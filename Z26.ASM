@@ -44,7 +44,8 @@ ENDIF
 	include	riot.asm		; RIOT emu
 	include cpu.asm			; 6502 opcodes, macros and support routines
 	include cpuhand.asm		; cpu memory & register handlers
-	include tia.asm			; <-- the main machine -- * start here *
+	include main.asm		; <-- the main machine -- * start here *
+	include tia.asm			; TIA emulator
 	include tiahand.asm		; TIA register handlers
 	include tiabuf.asm		; TIA buffer management stuff
 	include tiasnd.asm		; asm version of Ron Fries' TIASound

@@ -2,7 +2,7 @@
 ** z26 -- an Atari 2600 emulator
 */
 
-#define version "z26 (1.24)"
+#define version "z26 (1.25)"
 
 #include <dos.h>		/* _psp */
 #include <ctype.h>
@@ -34,6 +34,15 @@ main(int argc, char *argv[])
 	}
 	else
 	{
+
+/*
+** The following printf is to prevent Win98 from halting if z26 is launched
+** from a shortcut made into a button in the task bar.
+*/
+
+		printf("Entering graphics mode ... \n");
+		delay(100);
+
 		gui_CheckMouse();
 		gui_GraphicsMode();
 		gui_SetPalette(35, 40, 45);	/* 31, 34, 41 */

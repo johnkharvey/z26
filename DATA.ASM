@@ -29,59 +29,52 @@ WrTiaImmediateVector	dw	WrTiaVSync	; 0
 		        
 ; cycle offset table
 
-;CO=-1	;default cycle offset
-CO=0	; -1 for Oscar
-C1=-2	;(-2) -1 for yars -2 for tron
-C2=0	; 0 for vidcube
-C3=0	; -1
-C4=0	; -1
 
-
-CycleOffset	db	68+CO	;00	VSYNC
-		db	68+CO	;01	VBLANK
-		db	68+CO	;02	WSYNC
-		db	68+CO	;03	RSYNC
-		db	68+CO	;04	NUSIZ0
-		db	68+CO	;05	NUSIZ1
-		db	68+C2	;06	COLUP0
-		db	68+C2	;07	COLUP1
-		db	68+C2	;08	COLUPF
-		db	68+C2	;09	COLUBK
-		db	68+C2	;0a	CTRLPF
-		db	68+CO	;0b	REFP0
-		db	68+CO	;0c	REFP1
-		db	68+C1	;0d	PF0
-		db	68+C1	;0e	PF1
-		db	68+C1	;0f	PF2
+CycleOffset	db	68	;00	VSYNC
+		db	68	;01	VBLANK
+		db	68	;02	WSYNC
+		db	68	;03	RSYNC
+		db	68	;04	NUSIZ0
+		db	68	;05	NUSIZ1
+		db	68	;06	COLUP0
+		db	68	;07	COLUP1
+		db	68	;08	COLUPF
+		db	68	;09	COLUBK
+		db	68	;0a	CTRLPF
+		db	68	;0b	REFP0
+		db	68	;0c	REFP1
+		db	68-2	;0d	PF0	-- -1 for yars  -2 for tron
+		db	68-2	;0e	PF1
+		db	68-2	;0f	PF2
 		db	68-5	;10	RESP0	-- tune for Pacman
 		db	68-5	;11	RESP1	-- ditto
 		db	68-4	;12	RESM0	-- ditto 4
 		db	68-4	;13	RESM1	-- ditto 4
 		db	68-4	;14	RESBL	-- ditto 4
-		db	68+CO	;15	AUDC0
-		db	68+CO	;16	AUDC1
-		db	68+CO	;17	AUDF0
-		db	68+CO	;18	AUDF1
-		db	68+CO	;19	AUDV0
-		db	68+CO	;1a	AUDV1
-		db	68+C3	;1b	GRP0
-		db	68+C3	;1c	GRP1
-		db	68+C4	;1d	ENAM0
-		db	68+C4	;1e	ENAM1
-		db	68+C4	;1f	ENABL
-		db	68+CO	;20	HMP0
-		db	68+CO	;21	HMP1
-		db	68+CO	;22	HMM0
-		db	68+CO	;23	HMM1
-		db	68+CO	;24	HMBL
-		db	68+CO	;25	VDELP0
-		db	68+CO	;26	VDEL01
-		db	68+CO	;27	VDELBL
-		db	68+CO	;28	RESMP0
-		db	68+CO	;29	RESMP1
-		db	68+CO	;2a	HMOVE
-		db	68+CO	;2b	HMCLR
-		db	68+CO	;2c	CXCLR
+		db	68	;15	AUDC0
+		db	68	;16	AUDC1
+		db	68	;17	AUDF0
+		db	68	;18	AUDF1
+		db	68	;19	AUDV0
+		db	68	;1a	AUDV1
+		db	68	;1b	GRP0
+		db	68	;1c	GRP1
+		db	68	;1d	ENAM0
+		db	68	;1e	ENAM1
+		db	68	;1f	ENABL
+		db	68	;20	HMP0
+		db	68	;21	HMP1
+		db	68	;22	HMM0
+		db	68	;23	HMM1
+		db	68	;24	HMBL
+		db	68	;25	VDELP0
+		db	68	;26	VDEL01
+		db	68	;27	VDELBL
+		db	68	;28	RESMP0
+		db	68	;29	RESMP1
+		db	68	;2a	HMOVE
+		db	68	;2b	HMCLR
+		db	68	;2c	CXCLR
 
         
 
