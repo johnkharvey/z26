@@ -8,6 +8,20 @@
 ;*
 
 SetupSpecial:
+	cmp	ax,0f69ah
+	je	OldVsync		; enduro
+	cmp	ax,0cd03h		
+	je	OldVsync		; supferar
+	cmp	ax,0cc64h
+	je	OldVsync		; supferri
+	jmp	SetupReverse
+
+OldVsync:
+	mov	[NoRetrace],1
+	jmp	SetupReverse
+
+
+SetupReverse:
 	cmp	ax,07c93h
 	je	SSReverse		; centiped
 	cmp	ax,09f1eh
@@ -182,7 +196,7 @@ SSLINE:
 	cmp	ax,0fbedh
 	je	Line36			; starraid
 	cmp	ax,08e07h
-	je	Line36			; catmouse
+	je	Line34			; catmouse
 	cmp	ax,045cbh
 	je	Line35			; chinasyn
 	cmp	ax,08d5ch
@@ -307,6 +321,14 @@ SSLINE:
 	je	Line40			; tubybird
 	cmp	ax,0811h
 	je	Line44			; walker
+	cmp	ax,0cd03h
+	je	Line66			; supferar
+	cmp	ax,0cc64h
+	je	Line34			; supferri
+	cmp	ax,07c2bh
+	je	Line86			; motocros
+	cmp	ax,054f5h
+	je	Line62			; parachut
 
 
 	jmp	SSTR			; process Timer1 requests
@@ -412,6 +434,9 @@ Line58:	mov	[CFirst],58
 Line60:	mov	[CFirst],60
 	jmp	SSTR
 
+Line62:	mov	[CFirst],62
+	jmp	SSTR
+
 Line64:	mov	[CFirst],64
 	jmp	SSTR
 
@@ -428,6 +453,9 @@ Line72:	mov	[CFirst],72
 	jmp	SSTR
 
 Line74:	mov	[CFirst],74
+	jmp	SSTR
+
+Line86:	mov	[CFirst],86
 	jmp	SSTR
 
 ; *
@@ -568,6 +596,8 @@ SSCB:	cmp	ax,0359ch
 	je	SSCB8			; marflegr
 	cmp	ax,057cah
 	je	SSCB8			; mogulman (** it switches! **)
+	cmp	ax,0bf9ah
+	je	SSCB8			; roadrunr
 
 	jmp	SetupScoreMode
 
@@ -584,38 +614,25 @@ SetupScoreMode:
 	je	NoScore			; seaquest
 	cmp	ax,0fbedh
 	je	NoScore			; starraid
-	jmp	SetupCyclesPerScanLine
+	jmp	SetupCPUOffset
 
 NoScore:
 	mov	[NoScoreMode],1
-	jmp	SetupCyclesPerScanLine
+	jmp	SetupCPUOffset
 
-
-SetupCyclesPerScanLine:
-	cmp	ax,0e5beh
-	je	Cycles1			; tetris26
+SetupCPUOffset:
 	cmp	ax,0a402h
-	je	Cycles3			; spaceinv
-	cmp	ax,00eb4h
-	je	Cycles1			; taxavoid
-	cmp	ax,08e07h
-	je	Cycles3			; catmouse
-	cmp	ax,022abh
-	je	Cycles1			; cosmcrep
-	cmp	ax,08ab0h
-	je	Cycles3			; firebird
-	cmp	ax,0f52dh
-	je	Cycles1			; surround
-
-
+	je	CPU71			; spaceinv
+	cmp	ax,0e5beh
+	je	CPU69			; tetris26
+	cmp	ax,054f5h
+	je	CPU69			; parachut
 	jmp	SetupVBlankFrame
 
-Cycles1:
-	mov	[CyclesPerLine],CyclesPerScanLine-1
+CPU69:	mov	[CPUOffset],69
 	jmp	SetupVBlankFrame
 
-Cycles3:
-	mov	[CyclesPerLine],CyclesPerScanLine-3
+CPU71:	mov	[CPUOffset],71
 	jmp	SetupVBlankFrame
 
 SetupVBlankFrame:

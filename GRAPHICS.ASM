@@ -59,6 +59,13 @@ RGBLoop:
 	mov	al,013h
 	int	010h
 	call	TIAPalette
+	
+	cmp	[_VideoMode],0		; doing ModeX ?
+	jz	GRRet			;   no
+	
+	call	ModeXInit		;   yes, call Erik's Init Routine
+
+GRRet:
 	ret
 
 TIATextMode:

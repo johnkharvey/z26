@@ -6,20 +6,26 @@
 **  tasm -dmodule=1 /ml z26.asm
 **  tcc -ez26.exe z.c z26.obj
 **
-** (0.88) Jan  3, 1998  First version in "C"
-** (0.88)               Precision frame timer (-f<n> option)
-** (0.88) Jan 10, 1998  Ron Fries sound code added with Sound Blaster support
-** (0.88)               -q switch (quiet)
-** (0.89) Jan 11,1998   fix time constant calculation for 8-bit cards
-** (0.89)               fix pitch on 16-bit cards
+** (0.88)  Jan  3, 1998  First version in "C"
+** (0.88)                Precision frame timer (-f<n> option)
+** (0.88)  Jan 10, 1998  Ron Fries sound code added with Sound Blaster support
+** (0.88)                -q switch (quiet)
+** (0.89)  Jan 11, 1998  fix time constant calculation for 8-bit cards
+** (0.89)                fix pitch on 16-bit cards
+** (0.89)                added difficulty switches within emu F5 & F6
+** (0.90)  Jan 22, 1998  lay groundwork for Mode-X
+** (0.90)                new VGA sync based on vertical nondisplay interval
+** (0.90)  Jan 23, 1998  multiple missiles -- fixed missile command!
+** (0.90)  Jan 24, 1998  mid-line collisions -- freeway and oystron(!)
 */
 
 #include <stdio.h>		/* puts */
 #include <stdlib.h>		/* getenv */
 #include <dos.h>		/* _psp */
+#include <alloc.h>		/* farmalloc */
 
 #include "sb.c"			/* Sound Blaster driver code */
-#include "tiasound.c"		/* Ron Fries sound code */
+#include "tiasound.c"		/* Ron Fries' sound code */
 
 #define SAMPLE_FREQ 31400
 
@@ -30,12 +36,14 @@ unsigned int gHalfBufSize;	/* half of the DMA buffer size */
 
 extern short int psp;		/* (data.asm) */
 extern char *CartRom;
+extern char *RomPtr;
 extern short int DoCopyright;
 extern short int quiet;
 extern short int DoChecksum;
 extern short int Checksum;
 extern short int verbose;
 extern short int credits;
+extern unsigned short int VideoBufferSegment;  /* gets segment address of video buffer */
 
 
 /*
@@ -63,7 +71,7 @@ ShowBlaster()
     printf("         DMA 16-bit: %d\n",        gBlaster.DMAChan16Bit);
     printf("                IRQ: %d\n",        gBlaster.IRQNumber);
     printf("        DSP Version: %d.%02d\n",  (gBlaster.DSPVersion >> 8) & 0x00FF,
-				    (gBlaster.DSPVersion & 0x00FF));
+				              (gBlaster.DSPVersion & 0x00FF));
 }
 
 /*
@@ -94,13 +102,24 @@ main()
     puts("Couldn't allocate memory for cartridge ROM");
     return;
   }
+  RomPtr = CartRom - 0x1000;	/* adjust pointer to rom area within CartRom */
+
+  VideoBufferSegment = DOSalloc(0x1000); 	/* allocate this many paragraphs */
+						/* big enough to contain a wild pointer */
+						/* try THAT on a 32-bit compiler! */
+  if (VideoBufferSegment == NULL)
+  {
+    puts("Couldn't allocate memory for video buffer");
+    free(CartRom);
+    return;
+  }
 
   psp = _psp;			/* for command line processor (cmdline.asm) */
   CommandLine();		/* call command line processor */
 
   if (DoCopyright)
   {
-    puts("\n\nz26 -- An Atari 2600 emulator (0.89)");
+    puts("\n\nz26 -- An Atari 2600 emulator (0.90)");
     puts("Copyright (C) 1997-1998 by John Saeger\n");
 
     puts("Home Page:  http://www.whimsey.com/z26.html\n");
@@ -116,11 +135,11 @@ main()
     puts(" -0    -- player 0 hard");
     puts(" -r    -- do not wait for VGA retrace (full speed)");
     puts(" -q    -- quiet (no sound)");
-    puts(" -v    -- verbose (show diagnostic messages)");
+    puts(" -s    -- show sound diagnostic messages");
     puts(" -f<n> -- run emulator for <n> frames and display timing results");
     puts(" -d<n> -- use digital signal processing on sound (1=low, 2=high)");
     puts(" -c    -- show credits (please do!)\n\n");
-    return;
+    goto free_mem;
   }
 
   if (credits)
@@ -137,13 +156,13 @@ main()
     puts("responsible for any damages caused by the use of z26.\n");
 
     puts("z26 is freeware and may not be sold.");
-    return;
+    goto free_mem;
   }
 
   if (DoChecksum)
   {
     printf("%X", Checksum);
-    return;
+    goto free_mem;
   }
 
   if (quiet) goto no_sound;
@@ -223,12 +242,13 @@ main()
 
   Sb_init = 1;				/* mark Sound Blaster initialized */
 
-
 no_sound:
 
   emulator();				/* call emulator (tia.asm) */
 
+free_mem:
   free(CartRom);
+  DOSfree(VideoBufferSegment);
 
   if (Sb_init)
   {

@@ -4,13 +4,14 @@
 ;
 ;	-u <n>	upper scan line
 ;	-l <n>	lower scan line
-;	-c <n>	Select sound channels
+;	-c	show credits
 ;	-q	quiet
-;       -v      verbose
+;       -v <n>  select video mode
+;       -s      display sound diagnostic messages
 ;	-x	print out checksum of cartridge
-;	-r	don't wait for retrace (full speed)
-;	-f <n>  Do <n> frames and exit
-;       -d      Do digital signal processing
+;	-r	don't wait for retrace (full speed), -r1 use old vsync code
+;	-f <n>  do <n> frames and exit
+;       -d      do digital signal processing
 ;
 ; *****************************************************************************
 
@@ -171,8 +172,10 @@ EndInt:					; Command in CL,Value in AL
 	je	CMCredits
 	cmp	cl,'q'
 	je	CMQuiet
-	cmp	cl,'v'
+	cmp	cl,'s'
 	je	CMVerbose
+	cmp	cl,'v'
+	je	CMVideoMode
 	cmp	cl,'0'
 	je	CMD0
 	cmp	cl,'1'
@@ -231,7 +234,12 @@ CMXsum:	mov	[_DoChecksum],1		; do checksum
 	jmp	CLSkip
 
 CMNoRetrace:
-	mov	[NoRetrace],1		; don't wait for retrace (full speed)
+	cmp	eax,0
+	jz	CMNR1
+	mov	[NoRetrace],al		; don't wait for retrace (full speed)
+	jmp	CLSkip
+
+CMNR1:	mov	[NoRetrace],0ffh
 	jmp	CLSkip
 
 CMTimer1:
@@ -244,6 +252,10 @@ CMFrameExit:				; do <n> frames and exit
 
 CMDsp:
 	mov	[_dsp],ax
+	jmp	CLSkip
+
+CMVideoMode:
+	mov	[_VideoMode],ax
 	jmp	CLSkip
 
 ; we didn't see a filename string

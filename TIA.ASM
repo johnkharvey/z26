@@ -52,8 +52,8 @@ ENDIF
 					; as well as from the "C" program ...
 
 	call	Reset			; Reset the CPU
-	SaveRegs			; save the CPU status
 	call	TIAGraphicMode		; Switch into VGA mode
+	call	VSyncInit		; init VSync code
 	call	SetNewInt9		; Keyboard Handler
 
 	push	es
@@ -106,34 +106,25 @@ EXTRN _PauseDMA:near
 EXTRN _ContinueDMA:near
 
 xmain:  
-;	BLIP_HP_HALF
-;	TIMER_OFF
-
 	cmp	[FrameExit],0		; exiting after <n> frames ?
 	je	xm1			;   no
 	dec	[FrameExit]		;   yes, decrement counter
 	cmp	[FrameExit],0		; did it go to zero ?
 	je	GoTIME			;   yes, exit now
 
-
 xm1:
-	test	[NoRetrace],1		; waiting for retrace?
-	jnz	VRDone			;  no
-	
-	mov	dx,03dah		; wait for vertical retrace
-WaitForVR:
-	in	al,dx
-	test	al,8
-	jnz	VRDone
+	cmp	[_VideoMode],0		; X-Mode
+	jne	XVRTest			;   yes
 
-	call	_Fillbuffer		;fill sound buffer if necessary
+	call	VSync
+	call	ScanFrame
+	jmp	Paused
 
-	jmp	WaitForVR
+XVRTest:
+	call	ScanFrame
+	call	VSync
+	call	EriksVideo		; :)
 
-VRDone:
-;	 TIMER_ON
-
-	call	ScanFrame	
 Paused:	call	[CtrlFn]		; check which keys pressed
 	test	[GamePaused],1		; game paused ?
 	jz	xmain			;   no, next frame
@@ -240,44 +231,6 @@ ENDIF
 	int	MSDOS
 
 ;*
-;* do some instructions until RClock >= al
-;*
-
-ALIGN_ENTRY
-
-DoInstructions:
-	mov	[LastCycle],al		; last cycle to do
-	push	cx
-	push	dx
-	push	bp
-	push	si
-	LoadRegs			; load the CPU registers
-	jmp	InstructionLoop
-
-ualnext:usetest al			; <-- instruction done
-next:	call	[TimerVec]		; <-- instruction done, clock the RIOT timer
-
-InstructionLoop:
-	mov	bh,[LastCycle]
-	cmp	[RClock],bh
-	jge	InstructionsDone
-
-	fetchzx	ebx			; get the opcode
-	mov	dl,Cycles[bx]		; get cycles takes to do it
-	mov	[RCycles],dl		; save the number of cycles
-	add	[RClock],dl		; add to the clock
-	jmp	[vectors + ebx*2]	; --> do the instruction
-
-InstructionsDone:
-	SaveRegs			; save the CPU registers
-	pop	si
-	pop	bp
-	pop	dx
-	pop	cx
-	ret
-
-
-;*
 ;* Do One Frame
 ;*
 
@@ -287,8 +240,17 @@ EXTRN _Sb_init:BYTE
 ALIGN_ENTRY
 
 ScanFrame:
-	mov	ax,0a000h
+	cmp	[_VideoMode],0
+	jne	XBuffer			; X-Mode ?
+	mov	ax,0a000h		;   no
 	mov	gs,ax			; point GS to VGA area
+	jmp	XDone
+
+XBuffer:
+	mov	ax,[_VideoBufferSegment]
+	mov	gs,ax			; point gs at video buffer
+
+XDone:
         mov	[DisplayPointer],0	; reset display pointer
 ScanFrameLoop:
 	mov	bx,[ScanLine]		; reset the TIA for a new line
@@ -299,7 +261,9 @@ ScanFrameLoop:
 
 	call	TIALineTo		; generate a raster line
 
-	call	_Fillbuffer		;fill sound buffer if necessary
+	test	[ScanLine],0fh		; time to check sound buffer ?
+	jnz	ScanNextLine		;   no
+	call	_Fillbuffer		;   yes, fill sound buffer if necessary
 
 ScanNextLine:
 	inc	[ScanLine]		; Increment the scanline counter
@@ -323,24 +287,6 @@ NDret:
 	je	ScanFrameLoop		;   not yet
 	mov	[PrevFrame],ax		;   yes, mark it as current
 	ret				;	 and return
-
-;*
-;* come here when duff opcode 
-;*
-
-ALIGN_ENTRY
-
-fail:	dec	bp			; backup the instruction pointer
-	read	al,bp			; read the byte
-	call	ConHex			; display it
-	mov	al,'@'			; here comes the address
-	call	ConOut
-	mov	ax,bp			; pick up the address
-	call	ConWord			; display it
-WaitEsc:test	[KeyTable+KeyEsc],128	; wait for ESC to be pressed
-	jz	WaitEsc
-	jmp	GoDOS
-
 
 ; *****************************************************************************
 ;
@@ -380,6 +326,21 @@ WaitEsc:test	[KeyTable+KeyEsc],128	; wait for ESC to be pressed
 ;
 ; *****************************************************************************
 
+
+;*
+;* macro to see if we should do a CPU instruction
+;*
+
+TryCPU macro
+local Done
+
+	cmp	dl,[CPUClock]	; time for an instruction ?
+	jbe	Done		;   no
+	DoInstruction		;   yes
+Done:
+	endm
+
+
 ;*
 ;* collision test macros
 ;*
@@ -416,6 +377,26 @@ BackgroundPFOnly:
 	mov	ax,word ptr BackgroundColor[ebx*4]	; get color value word
 	add	cx,2
 	mov	gs:[di],ax
+	endm
+
+; version for X-mode
+
+X_CollisionConvert macro
+local BackgroundPFOnly
+
+	movzx	ebx,byte ptr[si]	; pick up a byte from TIADisplay
+	cmp	bl,2			; looking at background or playfield only?
+	jb	BackgroundPFOnly	;   yes
+	mov	ax,TIAColTab[ebx*2]	; do collision test
+	mov	di,[TIADisplayToColor]	; < preload table pointer
+	or	[TIACollide],ax
+	mov	bl,[bx + di]		; get high priority color
+
+BackgroundPFOnly:
+	mov	di,cx
+	mov	al,byte ptr BackgroundColor[ebx*4]	; get color value word
+        inc	cx
+	mov	gs:[di],al
 	endm
 
 
@@ -471,12 +452,22 @@ BlankBit macro
 	add	cx,2
 endm
 
+; version for x-mode
+
+X_BlankBit macro
+	mov	di,cx
+	xor	al,al
+	mov	gs:[di],al
+	inc	cx
+endm
 
 ;*
 ;* macro to do 4 blank bits
 ;*
 
 DoBlank4 macro
+
+	TryCPU
 
 	DoObjects
 	PlayfieldBit
@@ -505,11 +496,47 @@ DoBlank4 macro
 
 	endm	
 
+; version for X-mode
+
+X_DoBlank4 macro
+
+	TryCPU
+
+	DoObjects
+	PlayfieldBit
+	CollisionTest
+	X_BlankBit
+	inc	dl
+	inc	si
+
+	DoObjects
+	CollisionTest
+	X_BlankBit
+	inc	dl
+	inc	si
+
+	DoObjects
+	CollisionTest
+	X_BlankBit
+	inc	dl
+	inc	si
+
+	DoObjects
+	CollisionTest
+	X_BlankBit
+	inc	dl
+	inc	si
+
+	endm	
+
+
 ;*
 ;* do 4 real bits
 ;*
 
 DoReal4 macro
+
+	TryCPU
 
 	DoObjects
 	PlayfieldBit
@@ -534,6 +561,34 @@ DoReal4 macro
 
 	endm
 
+; version for X-mode
+
+X_DoReal4 macro
+
+	TryCPU
+
+	DoObjects
+	PlayfieldBit
+	X_CollisionConvert
+	inc	dl			; increment color clock
+	inc	si			; increment pf write / collision pointer
+
+	DoObjects
+	X_CollisionConvert
+	inc	dl			; increment color clock
+	inc	si			; increment pf write / collision pointer
+
+	DoObjects
+	X_CollisionConvert
+	inc	dl			; increment color clock
+	inc	si			; increment pf write / collision pointer
+
+	DoObjects
+	X_CollisionConvert
+	inc	dl			; increment color clock
+	inc	si			; increment pf write / collision pointer
+
+	endm
 
 ;*****************************************************************************
 
@@ -572,6 +627,14 @@ Set4BitsFast macro
 	add	cx,8
 	mov	gs:[di],eax
 	mov	gs:4[di],eax
+	endm
+
+;version for X-mode
+
+X_Set4BitsFast macro
+	mov	di,cx			; display pointer
+	add	cx,4
+	mov	gs:[di],eax
 	endm
 
 
@@ -613,12 +676,54 @@ PFSkip:
 	endm
 
 
+; X-mode version
+
+X_FastPlayfieldBit macro op1
+local PFSkip, SlowLane, SetPFBit, SetBkBit, FastSetPFBit
+
+	mov	di,[PFClockToBitTable]		; < preload table pointer
+	sub	al,dl				; # of color clocks to next object
+	movzx	bx,dl				; < preload offset
+	cmp	al,4				; at least 4 ?
+	mov	eax,[si]			; < pick up next 4 TIA bits
+	jb	SlowLane			;   no
+	test	eax,eax				; anything set in next 4 TIA bits ?
+	jne	SlowLane			;   yes
+
+	mov	ebx,[di + bx]			; playfield bit for this color clock
+	add	si,4				; bump TIA pointer
+	add	dl,4				; bump color clock
+
+	test	ebx,dword ptr [TIA+TIAPf0]	; setting a playfield bit ?
+	mov	eax,[BackgroundColor]		; < preload background color
+	jnz	FastSetPFBit			;   yes
+	X_Set4BitsFast				;   no, do 4 background bits
+	jmp	op1				; FastExit
+
+FastSetPFBit:
+	mov	eax,[PlayfieldColor]
+	X_Set4BitsFast
+	jmp	op1
+	
+SlowLane:
+	mov	ebx,[di + bx]
+	or	eax,TGPlay*01000000h+TGPlay*010000h+TGPlay*0100h+TGPlay
+	test	ebx,dword ptr [TIA+TIAPf0]
+	jz	PFSkip
+SetPFBit:
+	mov	[si],eax
+PFSkip:
+	endm
+
+
 ;*
 ;* do 4 real bits
 ;*
 
 DoRealFast4 macro
 local FastExit
+
+	TryCPU
 
 	DoObjectsAL
 	FastPlayfieldBit FastExit
@@ -645,6 +750,37 @@ local FastExit
 FastExit:
 	endm
 
+; X-mode version
+
+X_DoRealFast4 macro
+local FastExit
+
+	TryCPU
+
+	DoObjectsAL
+	X_FastPlayfieldBit FastExit
+
+	X_CollisionConvert
+	inc	dl			; increment color clock
+	inc	si			; increment pf write / collision pointer
+
+	DoObjects
+	X_CollisionConvert
+	inc	dl			; increment color clock
+	inc	si			; increment pf write / collision pointer
+
+	DoObjects
+	X_CollisionConvert
+	inc	dl			; increment color clock
+	inc	si			; increment pf write / collision pointer
+
+	DoObjects
+	X_CollisionConvert
+	inc	dl			; increment color clock
+	inc	si			; increment pf write / collision pointer
+
+FastExit:
+	endm
 
 ;*****************************************************************************
 
@@ -675,18 +811,10 @@ TIAGenerate:
 	mov	cx,40
 	rep	stosd			; clear the TIA display buffer
 
-
-;	mov	al,50
-;	call	DoInstructions		; do instructions for left half of screen
-
-;*** these are not commutative, breaks solaris
-
-	mov	al,[CyclesPerLine]	; was [CyclesPerLine]
-	call	DoInstructions		; do instructions for rest of screen
+	mov	al,24
+	call	DoInstructions		; do horizontal blank instructions
 
 	call	TIAInsertObjects	; insert objects from the last line
-
-;***
 
 	xor	dl,dl			; start position
 	mov	cx,[DisplayPointer]
@@ -708,14 +836,31 @@ TIABlankLoop:
 	mov	al,ColumnBlank
 	cmp	dl,al			; doing column blanking ?
 	jae	TIALoop			;   no
-	DoBlank4			;   yes, do 8 columns
+	cmp	[_VideoMode],0		;   yes, do 8 blank columns
+	jne	XBlank			; X-mode ?
+	DoBlank4			;   no, do regular
 	DoBlank4
+	jmp	TIALoop
+
+XBlank:
+	X_DoBlank4			; do 8 blank columns in X-mode
+	X_DoBlank4
 
 ALIGN_ENTRY	; may not want to do this...
 
 TIALoop:
+	cmp	[_VideoMode],0		; X-mode ?
+	jne	XReal			;   yes
+	
+	DoRealFast4			;   no, do regular
 	DoRealFast4
-	DoRealFast4
+	jmp	TIATest
+
+XReal:					; do X-mode pixels
+	X_DoRealFast4
+	X_DoRealFast4
+
+TIATest:
 	cmp	dl,dh
 	jne	TIALoop
 
@@ -755,6 +900,18 @@ TIARB1:
 TIAExit:				; we've finished the line scan...
 	mov	[DisplayPointer],cx
 
+	cmp	[_VideoWidth],180	; in 360 by 240 video mode ?
+	jne	TIARet			;   no
+	mov	di,[DisplayPointer]	;   yes, put out 20 blank pixels
+	xor	eax,eax
+	mov	gs:[di],eax
+	mov	gs:4[di],eax
+	mov	gs:8[di],eax
+	mov	gs:12[di],eax
+	mov	gs:16[di],eax
+	add	[DisplayPointer],20
+	
+TIARet:
 	ret
 
 ;*

@@ -1,5 +1,5 @@
 ;
-; here lie the TIA register handlers (except for sound stuff)
+; here lie the TIA register handlers (except for PC speaker sound stuff)
 ;
 ; they get called via the vector tables during raster generation (TIALineTo)
 ; they process the TIA events (or objects) that were queued up in the TIA buffer
@@ -491,6 +491,63 @@ TRSave: mov	bl,TIAReg[bp]		; bx = offset to register
         
 
 
+
+;macros for outputting player graphics
+
+;Forward macros
+
+BuildForward macro op1                  ;note: must be called 8 times in a row
+local M1
+        rol     ch,1
+        jnc     M1
+        or      op1[bx],ah
+M1:
+        endm
+
+BuildForward2 macro op1                 ;note: must be called 8 times in a row
+local M1
+        rol     ch,1
+        jnc     M1
+        or      2*op1[bx],ax
+M1:
+        endm
+
+BuildForward4 macro op1                 ;note: must be called 8 times in a row
+local M1
+        rol     ch,1
+        jnc     M1
+        or      4*op1[bx],eax
+M1:
+        endm
+        
+        
+;Reflected macros       
+
+BuildReverse macro op1                  ;note: must be called 8 times in a row
+local M1
+        ror     ch,1
+        jnc     M1
+        or      op1[bx],ah
+M1:
+        endm
+
+BuildReverse2 macro op1                 ;note: must be called 8 times in a row
+local M1
+        ror     ch,1
+        jnc     M1
+        or      2*op1[bx],ax
+M1:
+        endm
+
+BuildReverse4 macro op1                 ;note: must be called 8 times in a row
+local M1
+        ror     ch,1
+        jnc     M1
+        or      4*op1[bx],eax
+M1:
+        endm
+        
+
 ; *****************************************************************************
 ;
 ;			   Ball handling code
@@ -526,48 +583,6 @@ TRBNoDraw:
 	call	TIAInvalidate		; invalidate old copies
 TNret:	ret
 
-; *****************************************************************************
-;
-;		       Missile handling code
-;
-;	On entry	BP Points to the missile record (clock/addr/data/0)
-;
-; *****************************************************************************
-
-ALIGN_ENTRY
-
-TRMiss:					; ok , we've found a missile draw....
-	mov	bl,TIAReg[bp]		; bx = 0 if m0,bx = 1 if m1
-	and	bx,1
-
-	mov	al,TIA+TIAResmp0[bx]	; if its locked to the player
-	test	al,2			; don't do anything at all !
-	jnz	TNret
-
-	mov	al,TIA+TIAEnam0[bx]	; get the enable flag
-	test	al,2			; if zero,don't draw
-	jz	TRMNoDraw
-
-	mov	al,TIA+TIANuSiz0[bx]	; get the missile size
-	mov	ah,TGMissile0		; and the pixel to set
-	cmp	bl,0			; which is different for the missiles !
-	jz	TGMCDraw
-	mov	ah,TGMissile1
-TGMCDraw:
-	push	bx
-	mov	bl,TIAClock[bp]		; get clock value (bh already 0)
-	add	bx,offset TIADisplay	; bx points to ball start in line
-	call	TIASolidObject		; draw the object .....
-	pop	bx
-TRMNoDraw:
-	mov	al,TIAClock[bp]		; update RESm# counter with clock
-	mov	TIA+TIAResm0[bx],al	; so its drawn on the next line
-	mov	al,TIAReg[bp]		; register that was written....
-	test	al,128			; if bit 7 is clear (new Res...)
-	jnz	TGret
-	or	al,128
-	call	TIAInvalidate		; invalidate old copies
-TGret:	ret
 
 ; *****************************************************************************
 ;
@@ -583,6 +598,7 @@ TIASolidObject:
 	jnz	TIASONot1
 	or	[bx],ah			; set the bit
 	ret
+
 TIASONot1:
 	push	cx
 	mov	cl,ah			; cx = word version
@@ -668,6 +684,7 @@ TRPret:
 	pop	cx
 	ret
 
+
 ; *****************************************************************************
 ;
 ;	 Draw player graphic CH in size/copy AL at screen at BX.
@@ -712,8 +729,11 @@ TGORef: BuildReverse 0
 ALIGN_ENTRY
 
 TGODifferent:				; Handle oddities.......
+;	push	bp
 	movzx	esi,al
-	jmp	[offset TGODiffTab + esi*2]
+	call	[offset TGODiffTab + esi*2]
+;	pop	bp
+	ret
 
 TGO3Close:				; 3 Copies,close @ 0,16,32
 	call	TGOStd
@@ -758,8 +778,6 @@ ALIGN_ENTRY
 TGO2Medium:				; 2 copies seperated by 32 cycles
 	call	TGOStd
 	mov	ax,[bp]			; al = clock, ah = reg
-	mov	al,TIAClock[bp]
-	mov	ah,TIAReg[bp]
 	add	al,32
 	or	ah,64
 	call	TIAInsert
@@ -841,4 +859,17 @@ TGO4Ref:
 	BuildReverse4 6
 	BuildReverse4 7
 	ret
+
+.CEND
+.DATASEGMENT
+TGODiffTab	dw	TGORet		; 0
+		dw	TGO2Close	; 1
+		dw	TGO2Medium	; 2
+		dw	TGO3Close	; 3
+		dw	TGO2Far		; 4
+		dw	TGO2Width	; 5
+		dw	TGO3Medium	; 6
+		dw	TGO4Width	; 7
+.DEND
+.CODESEGMENT
 

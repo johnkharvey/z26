@@ -77,18 +77,23 @@ entry:	jmp	start			; jump around our data
 
 .CODESEGMENT
 	
+	include cpu.asm			; 6502 opcodes, macros and support routines
+	include math.asm		; Paul Robson's original math routines
+	include cpuhand.asm		; cpu memory & register handlers
 	include cmdline.asm		; command line interpreter
 	include special.asm		; process special cartridges
 	include console.asm		; console output (for debugging)
 	include keyboard.asm		; convert keyboard into Atari joystick
+	include dosmem.asm		; DOS far memory allocator
 	include sound.asm		; PC speaker support
 	include graphics.asm		; VGA graphics initialization
+	include vsync.asm		; vertical synchronization
 	include tia.asm			; <-- the main machine -- * start here *
+	include modex.asm		; Erik Mooney's Video routines :)
 	include tiahand.asm		; TIA register handlers
+	include missile.asm		; missile code
 	include tiabuf.asm		; TIA buffer management stuff
-	include cpu.asm			; 6502 opcodes and support routines
-	include cpuhand.asm		; cpu memory & register handlers
-	include Pcxwrite.asm		; PCX file dumper
+	include Pcxwrite.asm		; Ronnie Greene's PCX file dumper
 
 .CEND
 

@@ -19,10 +19,10 @@ RS		db	0		; stack pointer (stored in CL)
 ;     Z and N are worked out from the values stored in RZTEST and RNTEST
 ; *****************************************************************************
 
+ALIGN 2
+
 RClock		db	0		; clock cycles (stored in SI)
 RCycles		db	0		; cycles for this instruction.
-
-ALIGN 2
 
 RX		db	0		; x register (stored in DL)
 		db	0		; to allow 16-bit load & store (see _index)
@@ -97,6 +97,8 @@ ColumnBlank	db	0		; blank this many columns
 GamePaused	db	0		; game paused
 NoScoreMode	db	0		; set if we don't want PF to take on player colors
 CyclesPerLine	db	CyclesPerScanLine-2 ; # of cycles to execute instructions for each line
+CPUOffset	db	66		; 64 default offset for CPU clock
+CPUClock	db	0
 VBlankFrame	db	0		; VBlank causes a new frame
 LastCycle	db	0		; for DoInstructions
 ReverseSync	db	0		; sync on reverse transition
@@ -186,6 +188,12 @@ IFDEF module
 _CartRom	dw	0
 ENDIF
 
+global _RomPtr
+_RomPtr		dw	0		; gets overwritten by "C" program
+
+global	_Checksum
+_Checksum	dw	0		; gets cart checksum
+
 global _DoCopyright
 _DoCopyright	dw	0		; set by cmdline if "C" program should output
 					; copyright message
@@ -196,9 +204,6 @@ _quiet		dw	0		; set if we want no sound
 global	_DoChecksum
 _DoChecksum	dw	0		; set if we should print out checksum
 
-global	_Checksum
-_Checksum	dw	0		; gets cart checksum
-
 global	_verbose
 _verbose	dw	0		; verbose
 
@@ -207,6 +212,14 @@ _credits	dw	0		; show credits
 
 global	_dsp
 _dsp		dw	0		; do digital signal processing
+
+global	_VideoMode
+_VideoMode	dw	0		; video mode
+
+ALIGN 2
+
+global	_VideoBufferSegment
+_VideoBufferSegment	dw	0	; gets segment adr of video buffer
 
 ModuleReturn	dw	0
 ModuleBP	dw	0
@@ -230,6 +243,7 @@ CO=-1	; -1 for buck rogers
 C1=-2	; -1 for yars -2 for tron
 C2=0	; 0 for vidcube
 C3=0	; -1
+C4=0	; -1
 
 
 CycleOffset	db	68+CO	;00	VSYNC
@@ -261,9 +275,9 @@ CycleOffset	db	68+CO	;00	VSYNC
 		db	68+CO	;1a	AUDV1
 		db	68+C3	;1b	GRP0
 		db	68+C3	;1c	GRP1
-		db	68+CO	;1d	ENAM0
-		db	68+CO	;1e	ENAM1
-		db	68+CO	;1f	ENABL
+		db	68+C4	;1d	ENAM0
+		db	68+C4	;1e	ENAM1
+		db	68+C4	;1f	ENABL
 		db	68+CO	;20	HMP0
 		db	68+CO	;21	HMP1
 		db	68+CO	;22	HMM0
@@ -377,15 +391,6 @@ PFClockToBitForward	dd	1 shl 4		;0	forward
 PFClockToBitTable	dw	PFClockToBitReversed
 
 
-TGODiffTab	dw	TGORet		; 0
-		dw	TGO2Close	; 1
-		dw	TGO2Medium	; 2
-		dw	TGO3Close	; 3
-		dw	TGO2Far		; 4
-		dw	TGO2Width	; 5
-		dw	TGO3Medium	; 6
-		dw	TGO4Width	; 7
-
 ;
 ; Display to collision word
 ;
@@ -480,104 +485,4 @@ TIAColorPlayTable db	80 dup (TIAColup0)
 		  db    80 dup (TIAColup1)
 
 TIAPFColorByClock	dw offset TIAColorPFTable
-
-ALIGN 2
-
-Frequency dw 39 ; 30000.00 Hz
- dw 79 ; 15000.00 Hz
- dw 119 ; 10000.00 Hz
- dw 159 ; 7500.00 Hz
- dw 198 ; 6000.00 Hz
- dw 238 ; 5000.00 Hz
- dw 278 ; 4285.71 Hz
- dw 318 ; 3750.00 Hz
- dw 357 ; 3333.33 Hz
- dw 397 ; 3000.00 Hz
- dw 437 ; 2727.27 Hz
- dw 477 ; 2500.00 Hz
- dw 517 ; 2307.69 Hz
- dw 556 ; 2142.86 Hz
- dw 596 ; 2000.00 Hz
- dw 636 ; 1875.00 Hz
- dw 676 ; 1764.71 Hz
- dw 715 ; 1666.67 Hz
- dw 755 ; 1578.95 Hz
- dw 795 ; 1500.00 Hz
- dw 835 ; 1428.57 Hz
- dw 875 ; 1363.64 Hz
- dw 914 ; 1304.35 Hz
- dw 954 ; 1250.00 Hz
- dw 994 ; 1200.00 Hz
- dw 1034 ; 1153.85 Hz
- dw 1073 ; 1111.11 Hz
- dw 1113 ; 1071.43 Hz
- dw 1153 ; 1034.48 Hz
- dw 1193 ; 1000.00 Hz
- dw 1233 ; 967.74 Hz
- dw 1272 ; 937.50 Hz
-;
-
-; Vectors and Opcodes for the 6507 interpreter
-
-vectors dw op00,op01,fail,fail,fail,op05,op06,fail
-	dw op08,op09,op0a,fail,fail,op0d,op0e,fail
-	dw op10,op11,fail,fail,fail,op15,op16,fail
-	dw op18,op19,fail,fail,fail,op1d,op1e,fail
-
-	dw op20,op21,fail,fail,op24,op25,op26,fail
-	dw op28,op29,op2a,fail,op2c,op2d,op2e,fail
-	dw op30,op31,fail,fail,fail,op35,op36,fail
-	dw op38,op39,fail,fail,fail,op3d,op3e,fail
-
-	dw op40,op41,fail,fail,fail,op45,op46,fail
-	dw op48,op49,op4a,fail,op4c,op4d,op4e,fail
-	dw op50,op51,fail,fail,fail,op55,op56,fail
-	dw op58,op59,fail,fail,fail,op5d,op5e,fail
-
-	dw op60,op61,fail,fail,fail,op65,op66,fail
-	dw op68,op69,op6a,fail,op6c,op6d,op6e,fail
-	dw op70,op71,fail,fail,fail,op75,op76,fail
-	dw op78,op79,fail,fail,fail,op7d,op7e,fail
-
-	dw fail,op81,fail,fail,op84,op85,op86,fail
-	dw op88,fail,op8a,fail,op8c,op8d,op8e,fail
-	dw op90,op91,fail,fail,op94,op95,op96,fail
-	dw op98,op99,op9a,fail,fail,op9d,fail,fail
-
-	dw opa0,opa1,opa2,fail,opa4,opa5,opa6,fail
-	dw opa8,opa9,opaa,fail,opac,opad,opae,fail
-	dw opb0,opb1,fail,fail,opb4,opb5,opb6,fail
-	dw opb8,opb9,opba,fail,opbc,opbd,opbe,fail
-
-	dw opc0,opc1,fail,fail,opc4,opc5,opc6,fail
-	dw opc8,opc9,opca,fail,opcc,opcd,opce,fail
-	dw opd0,opd1,fail,fail,fail,opd5,opd6,fail
-	dw opd8,opd9,fail,fail,fail,opdd,opde,fail
-
-	dw ope0,ope1,fail,fail,ope4,ope5,ope6,fail
-	dw ope8,ope9,opea,fail,opec,oped,opee,fail
-	dw opf0,opf1,fail,fail,fail,opf5,opf6,fail
-	dw opf8,opf9,fail,fail,fail,opfd,opfe,fail
-
-; *****************************************************************************
-;			    Cycles per instruction
-; *****************************************************************************
-;	      0	 1  2  3  4  5	6  7  8	 9  a  b  c  d	e  f
-Cycles	db    7, 6, 2, 8, 3, 3, 5, 5, 3, 2, 2, 2, 4, 4, 6, 6  ; 0
-	db    2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7  ; 1
-	db    6, 6, 2, 8, 3, 3, 5, 5, 4, 2, 2, 2, 4, 4, 6, 6  ; 2
-	db    2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7  ; 3
-	db    6, 6, 2, 8, 3, 3, 7, 5, 3, 2, 2, 2, 3, 4, 6, 6  ; 4
-	db    2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7  ; 5
-	db    6, 6, 2, 8, 3, 3, 5, 5, 4, 2, 2, 2, 5, 4, 6, 6  ; 6
-	db    2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7  ; 7
-	db    2, 6, 2, 6, 3, 3, 3, 3, 2, 2, 2, 2, 4, 4, 4, 4  ; 8
-	db    2, 6, 2, 6, 4, 4, 4, 4, 2, 5, 2, 5, 5, 5, 5, 5  ; 9
-	db    2, 6, 2, 6, 3, 3, 3, 3, 2, 2, 2, 2, 4, 4, 4, 4  ; a
-	db    2, 5, 2, 5, 4, 4, 4, 4, 2, 4, 2, 4, 4, 4, 4, 4  ; b
-	db    2, 6, 2, 8, 3, 3, 5, 5, 2, 2, 2, 2, 4, 4, 6, 6  ; c
-	db    2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7  ; d
-	db    2, 6, 2, 8, 3, 3, 5, 5, 2, 2, 2, 2, 4, 4, 6, 6  ; e
-	db    2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7  ; f
-
 

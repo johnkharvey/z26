@@ -75,10 +75,8 @@ RBank4: and	si,01fffh
 	cmp	si,1000h		; if not ROM, read hardware
 	jb	ReadHardware
 
-	add	si,[_CartRom]
-	sub	si,01000h
-
-;	add	si,offset CartRom - 1000h
+	add	si,[_RomPtr]		; offset CartRom - 1000h
+					; set in z.c
 	ret
         
 ALIGN_ENTRY
@@ -97,10 +95,8 @@ RBank8: and	si,01fffh
 RBank8NoChange:
 	add	si,[RomBank]
 
-	add	si,[_CartRom]
-	sub	si,01000h
-
-;	add	si,offset CartRom - 1000h
+	add	si,[_RomPtr]		; offset CartRom - 1000h
+					; set in z.c
 	ret
         
 ALIGN_ENTRY
@@ -135,10 +131,8 @@ RBank16: and	si,01fffh
 RBank16NoChange:
 	add	si,[RomBank]
 
-	add	si,[_CartRom]
-	sub	si,01000h
-
-;	add	si,offset CartRom - 1000h
+	add	si,[_RomPtr]		; offset CartRom - 1000h
+					; set in z.c
 	ret
         
 ; *****************************************************************************
@@ -267,9 +261,8 @@ WriteHardwarePage0:
 	and	si,0FFh
 	cmp	si,080h			; writing to the TIA ?
 	jl	WriteTIA
-	add	si,offset RiotRam-128	; writing to the RAM
-	mov	dl,[WByte]
-	mov	[si],dl
+	mov	dl,[WByte]		; writing to RAM
+	mov	[RiotRam-128 + si],dl
 WHret:	ret
 
 ALIGN_ENTRY
@@ -404,7 +397,7 @@ WVBClear:
 WVBPastMin:
 	inc	ax
 	mov	[TopLine],ax
-	add	ax,[MaxLines]
+	add	ax,[_VideoHeight]	; was MaxLines
 	mov	[BottomLine],ax
 	cmp	[VBlankFrame],0
 	jz	WVBRet
@@ -420,13 +413,15 @@ WVBRet:
 ALIGN_ENTRY
 
 TIABlank:
+	cmp	[_VideoMode],0		; X-mode ?
+	jne	X_TIABlank		;   yes
 	push	ax
 	push	di
 	xor	ax,ax
 	mov	di,[DisplayPointer]
-TIABLoop:
 	cmp	di,30000
 	jb	TIABRet
+TIABLoop:
 	cmp	di,64000		; reached end of display area?
 	jae	TIABRet			;    yes, done
 	mov	gs:[di],ax
@@ -439,6 +434,30 @@ TIABRet:
 	pop	ax
 	ret
 
+; X-mode version
+
+X_TIABlank:
+	push	eax
+	push	bx
+	push	di
+	xor	eax,eax
+	mov	bx,[_VideoPixels]
+	mov	di,[DisplayPointer]
+	cmp	di,15000
+	jb	X_TIABRet
+X_TIABLoop:
+	cmp	di,bx			; reached end of display area?
+	jae	X_TIABRet		;    yes, done
+	mov	gs:[di],eax
+	add	di,4
+	jmp	X_TIABLoop
+
+X_TIABRet:
+	mov	[DisplayPointer],di
+	pop	di
+	pop	bx
+	pop	eax
+	ret
 
 ;xWrTiaVBlank:
 ;	mov	bl,[WByte]
