@@ -53,17 +53,8 @@ _emulator ENDP
 ;*
 
 start:
-	mov	di,offset StartMemory
-	mov	cx,offset EndMemory
-	sub	cx,di			; # of bytes to clear
-	xor	al,al
-	rep	stosb			; clear memory
-
 	call	InitData		; initialize data
-
 	call	_RecognizeCart		; do special setup for individual carts
-
-;	call	SetupSpecial
 	call	SetupBanks
 
 ; reset must follow SetupBanks...
@@ -212,7 +203,7 @@ ScanFrameLoop:
 
 	call	nTIALineTo		; generate a raster line
 
-	test	[KeyTable+KeyEsc],128	; ESC pressed ?
+	test	[_KeyTable+KeyEsc],128	; ESC pressed ?
 	jnz	GoDOS			;	 yes
 
 	test	[ScanLine],0fh		; time to read the time ?

@@ -67,7 +67,6 @@ SetupBanks:
 	mov	[MNSlice0],0
 	mov	[MNSlice1],7*800h
 	mov	[MNRamSlice],0
-	mov	[Pitfall2],0
 	mov	[Starpath],0
 
 	mov	al,[_BSType]		; bankswitching type specified

@@ -231,6 +231,10 @@ dd	keypad_3[] = {
 	0x9afa761f,	/* Magicard (Life).bin */
         0xf777a07d,     /* Holey Moley (Prototype) */
         0xc3e91b95,     /* Peek-A-Boo (Prototype) */
+        0x7c384d26,     /* Magicard (example program 1) */
+        0x30c54700,     /* Magicard (example program 2) */
+        0x5e7a5ac4,     /* Magicard (example program 3) */
+        0x27e4a094,     /* Magicard (example program 4) */
 	-1
 };
 
@@ -262,6 +266,10 @@ dd	BS_1[] = {
 	0x266bd1b6,	/* Video Life (CommaVid).bin */
         0xa0899305,     /* Video Life (alternative 2K) */
         0xfbb4ac5f,     /* Video Life (4K) from DP */
+        0x7c384d26,     /* Magicard (example program 1) */
+        0x30c54700,     /* Magicard (example program 2) */
+        0x5e7a5ac4,     /* Magicard (example program 3) */
+        0x27e4a094,     /* Magicard (example program 4) */
 	-1
 };
 

@@ -71,7 +71,6 @@ InitData:
 	call	Init_CPU
 	call	Init_TIA
 	call	Init_Riot
-	call	Init_P2
 	call	Init_Starpath
 
 	mov	[OurBailoutLine],1000

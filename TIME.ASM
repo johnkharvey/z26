@@ -28,8 +28,6 @@ low_time	dw	0
 
 _GetTime:
 
-	pushf
-	cli
 	xor	al,al
 	out	TIMER_CTL,al		; latch the timer count
 	in	al,TIMER0		; read lo-order byte
@@ -49,7 +47,7 @@ gt_fwd:	shr	ax,1			; cut rate in half
 	mov	eax,[hi_time]
 	shl	eax,15
 	or	ax,[low_time]
-	popf
+
 	ret
 
 ;*

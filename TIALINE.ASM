@@ -294,7 +294,7 @@ ALIGN 2
 	sub	bp,68
 
 PF_loop:
-	mov	edx,dword ptr [TIA+PF0]
+	mov	edx,dword ptr [_TIA+PF0]
 	test	edx,ds:[bp]
 	setnz	dh
 	add	bp,4
@@ -425,7 +425,7 @@ RenderPlayfield:
 	add	si,[PF_Table]
 	sub	si,68
 
-	mov	ebp,dword ptr [TIA+PF0]	; get playfield bits
+	mov	ebp,dword ptr [_TIA+PF0]	; get playfield bits
 
 	mov	ax,[BK_Color]
 	shl	eax,16

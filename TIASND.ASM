@@ -82,7 +82,7 @@ Div31	db	0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0
 ; Rather than have a table with 511 entries, we use a pseudo-random number
 ; generator.
 
-;Bit9		db	511 dup (?)	;* moved to memory.asm
+;_Bit9		db	511 dup (?)	;* moved to memory.asm
 
 ; The sample output is treated as another divide by N counter.
 ; For better accuracy, the Samp_n_cnt has a fixed binary decimal point
@@ -107,7 +107,8 @@ Div_n_max 	db	2 dup (0)
 
 SQ_MAX = 3072	; 1024
 
-;SoundQ		db	(SQ_MAX + 2) dup (?)
+SoundQ		db	(SQ_MAX + 2) dup (?)
+
 SQ_Input	dw	offset SoundQ	; point to next avail byte for storing
 SQ_Output	dw	offset SoundQ	; point to next avail byte for fetching
 SQ_Count	dw	0
@@ -135,7 +136,7 @@ _Tia_sound_init	proc	near
 
 	xor	bx,bx			; fill the 9-bit poly with random bits
 TSI_1:	call	_ShiftRegister9
-	mov	Bit9[bx],al
+	mov	_Bit9[bx],al
 	inc	bx
 	cmp	bx,511
 	jb	TSI_1
@@ -322,10 +323,12 @@ _Tia_process	proc	near
 	pushf
 	cli
 
-	cmp	[SQ_Count],BUF_SIZE/2	; enough sound available?
+	mov	dx,[_sb_buf_size]
+	shr	dx,1
+	cmp	[SQ_Count],dx		; enough sound available?
 	jbe	SoundBufferBail		;   no, bail out
-
-	mov	cx,BUF_SIZE/2		; # of bytes
+	sub	[SQ_Count],dx
+	mov	cx,dx			; # of bytes
 
 	mov	di,[_DMABuf]
 	add	di,[_DMABufToLoad]	; address of buffer to fill
@@ -342,7 +345,6 @@ SF_done:mov	[di],al			; put it in soundblaster buffer
 	dec	cx			; more room in soundblaster buffer?
 	jnz	SoundFillLoop		;   yes, get more
 
-	sub	[SQ_Count],BUF_SIZE/2
 	mov	[SQ_Output],si
 	
 SoundBufferBail:
@@ -456,7 +458,7 @@ TP_ProcessLoop:
 
 	xor	edi,edi			; process channel 0 first
 
-	cmp	[Pitfall2],0		; doing Pitfall2?
+	cmp	[_Pitfall2],0		; doing Pitfall2?
 	jz	TP_ProcessChannel	;   no
 	inc	edi			;   yes, only do channel 1
 
@@ -516,7 +518,7 @@ TP_Poly9:
 	inc_mod	P9+2*edi,511		; inc the P9 counter
 	mov	bx,[P9 + 2*edi]
 
-	cmp	Bit9[bx],0		; and set the output bit
+	cmp	_Bit9[bx],0		; and set the output bit
 	je	TP_VolumeOff
 	jmp	TP_VolumeOn
 
@@ -574,12 +576,12 @@ TP_Ch0done:
 	mov	ax,[Samp_n_max]		; ... adjust the sample counter
 	add	[Samp_n_cnt],ax
 
-	cmp	[Pitfall2],0		; running Pitfall 2?
+	cmp	[_Pitfall2],0		; running Pitfall 2?
 	jz	TP_NotPitfall2		;   no
 
 	call	Clock_Pitfall2		;   yes, clock P2 music clock (and build AUDV)
 	mov	al,[Outvol+1]		; channel 1
-	mov	ah,[P2_AUDV]
+	mov	ah,[_P2_AUDV]
 	and	ah,15
 	shl	ah,3
 	add	al,ah			; add in Pitfall 2 AUDV byte

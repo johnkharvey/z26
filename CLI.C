@@ -335,7 +335,16 @@ void cli_InterpretParm(char *p)
                         break;
 	case 'p':  	PaddleGame = (parm & 0xf) << 1;		break;
 	case 'k':  	KeyBase = parm & 3;			break;
-	case 'm':	MouseBase = parm & 3;			break;
+        case 'm':       if (parm < 100)
+                        {
+                                MouseBase = parm & 3;
+                        } else
+                        {
+                                parm = parm - 100;
+                                MouseBase = 0x80 + (parm % 10) + ((parm / 10) << 2);
+                                MPdirection = 1;  /* set directions for Marble Craze */
+                        }
+                        break;
 	case 't':  	if (parm) TraceCount = parm; else TraceCount = 0xff;
 			TraceEnabled = 1;
 			log = fopen("z26.log", "w");

@@ -153,7 +153,7 @@ _ShowBlasterDetected:
 	push	offset msg702
 	call	_put_str
 
-	mov	ax,BUF_SIZE
+	mov	ax,[_sb_buf_size]
 	push    ax		; DMA buffer size
 
 	call	_put_dec

@@ -216,6 +216,9 @@ MouseAsPaddle:
 	mov	ax,0bH			; # of mickeys since last call
 	int	33H
 
+        test    [_MouseBase],080H
+        jnz     MouseAsDoublePaddle
+
 	push	esi
 	movzx	esi,[_MouseBase]
 	mov	ebx,[ChargeTrigger0 + esi*4]
@@ -250,6 +253,71 @@ MP1:
 	pop	esi
 MPret:
 	ret
+
+MouseAsDoublePaddle:
+	push	esi
+        movzx   esi,[_MouseBase]
+        and     esi,3
+
+	mov	ebx,[ChargeTrigger0 + esi*4]
+        test    [_MPdirection],1
+        jz      MDP0a
+        add     bx,dx
+        jmp     MDP0b
+MDP0a:
+        sub     bx,dx
+MDP0b:
+	cmp	bx,TRIGMIN
+        jg      MDP1a
+	mov	bx,TRIGMIN
+MDP1a:
+	cmp	bx ,TRIGMAX
+        jna     MDP1b
+	mov	bx,TRIGMAX
+MDP1b:
+	mov	[ChargeTrigger0 + esi*4],ebx
+
+        movzx   esi,[_MouseBase]
+        shr     esi,2
+        and     esi,3
+
+	mov	ebx,[ChargeTrigger0 + esi*4]
+        test    [_MPdirection],2
+        jz      MDP1c
+        add     bx,cx
+        jmp     MDP1d
+MDP1c:
+        sub     bx,cx
+MDP1d:
+	cmp	bx,TRIGMIN
+        jg      MDP2a
+	mov	bx,TRIGMIN
+MDP2a:
+	cmp	bx ,TRIGMAX
+        jna     MDP2b
+	mov	bx,TRIGMAX
+MDP2b:
+	mov	[ChargeTrigger0 + esi*4],ebx
+
+	mov	ax,03H
+	int	33H
+        test    bx,2
+        jz      MDP3
+        mov     dl,PaddleBits[esi]
+	not	dl
+	and	[_IOPortA],dl
+MDP3:
+        test    bx,1
+        jz      MDP4
+        movzx   esi,[_MouseBase]
+        and     esi,3
+        mov     dl,PaddleBits[esi]
+	not	dl
+	and	[_IOPortA],dl
+MDP4:
+	pop	esi
+	ret
+
 
 MouseAsLightgun:
 	mov	ax,0bH

@@ -1,5 +1,5 @@
 /*
-** z26 is Copyright 1997-2000 by John Saeger and is a derived work with many
+** z26 is Copyright 1997-2002 by John Saeger and is a derived work with many
 ** contributors.  z26 is released subject to the terms and conditions of the 
 ** GNU General Public License Version 2 (GPL).	z26 comes with no warranty.
 ** Please see COPYING.TXT for details.
@@ -12,18 +12,40 @@ typedef unsigned char  		db;
 
 void far LongDelay(void);
 
-dw psp=0;		/* gets set by C program */
-dw CartSize=0;		/* gets cart size */
-dd Checksum=0;		/* gets cart checksum */
-dd XChecksum=0;		/* gets alternative checksum */
+dw psp;			/* gets set by C program */
+dw CartSize;		/* gets cart size */
+dd Checksum;		/* gets cart checksum */
+dd XChecksum;		/* gets alternative checksum */
 
-dd DelayTime=0;		/* gets long delay value */
+dd DelayTime;		/* gets long delay value */
 
-db CartRom[32770];      /* 34000 ROM image goes here */
-
-/*db FileName[260];*/	/* filename of current ROM being run */
-
+db CartRom[32770];      /* ROM image goes here */
+db KeyTable[128];	/* holds keystrokes */
 db PCXPalette[384];     /* palette information for PCX files goes here */
+db RiotRam[128];	/* RIOT RAM */
+db TIA[64];		/* TIA registers */
+db Ram[2048];		/* extra RAM */
+db Bit9[511];		/* for 9-bit polynomial (tiasnd) */
+dw sb_buf_size=2048;	/* size of soundblaster hardware buffer 
+			   don't change -- hardcoded asm depends on it */
+db BaseDMABuf[2050];	/* sound output goes here */
+
+/* Pitfall2 stuff */
+
+db P2_Flags[8];
+db P2_Counters[16];
+db P2_Top[8];
+db P2_Bottom[8];
+db P2_Enable[8];
+dw P2_Music_Top[8];
+dw P2_Music_Bottom[8];
+dw P2_Music_Count[8];
+
+db Pitfall2; 		/* tell RIOT timer to clock the music */
+dw P2_sreg; 		/* initialize shift register to non-zero val */
+db P2_Rbyte; 		/* return value for CPU read commands */
+db P2_AUDV; 		/* create an AUDV byte here */
+
 
 db far *ScreenBuffer;   /* pointer to screen buffer */
 dw ScreenSeg;           /* in seg and ofs form */
@@ -44,10 +66,6 @@ dw SC_ControlByte;	/* supercharger control byte */
 db InTextMode;		/* in TIA text mode outputting a message */
 
 dd crc;			/* holds accumulated CRC */
-/* dd crctab[256]; */		/* table to help CRC calculation */
-
-
-
 
 /* 
 ** Init C Variables every time emulator() is called.
@@ -57,12 +75,33 @@ dd crc;			/* holds accumulated CRC */
 
 void InitCVars(void)
 {
+	int i;
+
 	VBlankOff=0;
 	VBlankOn=0;
 	LinesInFrame=262;
 	BailoutLine=320;
 	InTextMode=0;
 
+	for (i=0; i<128;  i++) KeyTable[i]=0;
+	for (i=0; i<128;  i++) RiotRam[i]=0;
+	for (i=0; i<64;   i++) TIA[i]=0;
+	for (i=0; i<2048; i++) Ram[i]=0;
+	for (i=0; i<2050; i++) BaseDMABuf[i]=0;
+
+	for (i=0; i<8;    i++) P2_Flags[i]=0;
+	for (i=0; i<16;   i++) P2_Counters[i]=0;
+	for (i=0; i<8;    i++) P2_Top[i]=0;
+	for (i=0; i<8;    i++) P2_Bottom[i]=0;
+	for (i=0; i<8;    i++) P2_Enable[i]=0;
+	for (i=0; i<8;    i++) P2_Music_Top[i]=0;
+	for (i=0; i<8;    i++) P2_Music_Bottom[i]=0;
+	for (i=0; i<8;    i++) P2_Music_Count[i]=0;
+
+	Pitfall2 = 0;
+	P2_sreg = 1;
+	P2_Rbyte = 0;
+	P2_AUDV = 0;
 }
 
 

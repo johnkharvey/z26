@@ -3,7 +3,7 @@
 */
 
 /*
-** z26 is Copyright 1997-2001 by John Saeger and is a derived work with many
+** z26 is Copyright 1997-2002 by John Saeger and is a derived work with many
 ** contributors.  z26 is released subject to the terms and conditions of the 
 ** GNU General Public License Version 2 (GPL).	z26 comes with no warranty.
 ** Please see COPYING.TXT for details.
@@ -11,10 +11,10 @@
 
 
 
-#define version "z26 (1.54)"
+#define version "z26 (1.55)"
 
 /*
-#define version "Pre 1.54-F"
+#define version "Pre 1.55-C"
 */
 
 /*
@@ -38,17 +38,10 @@
 #include "carts.c"
 #include "cli.c"
 #include "gui.c"
-
-
 #include "trace.c"
-
-/*
-#include "tracex.c"
-*/
-
 #include "pcx.c"
-
 #include "kidvid.c"
+#include "palette.c"
 
 extern unsigned _stklen = 16384U;       /* set stack size to 16K */ 
 

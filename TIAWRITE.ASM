@@ -151,7 +151,7 @@ IsDeep:
 	pushad
 	movzx	dx,[RClock]
 	push	dx
-	movzx	dx,[TIA+si]
+	movzx	dx,[_TIA+si]
 	and	dx,0fh
 	push	dx
 	mov	dl,[WByte]
@@ -171,7 +171,7 @@ VeryDeep:
 	pushad
 	movzx	dx,[RClock]
 	push	dx
-	movzx	dx,[TIA+si]
+	movzx	dx,[_TIA+si]
 	and	dx,0fh
 	push	dx
 	mov	dl,[WByte]
@@ -536,13 +536,13 @@ DeactivateObject macro arg1
 ;*
 
 doUpdatePlayfieldColor:
-	mov	dl,[TIA+COLUPF]
+	mov	dl,[_TIA+COLUPF]
 	mov	dh,dl			; 16-bit playfield color
 	mov	[BL_Color],dx		; ball is always this color
 	mov	[PF_Color],dx		; assume *normal* state of affairs
 
 	mov	dx,offset TIADisplayToColour
-	test	[TIA+CTRLPF],PFP	; does playfield have priority?
+	test	[_TIA+CTRLPF],PFP	; does playfield have priority?
 	jz	UPFC_CheckScore		;	 no
 	mov	dx,offset TIADisplayToColour2
 	mov	[PixelColorTable],dx	;   yes, update pixel to color translation table
@@ -550,7 +550,7 @@ doUpdatePlayfieldColor:
 
 UPFC_CheckScore:
 	mov	[PixelColorTable],dx	; update pixel to color translation table
-	test	[TIA+CTRLPF],SCORE	; in score mode?
+	test	[_TIA+CTRLPF],SCORE	; in score mode?
 	jz	UPFC_done		;   no
 	mov	dx,[P0_Color]		; assume Player 0 color
 	cmp	cl,147			; right side of playfield?
@@ -578,7 +578,7 @@ UpdatePlayfieldReflection macro
 local UPFR_Ret
 
 	mov	[PF_Table],offset PFClockToBitForward
-	test	[TIA+CTRLPF],REF	; playfield reflected?
+	test	[_TIA+CTRLPF],REF	; playfield reflected?
 	jz	UPFR_Ret		;	  no
 	mov	[PF_Table],offset PFClockToBitReversed
 UPFR_Ret:
@@ -592,8 +592,8 @@ UPFR_Ret:
 
 UpdateBallGraphics:
 	
-	mov	dl,[TIA+ENABL]		; assume regular ball
-	test	[TIA+VDELBL],1		; using delayed register?
+	mov	dl,[_TIA+ENABL]		; assume regular ball
+	test	[_TIA+VDELBL],1		; using delayed register?
 	jz	UBGtestball		;   no
 	mov	dl,[BL_Delayed]		;	  yes, use delayed ball
 
@@ -602,7 +602,7 @@ UBGtestball:
 	jz	UBGnoball		;   no
 	ActivateObject	BL_BIT		;   yes, ActivateObject
 	mov	dl,030h			; mask ball size
-	and	dl,[TIA+CTRLPF]
+	and	dl,[_TIA+CTRLPF]
 	movzx	si,dl
 	shr	si,4
 	mov	dl,[BallSize + si]	; look up in table
@@ -624,8 +624,8 @@ UBGnoball:
 UpdatePlayerGraphics macro arg1
 local UPnodelay, UPdone
 
-	mov	dl,[TIA+GR&arg1]	  ; assume regular graphics
-	test	[TIA+VDEL&arg1],1	  ; using delayed register?
+	mov	dl,[_TIA+GR&arg1]	  ; assume regular graphics
+	test	[_TIA+VDEL&arg1],1	  ; using delayed register?
 	jz	UPnodelay		;   no
 	mov	dl,[arg1&_Delayed]	  ;   yes, use delayed graphics
 UPnodelay:
@@ -633,7 +633,7 @@ UPnodelay:
 	test	dl,dl			; graphics active?
 	jz	UPdone			;	 no, done
 	ActivateObject arg1&_BIT	  ;   yes, ActivateObject
-	test	[TIA+REF&arg1],08h	  ; reflected?
+	test	[_TIA+REF&arg1],08h	  ; reflected?
 	jz	UPdone			;	 no
 	movzx	si,dl			;   yes
 	mov	dl,[TIAReflect8+si]	; reflect it
@@ -675,12 +675,12 @@ local noMissile
 
 	DeactivateObject arg1&_BIT	  ; assume inactive
 	mov	[arg1&_Graphics],0	  ; clear register
-	test	[TIA+RES&arg1&P],2	  ; missile locked to player?
+	test	[_TIA+RES&arg1&P],2	  ; missile locked to player?
 	jnz	noMissile		;   yes, no missile
-	test	[TIA+ENA&arg1],2	  ; missile enabled?
+	test	[_TIA+ENA&arg1],2	  ; missile enabled?
 	jz	noMissile		;   no
 	ActivateObject arg1&_BIT	  ;   yes, ActivateObject
-	movzx	si,[TIA+NUSIZ&arg1]	  ; size is here
+	movzx	si,[_TIA+NUSIZ&arg1]	  ; size is here
 	and	si,030h			; mask size bits
 	shr	si,4
 	mov	dl,[BallSize + si]	; look up in table
@@ -716,7 +716,7 @@ UpdateM1Graphics:
 UpdateTable macro arg1
 local regular_ok
 
-	movzx	si,[TIA+NUSIZ&arg1]
+	movzx	si,[_TIA+NUSIZ&arg1]
 	and	si,7
 	movzx	dx,[arg1&_SizeTable+si]
 	mov	[arg1&_Size],dx
@@ -813,7 +813,7 @@ LockMissile macro arg1, arg2
 local nowrap
 
 	push	si
-	movzx	si,[TIA+NUSIZ&arg1]
+	movzx	si,[_TIA+NUSIZ&arg1]
 	and	si,7
 	movzx	dx,[MissileOffset+si]
 	pop	si
@@ -823,7 +823,7 @@ local nowrap
 	jbe	nowrap
 	sub	dx,160
 nowrap:
-	mov	[TIA+RES&arg1],dl
+	mov	[_TIA+RES&arg1],dl
 	mov	[arg1&_Position],dx
 
 	endm
@@ -833,7 +833,7 @@ nowrap:
 ;*
 
 UpdateM0Locking:
-	test	[TIA+RESMP0],2
+	test	[_TIA+RESMP0],2
 	jz	M0nolock
 
 	LockMissile M0 P0
@@ -846,7 +846,7 @@ M0nolock:
 ;*
 
 UpdateM1Locking:
-	test	[TIA+RESMP1],2
+	test	[_TIA+RESMP1],2
 	jz	M1nolock
 
 	LockMissile M1 P1
@@ -895,7 +895,7 @@ SetColor macro arg1
 
 	mov	dl,[WByte]
 	shr	dl,1			; pre shift right 1 bit
-	mov	[TIA+COLU&arg1],dl	  ; update the register
+	mov	[_TIA+COLU&arg1],dl	  ; update the register
 	mov	dh,dl
 
 	endm
@@ -937,7 +937,7 @@ H_CTRLPF:
 	call	CatchUpPixels
 
 	mov	dl,[WByte]
-	mov	[TIA+CTRLPF],dl
+	mov	[_TIA+CTRLPF],dl
 
 HCPFdone:
 	call	UpdateBallGraphics
@@ -963,10 +963,10 @@ H_PF:
 	call	CatchUpPixels
 
 	mov	dl,[WByte]
-	mov	[TIA+si],dl		; update the register
+	mov	[_TIA+si],dl		; update the register
 
 	DeactivateObject PF_BIT
-	test	dword ptr [TIA+PF0],0ffffffh  ; test playfield bits
+	test	dword ptr [_TIA+PF0],0ffffffh  ; test playfield bits
 	jz	H_PFRet
 	ActivateObject PF_BIT
 
@@ -1037,7 +1037,7 @@ MaxMotion label byte
 FixupMotionLow macro arg1
 local MotionOK
 
-	movsx	dx,[TIA+HM&arg1]
+	movsx	dx,[_TIA+HM&arg1]
 	push	bx
 	movzx	bx,[RClock]
 	movsx	bx,[MaxMotion+bx]
@@ -1068,15 +1068,15 @@ H_HMOVE:
 	call	UpdateM0Graphics
 
 WasntConfused:
-	movsx	dx,[TIA+HMP0]		; xx_Motion is different from HMxx
+	movsx	dx,[_TIA+HMP0]		; xx_Motion is different from HMxx
 	mov	[P0_Motion],dx		; in case we decide to doHMOVE 
-	movsx	dx,[TIA+HMP1]		; somewhere else
+	movsx	dx,[_TIA+HMP1]		; somewhere else
 	mov	[P1_Motion],dx
-	movsx	dx,[TIA+HMM0]
+	movsx	dx,[_TIA+HMM0]
 	mov	[M0_Motion],dx
-	movsx	dx,[TIA+HMM1]
+	movsx	dx,[_TIA+HMM1]
 	mov	[M1_Motion],dx
-	movsx	dx,[TIA+HMBL]
+	movsx	dx,[_TIA+HMBL]
 	mov	[BL_Motion],dx
 
 	mov	[HMOVE_Pending],1	; also in case we doHMOVE elsewhere
@@ -1116,7 +1116,7 @@ HiTable db 14, 13, 12, 12, 11, 10, 9, 9, 8, 7, 6, 6, 5, 4, 3, 3, 2, 1, 0, 0
 FixupMotionHi macro arg1
 local SetMotion
 
-	movsx	dx,[TIA+HM&arg1]
+	movsx	dx,[_TIA+HM&arg1]
 	add	dx,8
 	push	bx
 	movzx	bx,[RClock]
@@ -1187,7 +1187,7 @@ RBL_goahead:
 	call	CatchUpPixels
 	pop	bx			; restore object position
 
-	mov	[TIA+RESBL],bl
+	mov	[_TIA+RESBL],bl
 	mov	[BL_Position],bx
 
 	ret
@@ -1228,7 +1228,7 @@ H_RESP0:
 	CheatKoolAidePosition 40 54 52
 	CheatKoolAidePosition 49 63 61
 
-	mov	[TIA+RESP0],bl
+	mov	[_TIA+RESP0],bl
 	mov	[P0_Position],bx
 
 	call	UpdateM0Locking
@@ -1251,7 +1251,7 @@ H_RESP1:
 	CheatKoolAidePosition 40 63 65
 	CheatKoolAidePosition 49 72 74
 
-	mov	[TIA+RESP1],bl
+	mov	[_TIA+RESP1],bl
 	mov	[P1_Position],bx
 
 	call	UpdateM1Locking
@@ -1263,7 +1263,7 @@ H_RESP1:
 ;*
 
 H_RESM0:
-	test	[TIA+RESMP0],2		; missile locked to player ?
+	test	[_TIA+RESMP0],2		; missile locked to player ?
 	jnz	noRESM0			;   yes, don't position
 
 	GetObjectDelay M0
@@ -1273,7 +1273,7 @@ H_RESM0:
 	call	UpdateM0Table
 	pop	bx			; restore object position
 
-	mov	[TIA+RESM0],bl
+	mov	[_TIA+RESM0],bl
 	mov	[M0_Position],bx
 
 noRESM0:
@@ -1285,7 +1285,7 @@ noRESM0:
 ;*
 
 H_RESM1:
-	test	[TIA+RESMP1],2		; missile locked to player ?
+	test	[_TIA+RESMP1],2		; missile locked to player ?
 	jnz	noRESM1			;   yes, don't position
 
 	GetObjectDelay M1
@@ -1295,7 +1295,7 @@ H_RESM1:
 	call	UpdateM1Table
 	pop	bx			; restore object position
 
-	mov	[TIA+RESM1],bl
+	mov	[_TIA+RESM1],bl
 	mov	[M1_Position],bx
 
 noRESM1:
@@ -1311,7 +1311,7 @@ H_ENABL:
 	call	CatchUpPixels
 
 	mov	dl,[WByte]
-	mov	[TIA+ENABL],dl
+	mov	[_TIA+ENABL],dl
 
 	call	UpdateBallGraphics
 	ret
@@ -1326,7 +1326,7 @@ H_ENAM0:
 	call	CatchUpPixels
 
 	mov	dl,[WByte]
-	mov	[TIA+ENAM0],dl
+	mov	[_TIA+ENAM0],dl
 
 	call	UpdateM0Graphics
 	ret
@@ -1341,7 +1341,7 @@ H_ENAM1:
 	call	CatchUpPixels
 
 	mov	dl,[WByte]
-	mov	[TIA+ENAM1],dl
+	mov	[_TIA+ENAM1],dl
 
 	call	UpdateM1Graphics
 	ret
@@ -1356,7 +1356,7 @@ local NoCatchup, CatchupWide, NoCheat, done
 	GetObjectDelay M&arg1
 	call	CatchUpPixels		; render any missile in progress
 	
-	mov	dl,[TIA+NUSIZ&arg1]
+	mov	dl,[_TIA+NUSIZ&arg1]
 	and	dl,7
 	cmp	dl,7			; quad wide player?
 	je	CatchupWide		;   yes
@@ -1376,7 +1376,7 @@ CatchupWide:
 
 NoCatchup:
 	mov	dl,[WByte]
-	mov	[TIA+NUSIZ&arg1],dl	  ; switch to new NUSIZ
+	mov	[_TIA+NUSIZ&arg1],dl	  ; switch to new NUSIZ
 
 	call	UpdateM&arg1&Graphics	  ; update things
 	call	UpdateP&arg1&Table
@@ -1431,7 +1431,7 @@ H_VDELBL:
 	call	CatchUpPixels
 
 	mov	dl,[WByte]
-	mov	[TIA+VDELBL],dl
+	mov	[_TIA+VDELBL],dl
 
 	call	UpdateBallGraphics
 	ret
@@ -1446,7 +1446,7 @@ H_VDELP0:
 	call	CatchUpPixels
 
 	mov	dl,[WByte]
-	mov	[TIA+VDELP0],dl
+	mov	[_TIA+VDELP0],dl
 
 	call	UpdateP0Graphics
 	ret
@@ -1461,7 +1461,7 @@ H_VDELP1:
 	call	CatchUpPixels
 
 	mov	dl,[WByte]
-	mov	[TIA+VDELP1],dl
+	mov	[_TIA+VDELP1],dl
 
 	call	UpdateP1Graphics
 	ret
@@ -1475,9 +1475,9 @@ H_GRP0:
 	call	CatchUpPixels
 
 	mov	dl,[WByte]
-	mov	[TIA+GRP0],dl
+	mov	[_TIA+GRP0],dl
 
-	mov	dl,[TIA+GRP1]
+	mov	dl,[_TIA+GRP1]
 	mov	[P1_Delayed],dl
 	call	UpdateP0Graphics
 	call	UpdateP1Graphics
@@ -1494,11 +1494,11 @@ H_GRP1:
 	call	CatchUpPixels
 
 	mov	dl,[WByte]
-	mov	[TIA+GRP1],dl
+	mov	[_TIA+GRP1],dl
 
-	mov	dl,[TIA+ENABL]
+	mov	dl,[_TIA+ENABL]
 	mov	[BL_Delayed],dl
-	mov	dl,[TIA+GRP0]
+	mov	dl,[_TIA+GRP0]
 	mov	[P0_Delayed],dl
 	call	UpdateBallGraphics
 	call	UpdateP0Graphics
@@ -1520,7 +1520,7 @@ local NormalMotion
 
 	cmp	[RClock],26
 	jae	NormalMotion
-	movzx	bx,[TIA+HM&arg1]
+	movzx	bx,[_TIA+HM&arg1]
 	and	bx,0fh
 	shl	bx,4
 	movzx	dx,[WByte]
@@ -1550,7 +1550,7 @@ local NormalMotion
 NormalMotion:
 	mov	dl,[WByte]
 	sar	dl,4			; pre-shift right 4 bits (preserve sign)
-	mov	[TIA+HM&arg1],dl
+	mov	[_TIA+HM&arg1],dl
 	pop	bx
 
 	endm
@@ -1631,11 +1631,11 @@ HMC_NotConfused:
 	jmp	HMCLR_Done
 
 HMCLR_NotWeird:
-	mov	[TIA+HMP0],0
-	mov	[TIA+HMP1],0
-	mov	[TIA+HMM0],0
-	mov	[TIA+HMM1],0
-	mov	[TIA+HMBL],0
+	mov	[_TIA+HMP0],0
+	mov	[_TIA+HMP1],0
+	mov	[_TIA+HMM0],0
+	mov	[_TIA+HMM1],0
+	mov	[_TIA+HMBL],0
 
 HMCLR_Done:
 	ret
@@ -1663,7 +1663,7 @@ H_REFP0:
 	call	CatchUpPixels
 
 	mov	dl,[WByte]
-	mov	[TIA+REFP0],dl
+	mov	[_TIA+REFP0],dl
 	call	UpdateP0Graphics
 	ret
 
@@ -1678,7 +1678,7 @@ H_REFP1:
 	call	CatchUpPixels
 
 	mov	dl,[WByte]
-	mov	[TIA+REFP1],dl
+	mov	[_TIA+REFP1],dl
 	call	UpdateP1Graphics
 	ret
 
@@ -1692,7 +1692,7 @@ H_RESMP0:
 	call	CatchUpPixels
 
 	mov	dl,[WByte]
-	mov	[TIA+RESMP0],dl
+	mov	[_TIA+RESMP0],dl
 
 	call	UpdateM0Locking
 	call	UpdateM0Graphics
@@ -1709,7 +1709,7 @@ H_RESMP1:
 	call	CatchUpPixels
 
 	mov	dl,[WByte]
-	mov	[TIA+RESMP1],dl
+	mov	[_TIA+RESMP1],dl
 
 	call	UpdateM1Locking
 	call	UpdateM1Graphics

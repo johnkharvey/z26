@@ -141,7 +141,7 @@ FrameLimiter:
 	add	[FrameTime],eax		; make it next frame time
 
 FrameLimitLoop:
-	test	[KeyTable+KeyEsc],128	; ESC pressed ?
+	test	[_KeyTable+KeyEsc],128	; ESC pressed ?
 	jnz	FLRet			;   yes
 
 	call	_GetTime
