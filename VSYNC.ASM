@@ -7,18 +7,15 @@
 ;                       removed timeout from NDI code (mode 2)
 ;
 ; Apr 29, 1998          extreme simplification, do timing with hardware clock
+; Jul 14, 1998	(1.08)	variable game speed
 
 
 CRTSTAT=	03dah			; CRT status register
 
-
-ALIGN_ENTRY
-
-VSync:
-	cmp	[NoRetrace],1		; -r1
-	je	OldVsync
-	cmp	[NoRetrace],0ffh	; -r no param
+VSync:	cmp	[NoRetrace],0ffh	; -r no param
 	je	VSRet
+	cmp	[NoRetrace],1
+	jae	FrameLimiter		; -r<n>, n >= 1
 
 ;*
 ;* the default Vsync code -- look for non-display interval
@@ -52,18 +49,40 @@ NDOff:	mov	dx,CRTSTAT		; time the off period
 	jb	NDOff			;   no, keep waiting
 
 NDRet:	sti
-	ret				;   yes, we're done
+VSRet:	ret				;   yes, we're done
 
 
 ;*
-;* Old vsync -- just wait for vsync pulse
+;* Timer based frame limiter
 ;*
 
-OldVsync:
-	mov	dx,CRTSTAT		; wait for vertical retrace
-WaitForVSync:
-	in	al,dx
-	test	al,8
-	jz	WaitForVSync
-VSRet:	ret
+.CEND
+.DATASEGMENT
 
+FrameTime	dd	0
+TicksPerSecond	dd	1193182			; 14318180/12
+
+.DEND
+.CODESEGMENT
+
+FrameLimiter:
+	pushad
+
+	mov	eax,[TicksPerSecond]
+	xor	edx,edx
+	movzx	ecx,[NoRetrace]		; pick up # of frames per second
+	div	ecx			; eax = # of ticks per frame
+	add	[FrameTime],eax		; make it next frame time
+
+FrameLimitLoop:
+	test	[KeyTable+KeyEsc],128	; ESC pressed ?
+	jnz	FLRet			;   yes
+
+	call	_GetTime
+	cmp	eax,[FrameTime]
+	jb	FrameLimitLoop
+
+	mov	[FrameTime],eax		; mark new frame time
+
+FLRet:	popad
+	ret

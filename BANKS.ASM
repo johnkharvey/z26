@@ -1,5 +1,20 @@
 ; banks.asm -- z26 bank switch stuff
 
+; 02-17-98  got Parker Bros Working and added TigerVision
+
+.CEND
+.DATASEGMENT
+
+CartSize	dw	0		; gets cart size (cmdline.asm)
+
+ReadBank	dw	RBank4		; R/W vectors -- default to 4K cart
+WriteBank	dw	WBank4
+        
+RomBank		dw	0		; Rom bank pointer for F8 & F16
+
+.DEND
+.CODESEGMENT
+
 
 ;*
 ;* set up bank switch scheme
@@ -17,22 +32,74 @@ SetupBanks:
 
 Set8kMode:
 	mov	ax,[_Checksum]
+	cmp	ax,032cfh
+	je	SSC8			; stargate
+	cmp	ax,025efh
+	je	SSC8			; defendr2
+
 	cmp	ax,0e446h
 	je	SPB			; dethstar
 	cmp	ax,0f9f8h
 	je	SPB			; gyruss
 	cmp	ax,09a6dh
 	je	SPB			; sprcobra
+	cmp	ax,0c831h
+	je	SPB			; tutank
+	cmp	ax,0c026h
+	je	SPB			; popeye
+	cmp	ax,0ce17h
+	je	SPB			; swarcade
+	cmp	ax,05653h
+	je	SPB			; qbrtqube
+	cmp	ax,0e31ah
+	je	SPB			; frogger2
+	cmp	ax,0fce0h
+	je	SPB			; montzrev
+	cmp	ax,01113h
+	je	SPB			; docastle
+	cmp	ax,09379h
+	je	SPB			; toothpro
+
+	cmp	ax,0e35eh
+	je	STV			; riverp
+	cmp	ax,0cf71h
+	je	STV			; springer
+	cmp	ax,060bfh
+	je	STV			; polaris
+	cmp	ax,02510h
+	je	STV			; mnr2049r
+	cmp	ax,0ec87h
+	je	STV			; minrvol2
+	cmp	ax,04d38h
+	je	STV			; espial
+
+	cmp	ax,0ad52h
+	je	SFE			; decathln
+	cmp	ax,0f815h
+	je	SFE			; robotank
+
 
 	mov	[ReadBank], offset RBank8
 	mov	[WriteBank], offset WBank8
 	ret
 
 
-; set up Parker Brother's bank switch scheme
+; set up Parker Brother's 8K bank switch scheme
 
 SPB:	mov	[ReadBank], offset RBank8pb
 	mov	[WriteBank], offset WBank8pb
+	ret
+
+; set up Tigervision 8K bank switch scheme
+
+STV:	mov	[ReadBank], offset RBank8tv
+	mov	[WriteBank], offset WBank8tv
+	ret
+
+; set up FE (JSR/RTS) bank switch scheme
+
+SFE:	mov	[ReadBank], offset RBank8FE
+	mov	[WriteBank], offset WBank8FE
 	ret
 
 Set12KMode:
@@ -48,10 +115,6 @@ Set16kMode:
 	je	SSC			; cryscast
 	cmp	ax,0bc36h
 	je	SSC			; milliped
-	cmp	ax,0677dh
-	je	SSC8			; stargate
-	cmp	ax,04dbdh
-	je	SSC8			; defendr2
 	cmp	ax,0bd1dh
 	je	SSC			; jrpacman
 	cmp	ax,084ach
@@ -89,26 +152,33 @@ SSC:	mov	[ReadBank], offset RBank16sc
 SSC8:	mov	[ReadBank], offset RBank8sc
 	mov	[WriteBank], offset WBank8sc
 	ret
- 
+
+;*
+;* hardware read/write testing macros
+;*
+
+test_hw_read macro
+	and	si,01fffh
+	cmp	si,1000h		; if not ROM, read hardware
+	jb	ReadHardware
+	endm
+
+test_hw_write macro
+	and	si,01fffh
+	cmp	si,1000h
+	jb	WriteHardware
+	endm
 
 ;*
 ;* standard 4K cart
 ;*
 
-ALIGN_ENTRY
-
-RBank4: and	si,01fffh
-	cmp	si,1000h		; if not ROM, read hardware
-	jb	ReadHardware
+RBank4: test_hw_read
 	add	si,offset _CartRom - 1000h
 	ret
         
 
-ALIGN_ENTRY
-
-WBank4: and	si,01fffh
-	cmp	si,1000h
-	jb	WriteHardware
+WBank4:	test_hw_write
 	ret
 
 
@@ -116,11 +186,7 @@ WBank4: and	si,01fffh
 ;* standard 8K cart (F8)
 ;*
 
-ALIGN_ENTRY
-
-RBank8:	and	si,01fffh
-	cmp	si,1000h		; if not ROM, read hardware
-	jb	ReadHardware
+RBank8:	test_hw_read
 	cmp	si,1FF8h		; if not in switch area...
 	je	F8_RBank0
 	cmp	si,1FF9h
@@ -148,31 +214,23 @@ FA_RBank2:
 	ret
 
 
-ALIGN_ENTRY
-
-WBank8:	and	si,01fffh
-	cmp	si,1000h		; if not ROM, read hardware
-	jb	WriteHardware
+WBank8:	test_hw_write
 	cmp	si,1FF8h		; if not in switch area...
 	je	F8_WBank0
 	cmp	si,1FF9h
 	je	F8_WBank1
-	add	si,[RomBank]
 	ret
 
 F8_WBank0:
 	mov	[RomBank],0
-	add	si,[RomBank]
 	ret
 
 F8_WBank1:
 	mov	[RomBank],1000h
-	add	si,[RomBank]
 	ret
 
 FA_WBank2:
 	mov	[RomBank],2000h
-	add	si,[RomBank]
 	ret
 
 
@@ -180,12 +238,8 @@ FA_WBank2:
 ;* standard 8K cart with Super-Chip (F8+sc)
 ;*
 
-ALIGN_ENTRY
-
 RBank8sc:
-	and	si,01fffh
-	cmp	si,1000h		; if not ROM, read hardware
-	jb	ReadHardware
+	test_hw_read
 	cmp	si,1FF8h		; if not in switch area...
 	je	F8_RBank0
 	cmp	si,1FF9h
@@ -193,12 +247,8 @@ RBank8sc:
 	jmp	RBank16scTestRam
 
 
-ALIGN_ENTRY
-
 WBank8sc:
-	and	si,01fffh
-	cmp	si,1000h		; if not ROM, read hardware
-	jb	WriteHardware
+	test_hw_write
 	cmp	si,1FF8h		; if not in switch area...
 	je	F8_WBank0
 	cmp	si,1FF9h
@@ -210,12 +260,8 @@ WBank8sc:
 ;* 12K Ram Plus cart (FA)
 ;*
 
-ALIGN_ENTRY
-
 RBank12:
-	and	si,01fffh
-	cmp	si,1000h		; if not ROM, read hardware
-	jb	ReadHardware
+	test_hw_read
 	cmp	si,1FF8h		; if not in switch area...
 	je	F8_RBank0
 	cmp	si,1FF9h
@@ -229,12 +275,8 @@ RBank12:
 	ret
 
 
-ALIGN_ENTRY
-
 WBank12:
-	and	si,01fffh
-	cmp	si,1000h		; if not ROM, read hardware
-	jb	WriteHardware
+	test_hw_write
 	cmp	si,1FF8h		; if not in switch area...
 	je	F8_WBank0
 	cmp	si,1FF9h
@@ -256,11 +298,8 @@ WBank12:
 ;* standard 16K cart (F16)
 ;*
 
-ALIGN_ENTRY
-
-RBank16: and	si,01fffh
-	cmp	si,1000h		; if not ROM, read hardware
-	jb	ReadHardware
+RBank16:
+	test_hw_read
 	cmp	si,1FF6h		; if not in switch area...
 	jb	RBank16NoChange		; theres no change
 	cmp	si,1FF9h
@@ -279,15 +318,12 @@ RBank16NoChange:
 	ret
 
 
-ALIGN_ENTRY
-
-WBank16:and	si,01fffh
-	cmp	si,1000h		; if not ROM,no effect
-	jb	WriteHardware
+WBank16:
+	test_hw_write
 	cmp	si,1FF6h		; if not in switch area...
-	jb	Bank16NoChange		; theres no change
+	jb	WBank16NoChange		; theres no change
 	cmp	si,1FF9h
-	ja	Bank16NoChange
+	ja	WBank16NoChange
 
 	push	ax			; 16k ROM switch
 	mov	ax,si
@@ -296,8 +332,7 @@ WBank16:and	si,01fffh
 	mov	[RomBank],ax
 	pop	ax
 
-Bank16NoChange:
-	add	si,[RomBank]
+WBank16NoChange:
 	ret
 
 
@@ -305,12 +340,8 @@ Bank16NoChange:
 ;* standard 16K cart with Super-Chip (F16+sc)
 ;*
 
-ALIGN_ENTRY
-
 RBank16sc:
-	and	si,01fffh
-	cmp	si,1000h		; if not ROM, read hardware
-	jb	ReadHardware
+	test_hw_read
 	cmp	si,1FF6h		; if not in switch area...
 	jb	RBank16scTestRam	; theres no change
 	cmp	si,1FF9h
@@ -335,12 +366,8 @@ RBank16scTestRam:
 	ret
 
 
-ALIGN_ENTRY
-
 WBank16sc:
-	and	si,01fffh
-	cmp	si,1000h		; if not ROM,no effect
-	jb	WriteHardware
+	test_hw_write
 	cmp	si,1FF6h		; if not in switch area...
 	jb	WBank16scTestRam	; theres no change
 	cmp	si,1FF9h
@@ -354,7 +381,6 @@ WBank16sc:
 	pop	ax
 
 WBank16scNoChange:
-	add	si,[RomBank]
 	ret
 
 WBank16scTestRam:
@@ -371,187 +397,156 @@ WBank16scTestRam:
 ;* Parker Brother's 8K cart
 ;*
 
-ALIGN_ENTRY
+.CEND
+.DATASEGMENT
+
+; Parker Brother's ROM Slices
+
+PBSlice0	dw	0
+PBSlice1	dw	1*400h
+PBSlice2	dw	2*400h
+PBSlice3	dw	7*400h		; this one doesn't change
+					; points to 1K bank #7
+
+.DEND
+.CODESEGMENT
+
+
+PB_SetSlice macro
+	push	ax
+	push	bx
+
+	mov	ax,si
+	and	ax,7
+	shl	ax,10			; new bank
+
+	mov	bx,si
+	and	bx,18h
+	shr	bx,2			; slice to set *2			
+
+	mov	[PBSlice0 + bx],ax	
+	
+	pop	bx
+	pop	ax
+
+	endm
+
+PB_MapSlice macro
+	push	bx
+	mov	bx,si
+	and	bx,0fffh
+	shr	bx,10			; slice # we're in
+	shl	bx,1			; *2
+	and	si,03ffh		; mask low order bits
+	add	si,[PBSlice0 + bx]	; point to proper ROM slice
+	pop	bx
+
+	endm
+
 
 RBank8pb:
-	and	si,01fffh
-	cmp	si,1000h		; if not ROM, read hardware
-	jb	ReadHardware
+	test_hw_read
 	cmp	si,1Fe0h		; if not in switch area...
 	jb	RBank8pbNoChange	; theres no change
 	cmp	si,1FF8h
 	ja	RBank8pbNoChange
 
-	push	eax
-	movzx	eax,si
-	sub	ax,1Fe0h		; slice setting routine to call
-	call	[PBSliceSet + eax*2]
-	pop	eax
+	PB_SetSlice
 
 RBank8pbNoChange:
-	push	eax
-	movzx	eax,si
-	shr	eax,10			; slice # we're in
-	add	si,[PBSlice0 + eax*2]	; point to proper ROM slice
+	PB_MapSlice
 
-	add	si,offset _CartRom - 1000h
-	pop	eax
+	add	si,offset _CartRom
 	ret
 
 
-ALIGN_ENTRY
-
 WBank8pb:
-	and	si,01fffh
-	cmp	si,1000h		; if not ROM,no effect
-	jb	WriteHardware
+	test_hw_write
 	cmp	si,1Fe0h		; if not in switch area...
 	jb	WBank8pbNoChange	; theres no change
 	cmp	si,1FF8h
 	ja	WBank8pbNoChange
 
-	push	eax
-	movzx	eax,si
-	sub	ax,1Fe0h		; slice setting routine to call
-	call	[PBSliceSet + eax*2]
-	pop	eax
+	PB_SetSlice
 
 WBank8pbNoChange:
-	push	eax
-	movzx	eax,si
-	shr	eax,10			; slice # we're in
-	add	si,[PBSlice0 + eax*2]	; point to proper ROM slice
-
-	pop	eax
 	ret
 
-
-; Parker Brother's slice setting routines
-
-PB0_0:	mov	[PBSlice0],0
-	ret
-
-PB0_1:	mov	[PBSlice0],0400h
-	ret
-
-PB0_2:	mov	[PBSlice0],0800h
-	ret
-
-PB0_3:	mov	[PBSlice0],0c00h
-	ret
-
-PB0_4:	mov	[PBSlice0],1000h
-	ret
-
-PB0_5:	mov	[PBSlice0],1400h
-	ret
-
-PB0_6:	mov	[PBSlice0],1800h
-	ret
-
-PB0_7:	mov	[PBSlice0],1c00h
-	ret
-
-PB1_0:	mov	[PBSlice1],0
-	ret
-
-PB1_1:	mov	[PBSlice1],0400h
-	ret
-
-PB1_2:	mov	[PBSlice1],0800h
-	ret
-
-PB1_3:	mov	[PBSlice1],0c00h
-	ret
-
-PB1_4:	mov	[PBSlice1],1000h
-	ret
-
-PB1_5:	mov	[PBSlice1],1400h
-	ret
-
-PB1_6:	mov	[PBSlice1],1800h
-	ret
-
-PB1_7:	mov	[PBSlice1],1c00h
-	ret
-
-PB2_0:	mov	[PBSlice2],0
-	ret
-
-PB2_1:	mov	[PBSlice2],0400h
-	ret
-
-PB2_2:	mov	[PBSlice2],0800h
-	ret
-
-PB2_3:	mov	[PBSlice2],0c00h
-	ret
-
-PB2_4:	mov	[PBSlice2],1000h
-	ret
-
-PB2_5:	mov	[PBSlice2],1400h
-	ret
-
-PB2_6:	mov	[PBSlice2],1800h
-	ret
-
-PB2_7:	mov	[PBSlice2],1c00h
-	ret
-
+;*
+;* Tigervision 8K cart
+;*
 
 .CEND
 .DATASEGMENT
 
+; Tigervision ROM Slices
 
-;Parker Brother's slice setting branch table
-
-
-PBSliceSet	dw	PB0_0
-		dw	PB0_1
-		dw	PB0_2
-		dw	PB0_3
-		dw	PB0_4
-		dw	PB0_5
-		dw	PB0_6
-		dw	PB0_7
-
-		dw	PB1_0
-		dw	PB1_1
-		dw	PB1_2
-		dw	PB1_3
-		dw	PB1_4
-		dw	PB1_5
-		dw	PB1_6
-		dw	PB1_7
-
-		dw	PB2_0
-		dw	PB2_1
-		dw	PB2_2
-		dw	PB2_3
-		dw	PB2_4
-		dw	PB2_5
-		dw	PB2_6
-		dw	PB2_7
-
-; Memory read/write vectors
-
-CartSize	dw	0		; gets cart size (cmdline.asm)
-
-ReadBank	dw	RBank4		; default to 4K cart
-WriteBank	dw	WBank4
-        
-RomBank		dw	0		; Rom bank pointer for F8 & F16
-
-
-; Parker Brother's ROM Slices
-
-PBSlice0	dw	0
-PBSlice1	dw	0
-PBSlice2	dw	0
-PBSlice3	dw	1c00h		; this one doesn't change
-					; points to 1K bank #7
-
+TVSlice0	dw	0
+TVSlice1	dw	3*800h		; this one doesn't change
+					; points to 2K bank #3
 .DEND
 .CODESEGMENT
+
+
+TV_SetSlice macro
+	push	ax
+	mov	al,[WByte]
+	and	ax,3
+	shl	ax,11			; new bank
+	mov	[TVSlice0],ax
+	pop	ax
+	endm
+
+TV_MapSlice macro
+	push	bx
+	mov	bx,si
+	and	bx,0fffh
+	shr	bx,11			; slice # we're in
+	shl	bx,1			; *2
+	and	si,07ffh		; mask low order bits
+	add	si,[TVSlice0 + bx]	; point to proper ROM slice
+	pop	bx
+	endm
+
+
+RBank8tv:
+	test_hw_read
+	TV_MapSlice
+	add	si,offset _CartRom
+	ret
+
+WBank8tv:
+	cmp	si,03fh			; in range?
+	ja	NoTiger			;   no
+	TV_SetSlice			; defined in banks.asm
+
+NoTiger:
+	test_hw_write
+	ret
+
+
+;*
+;* FE 8K bankswitch scheme (JSR/RTS) (* doesn't work *)
+;*
+
+RBank8FE:
+	cmp	si,0feh
+	jne	RBank8FENoChange
+	mov	[RomBank],0h
+
+RBank8FENoChange:
+	test_hw_read
+	add	si,[RomBank]
+	add	si,offset _CartRom - 1000h
+	ret
+
+
+WBank8FE:
+	cmp	si,0feh
+	jne	WBank8FENoChange
+	mov	[RomBank],1000h
+
+WBank8FENoChange:
+	test_hw_write
+	ret
+

@@ -62,7 +62,7 @@ ENDIF
 
 ALIGN_ENTRY macro
 
-ALIGN 4
+;ALIGN 4
 
 	endm
 

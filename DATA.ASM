@@ -70,6 +70,8 @@ VBlankFrame	db	0		; VBlank causes a new frame
 ReverseSync	db	0		; sync on reverse transition
 WrapZero	db	0		; wrap negative player pos to zero
 					; atlantis and oceancty
+
+DoVsyncPending	db	0		; break instruction loop if vsync pending
 VsyncPending	db	0		; VSYNC pending
 
 ALIGN	2

@@ -6,7 +6,7 @@
 
 ; ShowCopyright messages (note: only last message is terminated)
 
-msg01	db	10, 10, 'z26 -- An Atari 2600 emulator (1.07)', 10
+msg01	db	10, 10, 'z26 -- An Atari 2600 emulator (1.08)', 10
 msg02	db	'Copyright (C) 1997-1998 by John Saeger', 10
 msg03	db	'Home Page:  http://www.whimsey.com/z26', 10, 10
 msg04	db	'    F1 -- reset      F2 -- select     F3 -- B/W        F4 -- Color', 10
@@ -16,8 +16,8 @@ msg06	db	'Player 0 controls: CTRL -- fire, Use arrow keys to move.', 10
 msg07	db	'Player 1 controls:    n -- fire, s -- left, e -- up, f -- right, d -- down', 10, 10
 msg08	db	'Command Line Switches (put before filename)', 10, 10
 msg08a	db	' -0    -- player 0 hard, -1 -- player 1 hard', 10
-msg10	db	' -r    -- do not wait for VGA retrace (full speed) ', 10
-msg10a	db	' -r1   -- use old vertical sync code (if your system seems to hang)', 10
+msg10	db	' -r    -- run game at maximum speed', 10
+msg10a	db	' -r<n> -- run game at <n> frames per second (<n> = 1 - 254 inclusive)', 10
 msg11	db	' -q    -- quiet (no sound)', 10
 msg12	db	' -s    -- show sound diagnostic messages', 10
 msg13	db	' -f<n> -- run emulator for <n> frames and display timing results', 10
@@ -32,23 +32,25 @@ msg101	db	10, 'z26 is based on A26 version 0.15 (C) 1996 by Paul Robson (autismu
 
 msg102	db	'PCX screen capture is (C) 1997 by Ronnie Greene (ender@abts.net).', 10, 10
 
-msg103	db	'Atari 2600 sound emulation is based on TIASound.', 10
-msg103a	db	'(C) 1996 by Ron Fries (rfries@tcmail.frco.com).', 10, 10
+msg103	db	'Atari 2600 sound emulation is based on TIASound (C) 1996 by Ron Fries.', 10
+msg103a	db	'                                              (rfries@tcmail.frco.com)', 10, 10
 
 msg104	db	'60Hz chained video modes courtesy of Jim Leonard (Trixter / Hornet).', 10
-msg105	db	'                                                 (trixter@hornet.org)', 10, 10
+msg105	db	'                                                (trixter@hornet.org)', 10, 10
 
-msg106	db	'Sound drivers are based on Asteroids v3.02.', 10
-msg107	db	'(C) 1997 by Chris Pile (pegasus@enterprise.net)', 10, 10
+msg106	db	'Sound drivers are based on Asteroids v3.02 (C) 1997 by Chris Pile.', 10
+msg107	db	'                                          (pegasus@enterprise.net)', 10, 10
 
-msg107a db	'6507 CPU emulation based in part on 6510core.c by Ettore Perazzoli ', 10
-msg107b	db	'                                                  (ettore@comm2000.it).', 10, 10
+msg107a db	'6507 CPU emulation based in part on 6510core.c by Ettore Perazzoli.', 10
+msg107b	db	'                                               (ettore@comm2000.it)', 10, 10
+
+msg107c db	'Please see readme.txt for more credits. :-)', 10, 10
 
 
 msg108	db	'z26 is provided without any warranty of any kind, either express or implied.', 10
 msg109	db	'Neither John Saeger, nor anyone who has worked on the code, may be held', 10
 msg110	db	'responsible for any damages caused by the use of z26.', 10, 10
-msg111	db	'z26 is freeware and may not be sold.', 10, 10, '$'
+msg111	db	'z26 is freeware and may not be sold.', 10, '$'
 
 ; ShowBlaster messages
 

@@ -165,9 +165,7 @@ ReallyQuit:
 ALIGN_ENTRY
 
 ScanFrame:
-;	call	_GetTime
-
-	mov	ax,0a000h		;   no
+	mov	ax,0a000h
 	mov	gs,ax			; point GS to VGA area
         mov	[DisplayPointer],0	; reset display pointer
 ScanFrameLoop:
@@ -179,17 +177,13 @@ ScanFrameLoop:
 
 	call	TIALineTo		; generate a raster line
 
-;	test	[ScanLine],07h		; time to check sound buffer ?
-;	jnz	ScanNextLine		;   no
-;	call	_Fillbuffer		;   yes, fill sound buffer if necessary
-
-	test	[ScanLine],03fh		; time to read the time ?
+	test	[ScanLine],01fh		; time to read the time ?
 	jnz	ScanNextLine		;   no
-	call	_GetTime
+	call	_GetTime		;   yes, needed to prevent timer overflow
 
 ScanNextLine:
 	inc	[ScanLine]		; Increment the scanline counter
-	sub	[RClock],CyclesPerScanLine ; adjust clock for next line
+	sub	[RClock],CyclesPerScanLine ; adjust RClock for next line
 
 ; do emergency bail-out test
 
@@ -201,7 +195,6 @@ ScanNextLine:
 	jl	NDret			;   not yet
 	inc	[Frame]			;   yes, to the next frame (allow escape to work)
 	mov	[ScanLine],0
-;	call	TIABlank
 
 NDret:  
 	mov	ax,[Frame]
@@ -213,8 +206,6 @@ NDret:
 ; *****************************************************************************
 ;
 ;			       TIA Emulator
-;
-;	Don't worry about - colours changing in mid playfield (yet)
 ;
 ; *****************************************************************************
 
@@ -248,6 +239,21 @@ NDret:
 ;
 ; *****************************************************************************
 
+;*
+;* macro to set CPUClock
+;*
+
+SetCPUClock macro
+	push	dx
+	mov	dl,[RClock]
+	mov	dh,[RClock]
+	add	dl,dl
+	sub	dh,[CPUOffset]
+	add	dl,dh
+	mov	[CPUClock],dl		; CPUClock = 3 * RClock - CPUOffset
+	pop	dx
+
+	endm
 
 ;*
 ;* macro to see if we should do a CPU instruction
@@ -259,8 +265,49 @@ local Done
 	cmp	dl,[CPUClock]	; time for an instruction ?
 	jbe	Done		;   no
 	DoInstruction		;   yes
+	SetCPUClock
+
 Done:
 	endm
+
+
+;*
+;* do some instructions until RClock >= al
+;*
+
+ALIGN_ENTRY
+
+DoInstructions:
+	mov	[LastCycle],al		; last cycle to do
+	push	dx
+	push	bp
+	push	si
+	LoadRegs			; load the CPU registers
+
+InstructionLoop:
+	fetch_opcode	ebx		; (fetchzx) get the opcode
+	call	[vectors + ebx*2]	; --> do the instruction
+	call	[TimerVec]		; clock the RIOT timer
+
+	cmp	[DoVsyncPending],0
+	je	SkipVsyncPending
+
+	cmp	[VsyncPending],0	; was Vsync set this instruction ?
+	jne	InstructionsDone	;    yes, fast exit
+
+SkipVsyncPending:
+	mov	bh,[LastCycle]
+	cmp	[RClock],bh
+	jl	InstructionLoop
+
+InstructionsDone:
+
+	SaveRegs			; save the CPU registers
+	pop	si
+	pop	bp
+	pop	dx
+
+InsRet:	ret
 
 
 ;*
@@ -577,6 +624,7 @@ TIAGenerate:
 
 	mov	al,24
 	call	DoInstructions		; do horizontal blank instructions
+	SetCPUClock
 
 	cmp	[VsyncPending],0
 	jne	TIAProcessBuffer
@@ -671,6 +719,7 @@ TIANoGenerate:
 
 	mov	al,24
 	call	DoInstructions		; do horizontal blank instructions
+	SetCPUClock
 	cmp	[VsyncPending],0
 	jne	TIAProcessBuffer
 
@@ -684,6 +733,7 @@ TIAFinishNoGenerateLoop:
 
 ;	mov	al,[CyclesPerLine]
 ;	call	DoInstructions
+;	SetCPUClock
 
 TIAProcessBuffer:
 	mov	bp,offset TIABuffer	; initialise the buffer

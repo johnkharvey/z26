@@ -19,7 +19,7 @@ PIC1		equ	0A1h
 EOI0		equ	020h
 EOI1		equ	0A0h
 
-BUF_SIZE	equ	128	; DMA buffer size  (256 is maximum)
+BUF_SIZE	equ	256	; DMA buffer size  (256 is maximum)
 
 				;(8   gives an interrupt frequency of 31400/4  = 7850       hz)
 				;(note:  8 is not recommended -- Cyrix 6x86 PR166 clogs here )

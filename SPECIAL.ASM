@@ -8,45 +8,36 @@
 ;*
 
 SetupSpecial:
-	cmp	ax,0e0e9h
-	je	SSReverse		; astroidc (cures jitter)
-	cmp	ax,08ae0h
-	je	SSReverse		; astroids (cures jitter)
-	cmp	ax,0677eh
-	je	SSReverse		; bugsbun
-	cmp	ax,00828h
-	je	SSReverse		; clwndown (cures jitter)
-	cmp	ax,0676ch
-	je	SSReverse		; commando (cures missile from wrong position)
 	cmp	ax,0a531h
 	je	SSReverse		; doubdunk (cures bad graphics)
 	cmp	ax,02bc1h
 	je	SSReverse		; mspacman (shows first line)
-	cmp	ax,00fc5h
-	je	SSReverse		; packong
-	cmp	ax,08b88h
-	je	SSReverse		; ramit
-	cmp	ax,0a402h
-	je	SSReverse		; spaceinv
-	cmp	ax,0deb1h
-	je	SSReverse		; supercce
-	cmp	ax,0ddb2h
-	je	SSReverse		; suprman1
-	cmp	ax,0d95eh
-	je	SSReverse		; suprman2
-	cmp	ax,070c4h
-	je	SSReverse		; survlrun
-	cmp	ax,0811h
-	je	SSReverse		; walker
-	cmp	ax,096a1h
-	je	SSReverse		; xevious
-;	cmp	ax,0a5d6h
-;	je	SSReverse		; oystr29
 
-	jmp	SSWRAP
+	jmp	SSVSYNC
 
 SSReverse:
 	mov	[ReverseSync],1
+	jmp	SSVSYNC
+
+
+;*
+;* process requests to do vsync pending test in instruction loop
+;*
+
+SSVSYNC:
+	cmp	ax,0b06fh
+	je	DoVsync			; blakjack
+	cmp	ax,022abh
+	je	DoVsync			; cosmcrep
+	cmp	ax,00a00h
+	je	DoVsync			; knightwn
+	cmp	ax,0c5dch
+	je	DoVsync			; taz
+
+	jmp	SSWRAP
+
+DoVsync:
+	mov	[DoVsyncPending],1
 	jmp	SSWRAP
 
 ;*
@@ -69,6 +60,8 @@ SSWRAP:	cmp	ax,0d274h
 	je	WZero			; holehunt
 	cmp	ax,0deebh
 	je	WZero			; strwbery
+	cmp	ax,0ecc2h
+	je	WZero			; beamride
 
 	jmp	SSLINE
 
@@ -83,7 +76,7 @@ SSLINE:
 	cmp	ax,08387h
 	je	Line69			; actionmn
 	cmp	ax,0b0a9h
-	je	Line70			; alienret
+	je	Line73			; alienret
 	cmp	ax,0e0e9h
 	je	Line36			; astroidc
 	cmp	ax,08ae0h
@@ -91,9 +84,9 @@ SSLINE:
 	cmp	ax,0f578h
 	je	Line35			; buckrog
 	cmp	ax,06000h
-	je	Line28			; burndesr
+	je	Line31			; burndesr
 	cmp	ax,07d16h
-	je	Line26			; carnival
+	je	Line29			; carnival
 	cmp	ax,08e07h
 	je	Line34			; catmouse
 	cmp	ax,037b7h
@@ -105,15 +98,15 @@ SSLINE:
 	cmp	ax,083e3h
 	je	Line28			; chuckwgn
 	cmp	ax,00828h
-	je	Line43			; clwndown
+	je	Line46			; clwndown
 	cmp	ax,0a01ch
-	je	Line43			; coln
+	je	Line46			; coln
 	cmp	ax,08d5ch
 	je	Line36			; colorbar
 	cmp	ax,02415h
 	je	Line36			; comandrd
 	cmp	ax,08698h
-	je	Line39			; combat
+	je	Line42			; combat
 	cmp	ax,0e90bh
 	je	Line32			; condor
 	cmp	ax,09f21h
@@ -125,7 +118,7 @@ SSLINE:
 	cmp	ax,0ce26h
 	je	Line48			; dethtrap
 	cmp	ax,0c814h
-	je	Line35			; dicepuzl
+	je	Line38			; dicepuzl
 	cmp	ax,0bd1fh
 	je	Line42			; dishastr
 	cmp	ax,03695h
@@ -133,7 +126,7 @@ SSLINE:
 	cmp	ax,0885ch
 	je	Line29			; dragster
 	cmp	ax,07cd6h
-	je	Line38			; drgndfnd
+	je	Line41			; drgndfnd
 	cmp	ax,02018h
 	je	Line35			; earthdie
 	cmp	ax,08234h
@@ -141,7 +134,7 @@ SSLINE:
 	cmp	ax,0ccd7h
 	je	Line40			; eggomana
 	cmp	ax,0f69ah
-	je	Line42B			; enduro
+	je	Line42			; enduro
 	cmp	ax,0ab1ch
 	je	Line52			; fighterp (* doesn't fix *)
 	cmp	ax,0ec02h
@@ -149,19 +142,19 @@ SSLINE:
 	cmp	ax,046b6h
 	je	Line70			; forest
 	cmp	ax,00cb2h
-	je	Line39			; front_rk
+	je	Line42			; front_rk
 	cmp	ax,01129h
 	je	Line48			; funwnumb
 	cmp	ax,0fdbfh
-	je	Line41			; harbresc
+	je	Line44			; harbresc
 	cmp	ax,058a6h
-	je	Line35			; holehunt
+	je	Line38			; holehunt
 	cmp	ax,08828h
-	je	Line31			; infiltrt
+	je	Line34			; infiltrt
 	cmp	ax,0a9c2h
 	je	Line18			; jawbreak
 	cmp	ax,04000h
-	je	Line28			; jnglfevr
+	je	Line31			; jnglfevr
 	cmp	ax,00a00h
 	je	Line40			; knightwn
 	cmp	ax,00b7ah
@@ -169,15 +162,15 @@ SSLINE:
 	cmp	ax,0ff2ch
 	je	Line28			; lasrvoly
 	cmp	ax,03769h
-	je	Line36			; malagai
+	je	Line38			; malagai
 	cmp	ax,06097h
 	je	Line44			; marinwar
 	cmp	ax,00264h
-	je	Line38			; mastbuld
+	je	Line41			; mastbuld
 	cmp	ax,0dc54h
 	je	Line60			; misn3000
 	cmp	ax,07c2bh
-	je	Line83			; motocros
+	je	Line86			; motocros
 	cmp	ax,0877fh
 	je	Line43			; mousetrp
 	cmp	ax,02bc1h
@@ -189,11 +182,11 @@ SSLINE:
 	cmp	ax,00194h
 	je	Line36			; othello
 	cmp	ax,054f5h
-	je	Line59			; parachut
+	je	Line62			; parachut
 	cmp	ax,00fc5h
-	je	Line28			; packong
+	je	Line31			; packong
 	cmp	ax,045aeh
-	je	Line60			; phantomt
+	je	Line65			; phantomt
 	cmp	ax,09f1eh
 	je	Line36			; pacman
 	cmp	ax,0187dh
@@ -211,7 +204,7 @@ SSLINE:
 	cmp	ax,02462h
 	je	Line36			; smurfres
 	cmp	ax,02697h
-	je	Line50			; snalsqrl
+	je	Line52			; snalsqrl
 	cmp	ax,07044h
 	je	Line38			; solarfox
 	cmp	ax,06373h
@@ -239,33 +232,55 @@ SSLINE:
 	cmp	ax,08000h
 	je	Line60			; surfprds
 	cmp	ax,070c4h
-	je	Line9			; survlrun
+	je	Line37			; survlrun
 	cmp	ax,0cbe1h
-	je	Line39			; tacscan
+	je	Line42			; tacscan
 	cmp	ax,046d8h
 	je	Line34			; tanksbut
 	cmp	ax,01866h
-	je	Line38			; tapeworm
+	je	Line41			; tapeworm
 	cmp	ax,079cfh
-	je	Line40			; timewarp
+	je	Line43			; timewarp
 	cmp	ax,08822h
 	je	Line24			; ufopatrl
 	cmp	ax,08272h
 	je	Line48			; univchos
 	cmp	ax,0811h
-	je	Line42			; walker
+	je	Line45			; walker
 	cmp	ax,00de3h
 	je	Line34			; wallball
 	cmp	ax,044dch
 	je	Line37			; xenophob
 	cmp	ax,096a1h
-	je	Line28			; xevious
+	je	Line31			; xevious
 	cmp	ax,062d5h
 	je	Line34			; zoofun
 	cmp	ax,0f5b3h
 	je	Line34			; starempr
 	cmp	ax,05317h
 	je	Line36			; reactor
+	cmp	ax,03cfah
+	je	Line50			; congbong
+	cmp	ax,08e4dh
+	je	Line36			; gijoe
+	cmp	ax,04d67h
+	je	Line41			; towerinf
+	cmp	ax,05e7eh
+	je	Line36			; vidolymp
+	cmp	ax,0e446h
+	je	Line36			; dethstar
+	cmp	ax,0c831h
+	je	Line40			; tutank
+	cmp	ax,05653h
+	je	Line38			; qbrtqube
+	cmp	ax,0fce0h
+	je	Line36			; montzrev
+	cmp	ax,09379h
+	je	Line36			; toothpro
+	cmp	ax,0dd61h
+	je	Line42			; endro_tw
+	cmp	ax,0e35eh
+	je	Line36			; riverp
 
 
 	jmp	SSTR			; process Timer1 requests
@@ -274,9 +289,6 @@ SSLINE:
 ; *
 ; * start line setting handlers *
 ; *
-
-Line9:	mov	[CFirst],9
-	jmp	SSTR
 
 Line18:	mov	[CFirst],18
 	jmp	SSTR
@@ -344,6 +356,12 @@ Line43:	mov	[CFirst],43
 Line44:	mov	[CFirst],44
 	jmp	SSTR
 
+Line45:	mov	[CFirst],45
+	jmp	SSTR
+
+Line46:	mov	[CFirst],46
+	jmp	SSTR
+
 Line48:	mov	[CFirst],48
 	jmp	SSTR
 
@@ -362,13 +380,28 @@ Line59:	mov	[CFirst],59
 Line60:	mov	[CFirst],60
 	jmp	SSTR
 
+Line62:	mov	[CFirst],62
+	jmp	SSTR
+
+Line63:	mov	[CFirst],63
+	jmp	SSTR
+
+Line65:	mov	[CFirst],65
+	jmp	SSTR
+
 Line69:	mov	[CFirst],69
 	jmp	SSTR
 
 Line70:	mov	[CFirst],70
 	jmp	SSTR
 
+Line73:	mov	[CFirst],73
+	jmp	SSTR
+
 Line83:	mov	[CFirst],83
+	jmp	SSTR
+
+Line86:	mov	[CFirst],86
 	jmp	SSTR
 
 ; *
@@ -384,6 +417,17 @@ SSTR:	cmp	ax,0bb3h
 	je	SetTimer1		; demohrby
 	cmp	ax,0c8bah
 	je	SetTimer1		; immies
+	cmp	ax,0ecc2h
+	je	SetTimer1		; beamride
+	cmp	ax,05653h
+	je	SetTimer1		; qbrtqube
+	cmp	ax,0f2d0h
+	je	SetTimer1		; humancan
+	cmp	ax,09ffah
+	je	SetTimer1		; radarlok
+	cmp	ax,0c525h
+	je	SetTimer1		; sprfootb
+
 
 	jmp	SSAU			; process audio requests
 
@@ -509,6 +553,14 @@ SSCB:	cmp	ax,0359ch
 	je	SSCB8			; mogulman (** it switches! **)
 	cmp	ax,0bf9ah
 	je	SSCB8			; roadrunr
+	cmp	ax,0ecc2h
+	je	SSCB8			; beamride
+	cmp	ax,0dd61h
+	je	SSCB8			; endro_tw
+	cmp	ax,0f69ah
+	je	SSCB8			; enduro
+
+
 
 	jmp	SetupScoreMode
 
@@ -532,26 +584,20 @@ NoScore:
 	jmp	SetupCPUOffset
 
 SetupCPUOffset:
-	cmp	ax,0a402h
-	je	CPU71			; spaceinv
 	cmp	ax,0e5beh
-	je	CPU69			; tetris26
-	cmp	ax,054f5h
-	je	CPU69			; parachut
+	je	CPU69			; tetris26 (it's supposed to jitter!)
 
 	jmp	SetupVBlankFrame
 
 CPU69:	mov	[CPUOffset],69
 	jmp	SetupVBlankFrame
 
-CPU71:	mov	[CPUOffset],71
-	jmp	SetupVBlankFrame
 
 SetupVBlankFrame:
 	cmp	ax,0bb9ch
 	je	SetVBlankFrame		; bowling
-	cmp	ax,0c771h
-	je	SetVBlankFrame		; tunlrunr
+	cmp	ax,0779fh
+	je	SetVBlankFrame		; bowlg_tw
 
 	jmp	SetupDone
 

@@ -11,12 +11,11 @@ Timer1: movzx	dx,[RCycles]		; normal timer, decrements at 1 per
 Timer0:
 	ret
 					; this decs at various rates
-ALIGN_ENTRY
-
 Timer2: movzx	dx,[RCycles]		; subtract cycles from tickcount
 	sub	[TickCnt],dx
 	jl	DecTimer		; if its < 0,decrement the timer
 	ret
+
 DecTimer:
 	mov	dx,[TRate]		; reset the tick counter
 	add	[TickCnt],dx
@@ -160,7 +159,7 @@ WriteHardware:
 WriteHardwarePage0:
 	and	si,0FFh
 	cmp	si,080h			; writing to the TIA ?
-	jl	WriteTIA
+	jl	WriteTIA		;   yes
 	mov	dl,[WByte]		; writing to RAM
 	mov	[RiotRam-128 + si],dl
 WHret:	ret
