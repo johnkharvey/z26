@@ -109,7 +109,6 @@ EXTRN _cli_ReloadStarpath:far
 
 EXTRN _KoolAide:byte
 EXTRN _RSBoxing:byte
-EXTRN _TIAZero:byte
 EXTRN _UserCFirst:word
 EXTRN _DefaultCFirst:word
 EXTRN _MPdirection:byte

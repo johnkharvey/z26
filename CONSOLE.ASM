@@ -1,6 +1,6 @@
 ; console.asm -- z26 console output routines
 
-; z26 is Copyright 1997-1999 by John Saeger and is a derived work with many
+; z26 is Copyright 1997-2001 by John Saeger and is a derived work with many
 ; contributors.  z26 is released subject to the terms and conditions of the 
 ; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ; Please see COPYING.TXT for details.
@@ -125,7 +125,7 @@ _put_point:
 	pop	cx		; return adr
 	pop	ax		; val
 	push	cx		; restore stack
-	mov	bx,100
+	mov	bx,10
 	xor	dx,dx
 	div	bx
 	push	dx		; save remainder
@@ -134,13 +134,7 @@ _put_point:
 	call	ConOut		; output decimal point
 	xor	eax,eax
 	pop	ax		; get remainder
-	cmp	ax,10
-	jae	pp1
-	push	ax
-	mov	al,'0'
-	call	ConOut
-	pop	ax
-pp1:	call	DPT		; output it
+	call	DPT		; output it
 
 	ret
 

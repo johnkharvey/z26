@@ -633,10 +633,8 @@ void gui_ShowScrollBar(int i, int j)
 	int barsize, bartop;
 
 	barsize = (rb-rt)/j;
-	bartop = rt + i*(barsize+1);
-
-	if (i) --bartop;
-
+	bartop = rt + i*(barsize);
+	
 	gui_FilledRectangle(rl-2,rt-2,rr+2,467,2);
 	gui_FilledRectangle(rl,bartop,rr,bartop+barsize,arrowcolor);
 }

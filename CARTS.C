@@ -12,7 +12,6 @@
 
 db KoolAide;		/* do KoolAide cheat */
 db RSBoxing;		/* do RSBOXING cheat */
-db TIAZero;		/* return zero for undocumented TIA reads */
 dw UserCFirst;		/* user requests game start here */
 dw DefaultCFirst;	/* emu recommends game start here */
 db MPdirection;		/* direction mouse must move to emulate paddle */
@@ -44,10 +43,6 @@ void RecognizeCart(void)
 	RSBoxing = 0;				/* RSBOXING cheat */
 	if (Lookup(Boxing)) RSBoxing = 1;
 	
-	TIAZero = 0;				/* games that want zero for undoc TIA reads */
-	if (Lookup(TIAZ)) TIAZero = 1;
-
-
 /* special starting lines */
 
 	UserCFirst = CFirst;

@@ -17,29 +17,6 @@ dd	Boxing[] = {
 	-1
 };
 
-dd	TIAZ[] = {
-	0xf7700bf0,	/* Berzerk (Atari) (PAL) [!].bin */
-	0x70882147,	/* Berzerk (Atari).bin */
-	0x2584da8d,	/* Berzerk (CCE).bin */
-	0xe44c244e,	/* Q-bert's Qubes [a].bin */
-	0xb8f2dca6,	/* Q-bert's Qubes.bin */
-	0x6a606373,	/* Rescue 1 Demo (This Planet Sucks proto) (PD).bin */
-	0x01052cc8,	/* Rescue 2 Demo (This Planet Sucks proto) (PD).bin */
-	0x6bcd1e4e,	/* Rescue 3 Demo (This Planet Sucks proto) (PD).bin */
-	0x767a2f36,	/* Rescue 4 Demo (This Planet Sucks proto) (PD).bin */
-	0x6da2cd05,	/* Space Canyon.bin */
-	0x88f336d3,	/* Space Cavern (Apollo) (1982) [!].bin */
-	0x9188c8ec,	/* This Planet Sucks (16K).bin */
-	0xc5dee875,	/* This Planet Sucks [a1].bin */
-	0x57a447af,	/* This Planet Sucks [a2].bin */
-	0xe45a0a5c,	/* This Planet Sucks.bin */
-	0xc2510159,	/* source.bin */
-	0xbfb935df,	/* abcdef.bin */
-
-
-	-1
-};
-
 dd	Paddle_0[] = {
 	0x56509fed,	/* Action Force - Action Man (Parker Bros) (PAL) [!].bin */
 	0x52549f12,	/* Action Force - Action Man (Parker Bros).bin */
@@ -227,6 +204,7 @@ dd	keypad_3[] = {
 	0xc1e0f57f,	/* Basic Programming_(eks).bin */
 	0x751a433a,	/* Game of Concentration_(eks).bin */
 	0x9afa761f,	/* Magicard (Life).bin */
+        0xf777a07d,     /* Holey Moley (Prototype) */
 	-1
 };
 

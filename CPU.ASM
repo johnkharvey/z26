@@ -57,6 +57,10 @@ _value		db	0
 _reg_a		db	0
 _flag_carry	db	0
 
+; state of the data bus -- used in cpuhand.asm
+
+BusState        db      0
+
 .code
 
 Init_CPU:
@@ -110,11 +114,19 @@ bumpclock macro
 read_bank macro
 	bumpclock
 	call	[ReadBank]
+        push    ax
+        mov     ax,[si]
+        mov     [BusState],al   ; remember last data on the bus
+        pop     ax
 	endm
 
 write_bank macro
 	bumpclock
 	call	[WriteBank]
+        push    ax
+        mov     al,[WByte]
+        mov     [BusState],al   ; remember last data on the bus
+        pop     ax
 	endm
 
 ;*

@@ -62,11 +62,12 @@ ReadTIA:
 	push	ax
         and     si,3fh
 	xor	al,al
-	cmp	[_TIAZero],0		; berzerk or qbrtqube?
-	jnz	ReadTIAZero		;   yes, start with zero
-
-        mov     ax,si                   ; set undefined bits depending
-                                        ;   on the address read
+        mov     al,[BusState]           ; set undefined bits depending
+                                        ;   on the state of the data bus
+        and     ax,07fh
+        test    si,08h
+        jnz     ReadTIAZero             ; collision register?
+        and     ax,03fh                 ;   yes, one more bit is defined
 
 ReadTIAZero:
         and     si,0fh
@@ -152,8 +153,8 @@ RILnoLightgun:
 	ret
 	
 ReadDumped:
-        cmp     [_Checksum],072902h             ; duckshot.bin requires
-        je      RetZero                         ;   always zero *EST*
+;        cmp     [_Checksum],072902h             ; duckshot.bin requires
+;        je      RetZero                         ;   always zero *EST*
         cmp	[_MouseBase],0ffh		; use mouse as paddles ?
 	jne	 RDump1				;   yes, check trigger
 	cmp	dword ptr [_PaddleGame],0	; if not a paddle game
