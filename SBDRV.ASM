@@ -37,7 +37,7 @@ SB_EXIT		equ	2
 
 .data?
 
-_BaseDMABuf	db	BUF_SIZE*2+2 dup (?)	; Sound Blaster DMA buffer
+;_BaseDMABuf	db	BUF_SIZE*2+2 dup (?)	; Sound Blaster DMA buffer
 
 .data
 

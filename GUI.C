@@ -827,7 +827,7 @@ gui_ShowList()
 	{
 		gui_ShowMainPanel();
 		gui_ShowZ26();
-		gui_ShowTitleBar("ROM List");
+		gui_ShowTitleBar(rom_list);
 		gui_ShowHelpButton();
 		gui_ShowCloseBox();
 		gui_ShowMainInset();

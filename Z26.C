@@ -3,7 +3,12 @@
 ** Copyright (C) 1997-1999 by John Saeger
 */
 
-#define version "z26 (1.27)"
+#define version "z26 (1.28)"
+
+#define rom_list "ROM List"
+/*
+#define rom_list "Preview version -- Please don't distribute."
+*/
 
 #include <dos.h>		/* _psp */
 #include <ctype.h>

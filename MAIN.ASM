@@ -111,9 +111,7 @@ xm1:
 	call	ModeXFlipPage		; done rendering, flip page display page
 	call	VS_PreGap		; this is how we ignore false triggers
 	call	VSync			; now look for vblank
-
 	call	ScanFrame
-
 
 ; the following kludge is needed for frogpond and congbong only
 
@@ -223,9 +221,12 @@ ScanNextLine:
 
 ScanBailOut:
 	mov	ax,[ScanLine]		; do emergency bail-out test
-	cmp	ax,500			; have we done way too many scan lines yet?
+	cmp	ax,[OurBailoutLine]	; too many lines?
 	jl	NDret			;   not yet
-	inc	[Frame]			;   yes, to the next frame (allow escape to work)
+	mov	ax,[BailoutLine]	;   yes, sharpen the test
+	mov	[OurBailoutLine],ax	
+DontSharpen:
+	inc	[Frame]			; to the next frame 
 	mov	[ScanLine],1
 
 NDret:  

@@ -1,12 +1,8 @@
 ; tiasnd.asm -- z26 sound generation routines
 ;               based on TIASound (c) 1996-1997 by Ron Fries
 
-; April 8, 1998 -- first release
-
-
-; This library is free software; you can redistribute it and/or modify it
-; under the terms of version 2 of the GNU Library General Public License.
-
+; 04-08-98 -- first release
+; 04-19-99 -- added sound queue
 
 ;*
 ;* generate a sequence of pseudo-random bits 511 bits long
@@ -36,7 +32,71 @@ _ShiftRegister9	endp
 
 sreg	dw	1		; initialize shift register to non-zero val
 
+.data
+
+; Initialze the bit patterns for the polynomials.
+
+; The 4bit and 5bit patterns are the identical ones used in the tia chip.
+; Though the patterns could be packed with 8 bits per byte, using only a
+; single bit per byte keeps the math simple, which is important for
+; efficient processing.
+
+Bit4	db	1,1,0,1,1,1,0,0,0,0,1,0,1,0,0
+Bit5	db	0,0,1,0,1,1,0,0,1,1,1,1,1,0,0,0,1,1,0,1,1,1,0,1,0,1,0,0,0,0,1
+
+; The 'Div by 31' counter is treated as another polynomial because of
+; the way it operates.  It does not have a 50% duty cycle, but instead
+; has a 13:18 ratio (of course, 13+18 = 31).  This could also be
+; implemented by using counters.
+
+Div31	db	0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0
+
+; Rather than have a table with 511 entries, we use a pseudo-random number
+; generator.
+
+;Bit9		db	511 dup (?)	;* moved to memory.asm
+
+; The sample output is treated as another divide by N counter.
+; For better accuracy, the Samp_n_cnt has a fixed binary decimal point
+; which has 8 binary digits to the right of the decimal point.
+
+Samp_n_cnt	dw	0
+Samp_n_max	dw	0
+
+SoundPointer	dw	0
+SoundByte	db	0,0		; pad to word just in case
+
+P4		db	2 dup (0)
+P5		db	2 dup (0)
+P9		dw	2 dup (0)
+AUDC		db	2 dup (0)
+AUDF		db	2 dup (0)
+AUDV		db	2 dup (0)
+Outvol		db	2 dup (0)
+Div_n_cnt 	db	2 dup (0)
+Div_n_max 	db	2 dup (0)
+
+
+SQ_MAX = 1024
+
+;SoundQ		db	(SQ_MAX + 2) dup (?)
+SQ_Input	dw	offset SoundQ	; point to next avail byte for storing
+SQ_Output	dw	offset SoundQ	; point to next avail byte for fetching
+SQ_Count	dw	0
+
+SQ_Top		dw	offset SoundQ + SQ_MAX + 1
+
+_sample_freq	dw	0
+_playback_freq	dw	0
+
+_new_val	dw	0
+
+prev_sample	dw	0
+next_sample	db	0
+
+
 .code
+
 
 ;*
 ;* handle the power-up initialization functions
@@ -73,17 +133,15 @@ TSI_1:	call	_ShiftRegister9
 	mov	word ptr  P5,ax
 	mov	dword ptr P9,eax
 
+	mov	[SQ_Input],offset SoundQ
+	mov	[SQ_Output],offset SoundQ
+	mov	[SQ_Count],0
+	mov	[SQ_Top],offset SoundQ + SQ_MAX + 1
+
 	ret	
+
 _Tia_sound_init	endp
 
-.data
-
-_new_val	dw	0
-
-prev_sample	dw	0
-next_sample	db	0
-
-.code
 
 ;*
 ;* update TIA sound registers
@@ -91,46 +149,42 @@ next_sample	db	0
 
 _Update_tia_sound	proc	near
 
-IFNDEF NEWTIA
-	movzx	bx,byte ptr TIAReg[di]
-	mov	al,TIAVal[di]
-ENDIF
-
-	sub	bx,21		; offset to AUDC
-	cmp	bx,5
-	ja	UTS_Done	; not an audio register
-	shl	bx,1
-
+	pushf
 	cli
 
-	jmp	cs:UTS_Jumptab[bx] ; see which channel has changed
-				   ; and update the register
+	jmp	cs:[UTS_Jumptab - 42 + 2*esi]	; and update the register
+						; note: base register offset is 21 within TIA
 
 UTS_Jumptab	label	word
-	dw	UTS_J0
-	dw	UTS_J1
-	dw	UTS_J2
-	dw	UTS_J3
-	dw	UTS_J4
-	dw	UTS_J5
+	dw	UTS_AUDC0
+	dw	UTS_AUDC1
+	dw	UTS_AUDF0
+	dw	UTS_AUDF1
+	dw	UTS_AUDV0
+	dw	UTS_AUDV1
 
-UTS_J0:	and	al,15
+UTS_AUDC0:
+	and	al,15
 	mov	[AUDC],al
 	jmp	UTS_Chan0
 
-UTS_J1:	and	al,15
+UTS_AUDC1:
+	and	al,15
 	mov	[AUDC+1],al
 	jmp	UTS_Chan1
 
-UTS_J2:	and	al,31
+UTS_AUDF0:
+	and	al,31
 	mov	[AUDF],al
 	jmp	UTS_Chan0
 
-UTS_J3:	and	al,31
+UTS_AUDF1:
+	and	al,31
 	mov	[AUDF+1],al
 	jmp	UTS_Chan1
 
-UTS_J4:	and	al,15
+UTS_AUDV0:
+	and	al,15
 	shl	al,3
 	mov	[AUDV],al
 
@@ -138,7 +192,8 @@ UTS_Chan0:
 	xor	bx,bx
 	jmp	UTS_RegSet
 
-UTS_J5:	and	al,15
+UTS_AUDV1:
+	and	al,15
 	shl	al,3
 	mov	[AUDV+1],al
 
@@ -182,13 +237,128 @@ UTS_rs3:mov	al,byte ptr _new_val
 				 	;     (otherwise complete previous)
 
 UTS_Done:
-
-	sti
-
+	popf
 	ret	
 
 _Update_tia_sound	endp
 
+
+;*
+;* macro to put byte in al in the sound queue
+;* always make sure SQ_Count < SQ_MAX before calling
+;*
+
+SQ_Store macro
+local done
+
+	mov	si,[SQ_Input]
+	mov	[si],al
+	inc	si
+	inc	[SQ_Count]
+	cmp	si,[SQ_Top]
+	jb	done
+	mov	si,offset SoundQ
+done:
+	mov	[SQ_Input],si
+
+	endm
+
+;*
+;* macro to fetch byte from sound queue into al
+;* always make sure SQ_Count nonzero before calling
+;*
+
+SQ_Fetch macro
+local done
+
+	dec	[SQ_Count]
+	mov	si,[SQ_Output]
+	mov	al,[si]
+	inc	si
+	cmp	si,[SQ_Top]
+	jb	done
+	mov	si,offset SoundQ
+done:
+	mov	[SQ_Output],si
+
+	endm
+
+
+;*
+;* Process a sound interrupt
+;*
+
+_Tia_process	proc	near
+
+	pushf
+	cli
+
+	mov	cx,BUF_SIZE/2		; # of bytes
+
+	mov	si,[_DMABuf]
+	add	si,[_DMABufToLoad]	; address of buffer to fill
+	mov	[SoundPointer],si
+
+SoundFillLoop:
+	cmp	[SQ_Count],0		; anything in the sound queue?
+	jz	RemainingSoundBytes	;   no, go generate
+	SQ_Fetch			;   yes, get a byte
+	mov	si,[SoundPointer]	
+	mov	[si],al			; put it in soundblaster buffer
+	inc	[SoundPointer]
+	dec	cx			; more room in soundblaster buffer?
+	jz	SoundBufferFull		;   no, we're done
+	jmp	SoundFillLoop		;   yes, see if more bytes in queue
+
+RemainingSoundBytes:
+	call	_FillSoundBuffer	; generate sound into the soundblaster buffer
+
+SoundBufferFull:
+	popf
+	ret
+
+_Tia_process endp
+
+
+;*
+;* put a byte in the sound queue
+;*
+
+_QueueSoundByte proc near
+
+	cmp	[_quiet],0		; doing sound at all?
+	jnz	DontQueueAnything	;   no
+	cmp	[_Sb_init],0		; SoundBlaster initialized ?
+	jz	DontQueueAnything	;   no
+	cmp	[_SoundMode],2		; forcing slow speed ?
+	jne	QueueIt			;   no
+	test	[ScanLine],1		; on an odd scan line?
+	jz	DontQueueAnything	;   no, skip this line
+
+QueueIt:
+	pushf				;   yes, save state of interrupts
+	cli
+
+	cmp	[SQ_Count],SQ_MAX	; sound queue already full?
+	jae	SoundQueueFull		;   yes, don't queue anything
+	mov	cx,1
+	mov	[SoundPointer],offset SoundByte
+	call	_FillSoundBuffer	;   no, generate a single sound byte
+	mov	al,[SoundByte]
+	SQ_Store			; put it in the sound queue
+
+SoundQueueFull:
+	popf				; restore state of interrupts
+
+DontQueueAnything:
+	ret
+
+_QueueSoundByte endp
+
+
+;*
+;* Fill the output buffer with the sound output based on the TIA chip parameters.
+;*
 
 inc_mod macro	op1,op2
 local done
@@ -200,18 +370,10 @@ local done
 done:
 	endm
 
-;*
-;* Fill the output buffer with the sound output based on the TIA chip parameters.
-;*
 
-
-_Tia_process	proc	near
-
-	mov	cx,BUF_SIZE/2		; # of bytes
-
-	mov	si,[_DMABuf]
-	add	si,[_DMABufToLoad]	; address of buffer to fill
-	mov	[SoundPointer],si
+_FillSoundBuffer proc near
+	pushf
+	cli
 
 	movzx	dx,[_dsp]		; do digital signal processing flag
 
@@ -362,55 +524,9 @@ TP_ProcessDone:
 	dec	cx			; one less byte to do
 	jnz	TP_ProcessLoop
 
+	popf
 	ret	
-_Tia_process	endp
 
-.data
+_FillSoundBuffer endp
 
-; Initialze the bit patterns for the polynomials.
-
-; The 4bit and 5bit patterns are the identical ones used in the tia chip.
-; Though the patterns could be packed with 8 bits per byte, using only a
-; single bit per byte keeps the math simple, which is important for
-; efficient processing.
-
-Bit4	db	1,1,0,1,1,1,0,0,0,0,1,0,1,0,0
-Bit5	db	0,0,1,0,1,1,0,0,1,1,1,1,1,0,0,0,1,1,0,1,1,1,0,1,0,1,0,0,0,0,1
-
-; The 'Div by 31' counter is treated as another polynomial because of
-; the way it operates.  It does not have a 50% duty cycle, but instead
-; has a 13:18 ratio (of course, 13+18 = 31).  This could also be
-; implemented by using counters.
-
-Div31	db	0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0
-
-; Rather than have a table with 511 entries, we use a pseudo-random number
-; generator.
-
-;Bit9		db	511 dup (?)	;* moved to memory.asm
-
-; The sample output is treated as another divide by N counter.
-; For better accuracy, the Samp_n_cnt has a fixed binary decimal point
-; which has 8 binary digits to the right of the decimal point.
-
-Samp_n_cnt	dw	0
-Samp_n_max	dw	0
-
-SoundPointer	dw	0
-
-P4		db	2 dup (0)
-P5		db	2 dup (0)
-P9		dw	2 dup (0)
-AUDC		db	2 dup (0)
-AUDF		db	2 dup (0)
-AUDV		db	2 dup (0)
-Outvol		db	2 dup (0)
-Div_n_cnt 	db	2 dup (0)
-Div_n_max 	db	2 dup (0)
-
-_sample_freq	dw	0
-_playback_freq	dw	0
-
-
-.code
 

@@ -17,7 +17,6 @@ EXTRN _CartRom:byte
 
 	include defs.asm		; our definitions
 	include init.asm		; initialized data
-	include memory.asm		; RIOT ram, cart ROM, & optional stack
 
 	include console.asm		; console output
 	include msg.asm			; messages
@@ -48,5 +47,7 @@ EXTRN _CartRom:byte
 	include joy.asm			; joystick routines
 	include sound.asm		; PC speaker support
 	include pcx.asm			; Ronnie Greene's PCX file dumper
+
+	include memory.asm		; RIOT ram, cart ROM, & optional stack
 
 	END	start   

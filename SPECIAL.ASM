@@ -1,3 +1,23 @@
+.data
+
+BailoutLine	dw	0
+
+LongTable label dword
+	dd	07a01ch		; coln
+	dd	06a939h		; opensesm
+	dd	06fc86h		; seamnstr
+	dd	0726efh		; spact_tw
+	dd	06f551h		; spactunl
+	dd	03e5beh		; tetris26
+	dd	-1
+
+
+
+.code
+
+
+
+
 ;*
 ;* do special setup for recognized cartridges
 ;*
@@ -233,6 +253,8 @@ SSTALL:
 	cmp	eax,07d2f5h		; spachase
 	je	SetMedium
 	cmp	eax,06f551h		; spactunl
+	je	SetTall
+	cmp	eax,0726efh		; spact_tw
 	je	SetTall
 	cmp	eax,0d0cc0h		; spikpeak
 	je	SetMedium
@@ -523,6 +545,8 @@ LineTable label byte
 	db	35
 	dd	0fdbfh			; harbresc
 	db	40
+	dd	01cb8ach		; ikariwar
+	db	56
 	dd	07c8bah			; immies
 	db	24
 	dd	039318h			; indy500
@@ -692,7 +716,7 @@ LineTable label byte
 	dd	06373h			; spidrman
 	db	32
 	dd	00cc0h			; spikpeak
-	db	49
+	db	43
 	dd	06df79h			; spitfire
 	db	35
 	dd	0109a6dh		; sprcobra
@@ -763,6 +787,8 @@ LineTable label byte
 	db	47
 	dd	07bfc2h			; walldfnd
 	db	38
+;	dd	0cbf85h			; wingwar
+;	db	51
 	dd	07f832h			; wordzapr
 	db	33
 	dd	0776e4h			; worldend
@@ -783,11 +809,14 @@ LineTable label byte
 ;*
 
 SSPADDLE:
+
 	cmp	eax,078387h		; actionmn
 	je	SPG0
 	cmp	eax,054e06h		; bachelor
 	je	SPG0
 	cmp	eax,055706h		; bachlrtt
+	je	SPG0
+	cmp	eax,062e00h		; beatem
 	je	SPG0
 	cmp	eax,03b06fh		; blakjack
 	je	SPG0
@@ -813,9 +842,13 @@ SSPADDLE:
 	je	SPG0
 ;	cmp	eax,079f28h		; mangia
 ;	je	SPG0
+	cmp	eax,8929fh		; mpong10
+	je	SPG0
 	cmp	eax,06d7fch		; muscmach
 	je	SPG0
 	cmp	eax,03c030h		; nightdrv
+	je	SPG0
+	cmp	eax,061d00h		; philly
 	je	SPG0
 	cmp	eax,07844bh		; picnic
 	je	SPG0
@@ -959,14 +992,26 @@ NoScore:
 SetP1Hard:
 	cmp	ax,094a9h
 	je	SP1HARD
-	jmp	SetupDone
+	jmp	SetupLong
 
 SP1HARD:
 	mov	dl,[_IOPortB]		; p1 hard
 	or	dl,128
 	mov	[_IOPortB],dl
+	jmp	SetupLong
+
+
+SetupLong:
+	mov	si,offset LongTable
+	call	SSFIND
+	cmp	edx,-1			; entry found ?
+	je	NotLong			;   no, short game
+	mov	[BailoutLine],340
 	jmp	SetupDone
 
+NotLong:
+	mov	[BailoutLine],270
+	jmp	SetupDone
 
 SetupDone:
 	ret

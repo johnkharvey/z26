@@ -19,10 +19,10 @@ ReadRIOTTab label word
 	dw	ReadTimerIntReg		; 287h Read Timer Interrupt Register
 
 WriteRIOTTab label word
-;	dw	WriteNothing		; 290h
-;	dw	WriteNothing		; 291h
-;	dw	WriteNothing		; 292h
-;	dw	WriteNothing		; 293h
+;	dw	WriteNothing		; 290h \
+;	dw	WriteNothing		; 291h  \  were commented out
+;	dw	WriteNothing		; 292h  /
+;	dw	WriteNothing		; 293h /
 
 	dw	SetRIOTTimer1		; 294h
 	dw	SetRIOTTimer8		; 295h
@@ -36,8 +36,6 @@ WriteRIOTTab label word
 ;*
 
 ReadRIOT:
-	cmp	si,0280h
-	jb	ReadFF			; ozone
 	and	esi,07h
 	jmp	[ReadRIOTTab + esi*2]
 
@@ -64,7 +62,7 @@ WriteRIOT:
 	test	si,014h
 	jz	WriteNothing
 
-	and	esi,03h
+	and	esi,03h			; was 3
 	jmp	[WriteRIOTTab + esi*2]
 	
 

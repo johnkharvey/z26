@@ -24,6 +24,8 @@ TIADisplay	db	320 dup (?)	; Display as currently setup
 _Ram		db	2048 dup (?)	; extra ram
 
 Bit9		db	511 dup (?)	; for sound generation
+SoundQ		db	(SQ_MAX + 2) dup (?)
+_BaseDMABuf	db	BUF_SIZE*2+2 dup (?)	; Sound Blaster DMA buffer
 
 ModeXBuffer	db	320+64 dup (?)	; for ModeX line rendering (a little extra here)
 

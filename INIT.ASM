@@ -20,6 +20,9 @@ BottomLine	dw	0		; was 36+200 bottom line of display
 OldCFirst	dw	0		; remember original CFirst
 					; (for homing the display)
 
+OurBailoutLine	dw	1000		; initial bailout line
+					; we fine tune it if exceeded
+
 DefaultCFirst	dw	0ffffh		; recommended start of game
 UserCFirst	dw	0ffffh		; remember what user specified (if anything)
 
@@ -140,9 +143,6 @@ VBlanking	dd	-1		; 0 if vblanking, -1 otherwise
 VBlank		db	0		; VBlank flag
 VSyncFlag	db	0		; VSync flag
 
-Ret0F		db	0Fh
-RetWd		db	0		; byte returned from collision read
-
 ;*** keep these in order ***
 
 DumpPorts	db	0,0,0,0		; Input ports (inp0..3)
@@ -228,6 +228,9 @@ InitData:
 	call	InitTIA
 
 
+	mov	[OurBailoutLine],1000
+
+
 	mov	[BlasterLoopCount],0
 	mov	[InTextMode],0
 
@@ -297,8 +300,6 @@ InitData:
 	mov	[VBlanking],-1
 	mov	[VBlank],0
 	mov	[VSyncFlag],0
-	mov	[Ret0F],0fh
-	mov	[RetWd],0
 	mov	dword ptr [DumpPorts],0
 	mov	word ptr [InputLatch],08080h
 

@@ -43,6 +43,7 @@ ENDIF
 
 	endm
       
+
 readsx	macro	op1,op2		; sign extended
 	mov	si,op2
 	call	[ReadBank]
@@ -55,6 +56,7 @@ ENDIF
 
 	endm
 
+
 readzx	macro	op1,op2		; zero extended
 	mov	si,op2
 	call	[ReadBank]
@@ -66,6 +68,7 @@ ELSE
 ENDIF
 
 	endm
+
 
 write	macro	op1,op2		; write memory
 	mov	si,op2
@@ -162,6 +165,7 @@ pagechange macro
 	bumpclock
 M1:
 	endm
+
 
 readaddress macro		; read data in bx -> bx
 	and	bx,0ffh		; must be in page zero

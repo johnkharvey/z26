@@ -5,7 +5,7 @@
 .data
 
 TRIGMAX =	240			; (guardian)  max val for charge triggers
-TRIGMIN =	22			; (solrstrm)  min val for charge triggers
+TRIGMIN =	1;22			; (solrstrm)  min val for charge triggers
 
 ChargeCounter	dd	-1		; # of lines capacitors have been charging
 
@@ -56,9 +56,14 @@ PaddleTriggerDown0:
 	movzx	esi,[_KeyBase]		; trigger to modify
 	mov	edx,[PaddleRepeat]
 	shr	edx,1
-	cmp	[ChargeTrigger0 + esi*4],TRIGMIN
-	jb	PTRet
+;	cmp	[ChargeTrigger0 + esi*4],TRIGMIN
+;	jb	PTRet
+;	sub	[ChargeTrigger0 + 4*esi],edx
+
 	sub	[ChargeTrigger0 + 4*esi],edx
+	jge	PTRet
+	add	[ChargeTrigger0 + 4*esi],edx
+
 PTRet:	pop	esi
 	ret
 

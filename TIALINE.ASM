@@ -661,6 +661,9 @@ nTIALineTo:
 	pop	es			; es gets restored before returning
 					; to C program
 
+	call	_QueueSoundByte		; put another 2 bytes in the sound queue
+	call	_QueueSoundByte
+
 	mov	bx,[ScanLine]
 	cmp	bx,[TopLine]		; line before first displayable?
 	jb	nTIANoGenerate		;   yes, don't render
