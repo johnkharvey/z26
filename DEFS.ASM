@@ -67,39 +67,6 @@ TGMissile0 = 		32		; Bit for M0
 TGCollisionReset = 	128		; Bit for collision reset here
 
 
-;control key definitions
-
-KeyEsc	=		1		; ESC (Quit to DOS)
-
-KeyF1	=		03Bh		; F1  (Reset)
-KeyF2	=		03Ch		; F2  (Select)
-KeyF3	=		03Dh		; F3  (unassigned)
-KeyF4	=		03Eh		; F4  (unassigned)
-KeyF5	=		03Fh		; F5  (unassigned)
-KeyF6	=		040h		; F6  (unassigned)
-KeyF7	=		041h		; F7  (unassigned)
-KeyF8	=		042h		; F8  (unassigned)
-KeyF9	=		043h		; F9  (Black and White)
-KeyF10	=		044h		; F10 (Color)
-
-KeyLeft	=		04Bh		; Left arrow
-KeyRight =		04Dh		; Right	arrow
-KeyUp =			048h		; Up arrow
-KeyDown	=		050h		; Down arrow
-KeySpace =		039H		; Space Bar (Fire)
-
-;KeyRAlt	=		038h		; Right	Alt (fire)
-
-KeyZ =			02Ch		; Z (P2	left)
-KeyX =			02Dh		; X (P2	right)
-KeyC =			02Eh		; C (P2	down)
-KeyF =			021h		; F (P2	Up)
-KeyG =			022h		; G (P2	Fire)
-
-KeyP =			019H		; P (pause game)
-KeyEnter =		01CH		; Enter (resume game)
-
-
 ; displacements into TIAColourTable
 
 TCTPF =			1		;playfield

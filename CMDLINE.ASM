@@ -111,7 +111,7 @@ XLoop:	mov	bl,[si]
 SetupSpecial:
 	cmp	ax,0f69ah		; Enduro
 	jne	SS1
-	mov	[CFirst],30		; first display line
+	mov	[CFirst],42		; first display line
 	jmp	SetupDone
 
 SS1:	cmp	ax,08387h
@@ -226,8 +226,6 @@ CMNoRetrace:
 CMTimer1:
 	mov	[TimerVec],offset Timer1 ; force Timer1
 	jmp	CLSkip
-	
-
 
 ; we didn't see a filename string
 
@@ -236,6 +234,12 @@ CLDoNoFile:
 	mov	dx,offset CopyRight
 	mov	ah,9
 	int	MSDOS			; output the copyright msg
+	mov	dx,offset Cred1
+	mov	ah,9
+	int	MSDOS
+	mov	dx,offset Cred2
+	mov	ah,9
+	int	MSDOS
 	mov	dx,offset Msg0
 	mov	ah,9
 	int	MSDOS			; output a message
@@ -257,6 +261,9 @@ CLDoNoFile:
 	mov	dx,offset Msg6
 	mov	ah,9
 	int	MSDOS			; output a message
+	mov	dx,offset Msg6a
+	mov	ah,9
+	int	MSDOS
 	mov	dx,offset Msg7
 	mov	ah,9
 	int	MSDOS			; output a message
@@ -283,7 +290,9 @@ CLDoNoFile:
 .CEND
 .DATASEGMENT
 
-CopyRight	db	13,10,'z26 -- An Atari 2600 emulator (0.81)',13,10,10,'Copyright (C) 1997 by John Saeger',13,10,10,'Based on A26 version 0.15 by Paul Robson.',13,10,10,'$'
+CopyRight	db	13,10,'z26 -- An Atari 2600 emulator (0.82)',13,10,'Copyright (C) 1997 by John Saeger',13,10,10,'$'
+Cred1		db	'Based on A26 version 0.15 by Paul Robson.',13,10,'$'
+Cred2		db	'PCX screen capture is by Ronnie Greene.',13,10,10,'$'
 Msg0		db	'   F1 -- reset',13,10,'$'
 Msg1		db	'   F2 -- select',13,10,'$'
 Msg2		db	'   F9 -- black and white',13,10,'$'
@@ -291,6 +300,7 @@ Msg3		db	'  F10 -- color',13,10,'$'
 Msg4		db	'SPACE -- fire',13,10,'$'
 Msg5		db	'    p -- pause game',13,10,'$'
 Msg6		db	'ENTER -- resume game',13,10,'$'
+Msg6a		db	'    = -- PCX screen capture',13,10,'$'
 Msg7		db	'  ESC -- quit game',13,10,10,'$'
 
 Msg8		db	'Command Line Switches (put before filename)',13,10,10,'$'

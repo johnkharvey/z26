@@ -3,26 +3,30 @@ PAGE 66,132
 ; z26 -- Atari 2600 emulator
 ; Copyright (C) 1997 by John Saeger
 
-; Based on A26 version 0.15 by Paul Robson.  Thanks Paul!
+; Based on A26 version 0.15 by Paul Robson.
+; PCX Screen Dump code by Ronnie Greene.
 
-; 01-09-97  --	first version
-;		(adapted from version 0.15 of Paul Robson's A26)
-
-; 08-28-97  --  (0.8) first released version
-; 11-14-97  --  moved copyright notice to display when no filename is entered
-; 11-14-97  --  added -r option to not wait for vertical retrace (flat out)
-; 11-14-97  --  change player 0 fire key to space bar
-; 11-14-97  --  added p for pause, enter to resume
-; 11-15-97  --  added F9 for B/W F10 for color & fix Starmaster
-; 11-17-97  --  add a help screen if no filename entered
-; 11-18-97  --  modified TIAWrap macro to set Hmoves to negative color clocks to zero
-;               (fixed left gun on Atlantis)
-; 11-18-97  --  decided to go to .EXE file format from now on
+; 01-09-97  --	first version -- adapted from version 0.15 of Paul Robson's A26
+; 08-28-97  --  (0.8)  first released version
+; 11-14-97  --  (0.81) moved copyright notice to display when no filename is entered
+; 11-14-97  --  (0.81) added -r option to not wait for vertical retrace (flat out)
+; 11-14-97  --  (0.81) change player 0 fire key to space bar
+; 11-14-97  --  (0.81) added p for pause, enter to resume
+; 11-15-97  --  (0.81) added F9 for B/W F10 for color & fix Starmaster
+; 11-17-97  --  (0.81) add a help screen if no filename entered
+; 11-18-97  --  (0.81) modified TIAWrap macro
+;		       now sets Hmoves to negative color clocks to zero
+;                      (fixed left gun on Atlantis)
+; 11-18-97  --  (0.81) decided to go to .EXE file format from now on
+; 11-22-97  --  (0.82) changed mind about .EXE file
+; 11-22-97  --  (0.82) new palette (Atlantis now has bluish water)
+; 11-22-97  --  (0.82) incorporated Ronnie Greene's PCX screen capture code
+; 11-22-97  --  (0.82) make Enduro copyright notice show up
 
 
 ; assembly time definitions
 
-;comfile =		1		; build a COM file 
+comfile =		1		; build a COM file
 memcheats =		1		; cheat	on 16-bit reads
 ;dotiming =		1		; generate timing blips
 
@@ -40,7 +44,7 @@ ENDIF
 .386					; allow 32-bit instructions
 
 .CODESEGMENT
-IFDEF comfile
+IFDEF comfile				; .COM files get program origin
 	org	0100h			; remember CP/M
 ENDIF   
 entry:	jmp	start			; jump around our data
@@ -64,6 +68,7 @@ entry:	jmp	start			; jump around our data
 	include tia.asm			; <-- the main machine -- * start here *
 	include tiahand.asm		; TIA register handlers
 	include tiabuf.asm		; TIA buffer management stuff
+	include Pcxwrite.asm		; PCX file dumper
 
 .CEND
 

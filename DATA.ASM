@@ -145,15 +145,10 @@ VDBlEn		db   0			; Buffer for Ball Vertical Delay Enable
 
 ALIGN 4
 
-		db 160 dup (0)		; for writes with neg clock
 TIADisplay	db 320 dup (0)		; Display as currently setup
-
 TIAScanLine	dw	0		; Scanline
-
 TIAWritePointer dw	0		; Write to TIA Buffer pointer
-
 TIAFrameSkip	dw	-1		; zero if frame skipped
-
 TIACollide	dw	0		; Collision flag word.
 
 ALIGN 4
@@ -480,133 +475,3 @@ Cycles	db    7, 6, 2, 8, 3, 3, 5, 5, 3, 2, 2, 2, 4, 4, 6, 6  ; 0
 	db    2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7  ; f
 
 
-TIAVGATable db 7,7,7	; 1c1c1c
-      db 22,22,22	; 595959
-      db 36,36,36	; 929292
-      db 47,47,47	; bcbcbc
-      db 54,54,54	; d9d9d9
-      db 59,59,59	; ececec
-      db 62,62,62	; f8f8f8
-      db 63,63,63	; ffffff	8/8
-      db 23,8,1		; 5e2304
-      db 41,17,5	; a54716
-      db 56,30,8	; e37820
-      db 63,42,7	; ffab1d
-      db 63,51,13	; ffce34
-      db 63,57,20	; ffe651
-      db 63,62,29	; fff977
-      db 63,63,38	; ffff98	8/8
-      db 28,7,4		; 721e11
-      db 44,14,8	; b33a20
-      db 56,26,8	; e36920
-      db 63,35,9	; ff8c25
-      db 63,43,14	; ffae38
-      db 63,49,22	; ffc559
-      db 63,53,33	; ffd587
-      db 63,57,40	; ffe4a1	8/8
-      db 31,6,3		; 7e1a0d
-      db 50,8,6		; c82119
-      db 59,14,14	; ec3b38
-      db 63,24,24	; fc6161
-      db 63,31,31	; ff7f7e
-      db 63,39,39	; ff9d9e
-      db 63,46,47	; ffb9bd
-      db 63,49,51	; ffc7ce	8/8
-      db 14,4,27	; 3b136d
-      db 34,10,35	; 8b2a8c
-      db 46,14,46	; b938ba
-      db 54,17,55	; db47dd
-      db 61,23,61	; f45ff5
-      db 63,30,63	; fe7afd
-      db 63,37,63	; ff95fd
-      db 63,41,63	; ffa4ff	8/8
-      db 16,2,33	; 400984
-      db 28,9,39	; 70249d
-      db 41,16,48	; a441c3
-      db 52,21,59	; d054ed
-      db 58,27,63	; e96dff
-      db 62,34,63	; f88aff
-      db 63,40,63	; fea1ff
-      db 63,42,63	; feabff	8/8
-      db 16,2,43	; 420aad
-      db 25,10,52	; 6428d0
-      db 35,18,53	; 8d4bd4
-      db 44,22,59	; b058ec
-      db 49,26,63	; c56bff
-      db 52,32,63	; d183ff
-      db 54,39,63	; db9dff
-      db 55,42,63	; dfaaff	8/8
-      db 1,9,41		; 626a5
-      db 9,15,53	; 263dd4
-      db 19,22,59	; 4f5aee
-      db 25,29,63	; 6575ff
-      db 32,36,63	; 8091ff
-      db 37,42,63	; 97a9ff
-      db 43,47,63	; afbeff
-      db 48,50,63	; c0cbff	8/8
-      db 8,6,40		; 2218a0
-      db 18,15,49	; 483ec7
-      db 24,22,59	; 6159ec
-      db 30,29,63	; 7a74ff
-      db 36,35,63	; 918eff
-      db 41,40,63	; a5a3ff
-      db 46,46,63	; b8b8ff
-      db 48,48,63	; c0c2ff	8/8
-      db 7,14,29	; 1d3876
-      db 7,23,43	; 1c5cac
-      db 12,33,51	; 3286cf
-      db 19,42,59	; 4ea8ec
-      db 28,49,63	; 70c7ff
-      db 36,54,63	; 93dbff
-      db 43,57,63	; afe4ff
-      db 48,58,63	; c3e9ff	8/8
-      db 14,20,0	; 395202
-      db 16,30,4	; 417a12
-      db 18,39,11	; 4a9f2e
-      db 23,47,21	; 5cbd55
-      db 26,56,30	; 69e27a
-      db 31,62,35	; 7cfa8d
-      db 38,63,41	; 9affa6
-      db 43,63,45	; adffb6	8/8
-      db 3,21,2		; d540a
-      db 4,31,3		; 137d0f
-      db 6,41,5		; 19a514
-      db 7,50,6		; 1ec919
-      db 17,57,11	; 47e42d
-      db 30,61,19	; 78f74d
-      db 38,63,30	; 9aff7a
-      db 44,63,38	; b2ff9a	8/8
-      db 1,20,3		; 5530e
-      db 1,29,5		; 77714
-      db 2,38,6		; 99b1a
-      db 18,49,7	; 48c41f
-      db 35,58,9	; 8fe924
-      db 42,63,16	; a8fc41
-      db 50,63,27	; c9ff6e
-      db 55,63,32	; dcff81	8/8
-      db 1,15,5		; 73f15
-      db 11,23,7	; 2d5f1e
-      db 22,32,9	; 598324
-      db 32,40,11	; 82a12e
-      db 42,48,14	; a9c13a
-      db 49,54,17	; c4d945
-      db 57,60,19	; e4f04e
-      db 60,63,20	; f2ff53	8/8
-      db 9,14,0		; 243803
-      db 20,21,6	; 51541b
-      db 37,32,13	; 978135
-      db 48,41,15	; c2a73e
-      db 54,48,15	; dbc03d
-      db 56,54,13	; e2d836
-      db 59,60,22	; eff258
-      db 62,63,31	; fbff7d	8/8
-      db 22,7,1		; 581f05
-      db 35,14,4	; 8d3a13
-      db 45,25,9	; b56427
-      db 52,33,14	; d0853a
-      db 59,40,19	; eda04e
-      db 63,45,23	; fcb75c
-      db 63,49,28	; ffc671
-      db 63,50,32	; ffcb83	8/8
-
-      
