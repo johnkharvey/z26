@@ -67,6 +67,8 @@ STUP_4:
 	mov	eax,1000000
 	call	_Delay			; let monitor sync
 
+	call	_ProgramDSP		; start DMA
+
 	call	VSync
 
 	call	_GetTime		; start time for frame timer
@@ -107,14 +109,12 @@ PausedLoop:
 PauseDMA:
 	cmp	[_Sb_init],0		; SoundBlaster initialized ?
 	jz	PDRET			;   no, just return
-	call	_SilenceBuffer		;   yes, fill buffer with silence
-;	call	_PauseDMA		;   yes, pause DMA
+;	call	_SilenceBuffer		;   yes, fill buffer with silence
 PDRET:	ret
 
 ContinueDMA:
 	cmp	[_Sb_init],0		; SoundBlaster initialized ?
 	jz	CDRET			;   no, just return
-;	call	_ContinueDMA		;   yes, continue DMA
 CDRET:	ret
 
 

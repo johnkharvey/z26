@@ -118,6 +118,14 @@ PAGE 66,132
 ;                       NDI timing done by 8253 hardware timer
 ;                       more precise frame timer
 ;                       non-linear palette (generally brighter)
+;
+; (1.02)  May  4, 1998  move _ProgramDSP (start SB DMA) to after graphics init
+;			(may help distortion on some systems)
+;
+;			don't fill buffer with silence at startup
+;			(this CAUSES a click)
+;
+;			silence buffer when game paused
 
 
 ; assembly time definitions

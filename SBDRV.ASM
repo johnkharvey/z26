@@ -355,6 +355,9 @@ WriteDSPBusy:
 	out	dx,al			; send the data
 	ret
 
+
+IFDEF compileoldcode
+
 ;*
 ;* SilenceBuffer()
 ;*
@@ -366,6 +369,8 @@ _SilenceBuffer:
 	mov	di,[_DMABuf]
 	rep	stosb			; Fill buffer
 	ret
+
+ENDIF
 
 
 ;*
@@ -575,6 +580,9 @@ get_irq:
 
 _ProgramDSP:
 
+	pushf
+	cli
+
 	mov	ah,0D1h			;Speaker on
 	call	send_dsp		;Send it
 	mov	ah,40h			;Set time constant
@@ -596,6 +604,8 @@ _ProgramDSP:
 
 SendDSPCommand:
 	call	send_dsp		;Send it
+
+	popf
 
 	ret				;Done
 
@@ -629,6 +639,9 @@ BaseOk:	mov	[_sbDMAOffset],ax
 ;*
 
 _ProgramDMA:
+
+	pushf
+	cli
 
 	mov	ch,[_sbDMAChan8Bit]	;preset DMA channel
 
@@ -679,24 +692,8 @@ _ProgramDMA:
 
 	mov	al,ch			;Channel
 	out	dma_mask,al		;re-enable DMA
-	ret
 
-
-;*
-;* StartBlaster() -- turn on the Sound Blaster
-;*                   called from SetupSoundBlaster
-;*
-
-_StartBlaster:
-
-	cli				; we have some serious business 
-					; to attend to
-
-	call	_SetISR			; like setting up the interrupt vector
-	call	_ProgramDMA		; programming the DMA controller
-	call	_ProgramDSP		; and the Sound Blaster DSP
-
-	sti				; back to *normal*
+	popf
 
 	ret
 
@@ -805,10 +802,19 @@ SSB_Slow:
 
 SSB_NoMsg:
 	call	_SetupDMABuffer		; setup DMA buffer (page change check)
-	call	_SilenceBuffer		; fill it with silence
+
+;	call	_SilenceBuffer		; fill it with silence
+
 	mov	[_DMABufToLoad],1	; init buffer flags
 	mov	[_gDMABufNowPlaying],0
-	call	_StartBlaster		; start up the Sound Blaster DMA & ISR
+
+
+	call	_SetISR			; set up the interrupt vector
+	call	_ProgramDMA		; program the DMA controller
+
+					; do _ProgramDSP (turn on DMA) at last minute
+
+
 	mov	[_Sb_init],1		; mark Sound Blaster in use
 SSB_Done:
 	xor	ax,ax			; normal return

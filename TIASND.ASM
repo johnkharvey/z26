@@ -347,6 +347,11 @@ TP_Ch0done:
 	mov	al,[Outvol+0]
 	add	al,[Outvol+1]		; sum the channels
 
+	cmp	[GamePaused],0		; if game paused
+	jz	TP_NoSilence
+	mov	al,080h			; fill buffer with silence
+TP_NoSilence:
+
 	cmp	[_dsp],0		; doing digital signal processing ?
 	je	TP_ProcessDone		;   no, just store it
 	mov	[next_sample],al	;   yes, take edge off square wave
