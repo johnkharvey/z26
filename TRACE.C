@@ -29,6 +29,12 @@ dd frame;
 dw line;
 db cycle;
 dw BL_Pos, M0_Pos, M1_Pos, P0_Pos, P1_Pos;
+dw BL_Mot, M0_Mot, M1_Mot, P0_Mot, P1_Mot;
+
+dw P2_R0, P2_R1, P2_R2, P2_R3, P2_R4, P2_R5, P2_R6, P2_R7;
+db P2_F0, P2_F1, P2_F2, P2_F3, P2_F4, P2_F5, P2_F6, P2_F7;
+
+db VD0, VD1;
 
 
 enum {_imp, _ac, _rel, _imm, _abs, _abs_x, _abs_y, _zero, _zero_x, _zero_y, _ind, _ind_x, _ind_y};
@@ -77,6 +83,16 @@ void ShowDeep(int Now, int Prev, int Cycle)
 void ShowVeryDeep()
 {
 	fprintf(log,"<-- very deep");
+}
+
+void ShowP2R(int adr)
+{
+	fprintf(log,"<-- P2R (%x)", adr);
+}
+
+void ShowP2W(int adr)
+{
+	fprintf(log,"<-- P2W (%x)", adr);
 }
 
 int ti_op8()
@@ -624,6 +640,7 @@ void ShowRegisters()
 	ti_showdec16(cycle*3-68);
 	ti_showstr(") ");
 
+
 	ti_showstr("(");
 	ti_showdec16((P0_Pos-68+5)%160);
 	ti_showstr(" ");
@@ -636,11 +653,74 @@ void ShowRegisters()
 	ti_showdec16((BL_Pos-68+4)%160);
 	ti_showstr(") ");
 
-	ti_showstr(" ");
 /*
+	ti_showstr("(");
+	ti_showhex8(P0_Mot);
+	ti_showstr(" ");
+	ti_showhex8(P1_Mot);
+	ti_showstr(" ");
+	ti_showhex8(M0_Mot);
+	ti_showstr(" ");
+	ti_showhex8(M1_Mot);
+	ti_showstr(" ");
+	ti_showhex8(BL_Mot);
+	ti_showstr(") ");
+*/
+/*
+	ti_showstr(" ");
 	ti_showhex32(timer);
 	ti_showstr("  ");
 */
+/*
+	ti_showstr("(");
+	ti_showhex16(P2_R0);
+	ti_showstr(" ");
+	ti_showhex16(P2_R1);
+	ti_showstr(" ");
+	ti_showhex16(P2_R2);
+	ti_showstr(" ");
+	ti_showhex16(P2_R3);
+	ti_showstr(" ");
+	ti_showhex16(P2_R4);
+	ti_showstr(") ");
+
+	ti_showstr("(");
+	ti_showhex8(P2_F0);
+	ti_showstr(" ");
+	ti_showhex8(P2_F1);
+	ti_showstr(" ");
+	ti_showhex8(P2_F2);
+	ti_showstr(" ");
+	ti_showhex8(P2_F3);
+	ti_showstr(" ");
+	ti_showhex8(P2_F4);
+	ti_showstr(") ");
+*/
+/*
+	ti_showstr("(");
+	ti_showhex16(P2_R5);
+	ti_showstr(" ");
+	ti_showhex16(P2_R6);
+	ti_showstr(" ");
+	ti_showhex16(P2_R7);
+	ti_showstr(") ");
+
+	ti_showstr("(");
+	ti_showhex8(P2_F5);
+	ti_showstr(" ");
+	ti_showhex8(P2_F6);
+	ti_showstr(" ");
+	ti_showhex8(P2_F7);
+	ti_showstr(") ");
+*/
+/*
+	ti_showstr("(");
+	ti_showhex8(VD0);
+	ti_showstr(" ");
+	ti_showhex8(VD1);
+	ti_showstr(") ");
+*/
+
 
 	if (cpu_NTest & 0x80)
 		ti_showstr("N");

@@ -17,16 +17,19 @@ NEWTIA = 1
 
 	include extern.asm		; external to ASM, internal to C
 	include defs.asm		; our definitions
+
 	include init.asm		; initialized data
+	include banks.asm		; bank switch code
+	include pitfall2.asm		; Pitfall II bank switch code
 
 	include console.asm		; console output
 	include msg.asm			; messages
 	include special.asm		; process special cartridges
+
 	include vga.asm			; VGA graphics initialization
 	include	modex.asm		; Mode-X support
 	include vsync.asm		; vertical synchronization
 	include trace.asm		; trace buffer stuff
-	include banks.asm		; bank switch code
 	include	riot.asm		; RIOT emu
 
 	include cpu.asm			; 6502 opcodes, macros and support routines

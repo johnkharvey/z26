@@ -77,7 +77,7 @@ Div_n_cnt 	db	2 dup (0)
 Div_n_max 	db	2 dup (0)
 
 
-SQ_MAX = 1024
+SQ_MAX = 1024	; 1024
 
 ;SoundQ		db	(SQ_MAX + 2) dup (?)
 SQ_Input	dw	offset SoundQ	; point to next avail byte for storing
@@ -208,6 +208,7 @@ UTS_RegSet:
 	mov	[_new_val],0		; indicate clock is zero so ...
 	mov	al,AUDV[bx]		; ... no processing will occur
 	mov	Outvol[bx],al		; and set output to selected volume
+
 	jmp	UTS_rs2
 
 UTS_rs1:
@@ -324,20 +325,8 @@ _Tia_process endp
 ;* put a byte in the sound queue
 ;*
 
-_QueueSoundByte proc near
-
-	cmp	[_quiet],0		; doing sound at all?
-	jnz	DontQueueAnything	;   no
-	cmp	[_Sb_init],0		; SoundBlaster initialized ?
-	jz	DontQueueAnything	;   no
-	cmp	[_SoundMode],2		; forcing slow speed ?
-	jne	QueueIt			;   no
-	test	[ScanLine],1		; on an odd scan line?
-	jz	DontQueueAnything	;   no, skip this line
-
-QueueIt:
-	pushf				;   yes, save state of interrupts
-	cli
+QueueSoundByte macro
+local SoundQueueFull
 
 	cmp	[SQ_Count],SQ_MAX	; sound queue already full?
 	jae	SoundQueueFull		;   yes, don't queue anything
@@ -348,12 +337,37 @@ QueueIt:
 	SQ_Store			; put it in the sound queue
 
 SoundQueueFull:
-	popf				; restore state of interrupts
+	endm
 
-DontQueueAnything:
+;*
+;* put sound bytes into buffer
+;* called once per scan line
+;*
+
+_QueueSoundBytes proc near
+
+	cmp	[_quiet],0		; doing sound at all?
+	jnz	DontQueueSound		;   no
+	cmp	[_Sb_init],0		; SoundBlaster initialized ?
+	jz	DontQueueSound		;   no
+
+	pushf
+	cli
+
+	QueueSoundByte
+
+	cmp	[_SoundMode],2		; forcing slow speed?
+	je	SoundDone		;   yes, skip second byte
+
+	QueueSoundByte
+
+SoundDone:
+	popf
+
+DontQueueSound:
 	ret
 
-_QueueSoundByte endp
+_QueueSoundBytes endp
 
 
 ;*
@@ -375,11 +389,13 @@ _FillSoundBuffer proc near
 	pushf
 	cli
 
-	movzx	dx,[_dsp]		; do digital signal processing flag
-
 TP_ProcessLoop:
 
 	xor	edi,edi			; process channel 0 first
+
+	cmp	[Pitfall2],0		; doing Pitfall2?
+	jz	TP_ProcessChannel	;   no
+	inc	edi			;   yes, only do channel 1
 
 TP_ProcessChannel:
 	cmp	[Div_n_cnt + di],1	; if div by N counter can count down ...
@@ -495,15 +511,28 @@ TP_Ch0done:
 	mov	ax,[Samp_n_max]		; ... adjust the sample counter
 	add	[Samp_n_cnt],ax
 
-	mov	al,[Outvol+0]
+	cmp	[Pitfall2],0		; running Pitfall 2?
+	jz	TP_NotPitfall2		;   no
+
+	call	Clock_Pitfall2		;   yes, clock P2 music clock (and build AUDV)
+	mov	al,[Outvol+1]		; channel 1
+	mov	ah,[P2_AUDV]
+	and	ah,15
+	shl	ah,3
+	add	al,ah			; add in Pitfall 2 AUDV byte
+	jmp	TP_Pitfall2_Done
+
+TP_NotPitfall2:
+	mov	al,[Outvol+0]		; not Pitfall 2, do normal mixing
 	add	al,[Outvol+1]		; sum the channels
 
+TP_Pitfall2_Done:
 	cmp	[GamePaused],0		; if game paused
 	jz	TP_NoSilence
 	mov	al,080h			; fill buffer with silence
 TP_NoSilence:
 
-	test	dx,dx			; doing digital signal processing ?
+	test	[_dsp],0ffh		; doing digital signal processing ?
 	jz	TP_ProcessDone		;   no, just store it
 	mov	[next_sample],al	;   yes, take edge off square wave
 	xor	ah,ah
@@ -511,7 +540,7 @@ TP_NoSilence:
 	shr	ax,1
 	mov	[prev_sample],ax	; dsp=2, scaled moving average
 
-	cmp	dx,1
+	cmp	[_dsp],1
 	jne	TP_ProcessDone
 	movzx	si,[next_sample]	; dsp=1, simple moving average
 	mov	[prev_sample],si

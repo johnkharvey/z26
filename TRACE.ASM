@@ -9,13 +9,15 @@
 
 PUBLIC _ReallyReadROM
 
+ALIGN 16
+
 _ReallyReadROM proc far
 
 	push	si
 	mov	si,[_cpu_MAR]
 
 	call	[ReadBank]
-	mov	al,byte ptr[si]
+	mov	al,[si]
 	mov	[_cpu_Rbyte],al
 
 	pop	si
@@ -23,6 +25,7 @@ _ReallyReadROM proc far
 	ret
 _ReallyReadROM endp
 
+ALIGN 16
 
 TraceInstruction:
 
@@ -52,6 +55,22 @@ TraceInstruction:
 	mov	ax,[P1_Position]
 	mov	[_P1_Pos],ax
 
+	mov	ax,[BL_Motion]
+	mov	[_BL_Mot],ax
+	mov	ax,[M0_Motion]
+	mov	[_M0_Mot],ax
+	mov	ax,[M1_Motion]
+	mov	[_M1_Mot],ax
+	mov	ax,[P0_Motion]
+	mov	[_P0_Mot],ax
+	mov	ax,[P1_Motion]
+	mov	[_P1_Mot],ax
+
+	mov	al,[TIA+VDELP0]
+	mov	[_VD0],al
+	mov	al,[TIA+VDELP1]
+	mov	[_VD1],al
+
 	mov	ax,[reg_pc]
 	mov	[_cpu_pc],ax
 	and	[_cpu_pc],01fffh
@@ -73,6 +92,41 @@ TraceInstruction:
 	mov	[_cpu_I],al
 	mov	al,[flag_B]
 	mov	[_cpu_B],al
+
+	mov	ax,word ptr [P2_Counters]
+	mov	[_P2_R0],ax
+	mov	ax,word ptr [P2_Counters+2]
+	mov	[_P2_R1],ax
+	mov	ax,word ptr [P2_Counters+4]
+	mov	[_P2_R2],ax
+	mov	ax,word ptr [P2_Counters+6]
+	mov	[_P2_R3],ax
+	mov	ax,word ptr [P2_Counters+8]
+	mov	[_P2_R4],ax
+	mov	ax,word ptr [P2_Counters+10]
+	mov	[_P2_R5],ax
+	mov	ax,word ptr [P2_Counters+12]
+	mov	[_P2_R6],ax
+	mov	ax,word ptr [P2_Counters+14]
+	mov	[_P2_R7],ax
+
+	mov	al,[P2_Flags]
+	mov	[_P2_F0],al
+	mov	al,[P2_Flags+1]
+	mov	[_P2_F1],al
+	mov	al,[P2_Flags+2]
+	mov	[_P2_F2],al
+	mov	al,[P2_Flags+3]
+	mov	[_P2_F3],al
+	mov	al,[P2_Flags+4]
+	mov	[_P2_F4],al
+	mov	al,[P2_Flags+5]
+	mov	[_P2_F5],al
+	mov	al,[P2_Flags+6]
+	mov	[_P2_F6],al
+	mov	al,[P2_Flags+7]
+	mov	[_P2_F7],al
+
 
 	call	_ShowRegisters
 	call	_ShowInstruction

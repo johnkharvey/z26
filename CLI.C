@@ -27,6 +27,7 @@ int cli_LoadROM(unsigned char *p)
 		*p++ = ch;
 		Checksum += ch;
 		++CartSize;
+		if (CartSize > 32768) break;
 	}
 
 	fclose(fp);
@@ -217,11 +218,19 @@ cli_CommandLine(int argc, char *argv[])
 		exit(1);
 	}
 
+	if (CartSize > 32768)
+	{
+		printf("Unsupported file.");
+		exit(1);
+	}
+
 	if (DoChecksum)
 	{
 		printf("%lx checksum\n", Checksum);
-		printf("%d bytes", CartSize);
+		printf("%ld bytes", (long int) CartSize);
 		exit(1);
 	}
+
+
 }
 

@@ -991,14 +991,17 @@ WasntConfused:
 
 	cmp	[RClock],20
 	ja	HiBlank
+	cmp	[RClock],3
+	jbe	LoBlank
 
 DoBlank:
-	mov	[HBlanking],0		; set up the HMOVE blank
 	FixupMotionLow P0
 	FixupMotionLow P1
 	FixupMotionLow M0
 	FixupMotionLow M1
 	FixupMotionLow BL
+LoBlank:
+	mov	[HBlanking],0		; set up the HMOVE blank
 	call	doHMOVE
 	ret
 
@@ -1032,9 +1035,57 @@ NoMotion:
 
 H_RESBL:
 	GetObjectDelay BL
+
+
 	call	CatchUpPixels
 
 	PositionObject
+
+	cmp	[WeirdRESP],0
+	jz	NotWeird_RESBL
+
+	cmp	[HMOVE_Cycle],3		; handle crackpot
+	jne	Weird_RESBL_1
+	cmp	[BL_Motion],0
+	jne	Weird_RESBL_1
+	cmp	[RClock],6
+	jne	Weird_RESBL_1
+
+	mov	bx,227
+
+Weird_RESBL_1:
+	cmp	[HMOVE_Cycle],3		; handle holehunt
+	jne	Weird_RESBL_2
+	cmp	[BL_Motion],0
+	jne	Weird_RESBL_2
+	cmp	[RClock],9
+	jne	Weird_RESBL_2
+
+	mov	bx,69
+
+Weird_RESBL_2:
+	cmp	[HMOVE_Cycle],3		; handle robotank
+	jne	Weird_RESBL_3
+	cmp	[BL_Motion],0
+	jne	Weird_RESBL_3
+	cmp	[RClock],10
+	jne	Weird_RESBL_3
+
+	mov	bx,70
+
+Weird_RESBL_3:
+	cmp	[HMOVE_Cycle],3		; handle track
+	jne	Weird_RESBL_4
+	cmp	[BL_Motion],7
+	jne	Weird_RESBL_4
+	cmp	[RClock],11
+	jne	Weird_RESBL_4
+
+	mov	bx,224
+
+Weird_RESBL_4:
+NotWeird_RESBL:
+
 	mov	[TIA+RESBL],bl
 	mov	[BL_Position],bx
 
@@ -1047,6 +1098,20 @@ H_RESBL:
 
 H_RESP0:
 	GetObjectDelay P0
+	cmp	[WeirdRESP],0
+	jz	NotWeird_RESP0
+
+	cmp	[HMOVE_Cycle],3		; handle dbldragn
+	jne	Weird_RESP0_1
+	cmp	[P0_Motion],0
+	jne	Weird_RESP0_1
+	cmp	[RClock],22
+	jne	Weird_RESP0_1
+
+	mov	bx,74
+
+Weird_RESP0_1:
+NotWeird_RESP0:
 	push	bx			; save object position
 	mov	[P0_TripleFlag],al
 	call	CatchUpPixels
@@ -1111,6 +1176,21 @@ H_RESM1:
 	jnz	noRESM1			;   yes, don't position
 
 	GetObjectDelay M1
+
+	cmp	[WeirdRESP],0
+	jz	NotWeird_RESM1
+
+	cmp	[HMOVE_Cycle],3		; handle dbldragn, pitfall2
+	jne	Weird_RESM1_1
+	cmp	[M1_Motion],0
+	jne	Weird_RESM1_1
+	cmp	[RClock],6
+	jne	Weird_RESM1_1
+
+	mov	bx,227
+
+Weird_RESM1_1:
+NotWeird_RESM1:
 	push	bx			; save object position
 	mov	[M1_TripleFlag],al
 	call	CatchUpPixels

@@ -2,6 +2,45 @@
 
 ; 02-17-98  got Parker Bros Working and added TigerVision
 
+.data
+
+ALIGN 2
+
+ReadBank	dw	RBank4		; R/W vectors -- default to 4K cart
+WriteBank	dw	WBank4
+        
+RomBank		dw	0		; Rom bank pointer for F8 & F16
+
+; Parker Brother's ROM Slices
+
+PBSlice0	dw	0
+PBSlice1	dw	1*400h
+PBSlice2	dw	2*400h
+PBSlice3	dw	7*400h		; this one doesn't change
+					; points to 1K bank #7
+; Tigervision ROM Slices
+
+TVSlice0	dw	0
+TVSlice1	dw	3*800h		; this one doesn't change
+					; points to 2K bank #3
+; Tigervision 32 ROM Slices
+
+TVSlice032	dw	0
+TVSlice132	dw	15*800h		; this one doesn't change
+					; points to 2K bank #15
+; M-Network ROM Slices
+
+MNSlice0	dw	0
+MNSlice1	dw	7*800h		; this one doesn't change
+					; points to 2K bank #3
+; M-Network RAM Slices
+
+MNRamSlice	dw	0		; which 256 byte ram slice
+
+; global Pitfall2 flag 
+
+Pitfall2	db	0		; tell RIOT timer to clock the music
+
 .code
 
 ;*
@@ -9,6 +48,22 @@
 ;*
 
 SetupBanks:
+	mov	[ReadBank], offset RBank4
+	mov	[WriteBank], offset WBank4
+	mov	[RomBank],0
+	mov	[PBSlice0],0
+	mov	[PBSlice1],1*400h
+	mov	[PBSlice2],2*400h
+	mov	[PBSlice3],7*400h
+	mov	[TVSlice0],0
+	mov	[TVSlice1],3*800h
+	mov	[TVSlice032],0
+	mov	[TVSlice132],15*800h
+	mov	[MNSlice0],0
+	mov	[MNSlice1],7*800h
+	mov	[MNRamSlice],0
+	mov	[Pitfall2],0
+
 	mov	ax,[_CartSize]
 	cmp	ax,02000h
 	je	Set8kMode		; 8K cart
@@ -74,6 +129,7 @@ Set8kMode:
 	cmp	ax,0f815h
 	je	SFE			; robotank
 
+SetF8:
 	mov	[ReadBank], offset RBank8
 	mov	[WriteBank], offset WBank8
 
@@ -166,6 +222,8 @@ SetFatalRun:
 SetPitfallII:
 	mov	[ReadBank], offset RBank8P2
 	mov	[WriteBank], offset WBank8P2
+	mov	[RomBank],01000h	; don't know if this is needed...
+	mov	[Pitfall2],1		; tell RIOT to clock the music
 	ret
 
 
@@ -613,34 +671,6 @@ RBank8FE:
 
 
 WBank8FE:
-	FE_SetBank
-	test_hw_write
-	ret
-
-
-;*
-;* Pitfall 2 experimental 8K bankswitch scheme -- flat model
-;*
-
-P2_SetBank macro
-	push	bx
-	mov	bx,2000h
-	and	bx,si			; isolate bank bit from address
-;	xor	bx,2000h		; don't invert for Pitfall II
-	shr	bx,1			; position it
-	mov	[RomBank],bx		; this is our bank
-	pop	bx
-	endm
-
-
-RBank8P2:
-	FE_SetBank
-	test_hw_read
-	MapRomBank
-	ret
-
-
-WBank8P2:
 	FE_SetBank
 	test_hw_write
 	ret

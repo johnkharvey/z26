@@ -8,10 +8,69 @@
 ; CPU doesn't use cx, bp, di -- trashes ax, bx, dx, si
 
 .data
+ALIGN 2
+
+reg_pc		dw	0		; program counter (stored in DI)
+
+; the following two locations must be in this order and next to each other
+
+reg_a		db	0		; accumulator (stored in AL)
+flag_carry	db	0		; carry bit   (stored in AH)
+
+; the following two locations are padded with an extra byte 
+; to allow 16-bit access (see _index)
+
+reg_x		db	0		; x register
+		db	0
+reg_y		db	0		; y register
+		db	0
+
+reg_sp		db	0		; stack pointer
+
+; a value is stored in the following vars for later testing
+
+RZTest		db	0		; zero test value (Z set when 0)
+RNTest		db	0		; sign test value (N set when negative)
+
+; these vars hold the values of flags other than Z and N
+
+flag_D		db	0		; decimal flag
+flag_V		db	0		; overflow flag
+flag_I		db	0		; interrupt disable flag
+flag_B		db	0		; break flag
+
+; some temporaries for use by decimal arith and ARR
+
+_value		db	0
+_reg_a		db	0
+_flag_carry	db	0
+
+ALIGN 2
+
+RClock		db	0		; clock cycles
+RCycles		db	0		; cycles for this instruction
 
 jam_msg	db	'Halt ','$'
 
 .code
+
+Init_CPU:
+	mov	[reg_pc],0
+	mov	[reg_a],0
+	mov	[flag_carry],0
+	mov	word ptr [reg_x],0
+	mov	word ptr [reg_y],0
+	mov	[reg_sp],0
+	mov	[RZTest],0
+	mov	[RNTest],0
+	mov	[flag_D],0
+	mov	[flag_V],0
+	mov	[flag_I],0
+	mov	[flag_B],0
+	mov	[RClock],0
+	mov	[RCycles],0
+
+	ret
 
 SaveCPUState macro
 	push	ax

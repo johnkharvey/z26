@@ -46,10 +46,42 @@ SSGRPx:
 	mov	[GRPxDelay],1		; assume 1
 	cmp	eax,0736a0h		; spidrftr
 	je	SSGRP_M2
-	jmp	SSCFF
+	jmp	SSRESP
 
 SSGRP_M2:
 	mov	[GRPxDelay],-2
+	jmp	SSRESP
+
+;*
+;* process weird RESP requests
+;*
+
+SSRESP:
+	mov	[WeirdRESP],0
+	cmp	eax,1c5b2ah		; dbldragn
+	je	SSRESP_Weird
+	cmp	eax,12157eh		; pitfall2
+	je	SSRESP_Weird
+	cmp	eax,076289h		; crackpot
+	je	SSRESP_Weird
+	cmp	eax,0dad52h		; decathln
+	je	SSRESP_Weird
+	cmp	eax,07220fh		; dolphin
+	je	SSRESP_Weird
+	cmp	eax,0658a6h		; holehunt
+	je	SSRESP_Weird
+;	cmp	eax,0d1cd4h		; moonptrl
+;	je	SSRESP_Weird
+	cmp	eax,0cf815h		; robotank
+	je	SSRESP_Weird
+	cmp	eax,1d8b25h		; track
+	je	SSRESP_Weird
+	cmp	eax,07153bh		; tubybird
+	je	SSRESP_Weird
+	jmp	SSCFF
+
+SSRESP_Weird:
+	mov	[WeirdRESP],1
 	jmp	SSCFF
 
 ;*
@@ -182,12 +214,18 @@ SSTALL:
 	je	SetMedium
 	cmp	eax,0745aeh		; phantomt
 	je	SetTall
+	cmp	eax,1e3898h		; pickpile
+	je	SetTall
 	cmp	eax,084f0eh		; pharhcrs
 	je	SetMedium
 	cmp	eax,0759b0h		; pooyan
 	je	SetTall
 	cmp	eax,0d5653h		; qbrtqube
 	je	SetMedium
+	cmp	eax,0e5e28h		; robnhood
+	je	SetMedium
+	cmp	eax,07c82eh		; robofght
+	je	SetTall
 	cmp	eax,0da469h		; rocnrope
 	je	SetMedium
 	cmp	eax,07200ah		; saveship
@@ -221,6 +259,8 @@ SSTALL:
 	cmp	eax,0779cfh		; timewarp
 	je	SetMedium
 	cmp	eax,074d67h		; towerinf
+	je	SetMedium
+	cmp	eax,70d15h		; tps
 	je	SetMedium
 	cmp	eax,070811h		; walker
 	je	SetMedium
@@ -417,6 +457,8 @@ LineTable label byte
 	db	32
 	dd	016beh			; bibi
 	db	50
+	dd	075cafh			; birabira
+	db	32
 	dd	0bf6fh			; bobby
 	db	53
 	dd	072efah			; boing
@@ -511,6 +553,8 @@ LineTable label byte
 	db	27
 	dd	02902h			; duckshot
 	db	68
+	dd	0ccffeh			; dumbo
+	db	55
 	dd	02018h			; earthdie
 	db	36
 	dd	06ccd7h			; eggomana
@@ -553,6 +597,8 @@ LineTable label byte
 	db	43
 	dd	07325fh			; galaga
 	db	35
+	dd	13c58eh			; ghost2
+	db	58
 	dd	094b8h			; ghostman
 	db	33
 	dd	07104fh			; gigolo
@@ -587,6 +633,8 @@ LineTable label byte
 	db	33
 	dd	00a00h			; knightwn
 	db	40
+	dd	05d600h			; ladywdng
+	db	41
 	dd	00b7ah			; lasrgate
 	db	28
 	dd	0ff2ch			; lasrvoly
@@ -657,6 +705,8 @@ LineTable label byte
 	db	36
 	dd	0e89f9h			; phoenix
 	db	42
+	dd	1e3898h			; pickpile
+	db	45
 	dd	06ae6h			; piececke
 	db	49
 	dd	073c87h			; plantpat
@@ -681,6 +731,8 @@ LineTable label byte
 	db	36
 	dd	016bf9ah		; roadrunr
 	db	32
+	dd	0e5e28h			; robnhood
+	db	37
 	dd	0da469h			; rocnrope
 	db	38
 	dd	07ffd8h			; roomdoom
@@ -795,6 +847,8 @@ LineTable label byte
 	db	36
 	dd	04d67h			; towerinf
 	db	39
+	dd	07b179h			; traffic (vblank triggers frame)
+	db	0			
 	dd	08822h			; ufopatrl
 	db	26
 	dd	08272h			; univchos
@@ -972,6 +1026,8 @@ SSP:	cmp	[_PaletteNumber],0ffh	; did user specify a palette number ?
 	je	SSPAL
 	cmp	eax,0754f5h		; parachut
 	je	SSNTSC
+	cmp	eax,1e3898h		; pickpile
+	je	SSPAL
 	cmp	eax,070a3eh		; skihunt
 	je	SSPAL
 	cmp	eax,06a5f1h		; ski_run
@@ -1084,6 +1140,8 @@ SetupLong:
 	cmp	eax,06a939h	; *opensesm
 	je	BailoutLong
 	cmp	eax,07187dh	; pandchse
+	je	BailoutVeryLong
+	cmp	eax,1e3898h	; pickpile
 	je	BailoutVeryLong
 	cmp	eax,073c87h	; plantpat
 	je	BailoutVeryLong

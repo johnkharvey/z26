@@ -167,7 +167,7 @@ DefineObjectVars P1
 ;* TIA initialization code
 ;*
 
-InitTIA:
+Init_TIA:
 	mov	[ActiveObjects],0
 	mov	[PF_Table], offset PFClockToBitForward
 	mov	[BK_Color],0
@@ -669,8 +669,7 @@ nTIALineTo:
 	pop	es			; es gets restored before returning
 					; to C program
 
-	call	_QueueSoundByte		; put another 2 bytes in the sound queue
-	call	_QueueSoundByte
+	call	_QueueSoundBytes	; put another 2 bytes in the sound queue
 
 	mov	[HMOVE_Cycle],0		; forget where last HMOVE was (cosmic)
 	cmp	[M0_Confused],0

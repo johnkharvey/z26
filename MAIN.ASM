@@ -199,9 +199,6 @@ ReallyQuit:
 ScanFrame:
         mov	[DisplayPointer],0	; reset display pointer
 ScanFrameLoop:
-	mov	bx,offset TIABuffer
-	mov	[TIAWritePointer],bx
-	mov	dword ptr [bx],-1	;* a dword pointer *
 
 IFDEF NEWTIA
 	call	nTIALineTo

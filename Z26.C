@@ -8,12 +8,12 @@
 */
 
 
-#define version "z26 (1.29)"
+#define version "z26 (1.30)"
 
 #define rom_list "ROM List"
 
 /*
-#define rom_list "Preview version D -- Please don't distribute."
+#define rom_list "Preview version B -- Please don't distribute."
 */
 
 
@@ -27,7 +27,7 @@
 
 
 extern short int psp;		/* (data.asm) */
-extern int CartSize;
+extern unsigned int CartSize;
 extern long int Checksum;
 
 unsigned char CartRom[32770];

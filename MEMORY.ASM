@@ -4,11 +4,6 @@
 
 StartMemory	label	byte		; <- mark start of memory to be cleared
 
-TIABuffer	db 256 dup (?)		; TIA information buffer
-					; 128 just isn't big enough for some
-					; trashed games.
-
-
 KeyTable	db	128 dup (?)	; Key pressed table
 
 RiotRam		db	128 dup (?)	; RIOT ram (must be initially zero)
@@ -28,6 +23,16 @@ SoundQ		db	(SQ_MAX + 2) dup (?)
 _BaseDMABuf	db	BUF_SIZE*2+2 dup (?)	; Sound Blaster DMA buffer
 
 ModeXBuffer	db	320+64 dup (?)	; for ModeX line rendering (a little extra here)
+
+P2_Flags	db	8 dup (?)
+P2_Counters	db	16 dup (?)
+P2_Top		db	8 dup (?)
+P2_Bottom	db	8 dup (?)
+P2_Enable	db	8 dup (?)
+P2_Music_Top	dw	8 dup (?)
+P2_Music_Bottom	dw	8 dup (?)
+P2_Music_Count	dw	8 dup (?)
+
 
 EndMemory	label	byte		; <- mark end of memory to be cleared
 

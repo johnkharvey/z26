@@ -7,10 +7,11 @@
 ;* Otherwise blueprnt.bin doesn't come up and others as well.
 ;*
 
+START_TIME = 07fffh			; 03ffffh
+
 .data
 
-Timer		dd	03ffffh		; the RIOT Timer (03fffffffh)
-TimerFudge	dd	0		; fudge timer by this amount (frogpond)
+Timer		dd	START_TIME	; the RIOT Timer
 TimerReadVec	dw	ReadTimer1024	; timer read vector
 TimerByte	db	0		; a return value
 TimerIntReg	db	0		; Timer Interrupt Register
@@ -38,8 +39,7 @@ WriteRIOTTab label word
 
 
 Init_Riot:
-	mov	dword ptr [Timer],03ffffh
-	mov	dword ptr [TimerFudge],0
+	mov	dword ptr [Timer],START_TIME
 	mov	[TimerReadVec], offset ReadTimer1024
 	mov	[TimerByte],0
 	mov	[TimerIntReg],0
@@ -167,7 +167,7 @@ ReadTimerIntReg:
 ;* But another interrupt *does* come.  (Otherwise lockchse.bin fails.)
 ;*
 
-	and	[Timer],03ffffh		; (03ffffh) clear interrupt flag
+	and	[Timer],START_TIME	; clear interrupt flag
 	mov	si,offset TimerIntReg
 	ret
 
@@ -176,6 +176,9 @@ ReadTimerIntReg:
 ;*
 
 ClockRIOT macro
+local NoPF2
+
 	movzx	edx,[RCycles]		; # of cycles for this instruction
 	sub	[Timer],edx		; subtract from timer
+
 	endm
