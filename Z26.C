@@ -11,7 +11,7 @@
 
 
 
-#define version "z26 (1.52)"
+#define version "z26 (1.53)"
 
 /*
 #define version "Pre 1.52-A"

@@ -259,6 +259,7 @@ dd	BS_3[] = {
         0x36910e4d,     /* Frogger II - Threedeep! (PAL) */
         0xb8bb2361,     /* Gyruss (PAL) */
         0xd3669372,     /* Star Wars: Ewok Adventure (proto) */
+        0x6400d110,     /* Lord of the Rings: Journey to Rivendell (proto) */
         -1
 };
 
