@@ -55,8 +55,7 @@ vswait:	in	al,dx			; wait for vertical retrace
 	sti
 
 	neg	cx			; cx now has # of loops in horizontal retrace
-	imul	cx,3
-	shr	cx,1			; multiply by 1.5 for safety
+	imul	cx,2			; multiply by 2 for safety
 	mov	[NDILoops],cx		; save for NDI wait routine
 
 	pop	es

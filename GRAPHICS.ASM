@@ -59,13 +59,22 @@ RGBLoop:
 	mov	al,013h
 	int	010h
 	call	TIAPalette
-	
+
 	cmp	[_VideoMode],0		; doing ModeX ?
 	jz	GRRet			;   no
-	
-	call	ModeXInit		;   yes, call Erik's Init Routine
 
-GRRet:
+GRV1:	cmp	[_VideoMode],2		; doing Trixter 60Hz (mode 1 or 2) ?
+	ja	GRV2			;   no
+	call	Trixter60Hz		;   yes
+	mov	[_VideoMode],0		; pretend we're mode 13
+	jmp	GRRet
+
+GRV2:	sub	[_VideoMode],2
+	call	ModeXInit		;   yes, call Erik's Init Routine
+	jmp	GRRet
+
+
+GRRet:	
 	ret
 
 TIATextMode:
@@ -75,6 +84,87 @@ TIATextMode:
 	mov	ah,1			; turn cursor back on
 	mov	cx,0B0Ch
 	int	010h
+	ret
+
+VidOut	macro	op1,op2,op3
+	mov	dx,op1
+	mov	al,op2
+	out	dx,al
+	inc	dx
+	mov	al,op3
+	out	dx,al
+	endm
+
+CRTC	equ	03d4h			; CRT controller
+CRTMISC	equ	03c2h			; misc output
+CRTSEQ	equ	03c4h			; sequencer
+CRTGFX	equ	03ceh			; graphics
+
+
+; setup a 60Hz 320 by 200 chained video mode
+; courtesy of Jim Leonard (Trixter / Hornet)
+
+Trixter60Hz:
+
+	mov	dx,CRTSEQ
+	mov	ax,0100h		; synchronous reset
+	out	dx,ax			; asserted
+	
+	mov	dx,CRTMISC		; misc output
+
+	cmp	[_VideoMode],1
+	jne	Tr60a
+	mov	al,063h			; mode 1 -- 63=squished maybe
+	jmp	Tr60b			;           e3=squished definitely
+
+Tr60a:	mov	al,0e7h			; mode 2 -- 28 Mhz clock
+Tr60b:	out	dx,al
+
+	mov	dx,CRTSEQ
+	mov	ax,0300h		; restart sequencer
+	out	dx,ax			; running again
+
+	mov	dx,CRTC
+	mov	al,011h			; vertical retrace end
+	out	dx,al
+	inc	dx
+	in	al,dx
+	and	al,07fh
+	out	dx,al
+
+	cmp	[_VideoMode],1
+	jne	Tr60c
+					; * mode 1 *
+	VidOut	CRTC,   000h, 05fh	; horizontal total
+	VidOut	CRTC,   004h, 054h	; horizontal retrace start
+	VidOut	CRTC,   005h, 080h	; horizontal retrace end
+	jmp	Tr60d
+					; * mode 2 *
+Tr60c:	VidOut	CRTC,   000h, 06ch	; horizontal total
+	VidOut	CRTC,   004h, 05bh	; horizontal retrace start
+	VidOut	CRTC,   005h, 087h	; horizontal retrace end
+
+Tr60d:	VidOut	CRTC,   001h, 04fh	; horizontal display enable end
+	VidOut	CRTC,   002h, 050h	; horizontal blanking start
+	VidOut	CRTC,   003h, 082h	; horizontal blanking end
+	VidOut	CRTC,   006h, 00ah	; vertical total
+	VidOut	CRTC,   007h, 03eh	; overflow
+	VidOut	CRTC,   008h, 000h	; preset row scan
+	VidOut	CRTC,   009h, 041h	; maximum scan line
+	VidOut	CRTC,   010h, 0bah	; vertical retrace start
+	VidOut	CRTC,   011h, 08ch	; vertical retrace end
+	VidOut	CRTC,   012h, 08fh	; vertical display enable end
+	VidOut	CRTC,   013h, 028h	; offset (logical line width)
+	VidOut	CRTC,   014h, 040h	; underline location
+	VidOut	CRTC,   015h, 090h	; vertical blanking start
+	VidOut	CRTC,   016h, 008h	; vertical blanking end
+	VidOut	CRTC,   017h, 0a3h	; mode control
+	VidOut	CRTSEQ, 001h, 001h	; (1) clocking mode
+	VidOut	CRTSEQ, 003h, 000h	; map select
+	VidOut	CRTSEQ, 004h, 00eh	; memory mode
+	VidOut	CRTGFX, 005h, 040h	; graphics mode
+	VidOut	CRTGFX, 006h, 005h	; miscellaneous
+
 	ret
 
 ; *****************************************************************************

@@ -792,6 +792,7 @@ FastExit:
 ; *
 
 TIALineTo:
+;	mov	[ColumnBlank],0
 	mov	bx,[ScanLine]
 	cmp	bx,[TopLine]		;was 10
 	jb	TIANoGenerate
@@ -840,13 +841,14 @@ TIABlankLoop:
 	jne	XBlank			; X-mode ?
 	DoBlank4			;   no, do regular
 	DoBlank4
-	jmp	TIALoop
+	jmp	TIABlankDone
 
 XBlank:
 	X_DoBlank4			; do 8 blank columns in X-mode
 	X_DoBlank4
 
-ALIGN_ENTRY	; may not want to do this...
+TIABlankDone:
+;	mov	[ColumnBlank],0
 
 TIALoop:
 	cmp	[_VideoMode],0		; X-mode ?

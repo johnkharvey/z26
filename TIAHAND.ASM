@@ -421,7 +421,9 @@ TWret:	ret
 
 ALIGN_ENTRY
 
-TRHMov: xor	bx,bx			; bx is offset into registers
+TRHMov:
+;	mov	[ColumnBlank],8
+	xor	bx,bx			; bx is offset into registers
 					; (start counting at zero)
 					; (relavent registers start at 010h)
 					; (that's why we add 090h instead of 080h)
@@ -466,7 +468,9 @@ TIAUP1: pop	bp
 
 ALIGN_ENTRY
 
-TRHmvB: mov	bx,0
+TRHmvB: 
+;	mov	[ColumnBlank],8
+	mov	bx,0
 TRHMB1: mov	ah,TIA+TIAHmp0[bx]	; get the adjustment
 	sar	ah,4			; preserve sign
 	mov	al,TIA+TIAResp0[bx]

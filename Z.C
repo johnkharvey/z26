@@ -17,6 +17,7 @@
 ** (0.90)                new VGA sync based on vertical nondisplay interval
 ** (0.90)  Jan 23, 1998  multiple missiles -- fixed missile command!
 ** (0.90)  Jan 24, 1998  mid-line collisions -- freeway and oystron(!)
+** (0.91)  Feb  2, 1998  60 Hz refresh video modes
 */
 
 #include <stdio.h>		/* puts */
@@ -119,7 +120,7 @@ main()
 
   if (DoCopyright)
   {
-    puts("\n\nz26 -- An Atari 2600 emulator (0.90)");
+    puts("\n\nz26 -- An Atari 2600 emulator (0.91)");
     puts("Copyright (C) 1997-1998 by John Saeger\n");
 
     puts("Home Page:  http://www.whimsey.com/z26.html\n");
@@ -138,18 +139,21 @@ main()
     puts(" -s    -- show sound diagnostic messages");
     puts(" -f<n> -- run emulator for <n> frames and display timing results");
     puts(" -d<n> -- use digital signal processing on sound (1=low, 2=high)");
+    puts(" -v<n> -- video mode (1=60Hz, 2=60Hz narrow)");
     puts(" -c    -- show credits (please do!)\n\n");
     goto free_mem;
   }
 
   if (credits)
   {
-    puts("\nz26 is based on A26 version 0.15 (C) 1996 by Paul Robson (autismuk@aol.com).");
-    puts("A26 is the original \"small and fast\" DOS based Atari 2600 emulator.\n");
+    puts("\nz26 is based on A26 version 0.15 (C) 1996 by Paul Robson (autismuk@aol.com).\n");
 
     puts("PCX screen capture is (C) 1997 by Ronnie Greene (ender@abts.net).\n");
 
     puts("Atari 2600 sound emulation is (C) 1996 by Ron Fries (rfries@tcmail.frco.com).\n");
+
+    puts("60Hz chained video modes courtesy of Jim Leonard (Trixter / Hornet).");
+    puts("                                                 (trixter@hornet.org)\n");
 
     puts("z26 is provided without any warranty of any kind, either express or implied.");
     puts("Neither John Saeger, nor anyone who has worked on the code, may be held");
