@@ -367,3 +367,163 @@ dd	BS_8[] = {
 	-1
 };
 */
+
+dd	Phosphorescent[] = {
+  0xa7890826,  /* alien.bin */
+  0xacdb6441,  /* astroidc.bin */
+  0xd6baa6cf,  /* astroids.bin */
+  0x8b232fbb,  /* bachelor.bin */
+  0xd9c47532,  /* bachlrtt.bin */
+  0x98efb758,  /* basicprg.bin */
+  0x2e76744c,  /* beu11.bin */
+  0x16b1a362,  /* blueprnt.bin */
+  0x2c636eb6,  /* boing.bin */
+  0x5474d585,  /* buckrog.bin */
+  0x75bd9195,  /* cathouse.bin */
+  0x4323a078,  /* catmouse.bin */
+  0x1cb28465,  /* chinasyn.bin */
+  0xa01ebff4,  /* compumat.bin */
+  0x8fa212f4,  /* cosmcrep.bin */
+  0xbf933de2,  /* cosmswrm.bin */
+  0xd7036918,  /* crimlpur.bin */
+  0x00ba2d68,  /* darkcham.bin */
+  0x1d12e8c1,  /* demohrby.bin */
+  0xe77f6742,  /* dethstar.bin */
+  0x15d8e02b,  /* dethtrap.bin */
+  0xaebfd482,  /* dicepuzl.bin */
+  0x57f730ee,  /* dishastr.bin */
+  0xb87a10b7,  /* dm.bin */
+  0x00e44527,  /* docastle.bin */
+  0x7117e8a9,  /* drgndfnd.bin */
+  0xd36c9159,  /* entombed.bin */
+  0x05a357e7,  /* fathom.bin */
+  0xe8b1225f,  /* firespin.bin */
+  0x9d63d054,  /* forest.bin */
+  0x36910e4d,  /* frogger2.bin */
+  0x1ee7036e,  /* ghost2.bin */
+  0xa0794137,  /* gigolo.bin */
+  0x2bc25098,  /* gorf.bin */
+  0xb8bb2361,  /* gyruss.bin */
+  0xc39c7a29,  /* infiltrt.bin */
+  0xc4be9818,  /* iwantmom.bin */
+  0xde6d008e,  /* joust.bin */
+  0x714a692b,  /* knightwn.bin */
+  0xc09801fb,  /* ladywdng.bin */
+  0x67b79cd2,  /* malagai.bin */
+  0x421d090e,  /* minemnos.bin */
+  0x350c63ba,  /* minrvol2.bin */
+  0x80f5e00e,  /* misn3000.bin */
+  0xf48b6b4c,  /* misslcmd.bin */
+  0x393372e5,  /* motor.bin */
+  0x405464ee,  /* mousetrp.bin */
+  0x596160d3,  /* mrdo.bin */
+  0x80f09601,  /* mtnking.bin */
+  0xf2ab3c3b,  /* nightdrv.bin */
+  0x27e43843,  /* opensesm.bin */
+  0xfa07aa39,  /* pharhcrs.bin */
+  0x86bc321d,  /* phasor.bin */
+  0x91405d9c,  /* phasrpal.bin */
+  0xf723b8a6,  /* popeye.bin */
+  0xa36f7aa4,  /* qb217.bin */
+  0x85bc70de,  /* racquetb.bin */
+  0x2aace942,  /* robofght.bin */
+  0x5a21e1cb,  /* roboto.bin */
+  0x62171047,  /* roomdoom.bin */
+  0x55da122d,  /* rs_baseb.bin */
+  0x5b171752,  /* rs_footb.bin */
+  0x231e70a6,  /* spcrobot.bin */
+  0x39a5f247,  /* startrek.bin */
+  0x57b51249,  /* steltrak.bin */
+  0x14f2ef2a,  /* sudmopal.bin */
+  0xce9cd420,  /* suicdemo.bin */
+  0x9fd23f79,  /* suicdpal.bin */
+  0x51d72cee,  /* suicid23.bin */
+  0x9b4f27df,  /* suicide.bin */
+  0xce09fcd4,  /* swarcade.bin */
+  0x8c2f6264,  /* tacscan.bin */
+  0xaedb3c29,  /* tetris26.bin */
+  0x34132e52,  /* thundgrd.bin */
+  0xd9088807,  /* toothpro.bin */
+  0x9a46f393,  /* tricksht.bin */
+  0x29c93a2c,  /* venture.bin */
+  0x7b7921c3,  /* vg_steep.bin */
+  0x02969f95,  /* vg_survi.bin */
+  0x30eb4f7a,  /* vidlife4.bin */
+  0x266bd1b6,  /* vidlife.bin */
+  0xa0899305,  /* vidlifex.bin */
+  0x646d7ecb,  /* wallball.bin */
+  0x75a39600,  /* warplock.bin */
+  0x8973f4af,  /* xevious.bin */
+  0x897a5109,  /* yars.bin */
+  0x29ddddc1,  /* z26-2.bin */
+  0x19a6dd6a,  /* z26.bin */
+  0x7bb15e70,  /* asteroid.bin (PAL games) */
+  0xc1e0f57f,  /* basicprg.bin */
+  0x2d9fa0e8,  /* blueprnt.bin */
+  0x17b9b5bd,  /* chinasyn.bin */
+  0x835db16f,  /* csmswarm.bin */
+  0x01088310,  /* darkcham.bin */
+  0x1ef047f1,  /* gorf.bin */
+  0x525ee7e9,  /* gyruss.bin */
+  0xb7ae061d,  /* joust.bin */
+  0xf45b259c,  /* langfing.bin */
+  0x80f5e00e,  /* misn3000.bin */
+  0xa3ff7697,  /* misscomm.bin */
+  0x545dba81,  /* nghtdrvr.bin */
+  0xc87fc312,  /* popeye.bin */
+  0x2aace942,  /* raumrobo.bin */
+  0x79b7409f,  /* schutzdr.bin */
+  0x4c59992d,  /* trikshot.bin */
+  0x0e2fa6d9,  /* yarsrvng.bin */
+  0x5f818633,  /* Asteroids 2.bin */
+  0x76814d29,  /* Asteroids (Atari) (PAL) [!].bin */
+  0xb7ae110a,  /* Atari - CX-26091 - Joust (PAL).bin */
+  0xe9c904ad,  /* Atari - CX-26145 - Venture (PAL).bin */
+  0x5c44872b,  /* Big Move This Demo 2 (PD).bin */
+  0x2c5a14da,  /* CBS Electronics - Mouse Trap (PAL).bin */
+  0xd3fe7a71,  /* CBS Electronics - Venture (PAL).bin */
+  0x4d2d3b41,  /* CommaVid - Room of Doom (PAL - not sure).bin */
+  0xfec87e0d,  /* Confrontation.bin */
+  0x3207fed6,  /* Cosmic Swarm (4k).bin */
+  0xd3b1a2d4,  /* Cosmic Swarm (32 in 1) (PAL).bin */
+  0x830bb210,  /* Dark Mage (Supercharger) (PD).bin */
+  0xb214ab6b,  /* Dark_Mage_(4K).bin */
+  0x2843d776,  /* Frogger II - Threedeep!.bin */
+  0x9c5c953c,  /* Imagic - Trick Shot (PAL).bin */
+  0x3216c1bb,  /* James Bond 007.bin */
+  0x568a18cb,  /* John K Harvey's Equalizer (NTSC) (PD).bin */
+  0x0a0c9d67,  /* John K Harvey's Equalizer (PAL) (PD).bin */
+  0x3d77201b,  /* Journey Escape.bin */
+  0x99421574,  /* Mark's Sound Demo.BIN */
+  0xee63a2ad,  /* Missle Command (graphics hack).bin */
+  0xf438f25d,  /* Night Driver (4k).bin */
+  0x4b2fb9aa,  /* Scroller Demo (Bob Colbert) (PD).bin */
+  0x4c5736a9,  /* Spectravideo - Tape Worm (PAL).bin */
+  0xa3ef6b2a,  /* Starpath - Phaser Patrol [a].bin */
+  0xd7298b0b,  /* Starpath - Suicide Mission [a].bin */
+  0x8d873cc8,  /* Starsoft (Without S.S. Initiales on the Back Side) Billard (PAL).bin */
+  0x9fed8dab,  /* Starsoft (Without S.S. Initiales on the Back Side) Die Springteufel (PAL).bin */
+  0x9cdc81b6,  /* Stell-A-Sketch.bin */
+  0xd7818beb,  /* Super Futebol (CCE).bin */
+  0xc6b33c95,  /* TechnoVision - Pharaoh's Curse (PAL).bin */
+  0x63d00489,  /* Teddy Apple.bin */
+  0xc29e2e3a,  /* Tetris 2600 (Colin Hughes) [o].bin */
+  0xe03a1d85,  /* Universal Chaos (PAL).bin */
+  0x56c0f7f1,  /* Xevious (CCE).bin */
+  0x1ed37ebd,  /* Yar's Revenge (1).bin */
+  0x90ecad98,  /* Alien (CCE).bin */
+  0xf58ddf00,  /* Apples and Dolls (CCE).bin */
+  0xf5f8ffff,  /* Dancing Plate (PAL).bin */
+  0xa93dc2c1,  /* Green and Yellow Number 1 Demo 2 (PD).bin */
+  0x1e54c27f,  /* Green and Yellow Number 1 Demo (PD).bin */
+  0x93f996cd,  /* John K Harvey's Equalizer (NTSC) (PD) [a].bin */
+  0x5c161fe4,  /* Masters of the Universe - The Power of He-Man.bin */
+  0xcc486b15,  /* Moving Maze Demo (PD).bin */
+  0x07da7621,  /* ZZZ_UNK_A2600_rom_039.bin */
+  0x5e788eef,  /* ZZZ_UNK_A2600_rom_061.bin */
+  0x93f434be,  /* ZZZ_UNK_A2600_rom_072.bin */
+  0x98f16ea6,  /* ZZZ_UNK_A2600_rom_073.bin */
+  0x37cb87d8,  /* Blueprint (CBS Electronics) (PAL) [!].bin */
+  0x5c74d64e,  /* Fathom (1983) (Imagic) (PAL) [!].bin */
+  0x8da45a53  /* Hili Ball (Starsoft) (PAL) [!].bin */
+};

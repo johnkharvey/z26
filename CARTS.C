@@ -55,19 +55,20 @@ void RecognizeCart(void)
 	DefaultCFirst = 0xffff;
 
         if (crc == 0xe5314b6c) CFirst = 50;     /* aciddrop */
+	if (crc == 0x7b4eb49c) CFirst = 44;	/* pickpile */
+	if (crc == 0xbf0aac36) CFirst = 23;	/* chalenge */
+	if (crc == 0x2bcce2c8) CFirst = 24;	/* immies */
+	if (crc == 0xcbebf38e) CFirst = 40;	/* Sancho - Nightmare (PAL).bin */
+	if (crc == 0xd8777a3b) CFirst = 40;	/* Starsoft - Gefecht im All (PAL).bin */
+//	if (crc == 0xbf9da2b1) CFirst = 37;	/* Robin Hood (PAL) */
+//	if (crc == 0x4f40a18e) CFirst = 30;	/* air_raid */
+//	if (crc == 0x6f62a864) CFirst = 30;	/* grescape */
+
 	if (crc == 0xb17b62db) CFirst = 1;	/* Balthazar */
 	if (crc == 0xfa07aa39) CFirst = 0;	/* pharhcrs -- vblank triggers frame */
 	if (crc == 0xbcb42d2b) CFirst = 0;	/* traffic  -- vblank triggers frame */
 
-	if (crc == 0x4f40a18e) CFirst = 30;	/* air_raid */
-	if (crc == 0x6f62a864) CFirst = 30;	/* grescape */
-	if (crc == 0x7b4eb49c) CFirst = 44;	/* pickpile */
-	if (crc == 0xbf9da2b1) CFirst = 37;	/* Robin Hood (PAL) */
-
-/*        if (crc == 0xa01ebff4) CFirst = 54; */    /* CompuMate */
-
 	DefaultCFirst = CFirst;
-
 
 /* paddle games */
 
@@ -107,6 +108,16 @@ void RecognizeCart(void)
                         UserPaletteNumber = 0;
                 }
 	}
+
+/* phosphorescent games */
+
+	if (Phosphor <= 100)
+	{
+		if (Lookup(Phosphorescent))
+			Phosphor = 77;
+	}
+	else
+		Phosphor = 0;
 
 
 /* games that should be quiet on PC speaker */

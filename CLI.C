@@ -357,17 +357,38 @@ void cli_InterpretParm(char *p)
 	case 'n':	ShowLineCount = 1;		       break; /* *EST* */
         case 'i':       Mindlink = parm & 3;                   break; /* *EST* */
         case '4':       AllowAll4 = 1;                         break; /* *EST* */
-        case 'e':       EnableFastCopy = 1;                    break; /* *EST* */
+        case 'e':       if (parm == 0) 
+				Effect = 1;
+			else
+				Effect = parm;
+			break;
+	case 'f':	if (parm == 0)
+				Phosphor = 77;
+			else
+				Phosphor = parm;
+			break;
+
         case 'h':       MaxLines = parm;                       break; /* *EST* */
         case 'v':       if (parm < 10)
 			{
 				VideoMode = parm;
 				InWindow = 0;
+				TrueColor = 0;
+				break;
 			}
-			else
+			if (parm < 20)
 			{
 				VideoMode = parm % 10;
 				InWindow = 1;
+				TrueColor = 1;
+				break;
+			}
+			if (parm < 30)
+			{
+				VideoMode = parm % 10;
+				InWindow = 0;
+				TrueColor = 1;
+				break;
 			}
 			break;
 
@@ -445,13 +466,16 @@ void cli_ReadParms(void)
 }
 
 
+char FileName[260];
+
 void cli_CommandLine(int argc, char *argv[])
 {
 	long int i;
 	int cnt;
 	unsigned char *p;
 	char ROMLoaded = 0; char ROMSeen = 0;
-        char FileName[260];     /* to z26.c */
+//        char FileName[260];     /* to z26.c */
+	FILE *xfp;
 
         ShowFPS=0;              /* resets flag for displaying FPS count - move to GLOBALS.C for GUI */
 
@@ -502,6 +526,18 @@ void cli_CommandLine(int argc, char *argv[])
 	{
 		sprintf(msg, "%06lx checksum -- %08lx crc\n%ld bytes", Checksum, crc,(long int) CartSize);
 		srv_print(msg);
+
+//		exit(1);	/* delete comment before shipping ;-) */
+
+		xfp = fopen("z26.crc", "a");
+		if (xfp == NULL)
+			srv_print("Couldn't open CRC file.");
+		else
+		{
+			fprintf(xfp,"  0x%08lx,  /* %s */\n", crc, FileName);
+			fclose(xfp);
+		}
+
 		exit(1);
 	}
 

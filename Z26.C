@@ -32,50 +32,9 @@ char *default_arg[] = { "z26", "-r100000", "-f5000", "demonatk.bin" };
 
 extern void emulator();
 
-void ClearScreenBuffers()
-{
-        int i;
-
-        for (i=0; i<65000; i++)
-        {
-                RealScreenBuffer1[i] = 0;
-                RealScreenBuffer2[i] = 0;
-                RealScreenBuffer3[i] = 0;
-                RealScreenBuffer4[i] = 0;
-        }
-
-}
 int main(int argc, char *argv[])
 {
         def_LoadDefaults();
-
-        RealScreenBuffer1=(char *) calloc(65000,sizeof(char));
-        if(RealScreenBuffer1==NULL)
-        {
-                srv_print("Couldn't allocate ScreenBuffer 1!  \n");
-                exit(1);
-        }
-
-        RealScreenBuffer2=(char *) calloc(65000,sizeof(char));
-        if(RealScreenBuffer2==NULL)
-        {
-                srv_print("Couldn't allocate ScreenBuffer 2!  \n");
-                exit(1);
-        }
-
-        RealScreenBuffer3=(char *) calloc(65000,sizeof(char));
-        if(RealScreenBuffer3==NULL)
-        {
-                srv_print("Couldn't allocate ScreenBuffer 3!  \n");
-                exit(1);
-        }
-
-        RealScreenBuffer4=(char *) calloc(65000,sizeof(char));
-        if(RealScreenBuffer4==NULL)
-        {
-                srv_print("Couldn't allocate ScreenBuffer 4!  \n");
-                exit(1);
-        }
 
         ClearScreenBuffers();
 
@@ -85,7 +44,7 @@ int main(int argc, char *argv[])
 	if (argc == 1)
 	{
 //		cli_CommandLine(4, default_arg);
-		srv_print("version 2.05");
+		srv_print("version 2.06");
 		exit(1);
 	}
 	else
@@ -111,8 +70,4 @@ int main(int argc, char *argv[])
        		}
 
 
-        free(RealScreenBuffer1);
-        free(RealScreenBuffer2);
-        free(RealScreenBuffer3);
-        free(RealScreenBuffer4);
 }                                                         

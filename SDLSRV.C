@@ -18,13 +18,13 @@
 #include "winsrv.c"
 #endif
 
-extern dd FDoLinearCopy();
-extern dd DoLinearCopy();
-extern dd DoWideLinearCopy();
+extern void FDoLinearCopy();
+extern void DoLinearCopy();
+extern void DoWideLinearCopy();
 
-extern dd CFDoLinearCopy();
-extern dd CDoLinearCopy();
-extern dd CDoWideLinearCopy();
+extern void CFDoLinearCopy();
+extern void CDoLinearCopy();
+extern void CDoWideLinearCopy();
 
 #define NUM_COLORS 256
 
@@ -34,6 +34,11 @@ dd srv_pitch;
 
 dd Vert;
 dd Horiz;
+dd Real_Horiz;
+dd width, height;
+dd Real_width;
+
+
 
 db *screen_pixels;
 db *emu_pixels;
@@ -53,25 +58,94 @@ srv_print(char *msg)
 #endif
 }
 
-srv_SetPalette()
+const SDL_VideoInfo *srv_vin;
+
+dd srv_colortab[128];
+dd srv_bpp = 0;
+dd srv_bypp = 0;
+
+dd srv_average[128][128];
+
+#include "pixcopy.c"
+
+srv_Phosphor(int c1, int c2)
 {
 	int i;
+
+	if (c2 > c1)
+	{
+		i = c2;
+		c2 = c1;
+		c1 = i;
+	}
+	i = ((c1-c2)*Phosphor)/100 + c2;
+	return i;
+}
+
+srv_SetPalette()
+{
+	int i,j;
+	db red, grn, blu;
 	SDL_Color palette[NUM_COLORS];
+
+	ClearScreenBuffers();
 
 	GeneratePalette();
 	for ( i=0; i<128; i++)
 	{
-		palette[i].r = PCXPalette[3*i];
-		palette[i].g = PCXPalette[3*i+1];
-		palette[i].b = PCXPalette[3*i+2];
+		red = PCXPalette[3*i];
+		grn = PCXPalette[3*i+1];
+		blu = PCXPalette[3*i+2];
+
+		palette[i].r = red;
+		palette[i].g = grn;
+		palette[i].b = blu;
+
+		srv_colortab[i] = SDL_MapRGB(srv_vin->vfmt, red, grn, blu);
 	}
 
 	SDL_SetColors(srv_screen, palette, 0, NUM_COLORS);
+
+	if (Phosphor && NoRetrace)
+	{
+		for ( i=0; i<128; i++)
+		{
+			for ( j=0; j<128; j++)
+			{
+			red = srv_Phosphor(PCXPalette[3*i], PCXPalette[3*j]);
+			grn = srv_Phosphor(PCXPalette[3*i+1], PCXPalette[3*j+1]);
+			blu = srv_Phosphor(PCXPalette[3*i+2], PCXPalette[3*j+2]);
+
+			srv_average[i][j] = SDL_MapRGB(srv_vin->vfmt, red, grn, blu);
+			}
+		}
+	}
 }
 
 void CreateScreen(Uint16 w, Uint16 h, Uint8 bpp, Uint32 flags)
 {
-	srv_screen = SDL_SetVideoMode(w, h, bpp, flags);
+	int sbpp;
+
+	ClearScreenBuffers();
+
+	sbpp=SDL_VideoModeOK(w, h, bpp, SDL_HWSURFACE);
+
+	if(!sbpp){
+  		srv_print("Mode not available.\n");
+  		exit(-1);
+	}
+
+//	sprintf(msg, "SDL Recommends %d bpp.\n", sbpp);
+//	srv_print(msg);
+
+	if (((srv_bypp == 4) || (srv_bypp == 3) || (srv_bypp == 2)) && (TrueColor))
+	{
+		srv_screen = SDL_SetVideoMode(w, h, srv_bpp, flags);
+	}
+	else
+	{
+		srv_screen = SDL_SetVideoMode(w, h, bpp, flags);
+	}
 	srv_pitch = srv_screen->pitch;
 	
 	if ( srv_screen == NULL ) {
@@ -80,9 +154,10 @@ void CreateScreen(Uint16 w, Uint16 h, Uint8 bpp, Uint32 flags)
 		return;
 	}
 
-	SDL_WM_SetCaption(" z26"," z26");
+//	SDL_WM_SetCaption(" z26"," z26");
+	SDL_WM_SetCaption(FileName, FileName);
 	
-	if (srv_screen->flags & SDL_FULLSCREEN)
+//	if (srv_screen->flags & SDL_FULLSCREEN)
 		SDL_ShowCursor(SDL_DISABLE);
 	srv_SetPalette();
 }
@@ -92,9 +167,12 @@ void srv_CreateScreen(void)
 	Uint32 videoflags;
 	int    done;
 	SDL_Event event;
-	int width, height, bpp;
+	int bpp;
 
-	if ( SDL_Init(SDL_INIT_VIDEO) < 0 ) 
+//	SDL_GrabMode grabmode = SDL_GRAB_ON;
+//	SDL_WM_GrabInput(grabmode);
+
+        if ( SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) < 0 ) 
 	{
 		sprintf(msg, "Couldn't initialize SDL: %s\n",SDL_GetError());
 		srv_print(msg);
@@ -103,51 +181,100 @@ void srv_CreateScreen(void)
 
 	SDL_WM_SetIcon(SDL_LoadBMP("z26win.bmp"), NULL);
 
+	if (srv_bpp == 0)
+	{
+		srv_vin = SDL_GetVideoInfo();
+		srv_bpp = srv_vin->vfmt->BitsPerPixel;
+		srv_bypp = srv_vin->vfmt->BytesPerPixel;
+	}
+
         switch(VideoMode){
                 case 0:
-                        width = 400;
-                        height = 300;
-                        Vert = 20;
-                        Horiz = 40;
+                        if (InWindow)
+			{
+				width = 330;  height = 280;  Vert = 10;  Horiz = 5;
+				if (Effect == 1) width -= 160;
+				if (Effect == 2) width -= 160;
+			}
+			else
+			{
+				width = 400;  height = 300;  Vert = 20;  Horiz = 40;
+			}
                 break;
                 case 1:
-                        width = 320;
-                        height = 240;
-                        Vert = 0;
-                        Horiz = 0;
+                       if (InWindow)
+			{
+				width = 330;  height = 250;  Vert = 5;   Horiz = 5;
+				if (Effect == 1) width -= 160;
+				if (Effect == 2) width -= 160;
+			}
+			else
+			{
+				width = 320;  height = 240;  Vert = 0;   Horiz = 0;
+			}
                 break;
                 case 2:
-                        width = 320;
-                        height = 200;
-                        Vert = 0;
-                        Horiz = 0;
+                       if (InWindow)
+			{
+				width = 330;  height = 210;  Vert = 5;   Horiz = 5;
+				if (Effect == 1) width -= 160;
+				if (Effect == 2) width -= 160;
+			}
+			else
+			{
+				width = 320;  height = 200;  Vert = 0;   Horiz = 0;
+			}
                 break;
                 case 3:
                 case 6:
-                        width = 800;
-                        height = 600;
-                        Vert = 40;
-                        Horiz = 80;
+                        if (InWindow)
+			{
+				width = 660;  height = 550;  Vert = 10;  Horiz = 10;
+				if (Effect == 1) width -= 320;
+				if (Effect == 2) width -= 160;
+			}
+			else
+			{
+	                        width = 800;  height = 600;  Vert = 40;  Horiz = 80;
+			}
                 break;
                 case 4:
                 case 7:
-                        width = 640;
-                        height = 480;
-                        Vert = 0;
-                        Horiz = 0;
+                        if (InWindow)
+			{
+				width = 660;  height = 500;  Vert = 10;   Horiz = 10;
+				if (Effect == 1) width -= 320;
+				if (Effect == 2) width -= 160;
+			}
+			else
+			{
+	                        width = 640;  height = 480;  Vert = 0;   Horiz = 0;
+			}
                 break;
                 case 5:
                 case 8:
-                        width = 640;
-                        height = 400;
-                        Vert = 0;
-                        Horiz = 0;
+                        if (InWindow)
+			{
+				width = 660;  height = 420;  Vert = 10;   Horiz = 10;
+				if (Effect == 1) width -= 320;
+				if (Effect == 2) width -= 160;
+			}
+			else
+			{
+	                        width = 640;  height = 400;  Vert = 0;   Horiz = 0;
+			}
                 break;
                 default:
-                        width = 400;
-                        height = 300;
-                        Vert = 20;
-                        Horiz = 40;
+                        if (InWindow)
+			{
+				width = 330;  height = 280;  Vert = 10;  Horiz = 5;
+				if (Effect == 1) width -= 160;
+				if (Effect == 2) width -= 160;
+			}
+			else
+			{
+				width = 400;  height = 300;  Vert = 20;  Horiz = 40;
+			}
                 break;
         };
 	bpp = 8;
@@ -213,7 +340,7 @@ void srv_Flip()
 
 	if (Flips % 20 == 0)
 	{
-		if ((SDL_GetTicks() - LastFlipTime) > 500)
+		if ((SDL_GetTicks() - LastFlipTime) > 1000)
 		{
 			ThisFlipTime = SDL_GetTicks();
 			ThisFlips = Flips;
@@ -243,9 +370,144 @@ void srv_Flip()
 			SDL_Delay(NextTick-Now);
 		Ticks = SDL_GetTicks();
 
-                SDL_UpdateRect(srv_screen, 0, 0, 0, 0);
+//                SDL_UpdateRect(srv_screen, 0, 0, 0, 0);
+                SDL_UpdateRect(srv_screen, Real_Horiz, Vert, Real_width, height-2*Vert);
 	}
 
+}
+
+void srv_CopyLoop( void (*copy)(), int sp_inc)
+{
+	int i;
+
+	for (i=0; i<MaxLines; ++i)
+        {
+        	(*copy)();
+                emu_pixels += 160;
+		emu_pixels_prev += 160;
+                screen_pixels += sp_inc;
+        }
+}
+
+void srv_CopyDouble( void (*copy)(), int sp_inc)
+{
+	int i;
+
+	for (i=0; i<MaxLines; ++i)
+        {
+        	(*copy)();
+		screen_pixels += sp_inc;
+		(*copy)();
+                emu_pixels += 160;
+		emu_pixels_prev += 160;
+                screen_pixels += sp_inc;
+        }
+}
+
+
+int odd = 0;
+
+void srv_PixelLogic(void (*FDoLinear)(),  void (*DoLinear)(),  void (*DoWideLinear)(),  void (*DoTrLinear)(),
+                    void (*FDoAverage)(), void (*DoAverage)(), void (*DoWideAverage)(), void (*DoTrAverage)(),
+		    void (*CFDoLinear)(), void (*CDoLinear)(), void (*CDoWideLinear)(), void (*CDoTrLinear)())
+{
+	void (*wide)();
+	void (*medium)();
+	void (*narrow)();
+	void (*triple)();
+
+	int bpp = srv_screen->format->BytesPerPixel;
+
+	if (Phosphor && NoRetrace && !DoInterlace)
+	{
+		wide = DoWideAverage;
+		medium = DoAverage;
+		narrow = FDoAverage;
+		triple = DoTrAverage;
+	}
+        else if ((DisableCompareCopy!=0)||((Flips & 0x7)==0x7))
+	{
+		wide = DoWideLinear;
+		medium = DoLinear;
+		narrow = FDoLinear;
+		triple = DoTrLinear;
+	}
+	else
+	{
+		wide = CDoWideLinear;
+		medium = CDoLinear;
+		narrow = CFDoLinear;
+		triple = CDoTrLinear;
+	}
+
+	screen_pixels = srv_buffer + Horiz*bpp + (Vert)*srv_pitch;
+
+	if (Effect == 1)
+	{
+		wide = medium;
+		medium = narrow;
+		if (InWindow)
+		{
+			Real_Horiz = Horiz;
+			Real_width = width-Real_Horiz*2;
+		}
+		else
+		{
+			screen_pixels += (srv_screen->w/4)*bpp;
+			Real_Horiz = Horiz+srv_screen->w/4;
+			Real_width = width-Real_Horiz*2;
+		}
+	}
+	else if (Effect == 2)
+	{
+		wide = triple;
+		medium = narrow;
+		if (InWindow)
+		{
+			Real_Horiz = Horiz;
+			Real_width = width-Real_Horiz*2;
+		}
+		else
+		{
+			if (width <= 400)
+			{
+				screen_pixels += (srv_screen->w/4)*bpp;
+				Real_Horiz = Horiz+srv_screen->w/4;
+				Real_width = width-Real_Horiz*2;
+			}
+			else
+			{
+				screen_pixels += (srv_screen->w/8)*bpp;
+				Real_Horiz = Horiz+srv_screen->w/8;
+				Real_width = width-Real_Horiz*2;
+			}
+		}
+	}
+	else
+	{
+		Real_Horiz = Horiz;
+		Real_width = width-Real_Horiz*2;
+	}
+
+	switch(VideoMode)
+	{
+	case 3: 
+	case 4: 
+	case 5:
+                if ((DoInterlace) && (odd & 1)) screen_pixels += srv_pitch;
+		srv_CopyLoop(wide, 2*srv_pitch);
+		break;
+
+	case 6: 
+	case 7: 
+	case 8:
+		srv_CopyDouble(wide, srv_pitch);
+		break;
+
+	default:
+		srv_CopyLoop(medium, srv_pitch);
+		break;
+	}
 }
 
 void srv_CopyScreen()
@@ -254,17 +516,15 @@ void srv_CopyScreen()
 	db *p;
 	db *q;
 	db ch;
-
-        static int odd = 0;
-
-//	if(ShowLineCount) show_scanlines();
+	int bpp = srv_screen->format->BytesPerPixel;
 
         odd++;                  // alternate startline for interlaced display
 
 	if ( SDL_LockSurface(srv_screen) < 0 ) 
 	{
-		sprintf(msg, "Couldn't lock display surface: %s\n", SDL_GetError());
+		sprintf(msg, "Couldn't lock display surface: %s\n\nExiting...", SDL_GetError());
 		srv_print(msg);
+		exit(1);
 		return;
 	}
 
@@ -274,106 +534,34 @@ void srv_CopyScreen()
 	emu_pixels = ScreenBuffer;
         emu_pixels_prev = ScreenBufferPrev;
 
-        if ((DisableCompareCopy!=0)||((Flips & 0x2e)==0x2e))
-        {
-                if (EnableFastCopy)
-                {
-                        screen_pixels = srv_buffer + Horiz + 80 + (Vert)*srv_pitch;
-                        for (i=0; i<MaxLines; ++i)
-                        {
-                                FDoLinearCopy();
-                                emu_pixels += 160;
-                                screen_pixels += srv_pitch;
-                        }
-                }
-                else if ((VideoMode>=3)&&(VideoMode<=5))  /* simulate scanlines */
-                {
-                        screen_pixels = srv_buffer + Horiz + (Vert)*srv_pitch;
-                        if ((DoInterlace) && (odd & 1)) screen_pixels += srv_pitch;
-                        for (i=0; i<MaxLines; ++i)
-                        {
-                                DoWideLinearCopy();
-                                emu_pixels += 160;
-                                screen_pixels += (2 * srv_pitch);
-                        }
-                }
-                else if ((VideoMode>=6)&&(VideoMode<=8))  /* no scanlines */
-                {
-                        screen_pixels = srv_buffer + Horiz + (Vert)*srv_pitch;
-                        for (i=0; i<MaxLines; ++i)
-                        {
-                                DoWideLinearCopy();
-                                screen_pixels += (srv_pitch);
-                                DoWideLinearCopy();
-                                emu_pixels += 160;
-                                screen_pixels += (srv_pitch);
-                        }
-                }
-                else
-                {
-                        screen_pixels = srv_buffer + Horiz + (Vert)*srv_pitch;
-                        for (i=0; i<MaxLines; ++i)
-                        {
-                                DoLinearCopy();
-                                emu_pixels += 160;
-                                screen_pixels += srv_pitch;
-                        }
+	switch(bpp)
+	{
+	case 1:
+		srv_PixelLogic(FDoLinearCopy,  DoLinearCopy,  DoWideLinearCopy, DoTrPixelCopy1,
+                    	       FDoLinearCopy,  DoLinearCopy,  DoWideLinearCopy, DoTrPixelCopy1,
+			       CFDoLinearCopy, CDoLinearCopy, CDoWideLinearCopy, CDoTrPixelCopy1);
+		break;
 
-                }
-        }
-        else    /* Compare-Copy routines enabled */
-        {
-                if (EnableFastCopy)
-                {
-                        screen_pixels = srv_buffer + Horiz + 80 + (Vert)*srv_pitch;
-                        for (i=0; i<MaxLines; ++i)
-                        {
-                                CFDoLinearCopy();
-                                emu_pixels += 160;
-                                emu_pixels_prev += 160;
-                                screen_pixels += srv_pitch;
-                        }
-                }
-                else if ((VideoMode>=3)&&(VideoMode<=5))  /* simulate scanlines */
-                {
-                        screen_pixels = srv_buffer + Horiz + (Vert)*srv_pitch;
-                        if ((DoInterlace) && (odd & 1)) screen_pixels += srv_pitch;
-                        for (i=0; i<MaxLines; ++i)
-                        {
-                                CDoWideLinearCopy();
-                                emu_pixels += 160;
-                                emu_pixels_prev += 160;
-                                screen_pixels += (2 * srv_pitch);
-                        }
-                }
-                else if ((VideoMode>=6)&&(VideoMode<=8))  /* no scanlines */
-                {
-                        screen_pixels = srv_buffer + Horiz + (Vert)*srv_pitch;
-                        for (i=0; i<MaxLines; ++i)
-                        {
-                                CDoWideLinearCopy();
-                                screen_pixels += (srv_pitch);
-                                CDoWideLinearCopy();
-                                emu_pixels += 160;
-                                emu_pixels_prev += 160;
-                                screen_pixels += (srv_pitch);
-                        }
-                }
-                else
-                {
-                        screen_pixels = srv_buffer + Horiz + (Vert)*srv_pitch;
-                        for (i=0; i<MaxLines; ++i)
-                        {
-                                CDoLinearCopy();
-                                emu_pixels += 160;
-                                emu_pixels_prev += 160;
-                                screen_pixels += srv_pitch;
-                        }
+	case 2:
+		srv_PixelLogic(FDoPixelCopy2,  DoPixelCopy2,  DoWidePixelCopy2, DoTrPixelCopy2,
+                    	       FDoPixelAv2,    DoPixelAv2,    DoWidePixelAv2,   DoTrPixelAv2,
+			       CFDoPixelCopy2, CDoPixelCopy2, CDoWidePixelCopy2,CDoTrPixelCopy2);
+		break;
 
-                }
-        }
+	case 3:
+		srv_PixelLogic(FDoPixelCopy3,  DoPixelCopy3,  DoWidePixelCopy3, DoTrPixelCopy3,
+                    	       FDoPixelAv3,    DoPixelAv3,    DoWidePixelAv3,   DoTrPixelAv3,
+			       CFDoPixelCopy3, CDoPixelCopy3, CDoWidePixelCopy3,CDoTrPixelCopy3);
+		break;
 
-        if((NoRetrace == 0) || (DoInterlace && (VideoMode >= 3) && (VideoMode <= 5)))
+	case 4:
+		srv_PixelLogic(FDoPixelCopy4,  DoPixelCopy4,  DoWidePixelCopy4, DoTrPixelCopy4,
+                    	       FDoPixelAv4,    DoPixelAv4,    DoWidePixelAv4,   DoTrPixelAv4,
+			       CFDoPixelCopy4, CDoPixelCopy4, CDoWidePixelCopy4,CDoTrPixelCopy4);
+		break;
+	}
+
+	if((NoRetrace == 0) || (DoInterlace && (VideoMode >= 3) && (VideoMode <= 5)))
         {
                 screen_buffer_count = (screen_buffer_count + 1) & 0x03;
 
@@ -464,7 +652,7 @@ srv_sound_on()
 
 	if (quiet==0)
 	{
-		if ( SDL_Init(SDL_INIT_AUDIO) < 0 ) 
+                if ( SDL_InitSubSystem(SDL_INIT_AUDIO) < 0 ) 
 		{
 			sprintf(msg, "Couldn't initialize SDL: %s\n",SDL_GetError());
 			srv_print(msg);
@@ -504,6 +692,9 @@ db srv_mouse_button;
 int srv_micky_x, srv_micky_y;
 int srv_mouse_x, srv_mouse_y;
 
+db srv_crap_button;
+int srv_crap_x, srv_crap_y;
+
 srv_get_mouse_button_status()
 {
 	srv_mouse_button = SDL_GetMouseState(&srv_mouse_x, &srv_mouse_y);
@@ -512,6 +703,9 @@ srv_get_mouse_button_status()
 srv_get_mouse_movement()
 {
 	srv_mouse_button = SDL_GetRelativeMouseState(&srv_micky_x, &srv_micky_y);
+	SDL_WarpMouse(width/2,height/2);
+	srv_Events();
+	srv_crap_button = SDL_GetRelativeMouseState(&srv_crap_x, &srv_crap_y);
 }
 
 
@@ -523,6 +717,10 @@ srv_Events()
 {
 	SDL_Event event;
 	dd sc;
+
+//	static int i=0;
+//
+//	if (++i%10 != 0) return;
 
 	while ( SDL_PollEvent(&event) ) {
 		switch (event.type) {

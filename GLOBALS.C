@@ -23,10 +23,6 @@ db PCXPalette[384];	/* palette information for PCX files goes here */
 
 db *ScreenBuffer;       /* pointer to screen buffer (set to RealScreenBuffer 1-4) */
 db *ScreenBufferPrev;   /* pointer to screen buffer for previous frame (RSB 1-4)*/
-db *RealScreenBuffer1;  /* pointer to screen buffer (gets allocated)*/
-db *RealScreenBuffer2;  /* pointer to screen buffer (gets allocated)*/
-db *RealScreenBuffer3;  /* pointer to screen buffer (gets allocated)*/
-db *RealScreenBuffer4;  /* pointer to screen buffer (gets allocated)*/
 
 dd LinesInFrame;	/* # of lines in last frame */
 dd PrevLinesInFrame;	/* # of lines in frame before that */
@@ -43,8 +39,26 @@ dd crc;			/* holds accumulated CRC */
 db KeyTable[128];	/* event handler should tell z26 about keystrokes here */
 db ShowFPS;
 db SoundQ[65537];	/* sound queue */
-dd SQ_Max = 1536*3;
+dd SQ_Max = 2048*3;
 
+char RealScreenBuffer1[65000];
+char RealScreenBuffer2[65000];
+char RealScreenBuffer3[65000];
+char RealScreenBuffer4[65000];
+
+void ClearScreenBuffers()
+{
+        int i;
+
+        for (i=0; i<65000; i++)
+        {
+                RealScreenBuffer1[i] = 0;
+                RealScreenBuffer2[i] = 0;
+                RealScreenBuffer3[i] = 0;
+                RealScreenBuffer4[i] = 0;
+       }
+
+}
 
 /* 
 ** Init C Variables every time emulator() is called.
@@ -75,6 +89,7 @@ void InitCVars(void)
 
 db VideoMode;		/* default video mode */
 db InWindow;		/* run game in a window */
+db TrueColor;		/* run game in true colors (16, 24, 32 bpp) */
 dd CFirst;		/* first game line to display (zero has VBlank trigger a new frame) */
 db quiet;		/* set if we want no sound */
 db IOPortA;		/* IO Port A (joystick) */
@@ -102,7 +117,8 @@ dd LGadjust;		/* adjust lightgun vertically *EST* */
 db ShowLineCount;	/* display stats on game exit */
 db Mindlink;		/* emulate Mindlink controller in which port *EST* */
 db AllowAll4;		/* allow all 4 directions on the joystick simultaniously */
-db EnableFastCopy;	/* use 32 bit mode X copy routines */
+db Effect;		/* video effect */
+db Phosphor;		/* phosphorescence */
 db KidVid;		/* ID byte on tapes for KidVid game *EST* */
 db KidVidTape;		/* tape number to be played *EST* */
 db DisableCompareCopy;  /* dont compare new frame with old frame before copying *EST* */
@@ -143,7 +159,8 @@ void def_LoadDefaults(void)
 	ShowLineCount = 0;
 	Mindlink = 0;
 	AllowAll4 = 0;
-	EnableFastCopy = 0;
+	Effect = 0;
+	Phosphor = 0;
 	KidVid = 0;
 	KidVidTape = 0;
         MaxLines = 0xffff ;  /* unreasonable default screen height - gets fixed by auto positioning */
