@@ -886,6 +886,9 @@ CLDoNoFile:
 	mov	dx,offset Msg6a
 	mov	ah,9
 	int	MSDOS			; output a message
+	mov	dx,offset Msg11
+	mov	ah,9
+	int	MSDOS			; output a message
 	mov	dx,offset Msg8
 	mov	ah,9
 	int	MSDOS			; output a message
@@ -895,15 +898,12 @@ CLDoNoFile:
 	mov	dx,offset Msg10
 	mov	ah,9
 	int	MSDOS			; output a message
-	mov	dx,offset Msg11
-	mov	ah,9
-	int	MSDOS			; output a message
 	jmp	Empty			;   exit
 
 .CEND
 .DATASEGMENT
 
-CopyRight	db	13,10,'z26 -- An Atari 2600 emulator (0.86)',13,10,10,'$'
+CopyRight	db	13,10,'z26 -- An Atari 2600 emulator (0.87)',13,10,10,'$'
 Cred3		db	'Home Page:  http://www.whimsey.com/z26.html',13,10,10,'$'
 Cred0		db	'Copyright (C) 1997 by John Saeger        (john@whimsey.com)',13,10,'$'
 Cred1		db	'Based on A26 version 0.15 by Paul Robson (autismuk@aol.com)',13,10,'$'
@@ -918,12 +918,13 @@ Msg6		db	' SPACE -- fire     ','$'
 Msg7		db	'   ESC -- quit game',13,10,10,'$'
 Msg6a		db	'     = -- PCX screen capture',13,10,10,'$'
 
+Msg11		db	'The Atari joystick is emulated with the arrow keys.',13,10,10,'$'
+
 Msg8		db	'Command Line Switches (put before filename)',13,10,10,'$'
 
 Msg9		db	'    -0 -- player 0 hard',13,10,'$'
 Msg10		db	'    -r -- do not wait for VGA retrace (full speed)',13,10,10,'$'
 
-Msg11		db	'The Atari joystick is emulated with the arrow keys.',13,10,10,'$'
 
 .DEND
 .CODESEGMENT

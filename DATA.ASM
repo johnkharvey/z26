@@ -174,7 +174,7 @@ WrTiaImmediateVector	dw	WrTiaVSync	; 0
 CO=-1	; -1 for buck rogers
 C1=-2	; -1 for yars -2 for tron
 C2=0	; 0 for vidcube
-C3=-1
+C3=-1	; -1
 
 
 CycleOffset	db	68+CO	;00	VSYNC
@@ -187,7 +187,7 @@ CycleOffset	db	68+CO	;00	VSYNC
 		db	68+C2	;07	COLUP1
 		db	68+C2	;08	COLUPF
 		db	68+C2	;09	COLUBK
-		db	68+CO	;0a	CTRLPF
+		db	68+C2	;0a	CTRLPF
 		db	68+CO	;0b	REFP0
 		db	68+CO	;0c	REFP1
 		db	68+C1	;0d	PF0
@@ -234,7 +234,7 @@ ALIGN 4
 ;23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6	5  4  3	 2  1  0
 ;				  ECX					|
 
-PfClockToBitTable	dd	1 shl 4		;0	forward
+PFClockToBitReversed	dd	1 shl 4		;0	forward
 			dd	1 shl 5		;1
 			dd	1 shl 6		;2
 			dd	1 shl 7		;3
@@ -275,6 +275,51 @@ PfClockToBitTable	dd	1 shl 4		;0	forward
 			dd	1 shl 6		;37
 			dd	1 shl 5		;38
 			dd	1 shl 4		;39
+
+PFClockToBitForward	dd	1 shl 4		;0	forward
+			dd	1 shl 5		;1
+			dd	1 shl 6		;2
+			dd	1 shl 7		;3
+			dd	1 shl 15	;4
+			dd	1 shl 14	;5
+			dd	1 shl 13	;6
+			dd	1 shl 12	;7
+			dd	1 shl 11	;8
+			dd	1 shl 10	;9
+			dd	1 shl 9		;10
+			dd	1 shl 8		;11
+			dd	1 shl 16	;12
+			dd	1 shl 17	;13
+			dd	1 shl 18	;14
+			dd	1 shl 19	;15
+			dd	1 shl 20	;16
+			dd	1 shl 21	;17
+			dd	1 shl 22	;18
+			dd	1 shl 23	;19
+		        
+			dd	1 shl 4		;0	forward
+			dd	1 shl 5		;1
+			dd	1 shl 6		;2
+			dd	1 shl 7		;3
+			dd	1 shl 15	;4
+			dd	1 shl 14	;5
+			dd	1 shl 13	;6
+			dd	1 shl 12	;7
+			dd	1 shl 11	;8
+			dd	1 shl 10	;9
+			dd	1 shl 9		;10
+			dd	1 shl 8		;11
+			dd	1 shl 16	;12
+			dd	1 shl 17	;13
+			dd	1 shl 18	;14
+			dd	1 shl 19	;15
+			dd	1 shl 20	;16
+			dd	1 shl 21	;17
+			dd	1 shl 22	;18
+			dd	1 shl 23	;19
+
+
+PFClockToBitTable	dw	PFClockToBitReversed
 
 
 TGODiffTab	dw	TGORet		; 0

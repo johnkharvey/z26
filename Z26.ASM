@@ -33,6 +33,7 @@ PAGE 66,132
 ; 12-13-97  --  (0.86) better playfield colors (single bit resolution)
 ; 12-15-97  --  (0.86) more work on vertical synchronization
 ; 12-17-97  --  (0.86) more speed
+; 12-23-97  --  (0.87) faster playfield and background draws
 
 
 ; assembly time definitions

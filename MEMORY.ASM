@@ -3,7 +3,12 @@
 ALIGN 4
 
 RiotRam		db	128 dup (0)	; RIOT ram (must be initially zero) why??
+
+db	0,0,0	; force PF0 onto a 4 byte boundary
+
 TIA		db 	64 dup (0)	; TIA Registers (also should be zero)
+
+ALIGN 4
 		
 TIADisplay	db	320 dup (?)	; Display as currently setup
 CartRom		db	16384 dup (?)	; space for cartridge	

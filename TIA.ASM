@@ -212,67 +212,28 @@ Done:
 	endm
 
 ;*
-;* output conversion macros
-;*
-
-ConvertOut macro
-
-	mov	di,[TIADisplayToColor]				
-	movzx	bx,byte ptr [si]	;pick up a byte from TIADisplay
-	mov	bl,[di+bx]
-	mov	bl,TIAColourTable[bx]	;pointer to color register
-	mov	di,[DisplayPointer]	; < preload display pointer (pentium opt)	
-	mov	al,TIA[bx]		;color value
-	shr	al,1
-	mov	ah,al			;two bytes at a time
-
-	mov	gs:[di],ax
-	add	[DisplayPointer],2
-
-	endm
-
-;*
 ;* combine collision test and output conversion
 ;*
 
 CollisionConvert macro
-local CollisionDone
+local BackgroundPFOnly
 
-	movzx	ebx,byte ptr [si]	;pick up a byte from TIADisplay
-	mov	di,[TIADisplayToColor]	; < preload table pointer (pentium opt)
-	cmp	bl,3
-	jb	CollisionDone
-	mov	ax,TIAColTab[ebx*2]
+	movzx	ebx,byte ptr [si]	; pick up a byte from TIADisplay
+	cmp	bl,2			; looking at background or playfield only?
+	jb	BackgroundPFOnly	;   yes
+	mov	di,[TIADisplayToColor]	; < preload table pointer
+	mov	ax,TIAColTab[ebx*2]	; do collision test
 	or	[TIACollide],ax
-
-CollisionDone:
 	mov	bl,[di+bx]		; get high priority color
-	mov	di,[DisplayPointer]	; < preload display pointer (pentium opt)	
-	mov	bl,TIAColourTable[bx]	;pointer to color register
-	add	[DisplayPointer],2	; < increment display pointer (pentium opt)
-	mov	al,TIA[bx]		;color value
-	shr	al,1
-	mov	ah,al			;two bytes at a time
+
+BackgroundPFOnly:
+	mov	di,cx			; < preload display pointer
+	mov	bl,TIAColourTable[bx]	; pointer to color register
+	add	cx,2			; < increment display pointer
+	mov	al,TIA[bx]		; color value
+	mov	ah,al			; two bytes at a time
 	mov	gs:[di],ax
 
-	endm
-
-
-;*
-;* macros to output a playfield bit
-;*
-
-PlayfieldBit macro
-local  PFSkip, L2
-	
-	test	cx,3			; multiple of 4 ?
-	jnz	PFSkip			;   no
-	mov	bx,cx			; note: one pf bit = 4 color clocks
-	mov	eax,dword ptr [TIA+TIAPf0]
-	test	eax,[PfClockToBitTable + bx] ; here we assume bx is a multiple of 4
-	jz	PFSkip
-	or	dword ptr [si],TGPlay*01000000h+TGPlay*010000h+TGPlay*0100h+TGPlay
-PFSkip:
 	endm
 
 
@@ -280,12 +241,14 @@ PFSkip:
 ;* only call this one if playfield clock is a multiple of 4
 ;*
 
-DangerousPlayfieldBit macro
+PlayfieldBit macro
 local PFSkip
 	
-	mov	bx,cx			; note: one pf bit = 4 color clocks
+	mov	di,[PFClockToBitTable]
 	mov	eax,dword ptr [TIA+TIAPf0]
-	test	eax,[PfClockToBitTable + bx] ; here we assume bx is a multiple of 4
+;	movzx	bx,dl
+	mov	bx,dx
+	test	eax,[di + bx]			; setting a playfield bit ?
 	jz	PFSkip
 	or	dword ptr [si],TGPlay*01000000h+TGPlay*010000h+TGPlay*0100h+TGPlay
 PFSkip:
@@ -321,28 +284,12 @@ Done:
 ;*
 
 BlankBit macro
-	mov	di,[DisplayPointer]
+	mov	di,cx
 	xor	ax,ax
 	mov	gs:[di],ax
-	add	[DisplayPointer],2
+	add	cx,2
 endm
 
-
-;*
-;* macro to do a blank bit (complete)
-;*
-
-DoBlank macro
-
-	DoObjects
-	PlayfieldBit
-	CollisionTest
-	BlankBit
-	inc	dl
-	inc	cx
-	inc	si
-
-	endm
 
 ;*
 ;* macro to do 4 blank bits
@@ -351,32 +298,28 @@ DoBlank macro
 DoBlank4 macro
 
 	DoObjects
-	DangerousPlayfieldBit
+	PlayfieldBit
 	CollisionTest
 	BlankBit
 	inc	dl
-	inc	cx
 	inc	si
 
 	DoObjects
 	CollisionTest
 	BlankBit
 	inc	dl
-	inc	cx
 	inc	si
 
 	DoObjects
 	CollisionTest
 	BlankBit
 	inc	dl
-	inc	cx
 	inc	si
 
 	DoObjects
 	CollisionTest
 	BlankBit
 	inc	dl
-	inc	cx
 	inc	si
 
 	endm	
@@ -391,7 +334,6 @@ DoReal	macro
 	PlayfieldBit
 	CollisionConvert
 	inc	dl			; increment color clock
-	inc	cx			; increment playfield clock
 	inc	si			; increment pf write / collision pointer
 
 	endm
@@ -403,31 +345,151 @@ DoReal	macro
 DoReal4 macro
 
 	DoObjects
-	DangerousPlayfieldBit
+	PlayfieldBit
 	CollisionConvert
 	inc	dl			; increment color clock
-	inc	cx			; increment playfield clock
 	inc	si			; increment pf write / collision pointer
 
 	DoObjects
 	CollisionConvert
 	inc	dl			; increment color clock
-	inc	cx			; increment playfield clock
 	inc	si			; increment pf write / collision pointer
 
 	DoObjects
 	CollisionConvert
 	inc	dl			; increment color clock
-	inc	cx			; increment playfield clock
 	inc	si			; increment pf write / collision pointer
 
 	DoObjects
 	CollisionConvert
 	inc	dl			; increment color clock
-	inc	cx			; increment playfield clock
 	inc	si			; increment pf write / collision pointer
 
 	endm
+
+
+;*****************************************************************************
+
+;*
+;* macro to process objects, leave clock of next object in AL for further testing
+;*
+
+DoObjectsAL macro
+local ObjectLoop, Skip, Branch, Done
+
+ObjectLoop:
+	mov	al,TIAClock[bp]
+	cmp	al,dl		
+	ja	Done			; if next change clock <= next pf write
+Branch:
+	mov	bl,TIAReg[bp]		;   goto register change handler
+	and	ebx,03fh		; only 63 options
+	call	[TIARegVector + ebx*2]
+        
+Skip:	add	bp,4			; go on to the next change
+	mov	al,TIAClock[bp]
+	cmp	al,TIAInvalid 		; if moved onto an invalid
+	je	Skip			; skip it.
+
+	cmp	al,dl			; < another change to handle?
+	jbe	Branch			;   yes
+Done:
+	endm
+
+
+;*
+;* set 4 display bits to value in bl, increment display pointer
+;*
+
+Set4Bits macro
+
+	mov	di,cx			; display pointer
+	mov	bh,bl
+	mov	ax,bx
+	shl	eax,16
+	mov	ax,bx
+	mov	gs:[di],eax
+	add	cx,8
+	mov	gs:4[di],eax
+
+	endm
+
+
+FastPlayfieldBit macro op1
+local PFSkip, SlowLane, SetPFBit, SetBkBit, FastSetPFBit
+
+	mov	di,[PFClockToBitTable]		; < preload table pointer
+	sub	al,dl				; # of color clocks to next object
+	cmp	al,4				; at least 4 ?
+	jb	SlowLane			;   no
+	cmp	dword ptr [si],0		; anything set in next 4 TIA bits ?
+	jne	SlowLane			;   yes
+
+	mov	eax,dword ptr [TIA+TIAPf0]
+;	movzx	bx,dl
+	mov	bx,dx
+	add	dl,4
+	test	eax,[di + bx]			; setting a playfield bit ?
+	jnz	FastSetPFBit			;   yes
+
+	mov	bl,TIA[TIAColubk]		;   no, do 4 background bits
+	add	si,4
+	Set4Bits
+	jmp	op1				; FastExit
+
+FastSetPFBit:
+	mov	bl,TIAColourTable[TCTPF]	; pointer to color register
+	add	si,4
+	mov	bl,TIA[bx]			; color value
+	Set4Bits
+	jmp	op1
+	
+
+SlowLane:
+	mov	eax,dword ptr [TIA+TIAPf0]
+;	movzx	bx,dl
+	mov	bx,dx
+	test	eax,[di + bx]			; setting a playfield bit ?
+	jz	PFSkip
+SetPFBit:
+	or	dword ptr [si],TGPlay*01000000h+TGPlay*010000h+TGPlay*0100h+TGPlay
+PFSkip:
+	endm
+
+;*
+;* do 4 real bits
+;*
+
+DoRealFast4 macro
+local FastExit
+
+	DoObjectsAL
+	FastPlayfieldBit FastExit
+
+	CollisionConvert
+	inc	dl			; increment color clock
+	inc	si			; increment pf write / collision pointer
+
+	DoObjects
+	CollisionConvert
+	inc	dl			; increment color clock
+	inc	si			; increment pf write / collision pointer
+
+	DoObjects
+	CollisionConvert
+	inc	dl			; increment color clock
+	inc	si			; increment pf write / collision pointer
+
+	DoObjects
+	CollisionConvert
+	inc	dl			; increment color clock
+	inc	si			; increment pf write / collision pointer
+
+FastExit:
+	endm
+
+
+;*****************************************************************************
 
 
 ; *     
@@ -457,22 +519,24 @@ TIAGenerate:
 
 	call	TIAInsertObjects	; insert objects from the last line
 
-	xor	dl,dl			; start position
-	xor	ecx,ecx			; clear playfield clock
+;	xor	dl,dl			; start position
+	xor	dx,dx			; dh = 0 too for FastPlayfieldBit
+	mov	cx,[DisplayPointer]
 
 	mov	di,[TIAPFColorByClock]	; update playfield color
 	mov	al,[di]			; clock position 0
 	mov	[TIAColourTable+TCTPF],al
 
-BlankLoop:
+TIABlankLoop:
 	mov	al,ColumnBlank
-	cmp	dl,al
-	jae	TIALoop
+	cmp	dl,al			; doing column blanking ?
+	jae	TIALoop			;   no
+	DoBlank4			;   yes, do 8 columns
 	DoBlank4
-	jmp	BlankLoop
 
 TIALoop:
-	DoReal4
+	DoRealFast4
+	DoRealFast4
 	cmp	dl,80			; reached middle of playfield?
 	je	TIARightBegin		;   yes
 TIATestDone:
@@ -486,12 +550,23 @@ TIARightBegin:
 	mov	al,[di+bx]
 	mov	[TIAColourTable+TCTPF],al
 
+; this code doesn't belong in the TIA handler because real TIA can't respond to change
+; in real time  (messes up astrblst if it's there)
+
+	mov	ax,offset PFClockToBitReversed
 	test	[TIA+TIACtrlPf],1	; reversing the current line ?
-	jnz	TIATestDone		;    yes, continue
-	xor	ecx,ecx			;    no, restart from beginning
-	jmp	TIATestDone
+	jnz	TIARB1			;    yes, continue
+	mov	ax,offset PFClockToBitForward
+
+TIARB1:
+	mov	[PFClockToBitTable],ax
+
+	cmp	dl,160
+	jae	TIAExit
+	jmp	TIALoop
 
 TIAExit:				; we've finished the line scan...
+	mov	[DisplayPointer],cx
 
 	ret
 

@@ -24,10 +24,10 @@ TIARegVector dw TRNoop		; 00 -- VSYNC
 	dw	TRNoop		; 03 -- RSYNC
 	dw	TRCopy		; 04 -- NUSIZ0
 	dw	TRCopy		; 05 -- NUSIZ1
-	dw	TRCopy		; 06 -- COLUP0
-	dw	TRCopy		; 07 -- COLUP1
-	dw	TRCopy		; 08 -- COLUPF
-	dw	TRCopy		; 09 -- COLUBK
+	dw	TRCopyColor	; 06 -- COLUP0
+	dw	TRCopyColor	; 07 -- COLUP1
+	dw	TRCopyColor	; 08 -- COLUPF
+	dw	TRCopyColor	; 09 -- COLUBK
 	dw	TRCtrlPF	; 0A -- CTRLPF
 	dw	TRCopy		; 0B -- REFP0
 	dw	TRCopy		; 0C -- REFP1
@@ -62,7 +62,7 @@ TIARegVector dw TRNoop		; 00 -- VSYNC
 	dw	TRCopy		; 29 -- RESMP1
 	dw	TRHMov		; 2A -- HMOVE
 	dw	TRHClr		; 2B -- HMCLR
-	dw	TRCxZr		; 2C -- CXCLR
+	dw	TRCClr		; 2C -- CXCLR
 
 	dw	TRNoop		; 2D
 	dw	TRNoop		; 2E
@@ -90,10 +90,10 @@ TIARegVector2 dw TRNoop		; 00 -- VSYNC
 	dw	TRNoop		; 03 -- RSYNC
 	dw	TRCopy		; 04 -- NUSIZ0
 	dw	TRCopy		; 05 -- NUSIZ1
-	dw	TRCopy		; 06 -- COLUP0
-	dw	TRCopy		; 07 -- COLUP1
-	dw	TRCopy		; 08 -- COLUPF
-	dw	TRCopy		; 09 -- COLUBK
+	dw	TRCopyColor	; 06 -- COLUP0
+	dw	TRCopyColor	; 07 -- COLUP1
+	dw	TRCopyColor	; 08 -- COLUPF
+	dw	TRCopyColor	; 09 -- COLUBK
 	dw	TRCtrlPF	; 0A -- CTRLPF
 	dw	TRCopy		; 0B -- REFP0
 	dw	TRCopy		; 0C -- REFP1
@@ -128,7 +128,7 @@ TIARegVector2 dw TRNoop		; 00 -- VSYNC
 	dw	TRCopy		; 29 -- RESMP1
 	dw	TRHmvB		; 2A -- HMOVE
 	dw	TRHClr		; 2B -- HMCLR
-	dw	TRCxZr		; 2C -- CXCLR
+	dw	TRCClr		; 2C -- CXCLR
 
 	dw	TRNoop		; 2D
 	dw	TRNoop		; 2E
@@ -162,18 +162,10 @@ TRSond: mov	bl,TIAReg[bp]		; bl = register
 	ret
 
 ;*
-;* clear collision latches (on-screen version)
+;* clear collision latches
 ;*
 
-;TRCClr: mov	bl,TIAClock[bp]		; clear the collision flag
-;	or	byte ptr TIADisplay[bx],80h ; set the bit 7 in the display field
-;	ret				    ;   (signals raster engine to clear it)
-
-;*
-;* clear collision latches (off-screen version)
-;*
-
-TRCxZr: mov	[TIACollide],0		; reset the collision word
+TRCClr: mov	[TIACollide],0		; reset the collision word
 	ret
 
 ;*
@@ -182,6 +174,7 @@ TRCxZr: mov	[TIACollide],0		; reset the collision word
 	        
 TRNoop: ret				; just ignore it ......
 
+
 ;*
 ;* copy register
 ;*
@@ -189,6 +182,19 @@ TRNoop: ret				; just ignore it ......
 TRCopy: mov	bl,TIAReg[bp]		; register copy.offset in bx
 					; bh is already zero
 	mov	al,TIAVal[bp]		; value in al
+	mov	TIA[bx],al		; write it
+
+	ret
+
+;*
+;* copy color register
+;*
+
+TRCopyColor:
+	mov	bl,TIAReg[bp]		; register copy.offset in bx
+					; bh is already zero
+	mov	al,TIAVal[bp]		; value in al
+	shr	al,1			; shift before storing
 	mov	TIA[bx],al		; write it
 
 	ret
@@ -220,7 +226,6 @@ TRCtrl2:
 	add	bx,[TIAPFColorByClock]
 	mov	al,[bx]
 	mov	[TIAColourTable+TCTPF],al
-
 
 	ret
 
@@ -278,8 +283,8 @@ TWret:
 
 TIAWrap:cmp	al,240			; went negative ???
 	ja	TWneg			;   yes, adjust
-	cmp	al,160			; past right side ?
-	jb	TWret			;   no
+	cmp	al,160			; past right side ? (was 160)
+	jb	TWret			;   no (was jb)
 	sub	al,160			;   yes
 	jmp	TWret
 

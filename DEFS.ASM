@@ -65,7 +65,6 @@ TGPlayer1 = 		4		; Bit for P1
 TGMissile1 = 		8		; Bit for M1
 TGPlayer0 = 		16		; Bit for P0
 TGMissile0 = 		32		; Bit for M0
-TGCollisionReset = 	128		; Bit for collision reset here
 
 
 ; displacements into TIAColourTable
