@@ -5,13 +5,16 @@
 start:
 
 IFNDEF comfile
-	mov	ax,_TEXT
+	mov	ax,_DATA
 	mov	ds,ax			;set up data segment
 	mov	bx,es
 	mov	psp,bx			;save pointer to PSP
-	mov	es,ax			;set up extra segment
+	mov	es,ax			;set up extra segment (ES = DS)
 	cli
-	mov	ss,ax			;set up stack segment
+	mov	ss,ax			;set up stack segment (SS = DS)
+					; (necessary because we use bp as a general
+					;  purpose index register)
+
 	mov	sp,offset mystack	;  and stack pointer
 	sti
 ENDIF   
@@ -139,30 +142,6 @@ NDret:
 	ret				;	 and return
 
 ;*
-;* blank the remainder of the display each frame
-;*
-
-TIABlank:
-	push	ax
-	push	di
-	xor	ax,ax
-	mov	di,[DisplayPointer]
-TIABLoop:
-	cmp	di,30000
-	jb	TIABRet
-	cmp	di,64000		; reached end of display area?
-	jae	TIABRet			;    yes, done
-	mov	gs:[di],ax
-	add	di,2
-	jmp	TIABLoop
-
-TIABRet:
-	mov	[DisplayPointer],di
-	pop	di
-	pop	ax
-	ret
-
-;*
 ;* come here when duff opcode 
 ;*
 
@@ -220,150 +199,236 @@ WaitEsc:test	[KeyTable+KeyEsc],128	; wait for ESC to be pressed
 ;* collision test macros
 ;*
 
-CollisionTest macro op1
-local Clear, Next
+CollisionTest macro
+local Done
 
-	mov	bl,op1[si]
+	movzx	ebx,byte ptr [si]
 	cmp	bl,3
-	jb	Next
-	shl	bl,1    
-	jc	Clear		;   if collision reset bit set
-	or	di,TIAColTab[bx]
-	jmp	Next
-        
-Clear:
-	xor	di,di
-	or	di,TIAColTab[bx]
-Next:
+	jb	Done
+	mov	ax,TIAColTab[ebx*2]
+	or	[TIACollide],ax
 
-	endm
-
-Collision4 macro
-	mov	di,[TIACollide]		; do the collision test
-	xor	bh,bh
-        
-	CollisionTest 0
-	CollisionTest 1
-	CollisionTest 2
-	CollisionTest 3
-
-	mov	[TIACollide],di
-
+Done:
 	endm
 
 ;*
 ;* output conversion macros
 ;*
 
-ConvertOut macro op1
-	mov	bl,op1[si]		;pick up a byte from TIADisplay
-	and	bx,03fh			;mask off collision reset bits
-	mov	di,[DisplayTranslate]
+ConvertOut macro
+
+	mov	di,[TIADisplayToColor]				
+	movzx	bx,byte ptr [si]	;pick up a byte from TIADisplay
 	mov	bl,[di+bx]
 	mov	bl,TIAColourTable[bx]	;pointer to color register
+	mov	di,[DisplayPointer]	; < preload display pointer (pentium opt)	
 	mov	al,TIA[bx]		;color value
 	shr	al,1
 	mov	ah,al			;two bytes at a time
-	mov	di,[DisplayPointer]	
+
 	mov	gs:[di],ax
-	add	di,2
-	mov	[DisplayPointer],di
+	add	[DisplayPointer],2
+
 	endm
 
-Convert4 macro
-local	L1
+;*
+;* combine collision test and output conversion
+;*
 
-	mov	ax,offset TIADisplayToColour
-	test	[TIA+TIACtrlPf],4	;if pf has priority, use alternate translation
-	jz	L1
-	mov	ax,offset TIADisplayToColour2
-L1:
-	mov	[DisplayTranslate],ax
-	ConvertOut 0
-	ConvertOut 1
-	ConvertOut 2
-	ConvertOut 3
+CollisionConvert macro
+local CollisionDone
+
+	movzx	ebx,byte ptr [si]	;pick up a byte from TIADisplay
+	mov	di,[TIADisplayToColor]	; < preload table pointer (pentium opt)
+	cmp	bl,3
+	jb	CollisionDone
+	mov	ax,TIAColTab[ebx*2]
+	or	[TIACollide],ax
+
+CollisionDone:
+	mov	bl,[di+bx]		; get high priority color
+	mov	di,[DisplayPointer]	; < preload display pointer (pentium opt)	
+	mov	bl,TIAColourTable[bx]	;pointer to color register
+	add	[DisplayPointer],2	; < increment display pointer (pentium opt)
+	mov	al,TIA[bx]		;color value
+	shr	al,1
+	mov	ah,al			;two bytes at a time
+	mov	gs:[di],ax
+
 	endm
 
-ConvertBlank4 macro
-	mov	di,[DisplayPointer]
-	xor	ax,ax
-	mov	gs:[di],ax
-	add	di,2
-	mov	gs:[di],ax
-	add	di,2
-	mov	gs:[di],ax
-	add	di,2
-	mov	gs:[di],ax
-	add	di,2
-	mov	[DisplayPointer],di
-	endm
 
 ;*
 ;* macros to output a playfield bit
 ;*
 
-LeftPlayfieldBit macro
+PlayfieldBit macro
 local  PFSkip, L2
 	
-	cmp	[NoScoreMode],0		; doing scores?
-	jnz	L2			;   no
-	mov	[TIAColourTable+TCTPF],TIAColupf
-	test	[TIA + TIACtrlPf],2	; if colour split, pf col = p0 col
-	jz	L2			;(was L2)
-	mov	[TIAColourTable+TCTPF],TIAColup0
-
-L2:					; note: one pf bit = 4 color clocks
-	mov	bx,cx
+	test	cx,3			; multiple of 4 ?
+	jnz	PFSkip			;   no
+	mov	bx,cx			; note: one pf bit = 4 color clocks
 	mov	eax,dword ptr [TIA+TIAPf0]
-	test	eax,PfClockToBitTable[bx]
+	test	eax,[PfClockToBitTable + bx] ; here we assume bx is a multiple of 4
 	jz	PFSkip
 	or	dword ptr [si],TGPlay*01000000h+TGPlay*010000h+TGPlay*0100h+TGPlay
 PFSkip:
 	endm
 
-RightPlayfieldBit macro
-local  PFSkip, L2
-	
-	cmp	[NoScoreMode],0		; doing scores?
-	jnz	L2			;   no
-	mov	[TIAColourTable+TCTPF],TIAColupf
-	test	[TIA + TIACtrlPf],2	; if colour split, pf col = p1 col
-	jz	L2			;(was L2)
-	mov	[TIAColourTable+TCTPF],TIAColup1
 
-L2:					; note: one pf bit = 4 color clocks
-	mov	bx,cx
+;*
+;* only call this one if playfield clock is a multiple of 4
+;*
+
+DangerousPlayfieldBit macro
+local PFSkip
+	
+	mov	bx,cx			; note: one pf bit = 4 color clocks
 	mov	eax,dword ptr [TIA+TIAPf0]
-	test	eax,PfClockToBitTable[bx]
+	test	eax,[PfClockToBitTable + bx] ; here we assume bx is a multiple of 4
 	jz	PFSkip
 	or	dword ptr [si],TGPlay*01000000h+TGPlay*010000h+TGPlay*0100h+TGPlay
 PFSkip:
 	endm
+
 
 ;*
 ;* macro to process objects
 ;*
 
 DoObjects macro
-local TIAObjectLoop, TIASkip, TIAObjectDone
+local ObjectLoop, Skip, Branch, Done
 
-TIAObjectLoop:
+ObjectLoop:
 	cmp	TIAClock[bp],dl		
-	ja	TIAObjectDone		; if next change clock <= next pf write
-	mov	bl,TIAReg[bp]		;   go to the register change handler
-	and	bx,03fh			; only 63 options !!
-	shl	bx,1
-	call	TIARegVector[bx]
+	ja	Done			; if next change clock <= next pf write
+Branch:
+	mov	bl,TIAReg[bp]		;   goto register change handler
+	and	ebx,03fh		; only 63 options
+	call	[TIARegVector + ebx*2]
         
-TIASkip:add	bp,4			; go on to the next change
+Skip:	add	bp,4			; go on to the next change
 	cmp	byte ptr TIAClock[bp],TIAInvalid ; if moved onto an invalid
-	je	TIASkip			; skip it.
-	jmp	TIAObjectLoop
-        
-TIAObjectDone:
+	je	Skip			; skip it.
+
+	cmp	TIAClock[bp],dl		; < another change to handle? (pentium opt)
+	jbe	Branch			;   yes
+Done:
+	endm
+
+;*
+;* macro to put a blank bit into the display
+;*
+
+BlankBit macro
+	mov	di,[DisplayPointer]
+	xor	ax,ax
+	mov	gs:[di],ax
+	add	[DisplayPointer],2
+endm
+
+
+;*
+;* macro to do a blank bit (complete)
+;*
+
+DoBlank macro
+
+	DoObjects
+	PlayfieldBit
+	CollisionTest
+	BlankBit
+	inc	dl
+	inc	cx
+	inc	si
+
+	endm
+
+;*
+;* macro to do 4 blank bits
+;*
+
+DoBlank4 macro
+
+	DoObjects
+	DangerousPlayfieldBit
+	CollisionTest
+	BlankBit
+	inc	dl
+	inc	cx
+	inc	si
+
+	DoObjects
+	CollisionTest
+	BlankBit
+	inc	dl
+	inc	cx
+	inc	si
+
+	DoObjects
+	CollisionTest
+	BlankBit
+	inc	dl
+	inc	cx
+	inc	si
+
+	DoObjects
+	CollisionTest
+	BlankBit
+	inc	dl
+	inc	cx
+	inc	si
 
 	endm	
+
+;*
+;* macro to do a real bit (complete)
+;*
+
+DoReal	macro
+
+	DoObjects
+	PlayfieldBit
+	CollisionConvert
+	inc	dl			; increment color clock
+	inc	cx			; increment playfield clock
+	inc	si			; increment pf write / collision pointer
+
+	endm
+
+;*
+;* do 4 real bits
+;*
+
+DoReal4 macro
+
+	DoObjects
+	DangerousPlayfieldBit
+	CollisionConvert
+	inc	dl			; increment color clock
+	inc	cx			; increment playfield clock
+	inc	si			; increment pf write / collision pointer
+
+	DoObjects
+	CollisionConvert
+	inc	dl			; increment color clock
+	inc	cx			; increment playfield clock
+	inc	si			; increment pf write / collision pointer
+
+	DoObjects
+	CollisionConvert
+	inc	dl			; increment color clock
+	inc	cx			; increment playfield clock
+	inc	si			; increment pf write / collision pointer
+
+	DoObjects
+	CollisionConvert
+	inc	dl			; increment color clock
+	inc	cx			; increment playfield clock
+	inc	si			; increment pf write / collision pointer
+
+	endm
+
 
 ; *     
 ; *  TIALineTo -- generate a raster line        
@@ -393,59 +458,41 @@ TIAGenerate:
 	call	TIAInsertObjects	; insert objects from the last line
 
 	xor	dl,dl			; start position
-	xor	cx,cx			; clear playfield clock
+	xor	ecx,ecx			; clear playfield clock
 
-TIALeftLoop:
-	DoObjects
-	LeftPlayfieldBit
-	add	dl,4			; increment color clock
-	add	cx,4			; increment playfield clock
-	
-	DoObjects
-	
+	mov	di,[TIAPFColorByClock]	; update playfield color
+	mov	al,[di]			; clock position 0
+	mov	[TIAColourTable+TCTPF],al
+
+BlankLoop:
 	mov	al,ColumnBlank
 	cmp	dl,al
-	ja	RealConvert
-	ConvertBlank4
-	jmp	DoCollisionTest		; cosmic commuter needs collision test
+	jae	TIALoop
+	DoBlank4
+	jmp	BlankLoop
 
-RealConvert:
-	Convert4
-
-DoCollisionTest:
-	Collision4
-
-	add	si,4			; increment pf write / collision pointer
-	cmp	dl,80			; reached end of line?
-	jae	TIARightBegin		;   yes, exit
-	jmp	TIALeftLoop
+TIALoop:
+	DoReal4
+	cmp	dl,80			; reached middle of playfield?
+	je	TIARightBegin		;   yes
+TIATestDone:
+	cmp	dl,160
+	jae	TIAExit
+	jmp	TIALoop
 
 TIARightBegin:
-;	pusha
-;	mov	al,[CyclesPerLine]
-;	call	DoInstructions		; do instructions for right half
-;	popa
+	mov	di,[TIAPFColorByClock]	; update playfield color
+	movzx	bx,dl
+	mov	al,[di+bx]
+	mov	[TIAColourTable+TCTPF],al
 
 	test	[TIA+TIACtrlPf],1	; reversing the current line ?
-	jnz	TIARightLoop		;    yes, continue
-	xor	cx,cx			;    no, restart from beginning
-
-TIARightLoop:
-	DoObjects
-	RightPlayfieldBit
-	add	dl,4			; increment color clock
-	add	cx,4			; increment playfield clock
-	
-	DoObjects
-	Convert4
-	Collision4
-
-	add	si,4			; increment pf write / collision pointer
-	cmp	dl,160			; reached end of line?
-	jae	TIAExit			;   yes, exit
-	jmp	TIARightLoop
+	jnz	TIATestDone		;    yes, continue
+	xor	ecx,ecx			;    no, restart from beginning
+	jmp	TIATestDone
 
 TIAExit:				; we've finished the line scan...
+
 	ret
 
 ;*

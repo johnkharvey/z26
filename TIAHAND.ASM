@@ -28,7 +28,7 @@ TIARegVector dw TRNoop		; 00 -- VSYNC
 	dw	TRCopy		; 07 -- COLUP1
 	dw	TRCopy		; 08 -- COLUPF
 	dw	TRCopy		; 09 -- COLUBK
-	dw	TRCopy		; 0A -- CTRLPF
+	dw	TRCtrlPF	; 0A -- CTRLPF
 	dw	TRCopy		; 0B -- REFP0
 	dw	TRCopy		; 0C -- REFP1
 	dw	TRCopy		; 0D -- PF0
@@ -62,7 +62,7 @@ TIARegVector dw TRNoop		; 00 -- VSYNC
 	dw	TRCopy		; 29 -- RESMP1
 	dw	TRHMov		; 2A -- HMOVE
 	dw	TRHClr		; 2B -- HMCLR
-	dw	TRCClr		; 2C -- CXCLR
+	dw	TRCxZr		; 2C -- CXCLR
 
 	dw	TRNoop		; 2D
 	dw	TRNoop		; 2E
@@ -94,7 +94,7 @@ TIARegVector2 dw TRNoop		; 00 -- VSYNC
 	dw	TRCopy		; 07 -- COLUP1
 	dw	TRCopy		; 08 -- COLUPF
 	dw	TRCopy		; 09 -- COLUBK
-	dw	TRCopy		; 0A -- CTRLPF
+	dw	TRCtrlPF	; 0A -- CTRLPF
 	dw	TRCopy		; 0B -- REFP0
 	dw	TRCopy		; 0C -- REFP1
 	dw	TRCopy		; 0D -- PF0
@@ -165,9 +165,9 @@ TRSond: mov	bl,TIAReg[bp]		; bl = register
 ;* clear collision latches (on-screen version)
 ;*
 
-TRCClr: mov	bl,TIAClock[bp]		; clear the collision flag
-	or	byte ptr TIADisplay[bx],80h ; set the bit 7 in the display field
-	ret				    ;   (signals raster engine to clear it)
+;TRCClr: mov	bl,TIAClock[bp]		; clear the collision flag
+;	or	byte ptr TIADisplay[bx],80h ; set the bit 7 in the display field
+;	ret				    ;   (signals raster engine to clear it)
 
 ;*
 ;* clear collision latches (off-screen version)
@@ -190,6 +190,38 @@ TRCopy: mov	bl,TIAReg[bp]		; register copy.offset in bx
 					; bh is already zero
 	mov	al,TIAVal[bp]		; value in al
 	mov	TIA[bx],al		; write it
+
+	ret
+
+;*
+;* write to CtrlPF
+;*
+
+TRCtrlPF: mov	bl,TIAReg[bp]		; register copy.offset in bx
+					; bh is already zero
+	mov	al,TIAVal[bp]		; value in al
+	mov	TIA[bx],al		; write it
+
+
+	mov	[TIADisplayToColor],offset TIADisplayToColour
+	test	[TIA+TIACtrlPf],4	; if pf has priority, use alternate translation
+	jz	TRCtrl1
+	mov	[TIADisplayToColor],offset TIADisplayToColour2
+
+TRCtrl1:
+	mov	[TIAPFColorByClock],offset TIAColorPFTable
+	cmp	[NoScoreMode],0		; doing scores?
+	jnz	TRCtrl2			;   no
+	test	[TIA+TIACtrlPf],2	;   yes, if color split, pf color = player color
+	jz	TRCtrl2
+	mov	[TIAPFColorByClock],offset TIAColorPlayTable
+TRCtrl2:
+	mov	bl,TIAClock[bp]		; update playfield color
+	add	bx,[TIAPFColorByClock]
+	mov	al,[bx]
+	mov	[TIAColourTable+TCTPF],al
+
+
 	ret
 
 ;*
@@ -244,19 +276,24 @@ TWneg:	add	al,160			; adjust
 TWret:
 	endm
 
-TIAWrap macro
-local TWneg,TWret
-
-	cmp	al,240			; went negative ???
+TIAWrap:cmp	al,240			; went negative ???
 	ja	TWneg			;   yes, adjust
 	cmp	al,160			; past right side ?
 	jb	TWret			;   no
 	sub	al,160			;   yes
 	jmp	TWret
 
-TWneg:	xor	al,al			; adjust
-TWret:
-	endm
+TWneg:	push	ax
+	mov	al,[WrapZero]
+	cmp	al,0
+	jnz	TWZero			;   wrap negatives to zero
+	pop	ax
+	add	al,160
+	ret
+
+TWZero:	pop	ax
+	xor	al,al			; adjust
+TWret:	ret
 
 
 ;*
@@ -296,7 +333,7 @@ TIAUP2:
 	sub	bp,4			; bp points to it
 	mov	al,TIAClock[bp]
 	sub	al,ah			; add the offset to it
-	TIAWrap
+	call	TIAWrap
 	mov	TIAClock[bp],al
 TIAUP1: pop	bp
 	pop	ax
@@ -312,7 +349,7 @@ TRHMB1: mov	ah,TIA+TIAHmp0[bx]	; get the adjustment
 	sar	ah,4			; preserve sign
 	mov	al,TIA+TIAResp0[bx]
 	sub	al,ah			; adjust it !
-	TIAWrap
+	call	TIAWrap
 	mov	TIA+TIAResp0[bx],al
 	inc	bx
 	cmp	bx,5
@@ -403,28 +440,6 @@ TRMNoDraw:
 	or	al,128
 	call	TIAInvalidate		; invalidate old copies
 TGret:	ret
-
-; *****************************************************************************
-;
-;	look for the first item in TIABuffer (BP) where Register = al
-;	and mark it invalid
-;
-; *****************************************************************************
-
-TIAInvalidate:
-	push	bp
-TIAI1:	mov	ah,TIAClock[bp]		; check if finished
-	cmp	ah,TIAEnd
-	je	TIAI2
-	cmp	al,TIAReg[bp]		; if found, mark it
-	je	TIAIMark
-	add	bp,4			; do next until end
-	jmp	TIAI1
-TIAIMark:				; mark it invalid.
-	mov	byte ptr TIAClock[bp],TIAInvalid
-TIAI2:
-	pop	bp
-	ret
 
 ; *****************************************************************************
 ;

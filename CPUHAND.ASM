@@ -302,16 +302,32 @@ WSret:	ret				; we're at the end of the line
 
 ; VSync -- vertical sync set-clear
 
-WrTiaVSync:     
+;* this stuff looks wrong
+;* it's the zero state of vsync that should set scanline to zero
+
+WrTiaVSync:
+	push	ax			; lasrgate needs this
+	test	[ReverseSync],1
+	jnz	DoReverseTest
+
 	test	[WByte],2		; if d1 is set then ....
-	jz	WSret
-NewFrame:
+	jnz	ZRET			; was jz
+	jmp	DoVSync
+
+DoReverseTest:
+	test	[WByte],2		; if d1 is set then ....
+	jz	ZRET
+
+DoVSync:
 	mov	[ScanLine],0		; back to screen top
-;	mov	[RClock],0
-	call	TIABlank
 	inc	[Frame]			; new frame.
+	mov	ax,[CFirst]
+	cmp	ax,0			; forcing first line ?
+	jz	ZRET			;   no, let vblank take care of it
+	mov	[TopLine],ax
+ZRET:	pop	ax
 	Ret
-        
+
 
 ; VBlank -- vertical blank set-clear
 
@@ -321,7 +337,8 @@ WrTiaVBlank:
 	mov	[VBlank],bl
 	test	bl,2			; setting or clearing ?
 	jz	WVBClear		;   clearing
-	mov	[TopLine],65535		; turn off Tia
+	mov	[TopLine],65535		;   setting -- turn off Tia
+	call	TIABlank		; clear rest of screen
 	jmp	WVBRet
 
 WVBClear:
@@ -330,16 +347,40 @@ WVBClear:
 	jae	WVBPastMin
 	mov	ax,[CFirst]
 WVBPastMin:
+	inc	ax
 	mov	[TopLine],ax
 	add	ax,[MaxLines]
 	mov	[BottomLine],ax
-	mov	al,[VBlankFrame]
-	cmp	al,0
+	cmp	[VBlankFrame],0
 	jz	WVBRet
 	inc	[Frame]			; for bowling !
 WVBRet:
 	pop	ax
 	ret      
+
+;*
+;* blank the remainder of the display each frame
+;*
+
+TIABlank:
+	push	ax
+	push	di
+	xor	ax,ax
+	mov	di,[DisplayPointer]
+TIABLoop:
+	cmp	di,30000
+	jb	TIABRet
+	cmp	di,64000		; reached end of display area?
+	jae	TIABRet			;    yes, done
+	mov	gs:[di],ax
+	add	di,2
+	jmp	TIABLoop
+
+TIABRet:
+	mov	[DisplayPointer],di
+	pop	di
+	pop	ax
+	ret
 
 
 ;xWrTiaVBlank:

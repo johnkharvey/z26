@@ -119,3 +119,28 @@ TIAInsert2:
 	pop	bx
         
 	ret
+
+
+; *****************************************************************************
+;
+;	look for the first item in TIABuffer (BP) where Register = al
+;	and mark it invalid
+;
+; *****************************************************************************
+
+TIAInvalidate:
+	push	bp
+TIAI1:	mov	ah,TIAClock[bp]		; check if finished
+	cmp	ah,TIAEnd
+	je	TIAI2
+	cmp	al,TIAReg[bp]		; if found, mark it
+	je	TIAIMark
+	add	bp,4			; do next until end
+	jmp	TIAI1
+TIAIMark:				; mark it invalid.
+	mov	byte ptr TIAClock[bp],TIAInvalid
+TIAI2:
+	pop	bp
+	ret
+
+

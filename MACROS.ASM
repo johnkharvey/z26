@@ -3,6 +3,11 @@
 
 ;segment declaration macros
 
+;*
+;* for .com file use tiny model
+;*
+
+IFDEF comfile
 .CODESEGMENT macro
 _TEXT SEGMENT USE16 DWORD PUBLIC 'CODE'
         ASSUME cs:_TEXT, ds:_TEXT, es:_TEXT
@@ -22,6 +27,33 @@ ALIGN 2
 .DEND   macro
 _TEXT ENDS
         endm
+ENDIF
+
+;*
+;* for .exe file use small model
+;*
+
+IFNDEF comfile
+.CODESEGMENT macro
+_TEXT SEGMENT USE16 DWORD PUBLIC 'CODE'
+        ASSUME cs:_TEXT, ds:_DATA, es:_DATA
+ALIGN 2 
+        endm
+        
+.CEND   macro
+_TEXT ENDS
+        endm
+
+.DATASEGMENT macro
+_DATA SEGMENT USE16 DWORD PUBLIC 'DATA'
+        ASSUME cs:_TEXT, ds:_DATA, es:_DATA     ;small model
+ALIGN 2 
+        endm
+
+.DEND   macro
+_DATA ENDS
+        endm
+ENDIF
 
 
 

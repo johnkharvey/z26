@@ -29,11 +29,15 @@ PAGE 66,132
 ;		       games with score mode (playfield taking on color of players)
 ; 12-02-97  --  (0.84) got tetris26, space invaders, taxavoid, catmouse to stop jiggling
 ;		       by playing games with CyclesPerScanLine
+; 12-04-97  --  (0.85) rework vertical synchronization
+; 12-13-97  --  (0.86) better playfield colors (single bit resolution)
+; 12-15-97  --  (0.86) more work on vertical synchronization
+; 12-17-97  --  (0.86) more speed
 
 
 ; assembly time definitions
 
-comfile =		1		; build a COM file
+;comfile =		1		; build a COM file
 memcheats =		1		; cheat	on 16-bit reads
 ;dotiming =		1		; generate timing blips
 

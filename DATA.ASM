@@ -64,8 +64,8 @@ TimerVec	dw	 Timer0		;timer routine vector -- Timer1 for starmaster
 TopLine		dw	0		; was 36     top line of display
 BottomLine	dw	0		; was 36+200 bottom line of display
 
-CFirst		dw	8		; <-- gets changed by SetupSpecial
-					; 8 is max for cubicol
+CFirst		dw	0		; <-- gets changed by SetupSpecial
+					; (leave it zero here)
 					 
 CLast		dw	256		; was 256 last scan line (from CMDLine)
 
@@ -84,6 +84,9 @@ NoScoreMode	db	0		; set if we don't want PF to take on player colors
 CyclesPerLine	db	CyclesPerScanLine-2 ; # of cycles to execute instructions for each line
 VBlankFrame	db	0		; VBlank causes a new frame
 LastCycle	db	0		; for DoInstructions
+ReverseSync	db	0		; sync on reverse transition
+WrapZero	db	0		; wrap negative player pos to zero
+					; atlantis and oceancty
 
 ReadBank	dw	RBank4		; Bank switching function (Read)
 WriteBank	dw	WBank4		; were RBank4 and WBank4
@@ -110,16 +113,6 @@ WByte		db	0		; byte to write
 
 
 
-;process these commands immediately
-
-ALIGN 2
-
-WrTiaImmediateVector	dw	WrTiaVSync	; 0
-			dw	WrTiaVBlank	; 1
-			dw	WrTiaWSync	; 2
-			dw	WSret		; 3 -- reset horizontal sync
-						;      for factory testing only !
-		        
 
 IOPortB		db	00Bh		; IO Port B (switches)
 IOPortA		db	0FFh		; IO Port A (joystick)
@@ -129,32 +122,26 @@ DumpPorts	db	0,0,0,0		; Input ports (inp0..3)
 InputLatch	db	080h		; Input latch (inp4)
 		db	080h		; Input latch (inp5)
 	   
-;CTVBlank	db	0		; current value in vblank
-
 ALIGN 2
 
 OldInt9		dw	0,0		; old vector for int9
 
 KeyTable	db	128 dup (0)	; Key pressed table
 
-TIABuffer	db 128 dup (TIAEnd)	; TIA information buffer
+TIABuffer	db 256 dup (TIAEnd)	; TIA information buffer
+					; 128 just isn't big enough for some trashed games
+					; I've seen SVector get stepped on (see below)
+					; then we're outta control
 
-TIA		db 64 dup (0)		; TIA Registers
 
 VDP0Gr		db   0			; Buffer for Player 0 Vert Del Graphic
 VDP1Gr		db   0			; Buffer for Player 1 Vert Del Graphic
 VDBlEn		db   0			; Buffer for Ball Vertical Delay Enable
 
-
-ALIGN 4
-
-TIADisplay	db 320 dup (0)		; Display as currently setup
 TIAScanLine	dw	0		; Scanline
 TIAWritePointer dw	0		; Write to TIA Buffer pointer
 TIAFrameSkip	dw	-1		; zero if frame skipped
 TIACollide	dw	0		; Collision flag word.
-
-ALIGN 4
 
 SVector dw	PCSound			; Vector for sound updates
 
@@ -171,13 +158,23 @@ SDMPX	db	2			; 0 = ch1,1 = ch2,2 = both,-1 = quiet
 MinVol	db	8			; minimum volume for PC Speaker
 
 
+;process these commands immediately
+
+ALIGN 2
+
+WrTiaImmediateVector	dw	WrTiaVSync	; 0
+			dw	WrTiaVBlank	; 1
+			dw	WrTiaWSync	; 2
+			dw	WSret		; 3 -- reset horizontal sync
+						;      for factory testing only !
+		        
 ; cycle offset table
 
 ;CO=-1	;default cycle offset
-CO=-1
-C1=-2
-;C2=-2	;play with this for video cube
-C2=-2
+CO=-1	; -1 for buck rogers
+C1=-2	; -1 for yars -2 for tron
+C2=0	; 0 for vidcube
+C3=-1
 
 
 CycleOffset	db	68+CO	;00	VSYNC
@@ -190,7 +187,7 @@ CycleOffset	db	68+CO	;00	VSYNC
 		db	68+C2	;07	COLUP1
 		db	68+C2	;08	COLUPF
 		db	68+C2	;09	COLUBK
-		db	68+C2	;0a	CTRLPF
+		db	68+CO	;0a	CTRLPF
 		db	68+CO	;0b	REFP0
 		db	68+CO	;0c	REFP1
 		db	68+C1	;0d	PF0
@@ -207,8 +204,8 @@ CycleOffset	db	68+CO	;00	VSYNC
 		db	68+CO	;18	AUDF1
 		db	68+CO	;19	AUDV0
 		db	68+CO	;1a	AUDV1
-		db	68+CO	;1b	GRP0
-		db	68+CO	;1c	GRP1
+		db	68+C3	;1b	GRP0
+		db	68+C3	;1c	GRP1
 		db	68+CO	;1d	ENAM0
 		db	68+CO	;1e	ENAM1
 		db	68+CO	;1f	ENABL
@@ -252,9 +249,6 @@ PfClockToBitTable	dd	1 shl 4		;0	forward
 			dd	1 shl 16	;12
 			dd	1 shl 17	;13
 			dd	1 shl 18	;14
-
-
-
 			dd	1 shl 19	;15
 			dd	1 shl 20	;16
 			dd	1 shl 21	;17
@@ -291,8 +285,6 @@ TGODiffTab	dw	TGORet		; 0
 		dw	TGO2Width	; 5
 		dw	TGO3Medium	; 6
 		dw	TGO4Width	; 7
-
-
 
 ;
 ; Display to collision word
@@ -379,6 +371,15 @@ TIAColourTable	db	TIAColubk	; Background
 		db	TIAColupf	; Playfield
 		db	TIAColup1	; Player 1,Missile 1
 		db	TIAColup0	; Player 0,Missile 0
+
+TIADisplayToColor dw	TIADisplayToColour
+
+TIAColorPFTable	db	160 dup (TIAColupf)
+
+TIAColorPlayTable db	80 dup (TIAColup0)
+		  db    80 dup (TIAColup1)
+
+TIAPFColorByClock	dw offset TIAColorPFTable
 
 ALIGN 2
 
