@@ -222,7 +222,10 @@ TRCopyPFColor:
 	movzx	bx,al
 	mov	al,TIA[bx]
 	mov	ah,al
-	mov	[PlayfieldColor],ax	; set up color for FastPlayfieldBit
+	shl	eax,16
+	mov	al,TIA[bx]
+	mov	ah,al
+	mov	[PlayfieldColor],eax	; set up color for FastPlayfieldBit
 
 	ret
 
@@ -237,7 +240,10 @@ TRCopyBKColor:
 
 	mov	al,TIA[TIAColubk]
 	mov	ah,al
-	mov	[BackgroundColor],ax	; set up background color for FastPlayfieldBit
+	shl	eax,16
+	mov	al,TIA[TIAColubk]
+	mov	ah,al
+	mov	[BackgroundColor],eax	; set up background color for FastPlayfieldBit
 
 	ret
 
@@ -252,7 +258,10 @@ TRCopyP1Color:
 
 	mov	al,TIA[TIAColup1]
 	mov	ah,al
-	mov	[Player1Color],ax	; set up background color for FastPlayfieldBit
+	shl	eax,16
+	mov	al,TIA[TIAColup1]
+	mov	ah,al
+	mov	[Player1Color],eax	; set up background color for FastPlayfieldBit
 
 	ret
 
@@ -267,7 +276,10 @@ TRCopyP0Color:
 
 	mov	al,TIA[TIAColup0]
 	mov	ah,al
-	mov	[Player0Color],ax	; set up background color for FastPlayfieldBit
+	shl	eax,16
+	mov	al,TIA[TIAColup0]
+	mov	ah,al
+	mov	[Player0Color],eax	; set up background color for FastPlayfieldBit
 
 	ret
 
@@ -304,7 +316,10 @@ TRCtrl2:
 	movzx	bx,al
 	mov	al,TIA[bx]
 	mov	ah,al
-	mov	[PlayfieldColor],ax	; set up color for FastPlayfieldBit
+	shl	eax,16
+	mov	al,TIA[bx]
+	mov	ah,al
+	mov	[PlayfieldColor],eax	; set up color for FastPlayfieldBit
 
 	ret
 

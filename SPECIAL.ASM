@@ -2,23 +2,71 @@
 ;* do special setup for recognized cartridges
 ;*
 
-
-;*
-;* process requests to reverse sense of test of vertical sync
-;*
-
 SetupSpecial:
-	cmp	ax,0a531h
-	je	SSReverse		; doubdunk (cures bad graphics)
-	cmp	ax,02bc1h
-	je	SSReverse		; mspacman (shows first line)
-	cmp	ax,0676ch
-	je	SSReverse		; commando (weird missile)
+	jmp	SSFudgeTimer
+
+
+;*
+;* find checksum entry in table pointed to by si
+;*
+
+SSFIND:
+SSFIND_Loop:
+	mov	edx,dword ptr [si]	; pick up checksum
+	add	si,4
+	cmp	edx,-1			; at end of table ?
+	je	SSFIND_Done
+	test	edx,0ffff0000h		; top word set ?
+	jnz	SSFIND_TestDouble	;   yes, do full dword test
+	cmp	ax,dx			;   no, test words
+	je	SSFIND_Done		; match
+	inc	si
+	jmp	SSFIND_Loop
+
+SSFIND_TestDouble:
+	cmp	eax,edx
+	je	SSFIND_Done
+	inc	si			; no match, skip line #
+	jmp	SSFIND_Loop
+
+SSFIND_Done:
+	ret
+
+
+
+;*
+;* process requests to fudge timer
+;*
+
+SSFudgeTimer:
+	cmp	ax,0b2d7h
+	jne	SSTR
+	mov	[TimerFudge],dword ptr 22	; frogpond
+	jmp	SSTR
+
+
+;*
+;* process requests for Timer0
+;*
+
+
+SSTR:	
+;	jmp	SetT0
+
+	cmp	ax,07d00h
+	je	SetT0			; berzerk
+	cmp	ax,06b3dh
+	je	SetT0			; boxing
+	cmp	ax,0f1d7h
+	je	SetT0			; checkact
+	cmp	ax,04d38h
+	je	SetT0			; espial
+	cmp	ax,0c3ceh
+	je	SetT0			; hero
 
 	jmp	SSWRAP
 
-SSReverse:
-	mov	[ReverseSync],1
+SetT0:	mov	[TimerVec], offset Timer0
 	jmp	SSWRAP
 
 
@@ -55,377 +103,457 @@ WZero:	mov	[WrapZero],1
 ;*
 
 SSLINE:
-	cmp	ax,08387h
-	je	Line69			; actionmn
-	cmp	ax,0b0a9h
-	je	Line73			; alienret
-	cmp	ax,0e0e9h
-	je	Line36			; astroidc
-	cmp	ax,08ae0h
-	je	Line36			; astroids
-	cmp	ax,0bf6fh
-	je	Line52			; bobby
-	cmp	ax,03ae7h
-	je	Line36			; brickick
-	cmp	ax,0f578h
-	je	Line35			; buckrog
-	cmp	ax,06000h
-	je	Line31			; burndesr
-	cmp	ax,07d16h
-	je	Line31			; carnival
-	cmp	ax,08e07h
-	je	Line34			; catmouse
-	cmp	ax,037b7h
-	je	Line19			; chalenge
-	cmp	ax,01a5eh
-	je	Line37			; challang
-	cmp	ax,045cbh
-	je	Line36			; chinasyn
-	cmp	ax,083e3h
-	je	Line28			; chuckwgn
-	cmp	ax,00828h
-	je	Line46			; clwndown
-	cmp	ax,0a01ch
-	je	Line46			; coln
-	cmp	ax,08d5ch
-	je	Line36			; colorbar
-	cmp	ax,02415h
-	je	Line36			; comandrd
-	cmp	ax,08698h
-	je	Line42			; combat
-	cmp	ax,0e90bh
-	je	Line32			; condor
-	cmp	ax,03cfah
-	je	Line48			; congbong
-	cmp	ax,022abh
-	je	Line46			; cosmcrep
-	cmp	ax,09f21h
-	je	Line36			; crosfrce
-	cmp	ax,02d81h
-	je	Line58			; dancplat
-	cmp	ax,081cfh
-	je	Line43			; darkcvrn
-	cmp	ax,0ce26h
-	je	Line48			; dethtrap
-	cmp	ax,0c814h
-	je	Line38			; dicepuzl
-	cmp	ax,0bd1fh
-	je	Line42			; dishastr
-	cmp	ax,03695h
-	je	Line36			; dkjr
-	cmp	ax,0885ch
-	je	Line29			; dragster
-	cmp	ax,07cd6h
-	je	Line41			; drgndfnd
-	cmp	ax,02018h
-	je	Line35			; earthdie
-	cmp	ax,08234h
-	je	Line30			; eggcatch
-	cmp	ax,0ccd7h
-	je	Line40			; eggomana
-	cmp	ax,0f69ah
-	je	Line42			; enduro
-	cmp	ax,0ab1ch
-	je	Line52			; fighterp (* doesn't fix *)
-	cmp	ax,0ec02h
-	je	Line42			; flashgrd
-	cmp	ax,046b6h
-	je	Line70			; forest
-	cmp	ax,00cb2h
-	je	Line42			; front_rk
-	cmp	ax,01129h
-	je	Line48			; funwnumb
-	cmp	ax,0fdbfh
-	je	Line45			; harbresc
-	cmp	ax,058a6h
-	je	Line38			; holehunt
-	cmp	ax,08828h
-	je	Line34			; infiltrt
-	cmp	ax,0b00ah
-	je	Line40			; iwantmom
-	cmp	ax,0a9c2h
-	je	Line18			; jawbreak
-	cmp	ax,04000h
-	je	Line31			; jnglfevr
-	cmp	ax,00a00h
-	je	Line40			; knightwn
-	cmp	ax,00b7ah
-	je	Line28			; lasrgate
-	cmp	ax,0ff2ch
-	je	Line28			; lasrvoly
-	cmp	ax,03769h
-	je	Line39			; malagai
-	cmp	ax,06097h
-	je	Line44			; marinwar
-	cmp	ax,00264h
-	je	Line41			; mastbuld
-	cmp	ax,0dc54h
-	je	Line60			; misn3000
-	cmp	ax,07c2bh
-	je	Line86			; motocros
-	cmp	ax,0877fh
-	je	Line43			; mousetrp
-	cmp	ax,02bc1h
-	je	Line35			; mspacman
-	cmp	ax,09aa0h
-	je	Line32			; namegame
-	cmp	ax,02b06h
-	je	Line26			; oscar
-	cmp	ax,00194h
-	je	Line36			; othello
-	cmp	ax,054f5h
-	je	Line62			; parachut
-	cmp	ax,00fc5h
-	je	Line31			; packong
-	cmp	ax,045aeh
-	je	Line65			; phantomt
-	cmp	ax,09f1eh
-	je	Line36			; pacman
-	cmp	ax,0187dh
-	je	Line40			; pandchse
-	cmp	ax,04e4ah
-	je	Line36			; piginspc
-	cmp	ax,076a4h
-	je	Line36			; rescter1
-	cmp	ax,0badeh
-	je	Line36			; sharkatk
-	cmp	ax,07be3h
-	je	Line22			; shootin
-	cmp	ax,08each
-	je	Line36			; shtlorbt
-	cmp	ax,02462h
-	je	Line36			; smurfres
-	cmp	ax,02697h
-	je	Line52			; snalsqrl
-	cmp	ax,07044h
-	je	Line38			; solarfox
-	cmp	ax,06373h
-	je	Line32			; spidrman
-	cmp	ax,00cc0h
-	je	Line50			; spikpeak
-	cmp	ax,0c4a4h
-	je	Line40			; squeezbx
-	cmp	ax,0deebh
-	je	Line37			; strwbery
-	cmp	ax,0deb1h
-	je	Line36			; supercce
-	cmp	ax,0ddb2h
-	je	Line36			; suprman1
-	cmp	ax,0d95eh
-	je	Line36			; suprman2
-	cmp	ax,0cd03h
-	je	Line70			; supferar
-	cmp	ax,0cc64h
-	je	Line34			; supferri
-	cmp	ax,08ed6h
-	je	Line36			; surfsup1
-	cmp	ax,08ed5h
-	je	Line36			; surf_fix
-	cmp	ax,08000h
-	je	Line60			; surfprds
-	cmp	ax,070c4h
-	je	Line37			; survlrun
-	cmp	ax,0cbe1h
-	je	Line42			; tacscan
-	cmp	ax,046d8h
-	je	Line34			; tanksbut
-	cmp	ax,01866h
-	je	Line41			; tapeworm
-	cmp	ax,079cfh
-	je	Line43			; timewarp
-	cmp	ax,08822h
-	je	Line24			; ufopatrl
-	cmp	ax,08272h
-	je	Line48			; univchos
-	cmp	ax,0811h
-	je	Line45			; walker
-	cmp	ax,00de3h
-	je	Line34			; wallball
-	cmp	ax,044dch
-	je	Line37			; xenophob
-	cmp	ax,096a1h
-	je	Line36			; xevious
-	cmp	ax,062d5h
-	je	Line34			; zoofun
-	cmp	ax,0f5b3h
-	je	Line34			; starempr
-	cmp	ax,05317h
-	je	Line36			; reactor
-	cmp	ax,08e4dh
-	je	Line36			; gijoe
-	cmp	ax,04d67h
-	je	Line41			; towerinf
-	cmp	ax,05e7eh
-	je	Line36			; vidolymp
-	cmp	ax,0e446h
-	je	Line36			; dethstar
-	cmp	ax,0c831h
-	je	Line40			; tutank
-	cmp	ax,05653h
-	je	Line38			; qbrtqube
-	cmp	ax,0fce0h
-	je	Line36			; montzrev
-	cmp	ax,09379h
-	je	Line36			; toothpro
-	cmp	ax,0dd61h
-	je	Line42			; endro_tw
-	cmp	ax,0e35eh
-	je	Line36			; riverp
+	push	si
+	mov	si,offset LineTable
 
+SSLINE_Loop:
+	mov	edx,dword ptr [si]	; pick up checksum
+	add	si,4
+	cmp	edx,-1			; at end of table ?
+	je	SSLINE_Done
+	test	edx,0ffff0000h		; top word set ?
+	jnz	SSLINE_TestDouble	;   yes, do full dword test
+	cmp	ax,dx			;   no, test words
+	je	SSLINE_SetLine		; match
+	inc	si
+	jmp	SSLINE_Loop
 
-	jmp	SSTR			; process Timer1 requests
+SSLINE_TestDouble:
+	cmp	eax,edx
+	je	SSLINE_SetLine
+	inc	si			; no match, skip line #
+	jmp	SSLINE_Loop
 
+SSLINE_SetLine:
+	movzx	dx,byte ptr [si]
+	mov	[CFirst],dx
 
-; *
-; * start line setting handlers *
-; *
-
-Line18:	mov	[CFirst],18
-	jmp	SSTR
-
-Line19:	mov	[CFirst],19
-	jmp	SSTR
-
-Line22:	mov	[CFirst],22
-	jmp	SSTR
-
-Line24:	mov	[CFirst],24
-	jmp	SSTR
-
-Line26:	mov	[CFirst],26
-	jmp	SSTR
-
-Line28:	mov	[CFirst],28
-	jmp	SSTR
-
-Line29:	mov	[CFirst],29
-	jmp	SSTR
-
-Line30:	mov	[CFirst],30
-	jmp	SSTR
-
-Line31:	mov	[CFirst],31
-	jmp	SSTR
-
-Line32:	mov	[CFirst],32
-	jmp	SSTR
-
-Line34:	mov	[CFirst],34
-	jmp	SSTR
-
-Line35:	mov	[CFirst],35
-	jmp	SSTR
-
-Line36:	mov	[CFirst],36
-	jmp	SSTR
-
-Line37:	mov	[CFirst],37
-	jmp	SSTR
-
-Line38:	mov	[CFirst],38
-	jmp	SSTR
-
-Line39:	mov	[CFirst],39
-	jmp	SSTR
-
-Line40:	mov	[CFirst],40
-	jmp	SSTR
-
-Line41:	mov	[CFirst],41
-	jmp	SSTR
-
-Line42B:mov	[CFirst],42		; first display line
-	jmp	SSCB8			; do column blanking
-
-Line42:	mov	[CFirst],42
-	jmp	SSTR
-
-Line43:	mov	[CFirst],43
-	jmp	SSTR
-
-Line44:	mov	[CFirst],44
-	jmp	SSTR
-
-Line45:	mov	[CFirst],45
-	jmp	SSTR
-
-Line46:	mov	[CFirst],46
-	jmp	SSTR
-
-Line48:	mov	[CFirst],48
-	jmp	SSTR
-
-Line50:	mov	[CFirst],50
-	jmp	SSTR
-
-Line52:	mov	[CFirst],52
-	jmp	SSTR
-
-Line58:	mov	[CFirst],58
-	jmp	SSTR
-
-Line59:	mov	[CFirst],59
-	jmp	SSTR
-
-Line60:	mov	[CFirst],60
-	jmp	SSTR
-
-Line62:	mov	[CFirst],62
-	jmp	SSTR
-
-Line63:	mov	[CFirst],63
-	jmp	SSTR
-
-Line65:	mov	[CFirst],65
-	jmp	SSTR
-
-Line69:	mov	[CFirst],69
-	jmp	SSTR
-
-Line70:	mov	[CFirst],70
-	jmp	SSTR
-
-Line73:	mov	[CFirst],73
-	jmp	SSTR
-
-Line83:	mov	[CFirst],83
-	jmp	SSTR
-
-Line86:	mov	[CFirst],86
-	jmp	SSTR
-
-; *
-; * process Timer1 requests *
-; *
-
-
-SSTR:	cmp	ax,0bb3h
-	je	SetTimer1		; starmaster
-	cmp	ax,0a757h
-	je	SetTimer1		; solaris
-	cmp	ax,08614h
-	je	SetTimer1		; demohrby
-	cmp	ax,0c8bah
-	je	SetTimer1		; immies
-	cmp	ax,0ecc2h
-	je	SetTimer1		; beamride
-	cmp	ax,05653h
-	je	SetTimer1		; qbrtqube
-	cmp	ax,0f2d0h
-	je	SetTimer1		; humancan
-	cmp	ax,09ffah
-	je	SetTimer1		; radarlok
-	cmp	ax,0c525h
-	je	SetTimer1		; sprfootb
-	cmp	ax,0765ch
-	je	SetTimer1		; califgms
-
-
-	jmp	SSAU			; process audio requests
-
-SetTimer1:
-	mov	[TimerVec],offset Timer1 ; starmaster
+SSLINE_Done:
+	pop	si
 	jmp	SSAU
+
+
+.CEND
+.DATASEGMENT
+
+LineTable label byte
+
+	dd	08387h			; actionmn
+	db	68
+	dd	078a61h			; air_raid
+	db	50
+	dd	0b0a9h			; alienret
+	db	74
+	dd	0fd0e6h			; artlduel
+	db	26
+	dd	0fd096h			; Art_duel
+	db	26
+	dd	07f62h			; asterpal
+	db	68
+	dd	06c060h			; astrblst
+	db	30
+	dd	06d274h			; atlantis
+	db	42
+	dd	04e06h			; bachelor
+	db	28
+	dd	05706h			; bachlrtt
+	db	28
+	dd	0568fh			; baseattk
+	db	71
+	dd	078e4ah			; bermdtri
+	db	45
+	dd	0737ddh			; bermuda
+	db	32
+	dd	016beh			; bibi
+	db	71
+	dd	0bf6fh			; bobby
+	db	53
+	dd	072efah			; boing
+	db	45
+	dd	03baceh			; bowling
+	db	42
+	dd	03cccdh			; braingms
+	db	42
+	dd	0f578h			; buckrog
+	db	34
+	dd	08504h			; burgtime
+	db	32
+	dd	06000h			; burndesr
+	db	32
+	dd	03d843h			; canyonb
+	db	61
+	dd	07d16h			; carnival
+	db	31
+	dd	034dch			; cathouse
+	db	41
+	dd	08e07h			; catmouse
+	db	36
+	dd	037b7h			; chalenge
+	db	23
+	dd	01a5eh			; challang
+	db	41
+	dd	045cbh			; chinasyn
+	db	37
+	dd	083e3h			; chuckwgn
+	db	28
+	dd	05485h			; circatri
+	db	46
+	dd	057177h			; circus
+	db	44
+	dd	00828h			; clwndown
+	db	46
+	dd	075b0dh			; cokewins
+	db	40
+	dd	0a01ch			; coln
+	db	47
+	dd	08698h			; combat
+	db	43
+	dd	039135h			; concentr
+	db	43
+	dd	0e90bh			; condor
+	db	34
+	dd	03cfah			; congbong
+	db	46
+	dd	0712ech			; cosmcark
+	db	46
+	dd	0d169h			; cosmcorr
+	db	40
+	dd	022abh			; cosmcrep
+	db	45
+	dd	03dac6h			; cosmswrm
+	db	40
+	dd	0e8575h			; crazclmb
+	db	50
+	dd	07b4aeh			; crshdive
+	db	38
+	dd	0657eh			; crusmisl
+	db	41
+	dd	014144ch		; cryscast
+	db	40
+	dd	05ac00h			; custrev
+	db	37
+	dd	07b6b1h			; cx2616pl
+	db	50
+	dd	02d81h			; dancplat
+	db	58
+	dd	05b2ah			; dbldragn
+	db	68
+	dd	07f16ch			; defender
+	db	50
+	dd	06f6b1h			; demonatk
+	db	42
+	dd	0ce26h			; dethtrap
+	db	41
+	dd	07c814h			; dicepuzl
+	db	38
+	dd	0885ch			; dragster
+	db	32
+	dd	07cd6h			; drgndfnd
+	db	42
+	dd	01984ach		; dsrtfalc
+	db	27
+	dd	02902h			; duckshot
+	db	68
+	dd	02018h			; earthdie
+	db	36
+	dd	06ccd7h			; eggomana
+	db	46
+	dd	066e29h			; encontl5
+	db	42
+	dd	06dd61h			; endro_tw
+	db	37
+	dd	06f69ah			; enduro
+	db	37
+	dd	04d38h			; espial
+	db	70
+	dd	070bb6h			; fantcvoy
+	db	36
+	dd	06ee6dh			; farmyard
+	db	38
+	dd	09233h			; fatalrun
+	db	68
+	dd	08dcfh			; fb_pir8
+	db	68
+	dd	0ab1ch			; fighterp
+	db	60
+	dd	08ab0h			; firebird
+	db	77
+	dd	0729f3h			; firefite
+	db	44
+	dd	0756ach			; firefly
+	db	50
+	dd	03d33ch			; flagcapt
+	db	43
+	dd	03d15eh			; football
+	db	41
+	dd	046b6h			; forest
+	db	70
+	dd	074a05h			; frankmon
+	db	43
+	dd	0b2d7h			; frogpond (Vblank triggers frame)
+	db	0	
+	dd	00cb2h			; front_rk
+	db	43
+	dd	07325fh			; galaga
+	db	35
+	dd	094b8h			; ghostman
+	db	33
+	dd	07104fh			; gigolo
+	db	41
+	dd	08e4dh			; gijoe
+	db	36
+	dd	049beh			; grescape
+	db	35
+	dd	0fdbfh			; harbresc
+	db	45
+	dd	07c8bah			; immies
+	db	24
+	dd	08828h			; infiltrt
+	db	35
+	dd	0b00ah			; iwantmom
+	db	42
+	dd	0a9c2h			; jawbreak
+	db	31
+	dd	0ef53h			; jediaren
+	db	38
+	dd	04000h			; jnglfevr
+	db	32
+	dd	077a48h			; jrnyescp
+	db	41
+	dd	0cb15h			; karate
+	db	33
+	dd	00a00h			; knightwn
+	db	40
+	dd	00b7ah			; lasrgate
+	db	28
+	dd	0ff2ch			; lasrvoly
+	db	28
+	dd	07e228h			; m_a_d
+	db	47
+	dd	03769h			; malagai
+	db	40
+	dd	079f28h			; mangia
+	db	34
+	dd	07c25eh			; marflegr
+	db	44
+	dd	00264h			; mastbuld
+	db	42
+	dd	09e43h			; metdef
+	db	71
+	dd	03db85h			; minigolf
+	db	46
+	dd	0ec87h			; minrvol2
+	db	68
+	dd	07900h			; mislcont
+	db	86
+	dd	0dc54h			; misn3000
+	db	60
+	dd	07ccdeh			; misslcmd
+	db	44
+	dd	02510h			; mnr2049r
+	db	36
+	dd	0757cah			; mogulman
+	db	37
+	dd	07c2bh			; motocros
+	db	86
+	dd	0a890h			; mrdo
+	db	37
+	dd	06d7fch			; muscmach
+	db	45
+	dd	0ced99h			; mygolf
+	db	60
+	dd	02a4bh			; nghtmare
+	db	41
+	dd	08403h			; nightstk
+	db	66
+	dd	072126h			; noescape
+	db	51
+	dd	09e5a5h			; obelix
+	db	68
+	dd	06c90ah			; oceancity
+	db	42
+	dd	04cebh			; offrockr
+	db	36
+	dd	0613ch			; omegrace
+	db	46
+	dd	06a939h			; opensesm
+	db	42
+	dd	00fc5h			; packong
+	db	32
+	dd	054f5h			; parachut
+	db	63
+	dd	09f1eh			; pacman
+	db	37
+	dd	07187dh			; pandchse
+	db	43
+	dd	045aeh			; phantomt
+	db	65
+	dd	04f0eh			; pharhcrs (Vblank triggers frame)
+	db	0	
+	dd	061d00h			; philly
+	db	36
+	dd	0e89f9h			; phoenix
+	db	42
+	dd	06ae6h			; piececke
+	db	47
+	dd	073c87h			; plantpat
+	db	45
+	dd	0d60bfh			; polaris
+	db	63
+	dd	0cc026h			; popeye
+	db	46
+	dd	0759b0h			; pooyan
+	db	32
+	dd	0de082h			; porkys
+	db	46
+	dd	0790d8h			; pyrmdwar
+	db	60
+	dd	06de9bh			; qbert
+	db	48
+	dd	05653h			; qbrtqube
+	db	37
+	dd	061495h			; raftridr
+	db	47
+	dd	076a4h			; rescter1
+	db	36
+	dd	016bf9ah		; roadrunr
+	db	32
+	dd	0da469h			; rocnrope
+	db	38
+	dd	07ffd8h			; roomdoom
+	db	32
+	dd	0ef608h			; rs_baseb
+	db	37
+	dd	0cdbcch			; rstennis
+	db	70
+	dd	07200ah			; saveship
+	db	45
+	dd	06fc86h			; seamnstr
+	db	45
+	dd	07be3h			; shootin
+	db	35
+	dd	0dde3ah			; skatebrd
+	db	38
+	dd	070a3eh			; skihunt
+	db	43
+	dd	0398afh			; skydiver
+	db	43
+	dd	03507bh			; slotmach
+	db	43
+	dd	0f56deh			; smurf_pl
+	db	66
+	dd	0f2462h			; smurfres
+	db	53
+	dd	02697h			; snalsqrl
+	db	54
+	dd	075df2h			; snekpeek
+	db	38
+	dd	07e543h			; sorcerer
+	db	50
+	dd	078933h			; spacattk
+	db	37
+	dd	07a402h			; spaceinv
+	db	42
+	dd	07d2f5h			; spachase
+	db	40
+	dd	03da9dh			; spacjock
+	db	44
+	dd	06f551h			; spcinvad
+	db	44
+	dd	07c896h			; spcrobot
+	db	44
+	dd	0736a0h			; spidrftr
+	db	38
+	dd	06373h			; spidrman
+	db	32
+	dd	00cc0h			; spikpeak
+	db	50
+	dd	06df79h			; spitfire
+	db	35
+	dd	0109a6dh		; sprcobra
+	db	45
+	dd	0cf71h			; springer
+	db	40
+	dd	0148037h		; sprnmast
+	db	32
+	dd	0dc396h			; spyhuntr
+	db	36
+	dd	08769ch			; sssnake
+	db	41
+	dd	07554fh			; starfox
+	db	50
+	dd	077fceh			; stargn
+	db	48
+	dd	070bb3h			; starmast
+	db	57
+	dd	0f4668h			; startrek
+	db	38
+	dd	07679dh			; stratgyx
+	db	29
+	dd	0772ach			; strnghld
+	db	38
+	dd	0deebh			; strwbery
+	db	40
+	dd	0cd03h			; supferar
+	db	68
+	dd	06cc64h			; supferri
+	db	33
+	dd	0127a01h		; suprbasb
+	db	37
+	dd	08000h			; surfprds
+	db	62
+	dd	03f52dh			; surround
+	db	42
+	dd	070c4h			; survlrun
+	db	36
+	dd	0cbe1h			; tacscan
+	db	47
+	dd	01866h			; tapeworm
+	db	42
+	dd	019e4h			; tapper
+	db	37
+	dd	03a20ah			; tennis
+	db	42
+	dd	0fb0ceh			; test
+	db	27
+	dd	06fa48h			; thrshold
+	db	28
+	dd	079cfh			; timewarp
+	db	44
+	dd	06d58dh			; tomboy
+	db	32
+	dd	09379h			; toothpro
+	db	36
+	dd	04d67h			; towerinf
+	db	42
+	dd	08822h			; ufopatrl
+	db	26
+	dd	08272h			; univchos
+	db	48
+	dd	0748dfh			; vidcube
+	db	41
+	dd	05e7eh			; vidolymp
+	db	37
+	dd	0811h			; walker
+	db	47
+	dd	07bfc2h			; walldfnd
+	db	38
+	dd	07f832h			; wordzapr
+	db	33
+	dd	0776e4h			; worldend
+	db	69
+	dd	044dch			; xenophob
+	db	38
+	dd	096a1h			; xevious
+	db	31
+	dd	062d5h			; zoofun
+	db	37
+
+	dd	-1			; end of table
+
+.DEND
+.CODESEGMENT
+
 
 ; *
 ; * process audio requests (silence...)
@@ -465,108 +593,70 @@ SSAUQ:
 ; * process column blank requests *
 ; *
 
-SSCB:	cmp	ax,0359ch
-	je	SSCB8			; seaquest
-	cmp	ax,0d0e6h
-	je	SSCB8			; pitfall
-	cmp	ax,0912ch
-	je	SSCB8			; chopper command
-	cmp	ax,0006bh
-	je	SSCB8			; keystone kapers
-	cmp	ax,048fbh
-	je	SSCB8			; river raid
-	cmp	ax,070c3h
-	je	SSCB8			; freeway
-	cmp	ax,08ac5h
-	je	SSCB8			; barnstorming
-	cmp	ax,0676ch
-	je	SSCB8			; commando
-	cmp	ax,03f40h
-	je	SSCB8			; crossbow
-	cmp	ax,05b2ah
-	je	SSCB8			; dbldragn
-	cmp	ax,06fd1h
-	je	SSCB8			; rivraid2
-	cmp	ax,04094h
-	je	SSCB8			; kung_fu
-	cmp	ax,0de3ah
-	je	SSCB8			; skatebrd
-	cmp	ax,06289h
-	je	SSCB8			; crackpot
-	cmp	ax,068d0h
-	je	SSCB8			; csmcomtr
-	cmp	ax,0220fh
-	je	SSCB8			; dolphin
-	cmp	ax,04159h
-	je	SSCB8			; frostbit
-	cmp	ax,0d872h
-	je	SSCB8			; grandprx
-	cmp	ax,058a6h
-	je	SSCB8			; holehunt
-	cmp	ax,05974h
-	je	SSCB8			; megmania
-	cmp	ax,0c658h
-	je	SSCB8			; pitf_cce
-	cmp	ax,07ef2h
-	je	SSCB8			; plaqattk
-	cmp	ax,090d8h
-	je	SSCB8			; pyrmdwar
-	cmp	ax,0935dh
-	je	SSCB8			; seahwk
-	cmp	ax,0274fh
-	je	SSCB8			; spacraid
-	cmp	ax,0cbe1h
-	je	SSCB8			; tacscan
-	cmp	ax,0d58dh
-	je	SSCB8			; tomboy
-	cmp	ax,0186eh
-	je	SSCB8			; vidcheck
-	cmp	ax,0392dh
-	je	SSCB8			; vidchess
-	cmp	ax,06b3dh
-	je	SSCB8			; boxing
-	cmp	ax,0f608h
-	je	SSCB8			; rs_baseb
-	cmp	ax,00fdah
-	je	SSCB8			; spcshutl
-	cmp	ax,01cd4h
-	je	SSCB8			; moonptrl
-	cmp	ax,0b429h
-	je	SSCB8			; pressure
-	cmp	ax,09538h
-	je	SSCB8			; lasrblst
-	cmp	ax,046b6h
-	je	SSCB8			; forest
-	cmp	ax,0b1d0h
-	je	SSCB8			; homerun
-	cmp	ax,0c25eh
-	je	SSCB8			; marflegr
-	cmp	ax,057cah
-	je	SSCB8			; mogulman (** it switches! **)
-	cmp	ax,0bf9ah
-	je	SSCB8			; roadrunr
-	cmp	ax,0ecc2h
-	je	SSCB8			; beamride
-	cmp	ax,0dd61h
-	je	SSCB8			; endro_tw
-	cmp	ax,0f69ah
-	je	SSCB8			; enduro
-	cmp	ax,0ad52h
-	je	SSCB8			; decathln
-	cmp	ax,0f815h
-	je	SSCB8			; robotank
-	cmp	ax,0b491h
-	je	SSCB8			; skyjinks
-;	cmp	ax,094a9h
-;	je	SSCB8			; he_man (** it switches! **)
-
-
-
+SSCB:	mov	si,offset ColumnBlankTable
+	call	SSFIND			; lookup checksum
+	cmp	edx,-1
+	je	SetupScoreMode		;   not found
+	mov	[ColumnBlank],8		;   found, blank first 8 columns
 	jmp	SetupScoreMode
 
+.CEND
+.DATASEGMENT
 
-SSCB8:	mov	[ColumnBlank],8		; blank first 8 columns
-	jmp	SetupScoreMode
+ColumnBlankTable label byte
+
+	dd	0359ch			; seaquest
+	dd	0d0e6h			; pitfall
+	dd	0912ch			; chopper command
+	dd	0006bh			; keystone kapers
+	dd	048fbh			; river raid
+	dd	070c3h			; freeway
+	dd	08ac5h			; barnstorming
+	dd	0676ch			; commando
+	dd	03f40h			; crossbow
+	dd	05b2ah			; dbldragn
+	dd	06fd1h			; rivraid2
+	dd	04094h			; kung_fu
+	dd	0de3ah			; skatebrd
+	dd	06289h			; crackpot
+	dd	068d0h			; csmcomtr
+	dd	0220fh			; dolphin
+	dd	04159h			; frostbit
+	dd	0d872h			; grandprx
+	dd	058a6h			; holehunt
+	dd	05974h			; megmania
+	dd	0c658h			; pitf_cce
+	dd	07ef2h			; plaqattk
+	dd	090d8h			; pyrmdwar
+	dd	0935dh			; seahwk
+	dd	0274fh			; spacraid
+	dd	0cbe1h			; tacscan
+	dd	0d58dh			; tomboy
+	dd	0186eh			; vidcheck
+	dd	0392dh			; vidchess
+	dd	06b3dh			; boxing
+	dd	0f608h			; rs_baseb
+	dd	00fdah			; spcshutl
+	dd	01cd4h			; moonptrl
+	dd	0b429h			; pressure
+	dd	09538h			; lasrblst
+	dd	046b6h			; forest
+	dd	0b1d0h			; homerun
+	dd	0c25eh			; marflegr
+	dd	057cah			; mogulman (** it switches! **)
+	dd	0bf9ah			; roadrunr
+	dd	0ecc2h			; beamride
+	dd	0dd61h			; endro_tw
+	dd	0f69ah			; enduro
+	dd	0ad52h			; decathln
+	dd	0f815h			; robotank
+	dd	0b491h			; skyjinks
+;	dd	094a9h			; he_man (** it switches! **)
+
+	dd	-1
+
+.DEND
+.CODESEGMENT
 
 
 SetupScoreMode:
@@ -596,6 +686,7 @@ SP1HARD:
 	jmp	SetupWrapWsync
 
 SetupWrapWsync:
+
 	cmp	ax,09f21h
 	je	DoWrapWsync		; crosfrce
 	cmp	ax,0e0e9h
@@ -604,10 +695,6 @@ SetupWrapWsync:
 	je	DoWrapWsync		; astroids
 	cmp	ax,03cfah
 	je	DoWrapWsync		; congbong
-	cmp	ax,0bf0eh
-	je	DoWrapWsync		; starvygr (doesn't fix)
-	cmp	ax,096a1h
-	je	DoWrapWsync		; xevious (doesn't fix)
 	jmp	SetupDone
 
 DoWrapWsync:
@@ -618,3 +705,4 @@ DoWrapWsync:
 
 SetupDone:
 	ret
+

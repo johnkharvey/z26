@@ -3,14 +3,12 @@
 ;			   Command Line	interpreter
 ;
 ;	-u <n>	upper scan line
-;	-l <n>	lower scan line
 ;       -b      black and white
-;	-c	show credits
 ;	-q	quiet
 ;       -v <n>  select video mode
 ;       -s      display sound diagnostic messages
 ;	-x	print out checksum of cartridge
-;	-r	don't wait for retrace (full speed), -r1 use old vsync code
+;	-r	don't wait for retrace (full speed), -r<n> run at <n> fps
 ;	-f <n>  do <n> frames and exit
 ;       -d <n>  do digital signal processing
 ;	-j <n>	do joystick
@@ -86,15 +84,15 @@ CartCopy:
        
 DoXsum:	mov	cx,[CartSize]
 
-	xor	ax,ax			; before we go
-	xor	bx,bx			; checksum the cartridge
+	xor	eax,eax			; before we go
+	xor	ebx,ebx			; checksum the cartridge
 	
 	mov	si,offset _CartRom
 XLoop:	mov	bl,[si]
 	inc	si
-	add	ax,bx
+	add	eax,ebx
 	loop	XLoop
-	mov	[_Checksum],ax		; save the checksum for cart recognition
+	mov	[_Checksum],eax		; save the checksum for cart recognition
 
 	pop	es
 
@@ -150,10 +148,6 @@ GetInt:
 EndInt:					; Command in CL,Value in AL
 	cmp	cl,'u'
 	je	CMUpper
-	cmp	cl,'l'
-	je	CMLower
-	cmp	cl,'c'
-	je	CMCredits
 	cmp	cl,'q'
 	je	CMQuiet
 	cmp	cl,'s'
@@ -170,8 +164,6 @@ EndInt:					; Command in CL,Value in AL
 	je	CMXsum
 	cmp	cl,'r'
 	je	CMNoRetrace
-	cmp	cl,'t'
-	je	CMTimer1
 	cmp	cl,'f'
 	je	CMFrameExit
 	cmp	cl,'d'
@@ -187,17 +179,6 @@ Back:	jmp	CLSkip			; back to the beginning
 CMUpper:xor	ah,ah			; set upper scan line
 	mov	[CFirst],ax
 	jmp	CLSkip
-CMLower:xor	ah,ah			; set lower scan line
-	mov	[CLast],ax
-	jmp	CLSkip
-
-CMCredits:				; show credits
-;	pop	es
-;	popa
-
-	call	_ShowCredits
-	jmp	ReallyQuit
-
 CMQuiet:				; quiet!
 	mov	[_quiet],1
 	jmp	CLSkip
@@ -234,10 +215,6 @@ CMNoRetrace:
 CMNR1:	mov	[NoRetrace],0ffh
 	jmp	CLSkip
 
-CMTimer1:
-	mov	[TimerVec],offset Timer1 ; force Timer1
-	jmp	CLSkip
-
 CMFrameExit:				; do <n> frames and exit
 	mov	[FrameExit],eax
 	jmp	CLSkip
@@ -262,3 +239,4 @@ CLDoNoFile:
 
 	call	_ShowCopyright
 	jmp	ReallyQuit
+

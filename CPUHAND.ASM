@@ -1,19 +1,3 @@
-.CEND
-.DATASEGMENT
-;process these commands immediately
-
-ALIGN 2
-
-WrTiaImmediateVector	dw	WrTiaVSync	; 0
-			dw	WrTiaVBlank	; 1
-			dw	WrTiaWSync	; 2
-			dw	WSret		; 3 -- reset horizontal sync
-						;      for factory testing only !
-		        
-.DEND
-.CODESEGMENT
-
-
 ; cpu memory and register handlers -- used by the CPU emulator
 
 ; *****************************************************************************
@@ -31,26 +15,6 @@ ReadHardwarePage0:
 	add	si,offset RiotRam-128	; point si to the riotram area
 	ret
 					        
-        
-ReadRIOT:
-	and	si,02FFh		; riot at 2xx 3xx
-	cmp	si,0284h		; is it the RIOT timer ???
-	je	ReadTimer		;   yes, (timer.asm)
-	cmp	si,0280h		; is it Port A (Hand Controllers) ?
-	je	ReadPortA
-	cmp	si,0282h		; is it Port B (Console Switches) ?
-	je	ReadPortB
-	mov	si,offset RetFF
-	ret
-
-ReadPortB:				; read console switches (port b)
-	mov	si,offset IOPortB
-	ret
-
-ReadPortA:				; read hand controllers (port b)
-	mov	si,offset IOPortA
-	ret
-
 
 ReadTIA:and	si,0Fh
 	cmp	si,08h			; reading collision registers ???
@@ -105,13 +69,6 @@ WriteHardwarePage0:
 	mov	[RiotRam-128 + si],dl
 WHret:	ret
 
-
-WriteRIOT:
-	and	si,02FFh		; can be at 2xx or 3xx
-	cmp	si,0290h		; writing to the timer (0290-029F)
-	jl	WHret			; go to the code that does that !
-	jmp	SetTimer
-        
 
 WriteTIA:
 	and	si,03Fh
@@ -182,80 +139,51 @@ WrTiaSetSkip:
 ; VSync -- vertical sync set-clear
 
 WrTiaVSync:
-	push	ax			; lasrgate needs this
-	test	[ReverseSync],1
-	jz	DoReverseTest
-
-	test	[WByte],2		; if d1 is set then ....
-	jnz	ZRET			; was jz
-	jmp	DoVSync
-
-DoReverseTest:
 	test	[WByte],2		; if d1 is set then ....
 	jz	ZRET
-
-DoVSync:
-	mov	[VsyncPending],1	; set VsyncPending flag
-	mov	[ScanLine],0		; back to screen top
+	mov	[ScanLine],1		; back to screen top
 	inc	[Frame]			; new frame.
-	mov	ax,[CFirst]
-	cmp	ax,0			; forcing first line ?
+	mov	dx,[CFirst]
+	cmp	dx,0			; forcing first line ?
 	jz	ZRET			;   no, let vblank take care of it
-	mov	[TopLine],ax
-ZRET:	pop	ax
-	Ret
+	mov	[TopLine],dx
+	add	dx,[MaxLines]
+	mov	[BottomLine],dx
+ZRET: 	Ret
 
 
 ; VBlank -- vertical blank set-clear
 
-; old version
-
 WrTiaVBlank:
-	push	ax
-	mov	al,[WByte]
-	mov	[VBlank],al
-	test	al,2			; setting or clearing ?
+	mov	dl,[WByte]
+	mov	[VBlank],dl
+	test	dl,2			; setting or clearing ?
 	jz	WVBClear		;   clearing
+	cmp	[CFirst],0		; VBlank triggering new frame ?
+	je	WTB_1			;   yes, don't mess with VBlanking
+	mov	[VBlanking],0
+	ret
+
+WTB_1:
 	mov	[TopLine],65535		;   setting -- turn off Tia
 	call	TIABlank		; clear rest of screen
 	jmp	WVBRet
 
 WVBClear:
-	mov	ax,[ScanLine]
-	cmp	ax,[CFirst]
+	cmp	[CFirst],0		; VBlank triggering new frame ?
+	je	WTB_2			;   yes, don't mess with VBlanking
+	mov	[VBlanking],-1
+	ret
+
+WTB_2:
+	mov	dx,[ScanLine]
+	cmp	dx,[CFirst]
 	jae	WVBPastMin
-	mov	ax,[CFirst]
+	mov	dx,[CFirst]
 WVBPastMin:
-	inc	ax
-	mov	[TopLine],ax
-	add	ax,MaxLines		; was MaxLines [_VideoHeight]
-	mov	[BottomLine],ax
-WVBRet:
-	pop	ax
-	ret      
-
-; this version breaks surfprds and comandrd
-
-;xWrTiaVBlank:
-;	push	ax
-;	mov	al,[WByte]
-;	mov	[VBlank],al
-;	test	al,2			; setting or clearing ?
-;	jz	WVBClear		;   clearing
-;	mov	[TopLine],65535		;   setting -- turn off Tia
-;	call	TIABlank		; clear rest of screen
-;	jmp	WVBRet
-
-;xWVBClear:
-;	cmp	[CFirst],0		; forcing first line?
-;	jne	WVBRet			;    yes, let VSync take care of it
-;	mov	ax,[ScanLine]
-;	mov	[TopLine],ax
-;	add	ax,[MaxLines]
-;	mov	[BottomLine],ax
-
-;xWVBRet:
-;	pop	ax
-;	ret      
-
+	inc	dx
+	mov	[TopLine],dx
+	add	dx,[MaxLines]
+	mov	[BottomLine],dx
+WVBRet:	ret      
 

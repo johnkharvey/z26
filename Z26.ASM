@@ -51,24 +51,21 @@ entry:	jmp	start			; jump around our data
 
 	include trace.asm		; trace buffer stuff
 	include banks.asm		; bank switch code
-	include	timer.asm		; RIOT timer emu
-	include cpu.asm			; 6507 emulator
+	include	riot.asm		; RIOT emu
+	include cpu.asm			; 6502 opcodes, macros and support routines
 	include cpuhand.asm		; cpu memory & register handlers
-
-	include tianew.asm
-
 	include tia.asm			; <-- the main machine -- * start here *
 	include tiahand.asm		; TIA register handlers
 	include tiabuf.asm		; TIA buffer management stuff
 	include tiasnd.asm		; asm version of Ron Fries' TIASound
 	include time.asm		; z26 timing functions
 
-	include sbdrv.asm		; sound blaster driver
+	include sbdrv.asm		; sound blaster assembly code
 	include keyboard.asm		; convert keyboard into Atari joystick
 	include joy.asm			; joystick routines
 	include sound.asm		; PC speaker support
 	include Pcxwrite.asm		; Ronnie Greene's PCX file dumper
-	include console.asm		; console output
+	include console.asm		; console output (for debugging)
 	include msg.asm			; messages
 
 .CEND

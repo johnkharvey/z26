@@ -151,6 +151,25 @@ _put_hex:
 
 	ret
 
+;*
+;* output hex word on stack
+;*
+
+_put_dhex:
+	pop	cx		; return adr
+	pop	eax		; val
+	push	eax
+	shr	eax,16
+	push	cx		; restore stack
+
+	call	ConWord		; output it
+
+	pop	cx
+	pop	eax
+	push	cx
+	call	ConWord
+
+	ret
 
 ;*
 ;* output string pointed to by stack

@@ -6,8 +6,14 @@
 ;
 ; *****************************************************************************
 
+.CEND
+.DATASEGMENT
 
-; April 11, 1998 -- Modified key assignments to match V-Stick
+CtrlSkipFlag	db	0	; skip this control key test
+
+.DEND
+.CODESEGMENT
+
 
 ;*
 ;* a keyboard macro
@@ -60,6 +66,10 @@ KeyEnter =		01CH		; Enter (resume game)
 
 KeyEquals =		00Dh		; = (do a screen dump)
 KeyMinus=		00Ch		; unassigned
+
+KeyPgUp=		0049h		; scroll up
+KeyPgDn=		0051h		; scroll down
+KeyHome=		0047h		; back to default screen position
 
 
 ; define control keys
@@ -147,10 +157,45 @@ Ctrl6:	test	[KeyTable+KeyEnter],128
 	jz	Ctrl7
 	mov	[GamePaused],0		; resume game
 Ctrl7:	test	[KeyTable+KeyEsc],128
-	jz	CtrlPCX
+	jz	Ctrl8
 	jmp	GoDOS			; ESC pressed -	exit
 
-CtrlPCX:test	[KeyTable+KeyEquals],128
+Ctrl8:	test	[KeyTable+KeyPgUp],128	; scroll up ?
+	jz	Ctrl9			;   no
+	cmp	[CFirst],0		;   yes, scrolling disabled ?
+	je	CtrlPCX			;          yes, skip scrolling
+	cmp	[CtrlSkipFlag],0	; skipping this test ?
+	jne	CtrlPCX			;   yes
+	mov	[CtrlSkipFlag],4	; no set skip count
+	cmp	[CFirst],1		; already at top ?
+	je	CtrlPCX			;   yes
+	dec	[CFirst]		;   no, scroll up
+
+
+Ctrl9:	test	[KeyTable+KeyPgDn],128	; scroll down ?
+	jz	CtrlPCX			;   no
+	cmp	[CFirst],0		;   yes, scrolling disabled ?
+	je	CtrlPCX			;          yes, skip scrolling
+	cmp	[CtrlSkipFlag],0	; skipping this test ?
+	jne	CtrlPCX			;   yes
+	mov	[CtrlSkipFlag],4	; no set skip count
+	cmp	[CFirst],99		; already at bottom ?
+	jae	CtrlPCX			;   yes
+	inc	[CFirst]		;   no, scroll down
+
+
+CtrlPCX:cmp	[CtrlSkipFlag],0	; skip flag already zero ?
+	jz	CtrlPCX1		;   yes
+	dec	[CtrlSkipFlag]		;   no, decrement it
+CtrlPCX1:
+	test	[KeyTable+KeyHome],128	; home key pressed ?
+	jz	CtrlPCX3		;   no
+	cmp	[OldCFirst],0		; is OldCFirst zero ?
+	jz	CtrlPCX3		;   yes, don't home the display
+	mov	dx,[OldCFirst]
+	mov	[CFirst],dx
+CtrlPCX3:
+	test	[KeyTable+KeyEquals],128
         jz      CtrlExit
         call    PCXWriteFile            ; = pressed - PCX screen dump
 

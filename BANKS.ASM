@@ -33,7 +33,7 @@ SetupBanks:
 	ret
 
 Set8kMode:
-	mov	ax,[_Checksum]
+	mov	eax,[_Checksum]
 	cmp	ax,032cfh
 	je	SSC8			; stargate
 	cmp	ax,025efh
@@ -51,7 +51,7 @@ Set8kMode:
 	je	SPB			; popeye
 	cmp	ax,0ce17h
 	je	SPB			; swarcade
-	cmp	ax,0c455h
+	cmp	eax,0cc455h
 	je	SPB			; swtagpro
 	cmp	ax,05653h
 	je	SPB			; qbrtqube
@@ -112,7 +112,7 @@ Set12KMode:
 	ret
 
 Set16kMode:
-	mov	ax,[_Checksum]
+	mov	eax,[_Checksum]
 	cmp	ax,02416h
 	je	SSC			; digdug
 	cmp	ax,0a44ch

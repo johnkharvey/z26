@@ -47,6 +47,9 @@ ENDIF
 
 	call	CommandLine		; Process the command line
 
+	mov	dx,[CFirst]
+	mov	[OldCFirst],dx		; remember starting line
+
 	cmp	[_quiet],0
 	jnz	STUP_4
 	call	_SetupSoundBlaster
@@ -155,6 +158,17 @@ IFDEF module
 ENDIF
 
 ReallyQuit:
+;	mov	ax,[CFirst]
+;	cmp	ax,[OldCFirst]
+;	je	RQ1
+;	push	ax
+;	call	_crlf
+;	call	_put_dec
+;	call	_crlf
+;	call	_ShowChecksum
+;	call	_crlf
+
+RQ1:
 	mov	ah,04Ch			; and return to MSDOS
 	int	MSDOS
 
@@ -286,9 +300,6 @@ InstructionLoop:
 	call	[vectors + ebx*2]	; --> do the instruction
 	call	[TimerVec]		; clock the RIOT timer
 
-	cmp	[VsyncPending],0	; was Vsync set this instruction ?
-	jne	InstructionsDone	;    yes, fast exit
-
 	mov	bh,[LastCycle]
 	cmp	[RClock],bh
 	jl	InstructionLoop
@@ -335,8 +346,9 @@ local BackgroundPFOnly
 	mov	bl,[bx + di]		; get high priority color
 
 BackgroundPFOnly:
+	mov	ax,word ptr BackgroundColor[ebx*4]	; get color value word
 	mov	di,cx
-	mov	ax,BackgroundColor[ebx*2] ; get color value word
+	and	ax,word ptr [VBlanking]
 	add	cx,2
 	mov	gs:[di],ax
 	endm
@@ -465,6 +477,121 @@ DoReal4 macro
 
 ;*****************************************************************************
 
+;*
+;* macro to process objects, leave clock of next object in AL for further testing
+;*
+
+DoObjectsAL macro
+local ObjectLoop, Skip, Branch, Done
+
+ObjectLoop:
+	mov	al,TIAClock[bp]
+	cmp	al,dl		
+	ja	Done			; if next change clock <= next pf write
+Branch:
+	mov	bl,TIAReg[bp]		;   goto register change handler
+	and	ebx,03fh		; only 63 options
+	call	[TIARegVector + ebx*2]
+        
+Skip:	add	bp,4			; go on to the next change
+	mov	al,TIAClock[bp]
+	cmp	al,TIAInvalid 		; if moved onto an invalid
+	je	Skip			; skip it.
+
+	cmp	al,dl			; < another change to handle?
+	jbe	Branch			;   yes
+Done:
+	endm
+
+;*
+;* set 4 display bits to value in bl, increment display pointer
+;*
+
+Set4BitsFast macro
+	and	eax,[VBlanking]
+	mov	di,cx			; display pointer
+	add	cx,8
+	mov	gs:[di],eax
+	mov	gs:4[di],eax
+	endm
+
+
+FastPlayfieldBit macro op1
+local PFSkip, SlowLane, SetPFBit, SetBkBit, FastSetPFBit
+
+	mov	di,[PFClockToBitTable]		; < preload table pointer
+	sub	al,dl				; # of color clocks to next object
+	movzx	bx,dl				; < preload offset
+	cmp	al,4				; at least 4 ?
+	mov	eax,[si]			; < pick up next 4 TIA bits
+	jb	SlowLane			;   no
+	test	eax,eax				; anything set in next 4 TIA bits ?
+	jne	SlowLane			;   yes
+
+	mov	ebx,[di + bx]			; playfield bit for this color clock
+	add	si,4				; bump TIA pointer
+	add	dl,4				; bump color clock
+
+	test	ebx,dword ptr [TIA+TIAPf0]	; setting a playfield bit ?
+	mov	eax,[BackgroundColor]		; < preload background color
+	jnz	FastSetPFBit			;   yes
+	Set4BitsFast				;   no, do 4 background bits
+	jmp	op1				; FastExit
+
+FastSetPFBit:
+	mov	eax,[PlayfieldColor]
+	Set4BitsFast
+	jmp	op1
+	
+SlowLane:
+	mov	ebx,[di + bx]
+	or	eax,TGPlay*01000000h+TGPlay*010000h+TGPlay*0100h+TGPlay
+	test	ebx,dword ptr [TIA+TIAPf0]
+	jz	PFSkip
+SetPFBit:
+	mov	[si],eax
+PFSkip:
+	endm
+
+
+
+;*
+;* do 4 real bits
+;*
+
+DoRealFast4 macro
+local FastExit
+
+	TryCPU
+
+	DoObjectsAL
+	FastPlayfieldBit FastExit
+
+	CollisionConvert
+	inc	dl			; increment color clock
+	inc	si			; increment pf write / collision pointer
+
+	DoObjects
+	CollisionConvert
+	inc	dl			; increment color clock
+	inc	si			; increment pf write / collision pointer
+
+	DoObjects
+	CollisionConvert
+	inc	dl			; increment color clock
+	inc	si			; increment pf write / collision pointer
+
+	DoObjects
+	CollisionConvert
+	inc	dl			; increment color clock
+	inc	si			; increment pf write / collision pointer
+
+FastExit:
+	endm
+
+
+;*****************************************************************************
+
 
 ; *     
 ; *  TIALineTo -- generate a raster line        
@@ -487,7 +614,6 @@ TIALineTo:
 ALIGN_ENTRY
 
 TIAGenerate:
-	mov	[VsyncPending],0	; clear Vsync pending flag
 
 	mov	si,offset TIADisplay	; playfield write pointer
 	mov	bp,offset TIABuffer	; initialise the buffer
@@ -505,9 +631,6 @@ TIAGenerate:
 	call	DoInstructions		; do horizontal blank instructions
 	SetCPUClock
 
-	cmp	[VsyncPending],0
-	jne	TIAProcessBuffer
-
 	cmp	[TopLine],65535		; did TIA turn off (VBlanking) ?
 	je	TIAFinishNoGenerate	;   yes, stop drawing
 
@@ -524,18 +647,22 @@ TIAGenerate:
 	movzx	bx,al
 	mov	al,TIA[bx]
 	mov	ah,al
-	mov	[PlayfieldColor],ax	; set up color for FastPlayfieldBit
+	shl	eax,16
+	mov	al,TIA[bx]
+	mov	ah,al
+	mov	[PlayfieldColor],eax	; set up color for FastPlayfieldBit
 
 TIABlankLoop:
 	mov	al,ColumnBlank
 	cmp	dl,al			; doing column blanking ?
 	jae	TIALoop			;   no
-	DoBlank4
+	DoBlank4			;   no, do regular
 	DoBlank4
 
 TIALoop:
-	DoReal4
-	DoReal4
+	
+	DoRealFast4			;   no, do regular
+	DoRealFast4
 
 	cmp	dl,dh
 	jne	TIALoop
@@ -555,7 +682,10 @@ TIARightBegin:
 	movzx	bx,al
 	mov	al,TIA[bx]
 	mov	ah,al
-	mov	[PlayfieldColor],ax	; set up color for FastPlayfieldBit
+	shl	eax,16
+	mov	al,TIA[bx]
+	mov	ah,al
+	mov	[PlayfieldColor],eax	; set up color for FastPlayfieldBit
 
 
 ; this code doesn't belong in the TIA handler because real TIA can't respond to change
@@ -572,9 +702,6 @@ TIARB1:
 
 TIAExit:				; we've finished the line scan...
 	mov	[DisplayPointer],cx
-;	cmp	[RClock],CyclesPerScanLine
-;	jae	TIARet
-;	DoInstruction
 
 TIARet:
 	ret
@@ -586,8 +713,6 @@ TIARet:
 ALIGN_ENTRY
 
 TIANoGenerate:
-	mov	[VsyncPending],0	; clear Vsync pending flag
-
 	mov	bp,offset TIABuffer	; initialise the buffer
 	mov	[TIAWritePointer],bp	
 	mov	byte ptr TIAClock[bp],TIAEnd
@@ -595,8 +720,6 @@ TIANoGenerate:
 	mov	al,24
 	call	DoInstructions		; do horizontal blank instructions
 	SetCPUClock
-	cmp	[VsyncPending],0
-	jne	TIAProcessBuffer
 
 TIAFinishNoGenerate:
 	xor	dl,dl
@@ -605,6 +728,10 @@ TIAFinishNoGenerateLoop:
 	add	dl,4
 	cmp	dl,160
 	jne	TIAFinishNoGenerateLoop
+
+;	mov	al,[CyclesPerLine]
+;	call	DoInstructions
+;	SetCPUClock
 
 TIAProcessBuffer:
 	mov	bp,offset TIABuffer	; initialise the buffer
@@ -617,10 +744,5 @@ TIABLLoop:
 	call	TIARegVector2[bx]
 	add	bp,4
 	jmp	TIABLLoop
-
-;	cmp	[RClock],CyclesPerScanLine
-;	jae	TIABLExit
-;	DoInstruction
-
 TIABLExit:
 	ret
