@@ -305,6 +305,7 @@ WSret:	ret				; we're at the end of the line
 WrTiaVSync:     
 	test	[WByte],2		; if d1 is set then ....
 	jz	WSret
+NewFrame:
 	mov	[ScanLine],0		; back to screen top
 ;	mov	[RClock],0
 	call	TIABlank
@@ -318,9 +319,9 @@ WrTiaVBlank:
 	push	ax
 	mov	bl,[WByte]
 	mov	[VBlank],bl
-	test	bl,2
-	jz	WVBClear
-	mov	[TopLine],65535		;turn off Tia
+	test	bl,2			; setting or clearing ?
+	jz	WVBClear		;   clearing
+	mov	[TopLine],65535		; turn off Tia
 	jmp	WVBRet
 
 WVBClear:
@@ -328,12 +329,14 @@ WVBClear:
 	cmp	ax,[CFirst]
 	jae	WVBPastMin
 	mov	ax,[CFirst]
-;	mov	ax,30			;good for Enduro
 WVBPastMin:
 	mov	[TopLine],ax
 	add	ax,[MaxLines]
 	mov	[BottomLine],ax
-
+	mov	al,[VBlankFrame]
+	cmp	al,0
+	jz	WVBRet
+	inc	[Frame]			; for bowling !
 WVBRet:
 	pop	ax
 	ret      

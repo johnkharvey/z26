@@ -8,33 +8,13 @@ ResLoop:mov	byte ptr RA[bx],0
 	dec	bx
 	jge	ResLoop
 	pop	bx
-	call	RLoad
+	LoadRegs
 	mov	cl,0FFh			; SP initialises to 255
 	mov	bp,0FFFCh		; get reset address
 	read	bl,bp			; from 0fffc,0fffd
 	inc	bp
 	read	bh,bp
 	mov	bp,bx			; and set the pctr
-	ret
-
-; *****************************************************************************
-;			Load registers from memory
-; *****************************************************************************
-
-RLoad:	mov	al,[RA]
-	mov	ah,[RCarry]
-	mov	cl,[RS]
-	mov	bp,[RPC]
-	ret
-        
-; *****************************************************************************
-;			Save registers to memory
-; *****************************************************************************
-
-RSave:	mov	[RA],al
-	mov	[RCarry],ah
-	mov	[RS],cl
-	mov	[RPC],bp
 	ret
 
 ; *****************************************************************************

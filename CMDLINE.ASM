@@ -198,7 +198,7 @@ SetupSpecial:
 	cmp	ax,06097h
 	je	Line40			; marinwar
 	cmp	ax,0dc54h
-	je	Line48			; misn3000
+	je	Line60			; misn3000
 	cmp	ax,0877fh
 	je	Line44			; mousetrp
 	cmp	ax,04790h
@@ -273,14 +273,12 @@ SetupSpecial:
 	je	Line37			; indy500
 	cmp	ax,08d5ch
 	je	Line40			; ?? who are you ??
-;	cmp	ax,0b229h
-;	je	Line60			; moonswep
 	cmp	ax,0e5beh
 	je	Line40			; Tetris26
 	cmp	ax,08e07h
 	je	Line42			; catmouse
-;	cmp	ax,08ab0h
-;	je	Line40			; firebird (doesn't fix)
+	cmp	ax,0a402h
+	je	Line44			; spaceinv
 
 	jmp	SSTR			; process Timer1 requests
 
@@ -526,37 +524,30 @@ SetupCyclesPerScanLine:
 	je	Cycles1			; taxavoid
 	cmp	ax,08e07h
 	je	Cycles3			; catmouse
-;	cmp	ax,0e90bh
-;	je	Cycles3			; condor (doesn't help much)
 	cmp	ax,022abh
 	je	Cycles1			; cosmcrep
-;	cmp	ax,09f21h
-;	je	Cycles1			; crosfrce (doesn't fix)
-;	cmp	ax,0217fh
-;	je	Cycles3			; gopher (doesn't fix)
-;	cmp	ax,07a61h
-;	je	Cycles1			; imagslct (doesn't fix)
-;	cmp	ax,0a9c2h
-;	je	Cycles3			; jawbreak (doesn't fix)
-;	cmp	ax,04cebh
-;	je	Cycles3			; offrockr (doesn't fix)
-;	cmp	ax,04f0eh
-;	je	Cycles3			; pharhcrs (doesn't fix)
-;	cmp	ax,03cd9h
-;	je	Cycles3			; quickstp (doesn't fix)
-;	cmp	ax,07be3h
-;	je	Cycles1			; shootin (doesn't fix)
-;	cmp	ax,0df79h
-;	je	Cycles3			; spitfire (doesn't fix)
 
-	jmp	SetupDone
+	jmp	SetupVBlankFrame
 
 Cycles1:
 	mov	[CyclesPerLine],CyclesPerScanLine-1
-	jmp	SetupDone
+	jmp	SetupVBlankFrame
 
 Cycles3:
 	mov	[CyclesPerLine],CyclesPerScanLine-3
+	jmp	SetupVBlankFrame
+
+SetupVBlankFrame:
+	cmp	ax,0bb9ch
+	je	SetVBlankFrame		; bowling
+	cmp	ax,0c771h
+	je	SetVBlankFrame		; tunlrunr
+
+	jmp	SetupDone
+
+
+SetVBlankFrame:
+	mov	[VBlankFrame],1
 	jmp	SetupDone
 	
 
@@ -663,6 +654,12 @@ CLDoNoFile:
 	mov	dx,offset CopyRight
 	mov	ah,9
 	int	MSDOS			; output the copyright msg
+	mov	dx,offset Cred3
+	mov	ah,9
+	int	MSDOS
+	mov	dx,offset Cred0
+	mov	ah,9
+	int	MSDOS
 	mov	dx,offset Cred1
 	mov	ah,9
 	int	MSDOS
@@ -690,10 +687,10 @@ CLDoNoFile:
 	mov	dx,offset Msg6
 	mov	ah,9
 	int	MSDOS			; output a message
-	mov	dx,offset Msg6a
+	mov	dx,offset Msg7
 	mov	ah,9
 	int	MSDOS
-	mov	dx,offset Msg7
+	mov	dx,offset Msg6a
 	mov	ah,9
 	int	MSDOS			; output a message
 	mov	dx,offset Msg8
@@ -713,23 +710,25 @@ CLDoNoFile:
 .CEND
 .DATASEGMENT
 
-CopyRight	db	13,10,'z26 -- An Atari 2600 emulator (0.83)',13,10,'Copyright (C) 1997 by John Saeger',13,10,10,'$'
-Cred1		db	'Based on A26 version 0.15 by Paul Robson.',13,10,'$'
-Cred2		db	'PCX screen capture is by Ronnie Greene.',13,10,10,'$'
-Msg0		db	'   F1 -- reset',13,10,'$'
-Msg1		db	'   F2 -- select',13,10,'$'
-Msg2		db	'   F9 -- black and white',13,10,'$'
-Msg3		db	'  F10 -- color',13,10,'$'
-Msg4		db	'SPACE -- fire',13,10,'$'
-Msg5		db	'    p -- pause game',13,10,'$'
-Msg6		db	'ENTER -- resume game',13,10,'$'
-Msg6a		db	'    = -- PCX screen capture',13,10,'$'
-Msg7		db	'  ESC -- quit game',13,10,10,'$'
+CopyRight	db	13,10,'z26 -- An Atari 2600 emulator (0.85)',13,10,10,'$'
+Cred3		db	'http://www.whimsey.com/z26.html',13,10,10,'$'
+Cred0		db	'Copyright (C) 1997 by John Saeger        (john@whimsey.com)',13,10,'$'
+Cred1		db	'Based on A26 version 0.15 by Paul Robson (autismuk@aol.com)',13,10,'$'
+Cred2		db	'PCX screen capture is by Ronnie Greene   (ender@abts.net)',13,10,10,'$'
+Msg0		db	'    F1 -- reset    ','$'
+Msg1		db	'    F2 -- select',13,10,'$'
+Msg2		db	'    F9 -- B/W      ','$'
+Msg3		db	'   F10 -- color',13,10,'$'
+Msg4		db	'     p -- pause    ','$'
+Msg5		db	' ENTER -- resume',13,10,'$'
+Msg6		db	' SPACE -- fire     ','$'
+Msg7		db	'   ESC -- quit game',13,10,10,'$'
+Msg6a		db	'     = -- PCX screen capture',13,10,10,'$'
 
 Msg8		db	'Command Line Switches (put before filename)',13,10,10,'$'
 
-Msg9		db	'   -0 -- player 0 hard',13,10,'$'
-Msg10		db	'   -r -- do not wait for VGA retrace (full speed)',13,10,10,'$'
+Msg9		db	'    -0 -- player 0 hard',13,10,'$'
+Msg10		db	'    -r -- do not wait for VGA retrace (full speed)',13,10,10,'$'
 
 Msg11		db	'The Atari joystick is emulated with the arrow keys.',13,10,10,'$'
 

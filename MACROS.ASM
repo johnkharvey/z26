@@ -375,3 +375,18 @@ usetest macro   op1                     ; use #1 to test both N and Z (normal)
         usentest op1
         endm
 
+; load CPU registers
+
+LoadRegs macro
+	mov	ax,word ptr [RA]	; mov al,[RA]; mov ah,[RCarry]
+	mov	cl,[RS]
+	mov	bp,[RPC]
+	endm
+
+; save CPU registers
+
+SaveRegs macro
+	mov	word ptr [RA],ax	; mov [RA],al; mov [RCarry],ah
+	mov	[RS],cl
+	mov	[RPC],bp
+	endm

@@ -82,6 +82,8 @@ ColumnBlank	db	0		; blank this many columns
 GamePaused	db	0		; game paused
 NoScoreMode	db	0		; set if we don't want PF to take on player colors
 CyclesPerLine	db	CyclesPerScanLine-2 ; # of cycles to execute instructions for each line
+VBlankFrame	db	0		; VBlank causes a new frame
+LastCycle	db	0		; for DoInstructions
 
 ReadBank	dw	RBank4		; Bank switching function (Read)
 WriteBank	dw	WBank4		; were RBank4 and WBank4

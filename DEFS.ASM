@@ -3,6 +3,7 @@
 MSDOS =			021H		; MSDOS	caller
 
 CyclesPerScanLine = 	76		; TIA timing constant
+CyclesPerLeftHalf =	50		; cycles thru left half of screen
 
 
 ;TIA register offsets

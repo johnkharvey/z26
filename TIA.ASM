@@ -21,7 +21,7 @@ ENDIF
 
 	call	CommandLine		; Process the command line
 	call	Reset			; Reset the CPU
-	call	RSave			; save the CPU status
+	SaveRegs			; save the CPU status
 	call	TIAGraphicMode		; Switch into VGA mode
 	call	SetNewInt9		; Keyboard Handler
 
@@ -53,7 +53,6 @@ Paused:	call	[CtrlFn]		; check which keys pressed
 	jnz	Paused
 	jmp	xmain
 
-
 ;*
 ;* end of program (escape pressed or bad opcode)
 ;*
@@ -74,6 +73,30 @@ Quit:
 	mov	ah,04Ch			; and return to MSDOS
 	int	MSDOS
 
+;*
+;* do some instructions until RClock >= al
+;*
+
+DoInstructions:
+	mov	[LastCycle],al		; last cycle to do
+	LoadRegs			; load the CPU registers
+
+InstructionLoop:
+	fetch	bl			; get the opcode
+	xor	bh,bh
+	mov	dl,Cycles[bx]		; get cycles takes to do it
+	mov	[RCycles],dl		; save the number of cycles
+	add	[RClock],dl		; add to the clock
+	shl	bx,1
+	jmp	[vectors + bx]		; --> do the instruction
+
+ualnext:usetest al			; <-- instruction done
+next:	call	[TimerVec]		; <-- instruction done, clock the RIOT timer
+	mov	bh,[LastCycle]		; was CyclesPerScanLine-2
+	cmp	[RClock],bh
+	jl	InstructionLoop
+	SaveRegs			; save the CPU registers
+	ret
 
 
 ;*
@@ -90,53 +113,21 @@ ScanFrameLoop:
 	mov	bx,offset TIABuffer
 	mov	[TIAWritePointer],bx
 	mov	dword ptr [bx],-1	;* a dword pointer *
-	xor	dl,dl			; next clock line for playfield write..
-	call	RLoad			; load the CPU registers
 
-;*
-;* do some instructions
-;*
-
-InstructionLoop:
-	fetch	bl			; get the opcode
-	xor	bh,bh
-	mov	dl,Cycles[bx]		; get cycles takes to do it
-	mov	[RCycles],dl		; save the number of cycles
-	add	[RClock],dl		; add to the clock
-	shl	bx,1
-	jmp	[vectors + bx]		; --> do the instruction
-
-ualnext:usetest al			; <-- instruction done
-next:	call	[TimerVec]		; <-- instruction done, clock the RIOT timer
-	mov	bh,[CyclesPerLine]	; normally CyclesPerScanLine-2
-	cmp	[RClock],bh		; * why -2?   -1 fixes tetris26 *
-					;             -3 fixes space invaders
-					;             -1 fixes taxavoid
-					;             -3 is best for catmouse
-	jl	InstructionLoop
-
-;*
-;* we've done a line full of instructions
-;*
-
-	call	RSave			; save the CPU registers
-
-	mov	di,DisplayPointer	; remember the display pointer
-
-	pusha
 	call	TIALineTo		; generate a raster line
-	popa
 
 	inc	[ScanLine]		; Increment the scanline counter
-	sub	[RClock],CyclesPerScanLine
+	sub	[RClock],CyclesPerScanLine ; adjust clock for next line
 
-; * this stuff is only needed if a game doesn't write to vsync
-; * like bowling
+; do emergency bail-out test
 
-	mov	ax,[ScanLine]		; (chopper command needs 266)
-	cmp	ax,270			; have we done all 262 scan lines yet?
+	mov	al,[VBlankFrame]	; vblank causes new frame (bowling?)
+	cmp	al,0
+	jnz	NDret			;   yes, skip emergency bail-out test
+	mov	ax,[ScanLine]		; 
+	cmp	ax,2000			; have we done way too many scan lines yet?
 	jl	NDret			;   not yet
-	inc	[Frame]			;   yes, to the next frame
+	inc	[Frame]			;   yes, to the next frame (allow escape to work)
 	mov	[ScanLine],0
 ;	call	TIABlank
 
@@ -309,38 +300,8 @@ ConvertBlank4 macro
 	endm
 
 ;*
-;* macro to output a playfield bit
+;* macros to output a playfield bit
 ;*
-;* there may be a bug in here
-;*   try seaquest 
-;*   there's a stripe in the middle when playfield takes on player color wrongly
-;* 
-
-xPlayfieldBit macro
-local PFDoIt, PFSkip, L1, L2
-	
-	mov	[TIAColourTable+TCTPF],TIAColupf
-	test	[TIA+TIACtrlPf],2	; if colour split, pf col = p0 col
-	jz	L2
-	mov	[TIAColourTable+TCTPF],TIAColup0
-L2:    	cmp	dl,80			; do a playfield bit, at center of screen ?
-	jne	PFDoIt			;(was jne)   no, just do it
-
-	test	[TIA+TIACtrlPf],2	;   yes, if colour split, pf col = p1 col
-	jz	L1
-	mov	[TIAColourTable+TCTPF],TIAColup1
-L1:	test	[TIA+TIACtrlPf],1	; reversing the current line ?
-	jnz	PFDoIt			;    yes, continue
-	xor	cx,cx			;    no, restart from beginning
-
-PFDoIt:					; note: one pf bit = 4 color clocks
-	mov	bx,cx
-	mov	eax,dword ptr [TIA+TIAPf0]
-	test	eax,PfClockToBitTable[bx]
-	jz	PFSkip
-	or	dword ptr [si],TGPlay*01000000h+TGPlay*010000h+TGPlay*0100h+TGPlay
-PFSkip:
-	endm
 
 LeftPlayfieldBit macro
 local  PFSkip, L2
@@ -380,7 +341,6 @@ L2:					; note: one pf bit = 4 color clocks
 PFSkip:
 	endm
 
-
 ;*
 ;* macro to process objects
 ;*
@@ -412,8 +372,6 @@ TIAObjectDone:
 ; *
 
 TIALineTo:
-	mov	bp,offset TIABuffer	; initialise the buffer
-
 	mov	bx,[ScanLine]
 	cmp	bx,[TopLine]		;was 10
 	jb	TIANoGenerate
@@ -421,7 +379,11 @@ TIALineTo:
 	jae	TIANoGenerate
 
 TIAGenerate:
+	mov	al,[CyclesPerLine]	; was [CyclesPerLine]
+	call	DoInstructions		; do instructions for left half of screen
+
 	mov	si,offset TIADisplay	; playfield write pointer
+	mov	bp,offset TIABuffer	; initialise the buffer
 
 	mov	di,si
 	xor	eax,eax
@@ -459,6 +421,11 @@ DoCollisionTest:
 	jmp	TIALeftLoop
 
 TIARightBegin:
+;	pusha
+;	mov	al,[CyclesPerLine]
+;	call	DoInstructions		; do instructions for right half
+;	popa
+
 	test	[TIA+TIACtrlPf],1	; reversing the current line ?
 	jnz	TIARightLoop		;    yes, continue
 	xor	cx,cx			;    no, restart from beginning
@@ -486,6 +453,10 @@ TIAExit:				; we've finished the line scan...
 ;*
 
 TIANoGenerate:
+	mov	al,[CyclesPerLine]
+	call	DoInstructions
+
+	mov	bp,offset TIABuffer	; initialise the buffer
 TIABLLoop:
 	cmp	byte ptr TIAClock[bp],TIAEnd	; check if finished
 	je	TIABLExit
