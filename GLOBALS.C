@@ -108,7 +108,7 @@ db TurnScreen;          /* rotate screen 90ø counter-clockwise in linear modes *
 db HalfScreen;		/* copy alternate scanlines to screen */
 db KidVid;              /* ID byte on tapes for KidVid game *EST* */
 db KidVidTape;          /* tape number to be played *EST* */
-
+db Interlace;           /* Simulate interlace in mode 6 *EST* */
 /*
 ** reinitialize the above variables
 */
@@ -149,4 +149,5 @@ void def_LoadDefaults(void)
         HalfScreen = 0;
         KidVid = 0;
         KidVidTape = 0;
+        Interlace = 0xff;
 }

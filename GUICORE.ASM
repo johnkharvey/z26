@@ -1162,7 +1162,7 @@ db	'  `o-5`d  -- enable 50Hz video modes`n`n'
 db	'  `o-b`d  -- start in black and white mode`n`n'
 db	'  `o-c`yN`d -- color palette  (`y0`d = NTSC  `y1`d = PAL  `y2`d = SECAM)`n`n'
 db      '  `o-d`yN`d -- DSP processing level  (`y1`d = low   `y2`d = high)`n`n'
-db      '  `o-e`d  -- enable 32-bit Mode-X and 160 pixel linear video modes`n`n'
+db      '  `o-e`d  -- enable 32-bit Mode-X and 160 pixel linear video modes, enable flicker in interlaced games`n`n'
 db	'  `o-f`yN`d -- run `yN`d frames and print timing results`n`n'
 db      '  `o-g`yN`d -- override game type  (`y1`d - Commavid extra RAM,`n'
 db      '                              `y2`d - 8K superchip,`n'
@@ -1208,6 +1208,8 @@ db      '  `o-w`yN`d -- emulate driving controllers  (`y1`d = left   `y2`d = rig
 db      '  `o-x`d  -- print out checksum of cartridge`n`n'
 db      '  `o-y`yN`d -- emulate keyboard controller  (`y1`d = left   `y2`d = right   `y3`d = both)`n`n'
 db      '  `o-z`d  -- rotate screen 90 degrees counter-clockwise (video modes 0 - 3 only)`n`n'
+db      '  `o-!`yN`d -- simulate interlace in video mode 6 (`y0`d = even lines first, `y1`d = odd lines first)`n'
+
 
 
 db	0

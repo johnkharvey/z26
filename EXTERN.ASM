@@ -53,6 +53,7 @@ EXTRN _KidVid:byte
 EXTRN _KidVidTape:byte
 EXTRN _SampleByte:byte
 EXTRN _kv_TapeBusy:word
+EXTRN _Interlace:byte
 
 EXTRN _LinesInFrame:word	; *EST*
 EXTRN _PrevLinesInFrame:word

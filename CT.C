@@ -341,6 +341,7 @@ dd	BS_9[] = {
 	0x6a31beac,	/* Private Eye (CCE).bin */
 	0x3fa749c0,	/* Private Eye [b].bin */
 	0x33242242,	/* Private Eye.bin */
+        0x2956b245,     /* Snow White (proto) */
 	-1
 };
 

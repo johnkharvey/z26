@@ -300,6 +300,7 @@ unsigned char SCBIOS[188] = {
 **      -e      enable faster mode X copy routines
 **      -z      rotate screen 90ø counter-clockwise in linear modes
 **	-h	copy half screen (alternate scan lines)
+**      -! <n>  simulate interlace in mode 6, <0> even frames first, <1> odd frames first
 */
 
 FILE *log;
@@ -374,6 +375,9 @@ void cli_InterpretParm(char *p)
         case 'e':       EnableFastCopy = 1;                    break; /* *EST* */
         case 'z':       TurnScreen = 1;                        break; /* *EST* */
         case 'h':	HalfScreen = 1;			       break;
+        case '!':       Interlace = parm & 1;
+                        VideoMode = 6;
+                        break;                                  /* *EST* */
         default:   	printf("Bad command line switch seen: -%c", ch);
 		   	exit(1);
 	}

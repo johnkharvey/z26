@@ -17,6 +17,7 @@ MISC_OUTPUT =	03c2h		; miscellaneous output register
 SCREEN_SEG =	0a000h		; segment of display memory in mode X
 
 .data
+ModeX6InterlaceShift    dw      0       ; offset odd frames in interlace mode
 ModeXDisplayPointer	dw	0
 ModeX79Shift            dw      50      ; offset each line's copy pointer
 ModeX			db	0	; set if in modex
@@ -746,8 +747,21 @@ MXCRet:
 MX6CopyScreen:
         mov     cx,[CopyCounterTable + si]
         push    cx
+
+        mov     ax,0
+        cmp     [_Interlace],0ffh
+        je      MX6EvenFrame
+        mov     ebx,[Frame]
+        and     ebx,1
+        cmp     bl,[_Interlace]
+        jne     MX6EvenFrame
+        mov     ax,80
+MX6EvenFrame:
+        mov     [ModeX6InterlaceShift],ax
+
         mov     si,[_ScreenOfs]
         mov     di,[ModeXDisplayPointer]
+        add     di,[ModeX6InterlaceShift]
 
 	mov	dx,SC_INDEX
 	mov	ax,0302h
@@ -766,6 +780,8 @@ MX6EvenLoop:
         pop     cx
         mov     si,[_ScreenOfs]
         mov     di,[ModeXDisplayPointer]
+        add     di,[ModeX6InterlaceShift]
+
 	mov	ax,0c02h
 	out	dx,ax			; enable planes 2,3 for odd pixels
 
@@ -913,6 +929,25 @@ FMXMove4 macro op1
 	endm
 
 ;*
+;* copy line to mode 6 display
+;*
+
+FMX6Move4 macro op1
+
+        mov     al,es:[si+op1+4]
+        mov     ah,es:[si+op1+6]
+        shl     eax,16
+        mov     al,es:[si+op1]
+        mov     ah,es:[si+op1+2]
+        mov     gs:[di],eax
+        mov     eax,0
+        mov     gs:[di+80],eax
+        add     si,8
+        add     di,4
+
+	endm
+
+;*
 ;* normal copy line
 ;*
 
@@ -956,8 +991,22 @@ FMXCRet:
 FMX6CopyScreen:
         mov     cx,[CopyCounterTable + si]
         push    cx
+
+        mov     ax,0
+        cmp     [_Interlace],0ffh
+        je      FMX6EvenFrame
+        mov     ebx,[Frame]
+        and     ebx,1
+        cmp     bl,[_Interlace]
+        jne     FMX6EvenFrame
+        mov     ax,80
+FMX6EvenFrame:
+        mov     [ModeX6InterlaceShift],ax
+
         mov     si,[_ScreenOfs]
         mov     di,[ModeXDisplayPointer]
+
+        add     di,[ModeX6InterlaceShift]
 
 	mov	dx,SC_INDEX
 	mov	ax,0302h
@@ -966,7 +1015,7 @@ FMX6CopyScreen:
 FMX6EvenLine:
         mov     bx,20
 FMX6EvenLoop:
-        FMXMove4 0
+        FMX6Move4 0
         dec     bx
         jnz     FMX6EvenLoop
         add     di,80                   ; skip one scanline
@@ -976,13 +1025,15 @@ FMX6EvenLoop:
         pop     cx
         mov     si,[_ScreenOfs]
         mov     di,[ModeXDisplayPointer]
-	mov	ax,0c02h
+        add     di,[ModeX6InterlaceShift]
+
+        mov     ax,0c02h
 	out	dx,ax			; enable planes 2,3 for odd pixels
 
 FMX6OddLine:
         mov     bx,20
 FMX6OddLoop:
-        FMXMove4 1
+        FMX6Move4 1
         dec     bx
         jnz     FMX6OddLoop
         add     di,80                   ; skip one scanline
