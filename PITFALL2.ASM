@@ -2,11 +2,12 @@
 ;* Pitfall 2 8K bankswitch scheme -- similar to standard F8
 ;*
 ;* 5-12-99 -- break ground
+;* 7-17-02 -- 32-bit
 ;*
 ;* Based in part on David Crane's U.S. Patent 4,644,495, Feb 17,1987.
 ;*
 
-; z26 is Copyright 1997-2000 by John Saeger and is a derived work with many
+; z26 is Copyright 1997-2002 by John Saeger and is a derived work with many
 ; contributors.	 z26 is released subject to the terms and conditions of the 
 ; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ; Please see COPYING.TXT for details.
@@ -15,180 +16,189 @@
 
 ; global Pitfall2 flag 
 
+P2_Start label byte			; <-- start clearing here
+
 Pitfall2	db	0		; tell RIOT timer to clock the music
 
-;P2_Flags	db	8 dup (?)	; \
-;P2_Counters	db	16 dup (?)	;  \
-;P2_Top		db	8 dup (?)	;	  these are in memory.asm
-;P2_Bottom	db	8 dup (?)	;  /
-;P2_Enable	db	8 dup (?)	; /
-;P2_Music_Top	dw	8 dup (?)
-;P2_Music_Bottom dw	8 dup (?)
-;P2_Music_Count	dw	8 dup (?)
-
-P2_sreg		dw	1		; initialize shift register to non-zero val
+P2_Flags	db	0,0,0,0,0,0,0,0
+P2_Counters	dd	0,0,0,0,0,0,0,0
+P2_Top		db	0,0,0,0,0,0,0,0
+P2_Bottom	db	0,0,0,0,0,0,0,0
+P2_Enable	db	0,0,0,0,0,0,0,0
+P2_Music_Top	dd	0,0,0,0,0,0,0,0
+P2_Music_Bottom	dd	0,0,0,0,0,0,0,0
+P2_Music_Count	dd	0,0,0,0,0,0,0,0
 
 P2_Rbyte	db	0		; return value for CPU read commands
+P2_Null		db	0		; return value for null read commands
 P2_AUDV		db	0		; create an AUDV byte here
+
+P2_sreg		dd	0		; initialize shift register to non-zero val
+
+P2_End label byte			; <-- finish clearing here
+
+.data
+
+
+
 
 ALIGN 2
 
-
-.code
-
-P2_Vectors label word
+P2_Vectors label dword
 
 ;*
 ;* read commands
 ;*
 
-	dw	P2_Read_Random		; 00 -- Random # generator
-	dw	P2_Read_Random		; 01 -- Random # generator
-	dw	P2_Read_Random		; 02 -- Random # generator
-	dw	P2_Read_Random		; 03 -- Random # generator
-	dw	P2_Read_Sound		; 04 -- Sound value
-	dw	P2_Read_Sound		; 05 -- Sound value
-	dw	P2_Read_Sound		; 06 -- Sound value
-	dw	P2_Read_Sound		; 07 -- Sound value
-	dw	P2_Read_DF		; 08 -- DF0
-	dw	P2_Read_DF		; 09 -- DF1
-	dw	P2_Read_DF		; 0a -- DF2
-	dw	P2_Read_DF		; 0b -- DF3
-	dw	P2_Read_DF		; 0c -- DF4
-	dw	P2_Read_DF		; 0d -- DF5
-	dw	P2_Read_DF		; 0e -- DF6
-	dw	P2_Read_DF		; 0f -- DF7
-	dw	P2_Read_DF_Flag		; 10 -- DF0 AND flag
-	dw	P2_Read_DF_Flag		; 11 -- DF1 AND flag
-	dw	P2_Read_DF_Flag		; 12 -- DF2 AND flag
-	dw	P2_Read_DF_Flag		; 13 -- DF3 AND flag
-	dw	P2_Read_DF_Flag		; 14 -- DF4 AND flag
-	dw	P2_Read_DF_Flag		; 15 -- DF5 AND flag
-	dw	P2_Read_DF_Flag		; 16 -- DF6 AND flag
-	dw	P2_Read_DF_Flag		; 17 -- DF7 AND flag
-	dw	P2_NoIO			; 18 -- DF0 AND flag swapped
-	dw	P2_NoIO			; 19 -- DF1 AND flag swapped
-	dw	P2_NoIO			; 1a -- DF2 AND flag swapped
-	dw	P2_NoIO			; 1b -- DF3 AND flag swapped
-	dw	P2_NoIO			; 1c -- DF4 AND flag swapped
-	dw	P2_NoIO			; 1d -- DF5 AND flag swapped
-	dw	P2_NoIO			; 1e -- DF6 AND flag swapped
-	dw	P2_NoIO			; 1f -- DF7 AND flag swapped
-	dw	P2_NoIO			; 20 -- DF0 AND flag reversed
-	dw	P2_NoIO			; 21 -- DF1 AND flag reversed
-	dw	P2_NoIO			; 22 -- DF2 AND flag reversed
-	dw	P2_NoIO			; 23 -- DF3 AND flag reversed
-	dw	P2_NoIO			; 24 -- DF4 AND flag reversed
-	dw	P2_NoIO			; 25 -- DF5 AND flag reversed
-	dw	P2_NoIO			; 26 -- DF6 AND flag reversed
-	dw	P2_NoIO			; 27 -- DF7 AND flag reversed
-	dw	P2_NoIO			; 28 -- DF0 AND flag SHR 1
-	dw	P2_NoIO			; 29 -- DF1 AND flag SHR 1
-	dw	P2_NoIO			; 2a -- DF2 AND flag SHR 1
-	dw	P2_NoIO			; 2b -- DF3 AND flag SHR 1
-	dw	P2_NoIO			; 2c -- DF4 AND flag SHR 1
-	dw	P2_NoIO			; 2d -- DF5 AND flag SHR 1
-	dw	P2_NoIO			; 2e -- DF6 AND flag SHR 1
-	dw	P2_NoIO			; 2f -- DF7 AND flag SHR 1
-	dw	P2_NoIO			; 30 -- DF0 AND flag SHL 1
-	dw	P2_NoIO			; 31 -- DF1 AND flag SHL 1
-	dw	P2_NoIO			; 32 -- DF2 AND flag SHL 1
-	dw	P2_NoIO			; 33 -- DF3 AND flag SHL 1
-	dw	P2_NoIO			; 34 -- DF4 AND flag SHL 1
-	dw	P2_NoIO			; 35 -- DF5 AND flag SHL 1
-	dw	P2_NoIO			; 36 -- DF6 AND flag SHL 1
-	dw	P2_NoIO			; 37 -- DF7 AND flag SHL 1
-	dw	P2_ReadFlags		; 38 -- DF0 flag
-	dw	P2_ReadFlags		; 39 -- DF1 flag
-	dw	P2_ReadFlags		; 3a -- DF2 flag
-	dw	P2_ReadFlags		; 3b -- DF3 flag
-	dw	P2_ReadFlags		; 3c -- DF4 flag
-	dw	P2_ReadFlags		; 3d -- DF5 flag
-	dw	P2_ReadFlags		; 3e -- DF6 flag
-	dw	P2_ReadFlags		; 3f -- DF7 flag
+	dd	P2_Read_Random		; 00 -- Random # generator
+	dd	P2_Read_Random		; 01 -- Random # generator
+	dd	P2_Read_Random		; 02 -- Random # generator
+	dd	P2_Read_Random		; 03 -- Random # generator
+	dd	P2_Read_Sound		; 04 -- Sound value
+	dd	P2_Read_Sound		; 05 -- Sound value
+	dd	P2_Read_Sound		; 06 -- Sound value
+	dd	P2_Read_Sound		; 07 -- Sound value
+	dd	P2_Read_DF		; 08 -- DF0
+	dd	P2_Read_DF		; 09 -- DF1
+	dd	P2_Read_DF		; 0a -- DF2
+	dd	P2_Read_DF		; 0b -- DF3
+	dd	P2_Read_DF		; 0c -- DF4
+	dd	P2_Read_DF		; 0d -- DF5
+	dd	P2_Read_DF		; 0e -- DF6
+	dd	P2_Read_DF		; 0f -- DF7
+	dd	P2_Read_DF_Flag		; 10 -- DF0 AND flag
+	dd	P2_Read_DF_Flag		; 11 -- DF1 AND flag
+	dd	P2_Read_DF_Flag		; 12 -- DF2 AND flag
+	dd	P2_Read_DF_Flag		; 13 -- DF3 AND flag
+	dd	P2_Read_DF_Flag		; 14 -- DF4 AND flag
+	dd	P2_Read_DF_Flag		; 15 -- DF5 AND flag
+	dd	P2_Read_DF_Flag		; 16 -- DF6 AND flag
+	dd	P2_Read_DF_Flag		; 17 -- DF7 AND flag
+	dd	P2_NoIO			; 18 -- DF0 AND flag swapped
+	dd	P2_NoIO			; 19 -- DF1 AND flag swapped
+	dd	P2_NoIO			; 1a -- DF2 AND flag swapped
+	dd	P2_NoIO			; 1b -- DF3 AND flag swapped
+	dd	P2_NoIO			; 1c -- DF4 AND flag swapped
+	dd	P2_NoIO			; 1d -- DF5 AND flag swapped
+	dd	P2_NoIO			; 1e -- DF6 AND flag swapped
+	dd	P2_NoIO			; 1f -- DF7 AND flag swapped
+	dd	P2_NoIO			; 20 -- DF0 AND flag reversed
+	dd	P2_NoIO			; 21 -- DF1 AND flag reversed
+	dd	P2_NoIO			; 22 -- DF2 AND flag reversed
+	dd	P2_NoIO			; 23 -- DF3 AND flag reversed
+	dd	P2_NoIO			; 24 -- DF4 AND flag reversed
+	dd	P2_NoIO			; 25 -- DF5 AND flag reversed
+	dd	P2_NoIO			; 26 -- DF6 AND flag reversed
+	dd	P2_NoIO			; 27 -- DF7 AND flag reversed
+	dd	P2_NoIO			; 28 -- DF0 AND flag SHR 1
+	dd	P2_NoIO			; 29 -- DF1 AND flag SHR 1
+	dd	P2_NoIO			; 2a -- DF2 AND flag SHR 1
+	dd	P2_NoIO			; 2b -- DF3 AND flag SHR 1
+	dd	P2_NoIO			; 2c -- DF4 AND flag SHR 1
+	dd	P2_NoIO			; 2d -- DF5 AND flag SHR 1
+	dd	P2_NoIO			; 2e -- DF6 AND flag SHR 1
+	dd	P2_NoIO			; 2f -- DF7 AND flag SHR 1
+	dd	P2_NoIO			; 30 -- DF0 AND flag SHL 1
+	dd	P2_NoIO			; 31 -- DF1 AND flag SHL 1
+	dd	P2_NoIO			; 32 -- DF2 AND flag SHL 1
+	dd	P2_NoIO			; 33 -- DF3 AND flag SHL 1
+	dd	P2_NoIO			; 34 -- DF4 AND flag SHL 1
+	dd	P2_NoIO			; 35 -- DF5 AND flag SHL 1
+	dd	P2_NoIO			; 36 -- DF6 AND flag SHL 1
+	dd	P2_NoIO			; 37 -- DF7 AND flag SHL 1
+	dd	P2_ReadFlags		; 38 -- DF0 flag
+	dd	P2_ReadFlags		; 39 -- DF1 flag
+	dd	P2_ReadFlags		; 3a -- DF2 flag
+	dd	P2_ReadFlags		; 3b -- DF3 flag
+	dd	P2_ReadFlags		; 3c -- DF4 flag
+	dd	P2_ReadFlags		; 3d -- DF5 flag
+	dd	P2_ReadFlags		; 3e -- DF6 flag
+	dd	P2_ReadFlags		; 3f -- DF7 flag
 
 ;*
 ;* write commands
 ;*
 
-	dw	P2_WriteTop		; 40 -- DF0 top count
-	dw	P2_WriteTop		; 41 -- DF1 top count
-	dw	P2_WriteTop		; 42 -- DF2 top count
-	dw	P2_WriteTop		; 43 -- DF3 top count
-	dw	P2_WriteTop		; 44 -- DF4 top count
-	dw	P2_WriteTop		; 45 -- DF5 top count
-	dw	P2_WriteTop		; 46 -- DF6 top count
-	dw	P2_WriteTop		; 47 -- DF7 top count
-	dw	P2_WriteBottom		; 48 -- DF0 bottom count
-	dw	P2_WriteBottom		; 49 -- DF1 bottom count
-	dw	P2_WriteBottom		; 4a -- DF2 bottom count
-	dw	P2_WriteBottom		; 4b -- DF3 bottom count
-	dw	P2_WriteBottom		; 4c -- DF4 bottom count
-	dw	P2_WriteBottom		; 4d -- DF5 bottom count
-	dw	P2_WriteBottom		; 4e -- DF6 bottom count
-	dw	P2_WriteBottom		; 4f -- DF7 bottom count
-	dw	P2_WriteCounterLow	; 50 -- DF0 counter low
-	dw	P2_WriteCounterLow	; 51 -- DF1 counter low
-	dw	P2_WriteCounterLow	; 52 -- DF2 counter low
-	dw	P2_WriteCounterLow	; 53 -- DF3 counter low
-	dw	P2_WriteCounterLow	; 54 -- DF4 counter low
-	dw	P2_WriteCounterLow	; 55 -- DF5 counter low
-	dw	P2_WriteCounterLow	; 56 -- DF6 counter low
-	dw	P2_WriteCounterLow	; 57 -- DF7 counter low
-	dw	P2_WriteCounterHigh	; 58 -- DF0 counter high
-	dw	P2_WriteCounterHigh	; 59 -- DF1 counter high
-	dw	P2_WriteCounterHigh	; 5a -- DF2 counter high
-	dw	P2_WriteCounterHigh	; 5b -- DF3 counter high
-	dw	P2_WriteCounterHigh	; 5c -- DF4 counter high
-	dw	P2_WriteCounterHigh	; 5d -- DF5 counter high AND music enable
-	dw	P2_WriteCounterHigh	; 5e -- DF6 counter high AND music enable
-	dw	P2_WriteCounterHigh	; 5f -- DF7 counter high AND music enable
-	dw	P2_NoIO			; 60 -- not used (draw line movement)
-	dw	P2_NoIO			; 61 -- not used (draw line movement)
-	dw	P2_NoIO			; 62 -- not used (draw line movement)
-	dw	P2_NoIO			; 63 -- not used (draw line movement)
-	dw	P2_NoIO			; 64 -- not used (draw line movement)
-	dw	P2_NoIO			; 65 -- not used (draw line movement)
-	dw	P2_NoIO			; 66 -- not used (draw line movement)
-	dw	P2_NoIO			; 67 -- not used (draw line movement)
-	dw	P2_NoIO			; 68 -- not used
-	dw	P2_NoIO			; 69 -- not used
-	dw	P2_NoIO			; 6a -- not used
-	dw	P2_NoIO			; 6b -- not used
-	dw	P2_NoIO			; 6c -- not used
-	dw	P2_NoIO			; 6d -- not used
-	dw	P2_NoIO			; 6e -- not used
-	dw	P2_NoIO			; 6f -- not used
-	dw	P2_ResetRandom		; 70 -- random number generator reset
-	dw	P2_ResetRandom		; 71 -- random number generator reset
-	dw	P2_ResetRandom		; 72 -- random number generator reset
-	dw	P2_ResetRandom		; 73 -- random number generator reset
-	dw	P2_ResetRandom		; 74 -- random number generator reset
-	dw	P2_ResetRandom		; 75 -- random number generator reset
-	dw	P2_ResetRandom		; 76 -- random number generator reset
-	dw	P2_ResetRandom		; 77 -- random number generator reset
-	dw	P2_NoIO			; 78 -- not used
-	dw	P2_NoIO			; 79 -- not used
-	dw	P2_NoIO			; 7a -- not used
-	dw	P2_NoIO			; 7b -- not used
-	dw	P2_NoIO			; 7c -- not used
-	dw	P2_NoIO			; 7d -- not used
-	dw	P2_NoIO			; 7e -- not used
-	dw	P2_NoIO			; 7f -- not used
+	dd	P2_WriteTop		; 40 -- DF0 top count
+	dd	P2_WriteTop		; 41 -- DF1 top count
+	dd	P2_WriteTop		; 42 -- DF2 top count
+	dd	P2_WriteTop		; 43 -- DF3 top count
+	dd	P2_WriteTop		; 44 -- DF4 top count
+	dd	P2_WriteTop		; 45 -- DF5 top count
+	dd	P2_WriteTop		; 46 -- DF6 top count
+	dd	P2_WriteTop		; 47 -- DF7 top count
+	dd	P2_WriteBottom		; 48 -- DF0 bottom count
+	dd	P2_WriteBottom		; 49 -- DF1 bottom count
+	dd	P2_WriteBottom		; 4a -- DF2 bottom count
+	dd	P2_WriteBottom		; 4b -- DF3 bottom count
+	dd	P2_WriteBottom		; 4c -- DF4 bottom count
+	dd	P2_WriteBottom		; 4d -- DF5 bottom count
+	dd	P2_WriteBottom		; 4e -- DF6 bottom count
+	dd	P2_WriteBottom		; 4f -- DF7 bottom count
+	dd	P2_WriteCounterLow	; 50 -- DF0 counter low
+	dd	P2_WriteCounterLow	; 51 -- DF1 counter low
+	dd	P2_WriteCounterLow	; 52 -- DF2 counter low
+	dd	P2_WriteCounterLow	; 53 -- DF3 counter low
+	dd	P2_WriteCounterLow	; 54 -- DF4 counter low
+	dd	P2_WriteCounterLow	; 55 -- DF5 counter low
+	dd	P2_WriteCounterLow	; 56 -- DF6 counter low
+	dd	P2_WriteCounterLow	; 57 -- DF7 counter low
+	dd	P2_WriteCounterHigh	; 58 -- DF0 counter high
+	dd	P2_WriteCounterHigh	; 59 -- DF1 counter high
+	dd	P2_WriteCounterHigh	; 5a -- DF2 counter high
+	dd	P2_WriteCounterHigh	; 5b -- DF3 counter high
+	dd	P2_WriteCounterHigh	; 5c -- DF4 counter high
+	dd	P2_WriteCounterHigh	; 5d -- DF5 counter high AND music enable
+	dd	P2_WriteCounterHigh	; 5e -- DF6 counter high AND music enable
+	dd	P2_WriteCounterHigh	; 5f -- DF7 counter high AND music enable
+	dd	P2_NoIO			; 60 -- not used (draw line movement)
+	dd	P2_NoIO			; 61 -- not used (draw line movement)
+	dd	P2_NoIO			; 62 -- not used (draw line movement)
+	dd	P2_NoIO			; 63 -- not used (draw line movement)
+	dd	P2_NoIO			; 64 -- not used (draw line movement)
+	dd	P2_NoIO			; 65 -- not used (draw line movement)
+	dd	P2_NoIO			; 66 -- not used (draw line movement)
+	dd	P2_NoIO			; 67 -- not used (draw line movement)
+	dd	P2_NoIO			; 68 -- not used
+	dd	P2_NoIO			; 69 -- not used
+	dd	P2_NoIO			; 6a -- not used
+	dd	P2_NoIO			; 6b -- not used
+	dd	P2_NoIO			; 6c -- not used
+	dd	P2_NoIO			; 6d -- not used
+	dd	P2_NoIO			; 6e -- not used
+	dd	P2_NoIO			; 6f -- not used
+	dd	P2_ResetRandom		; 70 -- random number generator reset
+	dd	P2_ResetRandom		; 71 -- random number generator reset
+	dd	P2_ResetRandom		; 72 -- random number generator reset
+	dd	P2_ResetRandom		; 73 -- random number generator reset
+	dd	P2_ResetRandom		; 74 -- random number generator reset
+	dd	P2_ResetRandom		; 75 -- random number generator reset
+	dd	P2_ResetRandom		; 76 -- random number generator reset
+	dd	P2_ResetRandom		; 77 -- random number generator reset
+	dd	P2_NoIO			; 78 -- not used
+	dd	P2_NoIO			; 79 -- not used
+	dd	P2_NoIO			; 7a -- not used
+	dd	P2_NoIO			; 7b -- not used
+	dd	P2_NoIO			; 7c -- not used
+	dd	P2_NoIO			; 7d -- not used
+	dd	P2_NoIO			; 7e -- not used
+	dd	P2_NoIO			; 7f -- not used
 
-;.code
+.code
 
 ;*
 ;* Pitfall 2 initialization
 ;*
 
 Init_P2:				; <-- from init.asm
+
+	clear_mem P2_Start, P2_End
+
 	mov	[P2_sreg],1		; random # generator (must be non-zero)
 	ret
 
 SetPitfallII:				; <-- from banks.asm
-	mov	[ReadBank], offset RBank8P2
-	mov	[WriteBank], offset WBank8P2
+	mov	[_BSType],14
 	mov	[RomBank],01000h	; don't know if this is needed...
 	mov	[Pitfall2],1		; tell RIOT to clock the music
 	ret
@@ -199,7 +209,7 @@ SetPitfallII:				; <-- from banks.asm
 
 RBank8P2:
 	test_hw_read
-	cmp	si,107fh
+	cmp	esi,107fh
 	jbe	R_P2
 	SetBank_8			; F8 macro
 	MapRomBank
@@ -208,7 +218,7 @@ RBank8P2:
 
 WBank8P2:
 	test_hw_write
-	cmp	si,107fh
+	cmp	esi,107fh
 	jbe	W_P2
 	SetBank_8			; F8 macro
 	ret
@@ -218,20 +228,20 @@ WBank8P2:
 ;*
 
 R_P2:
-	cmp	si,1040h		; read in range?
+	cmp	esi,1040h		; read in range?
 	jae	P2_NoIO			;   no
 	and	esi,07fh
-	jmp	cs:[P2_Vectors+esi*2]
+	jmp	[P2_Vectors+esi*4]
 
 ;*
 ;* write Pitfall 2 register
 ;*
 
 W_P2:
-	cmp	si,1040h		; write in range?
+	cmp	esi,1040h		; write in range?
 	jb	P2_NoIO			;	  no
 	and	esi,07fh
-	jmp	cs:[P2_Vectors+esi*2]
+	jmp	[P2_Vectors+esi*4]
 
 ;*
 ;* Pitfall 2 register handlers
@@ -242,11 +252,12 @@ W_P2:
 ;*
 
 P2_NoIO:
+	mov	esi, offset P2_Null
 	ret
 
 
 ;*
-;* macro to tune the pitch of the music
+;* routine to tune the pitch of the music
 ;*
 ;* We use this to match the Pitfall II music clock to the TIA music clock.
 ;*
@@ -256,21 +267,20 @@ P2_NoIO:
 ;* need to make sure that the important chords sound *nice*.
 ;*
 
-Tune_Music macro
-
-	push	ax
-	push	cx
+Tune_Music:
+	push	eax
+	push	ecx
 	mov	al,dl
-	xor	dx,dx
+	xor	edx,edx
 	mov	cl,129
 	mul	cl
-	mov	cx,79
-	div	cx
-	mov	dx,ax
-	pop	cx
-	pop	ax
+	mov	ecx,79
+	div	ecx
+	mov	edx,eax
+	pop	ecx
+	pop	eax
 
-	endm
+	ret
 
 ;*
 ;* write top register
@@ -279,11 +289,11 @@ Tune_Music macro
 P2_WriteTop:
 	and	esi,7
 	mov	dl,[WByte]		; pick up byte to write
-	mov	[P2_Top + si],dl	; save in TOP
-	cmp	si,5
+	mov	[P2_Top + esi],dl	; save in TOP
+	cmp	esi,5
 	jb	P2_WriteDone
-	Tune_Music
-	mov	[P2_Music_Top + esi*2],dx
+	call	Tune_Music
+	mov	[P2_Music_Top + esi*4],edx
 
 P2_WriteDone:
 	ret
@@ -294,12 +304,12 @@ P2_WriteDone:
 
 P2_WriteBottom:
 	and	esi,7
-	mov	dl,[WByte]		; pick up byte to write
-	mov	[P2_Bottom + si],dl	; save in BOTTOM
-	cmp	si,5
+	mov	dl,[WByte]			; pick up byte to write
+	mov	[P2_Bottom + esi],dl		; save in BOTTOM
+	cmp	esi,5
 	jb	P2_WriteDone
-	Tune_Music
-	mov	[P2_Music_Bottom + esi*2],dx
+	call	Tune_Music
+	mov	[P2_Music_Bottom + esi*4],edx
 	ret
 
 ;*
@@ -308,12 +318,14 @@ P2_WriteBottom:
 
 P2_WriteCounterLow:
 	and	esi,7
-	mov	dl,[WByte]		; pick up byte to write
-	mov	[P2_Counters + esi*2],dl ; save in LOW counter byte
-	cmp	si,5
+	mov	edx,[P2_Counters + esi*4]
+	mov	dl,[WByte]			; pick up byte to write in LOW counter byte
+	and	edx,07ffh			; mask to 11 bits
+	mov	[P2_Counters + esi*4],edx
+	cmp	esi,5
 	jb	P2_WriteDone
-	Tune_Music
-	mov	[P2_Music_Count + esi*2],dx
+	call	Tune_Music
+	mov	[P2_Music_Count + esi*4],edx
 	ret
 
 ;*
@@ -322,11 +334,12 @@ P2_WriteCounterLow:
 
 P2_WriteCounterHigh:
 	and	esi,7
-	mov	dl,[WByte]		; pick up byte to write
-	mov	[P2_Enable + si],dl	; save whole thing in enable
-	and	dl,7			; mask bottom 3 bits for a total of 11
-	mov	[P2_Counters + esi*2 + 1],dl ; save in HIGH counter byte
-	mov	[P2_Flags + si],0	; this also clears the FLAG
+	mov	edx,[P2_Counters + esi*4]
+	mov	dh,[WByte]			; pick up byte to write in HI counter byte
+	mov	[P2_Enable + esi],dh		; save whole thing in enable
+	and	edx,07ffh			; mask to 11 bits
+	mov	[P2_Counters + esi*4],edx
+	mov	[P2_Flags + esi],0		; this also clears the FLAG
 	ret
 
 ;*
@@ -342,48 +355,51 @@ P2_ResetRandom:
 ;*
 
 P2_ReadFlags:
-	and	si,7
-	add	si,offset P2_Flags
+	and	esi,7
+	add	esi,offset P2_Flags
 	ret
 
 ;*
 ;* macro to read data via data fetcher
 ;*
 
-Read_DF macro
-local P2_FlagOne, P2_FlagZero, P2_Cont
+Read_DF:
 	and	esi,7
-	push	bx
-	mov	dl,[P2_Counters + esi*2]	; use old counter value for flag test
-	dec	word ptr [P2_Counters + esi*2]	; decrement for current fetch
-	cmp	dl,[P2_Top + si]		; equal to top value?
+	push	ebx
+	mov	edx,[P2_Counters + esi*4]	; use old counter value for flag test
+	dec	[P2_Counters + esi*4]		; decrement for current fetch
+	cmp	dl,[P2_Top + esi]		; equal to top value?
 	je	P2_FlagOne			;   yes, set flag
-	cmp	dl,[P2_Bottom + si]		; equal to bottom value?
+	cmp	dl,[P2_Bottom + esi]		; equal to bottom value?
 	je	P2_FlagZero			;   yes, clear flag
 	jmp	P2_Cont
 
 P2_FlagOne:
-	mov	[P2_Flags + si],0ffh		; set flag
+	mov	[P2_Flags + esi],0ffh		; set flag
 	jmp	P2_Cont
 
 P2_FlagZero:
-	mov	[P2_Flags + si],0		; clear flag
+	mov	[P2_Flags + esi],0		; clear flag
 
 P2_Cont:
-	mov	bx,word ptr [P2_Counters + esi*2] ; get current counter
-	neg	bx				; fetch data
-	mov	dl,[_CartRom + 027feh + bx]	; yes it *is* magic
+	mov	ebx,[P2_Counters + esi*4]	; get current counter
+	neg	ebx				; fetch data
+
+	mov	dl,[_CartRom + 027feh + ebx]	; yes it *is* magic
+
 	mov	[P2_Rbyte],dl			; save data
-	pop	bx
-	endm
+	pop	ebx
+	ret
+
+
 
 ;*
 ;* read data via data fetcher
 ;*
 
 P2_Read_DF:
-	Read_DF
-	mov	si,offset P2_Rbyte		; pointer for CPU
+	call	Read_DF
+	mov	esi,offset P2_Rbyte		; pointer for CPU
 	ret
 
 ;*
@@ -391,36 +407,46 @@ P2_Read_DF:
 ;*
 
 P2_Read_DF_Flag:
-	Read_DF
-	mov	dl,[P2_Flags + si]		; pick up flag
+	call	Read_DF
+	mov	dl,[P2_Flags + esi]		; pick up flag
 	and	[P2_Rbyte],dl			; AND data
-	mov	si,offset P2_Rbyte		; restore pointer for CPU
+	mov	esi,offset P2_Rbyte		; restore pointer for CPU
 	ret
 
 ;*
-;* Generate a sequence of pseudo-random numbers 511 numbers long
-;* by emulating a 9-bit shift register with feedback taps at
-;* positions 5 and 9.  (Code from tiasnd.asm).
-;*
-;* It should really be a 255 number sequence, but it will do for now.
+;* Generate a sequence of pseudo-random numbers 255 numbers long
+;* by emulating an 8-bit shift register with feedback taps at
+;* positions 4, 5, 6, and 8.
 ;*
 
 P2_Read_Random:
-	push	ax
-	mov	ax,[P2_sreg]
-	and	ax,1				; bit 9 (register output & return val)
-	mov	dx,[P2_sreg]
-	and	dx,16
-	shr	dx,4				; position bit 5 at bottom
-	xor	dx,ax				; xor with bit 9 = new bit 1
+	push	eax
+
+	mov	eax,[P2_sreg]
+	and	eax,1				; isolate bit 8
+	mov	edx,[P2_sreg]
+	and	edx,4
+	shr	edx,2
+	xor	eax,edx				; xor with bit 6
+	mov	edx,[P2_sreg]
+	and	edx,8
+	shr	edx,3
+	xor	eax,edx				; xor with bit 5
+	mov	edx,[P2_sreg]
+	and	edx,16
+	shr	edx,4
+	xor	eax,edx				; xor with bit 4
+	shl	eax,7				; this is the new bit 1
 	shr	[P2_sreg],1			; shift the register
-	shl	dx,8				; position the feedback bit
-	or	[P2_sreg],dx			; or it in
-	mov	dl,byte ptr [P2_sreg]
+	or	[P2_sreg],eax			; or in the feedback
+
+	mov	edx,[P2_sreg]
 	mov	[P2_Rbyte],dl
-	mov	si,offset P2_Rbyte
-	pop	ax
+	mov	esi,offset P2_Rbyte
+
+	pop	eax
 	ret	
+
 
 
 ;*
@@ -434,7 +460,7 @@ P2_Read_Random:
 ;*
 
 P2_Read_Sound:
-	mov	si,offset P2_AUDV
+	mov	esi,offset P2_AUDV
 	ret
 
 
@@ -445,21 +471,21 @@ P2_Read_Sound:
 Clock_Channel macro arg1
 local MusicZero, ChannelDone
 
-	test	[P2_Enable + arg1],010h		  ; channel enabled?
+	test	[P2_Enable + arg1],010h		; channel enabled?
 	jz	ChannelDone			;   no
-	mov	dx,[P2_Music_Count + arg1*2]	  ; use old counter value for flag test
-	dec	word ptr [P2_Music_Count + arg1*2]; decrement for current fetch
-	cmp	dx,[P2_Music_Bottom + arg1*2]	  ; equal to bottom value?
+	mov	edx,[P2_Music_Count + arg1*4]	; use old counter value for flag test
+	dec	[P2_Music_Count + arg1*4]	; decrement for current fetch
+	cmp	edx,[P2_Music_Bottom + arg1*4]	; equal to bottom value?
 	je	MusicZero			;   yes, clear flag
-	cmp	dx,-1				; time to reset?
-	jnz	ChannelDone			;   no
-	mov	dx,[P2_Music_Top + arg1*2]	  ;   yes, reset counter
-	mov	word ptr [P2_Music_Count + arg1*2],dx
-	mov	[P2_Flags + arg1],0ffh		  ; set flag
+	cmp	edx,-1				; time to reset?
+	jnz	ChannelDone			;	no
+	mov	edx,[P2_Music_Top + arg1*4]	;   yes, reset counter
+	mov	[P2_Music_Count + arg1*4],edx
+	mov	[P2_Flags + arg1],0ffh		; set flag
 	jmp	ChannelDone
 
 MusicZero:
-	mov	[P2_Flags + arg1],0		  ; clear flag
+	mov	[P2_Flags + arg1],0		; clear flag
 
 ChannelDone:
 	endm
@@ -469,11 +495,13 @@ ChannelDone:
 ;* clock music -- clock all channels
 ;*
 
-Clock_Music macro
+Clock_Music:
 	Clock_Channel 5
 	Clock_Channel 6
 	Clock_Channel 7
-	endm
+
+	ret
+
 
 ;*
 ;* build AUDV byte
@@ -490,19 +518,6 @@ Mix_AUDV db 0, 6, 5, 0bh, 4, 0ah, 9, 0fh
 
 .code
 
-Build_AUDV macro
-	movzx	bx,byte ptr [P2_Flags + 5]
-	mov	dl,byte ptr [P2_Flags + 6]
-	mov	dh,byte ptr [P2_Flags + 7]
-	and	bl,1
-	and	dl,2
-	and	dh,4
-	or	bl,dl
-	or	bl,dh
-	mov	dl,[Mix_AUDV + bx]
-	mov	[P2_AUDV],dl
-	endm
-
 ;*
 ;* clock Pitfall 2 from TIA sound
 ;*
@@ -510,18 +525,23 @@ Build_AUDV macro
 
 Clock_Pitfall2:
 	push	ebx
-	push	dx
+	push	edx
 
-	Clock_Music			;   yes, clock P2
-	cmp	[_SoundMode],2		; forcing slow speed ?
-	jne	ClockP2Done		;   no
-	Clock_Music			;   yes, double clock
+	call	Clock_Music		; clock P2
 
-ClockP2Done:
-	Build_AUDV			; build the AUDV byte
+	mov	bl,[P2_Flags + 5]	; Build AUDV
+	mov	dl,[P2_Flags + 6]
+	mov	dh,[P2_Flags + 7]
+	and	ebx,1
+	and	dl,2
+	and	dh,4
+	or	bl,dl
+	or	bl,dh
+	mov	dl,[Mix_AUDV + ebx]
+	mov	[P2_AUDV],dl
 
 ClockP2NoClock:
-	pop	dx
+	pop	edx
 	pop	ebx
 	ret
 

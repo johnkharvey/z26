@@ -1,8 +1,10 @@
 ;*
 ;* main.asm -- main entry point here...
 ;*
+;* 09-02-02 -- 32-bit
+;*
 
-; z26 is Copyright 1997-2000 by John Saeger and is a derived work with many
+; z26 is Copyright 1997-2002 by John Saeger and is a derived work with many
 ; contributors.	 z26 is released subject to the terms and conditions of the 
 ; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ; Please see COPYING.TXT for details.
@@ -10,42 +12,29 @@
 
 .data
 
-ModuleReturnAdr	dd	?		; word if small model, dword if medium
-ModuleSP	dw	?
+ModuleSP	dd	?
 
 
 .code
 
 PUBLIC _emulator
 
-_emulator PROC FAR			; near if small model, far if medium
-
-	push	ds			; because "C" program can blow es ...
-	pop	es			; ... before we get here (getvect)
-
-	mov	ax,_psp
-	mov	psp,ax			; set up PSP for commandline
-	pop	ModuleReturnAdr		; save return adr
-
+_emulator:				; near if small model, far if medium
 	pushad
 
-	mov	ax,sp
-	mov	[ModuleSP],ax		; save sp (no return adr on stack)
+     	mov	eax,esp
+	mov	[ModuleSP],eax		; save sp (no return adr on stack)
 
 	jmp	start
 
 ModuleReturn:
-	push	ds
-	pop	es
-	mov	ax,[ModuleSP]
-	mov	sp,ax
+	mov	eax,[ModuleSP]
+	mov	esp,eax
 
 	popad
 
-	push	ModuleReturnAdr
 	ret
 
-_emulator ENDP
 
 
 ;*
@@ -53,94 +42,31 @@ _emulator ENDP
 ;*
 
 start:
-	mov	di,offset StartMemory
-	mov	cx,offset EndMemory
-	sub	cx,di			; # of bytes to clear
-	xor	al,al
-	rep	stosb			; clear memory
-
 	call	InitData		; initialize data
-
 	call	_RecognizeCart		; do special setup for individual carts
-
-;	call	SetupSpecial
 	call	SetupBanks
-
-; reset must follow SetupBanks...
-
-	call	Reset			; Reset the CPU
-
-	cmp	[_quiet],0
-	jnz	STUP_4
-	cmp	[_SoundMode],1		; sound mode 1 (force PC speaker) ?
-	je	STUP_4			;	 yes
-	call	_SetupSoundBlaster
-	test	ax,ax			; did user press escape ?
-	jnz	ReallyQuit		;   yes
-
-STUP_4:
-	call	_SetupTimer		; put timer in mode 2
-
-	call	TIASaveVideoMode
-	call	VSync
-
-	call	TIAGraphicMode		; Switch into VGA mode
-	call	SetNewInt9		; Keyboard Handler
-	call	JoyCenter		; set joystick center position
-
-	call	MouseInit		; *EST*
-
-	mov	eax,200000
-	call	_Delay			; let monitor sync
-
-	call	TIAGraphicMode		; flush twice, it's a long way to Broiler Hut
-	mov	eax,800000
-	call	_Delay			; let monitor sync
-
-	call	_ProgramDSP		; start DMA
-
-	call	VSync
-
-	call	_GetTime		; start time for frame timer
-	mov	[StartTicks],eax
-
-	mov	eax,[_FrameExit]
-	mov	[OriginalFrameExit],eax	; remember how many frames for FPS calculation
-	inc	[_FrameExit]		; do correct # of loops
-
-
-	mov	dx,[_CFirst]		; set up some things in case there's no vsync
-	mov	[TopLine],dx		; (like bowlg_tw.bin)
-	add	dx,[_MaxLines]
-	mov	[BottomLine],dx
-
-        call    Controls                ; check controls before emulation starts
+	call	Reset			; Reset the CPU -- must follow SetupBanks
+	call	Init_Service
+	call	Controls		; check controls before emulation starts
 
 ;*
 ;* the main outer loop
 ;*
 
 xmain:  
-	cmp	[OriginalFrameExit],0	; exiting after <n> frames ?
+	cmp	[_FrameExit],0		; exiting after <n> frames ?
 	je	xm1			;   no
 	dec	[_FrameExit]		;   yes, decrement counter
-	jz	GoTIME			;	   zero, exit now
+	jz	GoDOS			;	 zero, exit now
 
 xm1:
-;        call    ModeXCopyScreen         ; copy screenbuffer to video RAM
-	call	ModeXFlipPage		; done rendering, flip page display page
-	call	VS_PreGap		; this is how we ignore false triggers
-	call	VSync			; now look for vblank
-        call    ModeXCopyScreen         ; copy screenbuffer to video RAM
-        cmp     [_VideoMode],9          ; are we in mode 9 ?
-        jne     NoLineNr
-        call    MX9PutLineNr            ; ... yes, display number of lines in frame
-NoLineNr:
+	call	_VSync			; now look for vblank
+	call	_ModeXCopyScreen	; copy screenbuffer to video RAM
 	call	ScanFrame
 
 Paused:	call	Controls		; check which keys pressed
 	test	[GamePaused],1		; game paused ?
-	jz	xmain			;	no, next frame
+	jz	xmain			;   no, next frame
 
 PausedLoop:
 	call	Controls		; check which keys pressed
@@ -150,92 +76,34 @@ PausedLoop:
 
 
 ;*
-;* shutdown the weird stuff
-;*
-
-sd_weird:
-	call	_sound_clear		; turn sound off (Soundblaster)
-	call	SoundOff		; turn sound off (PC speaker)
-	call	TIARestoreVideoMode
-	call	SetOldInt9		; reset the key handler
-	call	_RestoreTimer		; put timer back into mode 3
-	call	_RestoreISR		; restore SoundBlaster ISR (if was on)
-	ret
-
-;*
-;* end of program (escape pressed or bad opcode)
-;*
-
-GoTIME:
-	call	VSync
-
-	call	_GetTime
-	sub	eax,[StartTicks]
-	mov	[StopTicks],eax		; how long game took
-
-	call	sd_weird		; shutdown the weird stuff
-
-	call	FramesPerSecond		; output frames per second message
-
-	jmp	Empty
-
-	
-
-GoDOS:
-        push    es
-        call    _kv_CloseSampleFile      ; close file if opened
-        pop     es
-        call	sd_weird		; shutdown the weird stuff
-
-Empty:	call	_kb_hit			; empty the keyboard buffer
-	jz	Quit			;   buffer empty
-	call	_get_char		; read char
-	jmp	Empty
-
-Quit:
-	jmp	ModuleReturn
-
-
-ReallyQuit:
-	mov	ah,04Ch			; and return to MSDOS
-	int	MSDOS
-
-;*
 ;* Do One Frame
 ;*
 
-
 ScanFrame:
-        mov     ax,[_ScreenOfs]          ; reset display pointer
-        mov     [DisplayPointer],ax
+	mov	eax,[_ScreenBuffer]	; reset display pointer
+	mov	[DisplayPointer],eax
 ScanFrameLoop:
 
 	call	nTIALineTo		; generate a raster line
 
-	test	[KeyTable+KeyEsc],128	; ESC pressed ?
-	jnz	GoDOS			;	 yes
+	call	_TestEscExit		; exit if ESC pressed
 
-	test	[ScanLine],0fh		; time to read the time ?
-	jnz	ScanNextLine		;   no
-	call	_GetTime		;   yes, needed to prevent timer overflow
-
-ScanNextLine:
 	inc	[ScanLine]		; Increment the scanline counter
 	sub  [RClock],CYCLESPERSCANLINE ; adjust RClock for next line
 
 	test	[VBlank],080h		; discharging capacitors ?
 	jnz	ScanBailOut		;   yes
 					;	 no, put some charge on the capacitors
-	test dword ptr [ChargeCounter],080000000h ; already fully charged ?
+	test [ChargeCounter],080000000h ; already fully charged ?
 	jnz	ScanBailOut		;   yes, don't increment
-	inc	dword ptr [ChargeCounter] ;   no, add some charge
+	inc  [ChargeCounter]		;   no, add some charge
 
 ScanBailOut:
-	mov	ax,[ScanLine]		; do emergency bail-out test
-	cmp	ax,[OurBailoutLine]	; too many lines?
-	jl	NDret			;	not yet
-	mov	ax,[_BailoutLine]	;	  yes, sharpen (or loosen) the test
-	mov	[OurBailoutLine],ax	
+	mov	eax,[ScanLine]		; do emergency bail-out test
+	cmp	eax,[OurBailoutLine]	; too many lines?
+	jl	NDret			;   not yet
+	mov	eax,[_BailoutLine]	;   yes, sharpen (or loosen) the test
+	mov	[OurBailoutLine],eax	
 DontSharpen:
 	inc	[Frame]			; to the next frame
 	mov	[ScanLine],1
@@ -244,7 +112,7 @@ NDret:
 	mov	eax,[Frame]
 	cmp	eax,[PrevFrame]		; have we gone to a new frame ?
 	je	ScanFrameLoop		;   not yet
-	mov	[PrevFrame],eax		;	  yes, mark it as current
+        call    BlankBufferEnd          ;   yes, blank screen buffer if anything left
+	mov	[PrevFrame],eax		;   yes, mark it as current
 	ret				;	 and return
-
 

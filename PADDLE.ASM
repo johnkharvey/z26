@@ -2,10 +2,12 @@
 ;* paddle.asm -- z26 paddle support
 ;*
 
-; z26 is Copyright 1997-2000 by John Saeger and is a derived work with many
+; z26 is Copyright 1997-2002 by John Saeger and is a derived work with many
 ; contributors.	 z26 is released subject to the terms and conditions of the 
 ; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ; Please see COPYING.TXT for details.
+
+; 09-07-02 -- 32-bit
 
 .data
 

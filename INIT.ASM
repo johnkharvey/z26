@@ -1,4 +1,8 @@
-; init.asm -- initialize all data in z26 asm modules
+;*
+;* init.asm -- initialize all data in z26 asm modules
+;*
+;* 09-02-02 -- 32-bit
+;*
 
 ; z26 is Copyright 1997-2000 by John Saeger and is a derived work with many
 ; contributors.	 z26 is released subject to the terms and conditions of the 
@@ -7,111 +11,100 @@
 
 .data
 
-ALIGN 2
+IN_Start label byte			; <-- start clearing hera
 
-Frame		dd	0		; Frame Counter
-PrevFrame	dd	0		; Previous value frame counter
+;_KeyTable	db	128 dup (?)	; Key pressed table
+RiotRam		db	128 dup (?)	; RIOT ram (must be initially zero)
+TIA		db 	64 dup (?)	; TIA Registers (also should be zero)
+_Ram		db	2048 dup (?)	; extra ram
 
-OriginalFrameExit dd	0		; save it here for FPS calculation
-StartTicks	dd	0		; ticks at start
-StopTicks	dd	0		; ticks at finish
+Frame		dd	1 dup (?)	; Frame Counter
+PrevFrame	dd	1 dup (?)	; Previous value frame counter
 
-ScanLine	dw	1		; current scan line
-TopLine		dw	0		; was 36	    top line of display
-BottomLine	dw	0		; was 36+200 bottom line of display
+VBlanking	dd	1 dup (?)	; 0 if vblanking, -1 otherwise
+VBlank		db	1 dup (?)	; VBlank flag
+VSyncFlag	db	1 dup (?)	; VSync flag
 
-OldCFirst	dw	0		; remember original CFirst
-					; (for homing the display)
-
-OurBailoutLine	dw	1000		; initial bailout line
+ScanLine	dd	1 dup (?)	; current scan line
+OurBailoutLine	dd	1 dup (?)	; initial bailout line
 					; we fine tune it if exceeded
 
-;DefaultCFirst	dw	0ffffh		; recommended start of game
-;UserCFirst	dw	0ffffh		; remember what user specified (if anything)
+TopLine		dd	1 dup (?)	; top line of display
+BottomLine	dd	1 dup (?)	; bottom line of display
 
-DisplayPointer	dw	0		;pointer into display RAM
+OldCFirst	dd	1 dup (?)	; remember original CFirst
+					; (for homing the display)
 
-GamePaused	db	0		; game paused
+GamePaused	db	1 dup (?)	; game paused
+WByte		db	1 dup (?)	; byte to write
 
-WByte		db	0		; byte to write
+DisplayPointer	dd	1 dup (?)	; pointer into display RAM
 
-ALIGN 2
+IN_End label byte			; <-- finish clearing here
 
-TIACollide	dw	0		; Collision flag word.
-
-psp		dw	0		; gets pointer to PSP 
-					; (if .EXE file or module)
-
-ALIGN 2
-; *** cpuhand.asm ***
-
-VBlanking	dd	-1		; 0 if vblanking, -1 otherwise
-VBlank		db	0		; VBlank flag
-VSyncFlag	db	0		; VSync flag
-
-;*** keep these in order ***
-
-DumpPorts	db	0,0,0,0		; Input ports (inp0..3)
-
-InputLatch	db	080h		; Input latch (inp4)
-		db	080h		; Input latch (inp5)
-
-ALIGN 2
-
-; *** new stuff ***
-
-BlasterLoopCount dd	0		; count # of trys initting the soundblaster
-					; (sbdrv.asm)
 
 .code
 
-InitData:
-	call	_InitCVars
+;*
+;* routine to do rep stosb to data segment
+;*
 
+rep_stosb:
+	cmp	ecx,0
+	jz	rs_done
+
+rs_loop:
+	mov	[edi],al
+	inc	edi
+	dec	ecx
+	jnz	rs_loop
+
+rs_done:
+	ret
+
+
+;*
+;* macro to clear memory
+;*
+
+clear_mem macro mem_start, mem_finish
+
+	mov	edi,offset mem_start
+	mov	ecx,offset mem_finish
+	sub	ecx,edi			; # of bytes to clear
+	xor	al,al
+	call	rep_stosb		; clear memory
+
+	endm
+
+;*
+;* initialize data
+;*
+
+InitData:
+	clear_mem IN_Start, IN_End
+
+	mov	[OurBailoutLine],1000
+	mov	[ScanLine],1
+	mov	[VBlanking],-1
+
+;	mov	dword ptr [OldInt9],0
+	mov	[CtrlSkipFlag],0
+
+	mov	eax,[_ScreenBuffer]
+	mov	[DisplayPointer],eax
+
+	call	_InitCVars
 	call	Init_CPU
+	call	Init_CPUhand
 	call	Init_TIA
 	call	Init_Riot
 	call	Init_P2
 	call	Init_Starpath
+	call	Init_Tiasnd
+	call	Init_SoundQ
 
-	mov	[OurBailoutLine],1000
-
-
-	mov	[BlasterLoopCount],0
-
-	mov	[Frame],0
-	mov	[PrevFrame],0
-	mov	[OriginalFrameExit],0
-	mov	[StartTicks],0
-	mov	[StopTicks],0
-	mov	[ScanLine],1
-
-	mov	[OldCFirst],0
-;	mov	[DefaultCFirst],0ffffh
-;	mov	[UserCFirst],0ffffh
-
-	mov	[GamePaused],0
-	mov	[WByte],0
-
-	mov	[TIACollide],0
-
-	mov	[VBlanking],-1
-	mov	[VBlank],0
-	mov	[VSyncFlag],0
-	mov	dword ptr [DumpPorts],0
-	mov	word ptr [InputLatch],08080h
-
-	mov	dword ptr [OldInt9],0
-	mov	[CtrlSkipFlag],0
-
-        mov     ax,[_ScreenOfs]
-        mov     [DisplayPointer],ax
-
-        mov     ah,0            ; read PC-Timer to initialize the RIOT timer
-        int     1aH             ;    with a random value
-        and     dx,0ffH
-        shl     edx,10          ; 10-bit shift, because T1024T is default
-        mov     dword ptr [Timer],edx     ;    see RIOT.ASM for details
+	call	RandomizeRIOTTimer
 
 	ret
 

@@ -361,13 +361,6 @@ dd	BS_7[] = {
 	-1
 };
 
-dd      BS_12[] = {
-        0x39c892c7,     /* Pleiades prototype */
-        0xbc5527e7,     /* Pleiades prototype (fixed) */
-        0x2c19c728,     /* Funky Fish prototype */
-        -1              /* UA Ltd. prototypes go here */
-};
-
 /*
 dd	BS_8[] = {
         0xbe1047cf,      Fatal Run (PAL).bin 

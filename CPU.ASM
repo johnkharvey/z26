@@ -10,28 +10,35 @@
 ; 06-27-98 -- new design
 ; 07-17-98 -- simplify
 ; 06-26-99 -- cycle perfect
+; 08-04-02 -- 32-bit
 
-; CPU doesn't use cx, bp, di -- trashes ax, bx, dx, si
+; CPU doesn't use ecx, ebp, edi -- trashes eax, ebx, edx, esi
 
 .data
 ALIGN 2
+wreg_pc label word			; a word sized alias to pc (for inc [wreg_pc])
+reg_pc		dd	0		; program counter
 
-reg_pc		dw	0		; program counter
+dwreg_sp label dword			; a dword sized alias to the stack pointer
+reg_sp		db	0,1,0,0		; stack pointer
 
-wreg_sp label word			; a word sized alias to the stack pointer
-reg_sp		db	0,1		; stack pointer
-
-; the following two locations must be in this order and next to each other
+; the following locations must be in this order and next to each other
 
 reg_a		db	0		; accumulator (stored in AL)
 flag_carry	db	0		; carry bit   (stored in AH)
+		db	0		; pad to dword
+		db	0
 
 ; the following two locations are padded with an extra byte 
 ; to allow 16-bit access (see _index)
 
 reg_x		db	0		; x register
+		db	0		; pad to dword
+		db	0
 		db	0
 reg_y		db	0		; y register
+		db	0		; pad to dword
+		db	0
 		db	0
 
 ; a value is stored in the following vars for later testing
@@ -84,17 +91,17 @@ Init_CPU:
 ;*
 
 SaveCPUState macro
-	push	ax
-	push	bx
-	push	dx
-	push	si
+	push	eax
+	push	ebx
+	push	edx
+	push	esi
 	endm
 
 RestoreCPUState macro
-	pop	si
-	pop	dx
-	pop	bx
-	pop	ax
+	pop	esi
+	pop	edx
+	pop	ebx
+	pop	eax
 	endm
 
 
@@ -112,21 +119,27 @@ bumpclock macro
 ;*
 
 read_bank macro
+	push	eax
 	bumpclock
-	call	[ReadBank]
-        push    ax
-        mov     ax,[si]
+	mov	eax, [_BSType]
+
+	call	[RBankTab + eax*4]	; trashes eax
+
+        mov     al,[esi]
         mov     [BusState],al   ; remember last data on the bus
-        pop     ax
+        pop     eax
 	endm
 
 write_bank macro
+	push	eax
 	bumpclock
-	call	[WriteBank]
-        push    ax
+	mov	eax, [_BSType]
+
+	call	[WBankTab + eax*4]	; trashes eax
+
         mov     al,[WByte]
         mov     [BusState],al   ; remember last data on the bus
-        pop     ax
+        pop     eax
 	endm
 
 ;*
@@ -134,36 +147,36 @@ write_bank macro
 ;*
 
 read	macro	op1,op2		; read memory
-	mov	si,op2
+	mov	esi,op2
 	read_bank
-	mov	op1,byte ptr [si]
+	mov	op1,byte ptr [esi]
 	endm
       
 readsx	macro	op1,op2		; sign extended
-	mov	si,op2
+	mov	esi,op2
 	read_bank
-	movsx	op1,byte ptr [si]
+	movsx	op1,byte ptr [esi]
 	endm
 
 readzx	macro	op1,op2		; zero extended
-	mov	si,op2
+	mov	esi,op2
 	read_bank
-	movzx	op1,byte ptr [si]
+	movzx	op1,byte ptr [esi]
 	endm
 
 slack_read macro arg1		  ; read and throw away result
-	mov	si,arg1
+	mov	esi,arg1
 	read_bank
 	endm
 
 write	macro	op1,op2		; write memory
-	mov	si,op2
+	mov	esi,op2
 	mov	[WByte],op1
 	write_bank
 	endm
 
 slack_write	macro	op1,op2	; write memory
-	mov	si,op2
+	mov	esi,op2
 	mov	[WByte],op1
 	write_bank
 	endm
@@ -174,17 +187,17 @@ slack_write	macro	op1,op2	; write memory
 
 fetch	macro	op1
 	read	op1,[reg_pc]
-	inc	[reg_pc]
+	inc	[wreg_pc]
 	endm
 
 fetchsx macro	op1
 	readsx	op1,[reg_pc]
-	inc	[reg_pc]
+	inc	[wreg_pc]
 	endm
 
 fetchzx macro	op1
 	readzx	op1,[reg_pc]
-	inc	[reg_pc]
+	inc	[wreg_pc]
 	endm
 
 fetch_opcode macro   op1	; special fetchzx for trace logging
@@ -201,7 +214,7 @@ fo_1:
 ENDIF
 	mov	[RCycles],0
 	readzx	 op1,[reg_pc]
-	inc	[reg_pc]
+	inc	[wreg_pc]
 	endm
 
 slack_fetch macro		; read and throw away, don't inc PC
@@ -213,17 +226,17 @@ slack_fetch macro		; read and throw away, don't inc PC
 ;*
 
 zpush	macro	op1
-	write	op1,[wreg_sp]	; write byte to top of stack
+	write	op1,[dwreg_sp]	; write byte to top of stack
 	dec	[reg_sp]	; and decrement stack pointer
 	endm
 
 zpop	macro	op1
 	inc	[reg_sp]	; increment the	stack pointer
-	read	op1,[wreg_sp]	; and read the top byte
+	read	op1,[dwreg_sp]	; and read the top byte
 	endm
 
 slack_pop macro			; read stack and throw away, don't inc SP
-	slack_read [wreg_sp]
+	slack_read [dwreg_sp]
 	endm
 
 ;*
@@ -236,15 +249,15 @@ absolute macro
 	endm
 
 zeropage macro
-	fetchzx	bx
+	fetchzx	ebx
 	endm
 
 readaddress macro		; read data in bx -> bx
-	and	bx,0ffh		; must be in page zero
-	read	dl,bx
+	and	ebx,0ffh	; must be in page zero
+	read	dl,ebx
 	inc	bl
-	read	dh,bx
-	mov	bx,dx
+	read	dh,ebx
+	mov	ebx,edx
 	endm
 
 ;*
@@ -279,7 +292,7 @@ zero_write macro
 
 zero_x_read macro		; Zero page indexed addressing
 	zeropage
-	slack_read bx
+	slack_read ebx
 	add	bl,[reg_x]
 	endm
 
@@ -293,7 +306,7 @@ zero_x_write macro
 
 zero_y_read macro
 	zeropage
-	slack_read bx
+	slack_read ebx
 	add	bl,[reg_y]
 	endm
 
@@ -308,15 +321,15 @@ local done
 	absolute
 	add	bl,[reg_x]
 	jnc	done
-	slack_read bx
+	slack_read ebx
 	inc	bh
 done:
 	endm	
 
 abs_x_rmw macro
 	absolute
-	slack_read bx
-	add	bx, word ptr [reg_x]
+	slack_read ebx
+	add	ebx, dword ptr [reg_x]
 	endm
 
 abs_x_write macro
@@ -329,15 +342,15 @@ local done
 	absolute
 	add	bl,[reg_y]
 	jnc	done
-	slack_read bx
+	slack_read ebx
 	inc	bh
 done:
 	endm
 
 abs_y_rmw macro
 	absolute
-	slack_read bx
-	add	bx, word ptr [reg_y]
+	slack_read ebx
+	add	ebx, dword ptr [reg_y]
 	endm
 
 abs_y_write macro
@@ -347,8 +360,8 @@ abs_y_write macro
 
 ind_x_read macro		; Indexed indirect addressing
 	zeropage
-	slack_read bx
-	add	bx, word ptr [reg_x]
+	slack_read ebx
+	add	ebx, dword ptr [reg_x]
 	readaddress
 	endm
 
@@ -368,7 +381,7 @@ local done
 	readaddress
 	add	bl,[reg_y]
 	jnc	done
-	slack_read bx
+	slack_read ebx
 	inc	bh
 done:
 	endm
@@ -376,11 +389,11 @@ done:
 ind_y_rmw macro
 	zeropage
 	readaddress
-	push	bx
+	push	ebx
 	add	bl,[reg_y]
-	slack_read bx
-	pop	bx
-	add	bx, word ptr [reg_y]
+	slack_read ebx
+	pop	ebx
+	add	ebx, dword ptr [reg_y]
 	endm
 
 ind_y_write macro
@@ -431,7 +444,7 @@ op1:	fetch	dl
 op_read macro op1,op2,op3
 op_align
 op1:	op3&_read
-	read	dl,bx
+	read	dl,ebx
 	_&op2
 	ret
 	endm
@@ -439,10 +452,10 @@ op1:	op3&_read
 op_rmw macro op1,op2,op3
 op_align
 op1:	op3&_rmw
-	read	dl,bx
-	slack_write dl,bx
+	read	dl,ebx
+	slack_write dl,ebx
 	_&op2
-	write	dl,bx
+	write	dl,ebx
 	ret
 	endm
 
@@ -450,13 +463,13 @@ op_write macro op1,op2,op3
 op_align
 op1:	op3&_write
 	_&op2
-	write	dl,bx
+	write	dl,ebx
 	ret
 	endm
 
 op_branch macro op1,op2,op3,op4
 op_align
-op1:	fetchsx dx		; sign-extended branch offset into dx
+op1:	fetchsx edx		; sign-extended branch offset into dx
 	test	op2,op3
 	op4	DoBranch
 	ret
@@ -519,7 +532,7 @@ DoADC:	cmp	[flag_D],0
 	setc	ah
 	ret
 
-ADCBCD:	push	cx
+ADCBCD:	push	ecx
 
 	mov	[_reg_a],al
 	mov	[_value],dl
@@ -538,27 +551,27 @@ ADCBCD:	push	cx
 	jbe	ADCD_1
 	add	al,6
 ADCD_1:	mov	cl,al			; save result with half carry
-	and	ax,0fh
+	and	eax,0fh
 	mov	dl,[_reg_a]
-	and	dx,0f0h
-	add	ax,dx			; combine with top nybble of _reg_a
+	and	edx,0f0h
+	add	eax,edx			; combine with top nybble of _reg_a
 	mov	dl,[_value]
-	and	dx,0f0h
-	add	dx,ax			; add top nybble of _value
+	and	edx,0f0h
+	add	edx,eax			; add top nybble of _value
 	cmp	cl,0fh			; did lower nybble fixup overflow ?
 	jbe	ADCD_3
-	add	dx,010h			;   yes
+	add	edx,010h		;   yes
 ADCD_3:	mov	[RNTest],dl		; set a flag
-	mov	ax,dx			; fixup top nybble
-	and	dx,01f0h
-	cmp	dx,090h
+	mov	eax,edx			; fixup top nybble
+	and	edx,01f0h
+	cmp	edx,090h
 	jbe	ADCD_6
-	add	ax,060h
+	add	eax,060h
 ADCD_6:	test	ah,ah
 	setnz	ah			; set carry
 	mov	dl,[_value]		; ADC must preserve dl for RRA
 
-	pop	cx
+	pop	ecx
 	ret	
 
 _ANC macro
@@ -584,8 +597,8 @@ _ARR macro
 
 ; algorithm based on 6510core.c by Ettore Perazzoli (ettore@comm2000.it)
 
-	push	bx
-	push	cx
+	push	ebx
+	push	ecx
 
 	and	al,dl
 	mov	bl,al
@@ -596,8 +609,8 @@ _ARR macro
 	mov	[RNTest],ah
 	shl	[RNTest],7
 
-	mov	cx,ax
-	shr	cx,1
+	mov	ecx,eax
+	shr	ecx,1
 
 	setnz	[RZTest]
 
@@ -619,10 +632,10 @@ _ARR macro
 	and	dl,15
 	or	cl,dl
 ARR_1:	mov	al,bl
-	and	ax,240
-	and	bx,16
-	add	ax,bx
-	cmp	ax,80
+	and	eax,240
+	and	ebx,16
+	add	eax,ebx
+	cmp	eax,80
 	jbe	ARR_2
 	mov	al,cl
 	and	al,15
@@ -637,7 +650,7 @@ ARR_2:	xor	ah,ah
 	mov	al,cl
 	jmp	ARR_5
 
-ARR_4:	shr	ax,1
+ARR_4:	shr	eax,1
 	usetest	al
 
 	mov	bl,al
@@ -651,8 +664,8 @@ ARR_4:	shr	ax,1
 	xor	bl,dl
 	setnz	[flag_V]
 ARR_5:
-	pop	cx
-	pop	bx
+	pop	ecx
+	pop	ebx
 	endm
 
 _ASL macro
@@ -810,7 +823,7 @@ DoSBC:	cmp	[flag_D],0
 	setnc	ah
 	ret
 
-SBCBCD:	push	cx
+SBCBCD:	push	ecx
 
 	mov	[_reg_a],al
 	mov	[_value],dl
@@ -823,33 +836,33 @@ SBCBCD:	push	cx
 	seto	[flag_V]
 
 	mov	al,[_reg_a]	; now do decimal subtraction
-	and	dx,0fh
+	and	edx,0fh
 	add	dl,ah
-	and	ax,0fh
-	sub	ax,dx		; subtract bottom nybbles with carry
-	mov	cx,ax		; save result
+	and	eax,0fh
+	sub	eax,edx		; subtract bottom nybbles with carry
+	mov	ecx,eax		; save result
 	mov	al,[_reg_a]
-	and	ax,0f0h
+	and	eax,0f0h
 	mov	dl,[_value]
-	and	dx,0f0h
-	sub	ax,dx		; subtract top nybbles
-	test	cx,010h		; bottom nybble underflow ?
+	and	edx,0f0h
+	sub	eax,edx		; subtract top nybbles
+	test	ecx,010h		; bottom nybble underflow ?
 	je	SBCD_5
-	add	ax,-16		;	 yes, fixup
-	mov	dx,cx
-	add	dx,-6
+	add	eax,-16		;	 yes, fixup
+	mov	edx,ecx
+	add	edx,-6
 	jmp	SBCD_6
 
-SBCD_5:	mov	dx,cx
-SBCD_6:	and	dx,0fh
-	or	ax,dx		; combine lower and upper nybble result
-	test	ax,0100h	; upper nybble underflow ?
+SBCD_5:	mov	edx,ecx
+SBCD_6:	and	edx,0fh
+	or	eax,edx		; combine lower and upper nybble result
+	test	eax,0100h	; upper nybble underflow ?
 	je	SBCD_7
-	sub	ax,060h		;	  yes, fixup
+	sub	eax,060h		;	  yes, fixup
 SBCD_7:	mov	ah,[_flag_carry]
 	mov	dl,[_value]	; SBC must preserve dl for ISB
 
-	pop	cx
+	pop	ecx
 	ret	
 
 _SBX macro
@@ -925,8 +938,8 @@ _BRK macro
 	slack_fetch
 
 	mov	[flag_B],1	; set break flag
-	inc	[reg_pc]
-	mov	bx,[reg_pc]	; push return address
+	inc	[wreg_pc]
+	mov	ebx,[reg_pc]	; push return address
 	zpush	bh
 	zpush	bl
 
@@ -935,29 +948,32 @@ _BRK macro
 	zpush	dl
 
 	mov	[flag_I],1	; disable interrupts
-	mov	bx,0FFFEh	; fetch	the vector
+	mov	ebx,0FFFEh	; fetch	the vector
 
-	push	ax
-	read	al,bx
-	inc	bx
-	read	ah,bx
-	mov	[reg_pc],ax	; and transfer control
-	pop	ax
+	push	eax
+	read	al,ebx
+	inc	ebx
+	read	ah,ebx
+	and	eax,0ffffh
+	mov	[reg_pc],eax	; and transfer control
+	pop	eax
 	endm
 
 _JMPI macro
 	fetch	bl		; read the address of the the jump
 	fetch	bh
-	read	dl,bx
+	read	dl,ebx
 	inc	bl		; stay in current page
-	read	dh,bx
-	mov	[reg_pc],dx	; and jump to it
+	read	dh,ebx
+	and	edx,0ffffh
+	mov	[reg_pc],edx	; and jump to it
 	endm
 
 _JMPW macro
 	fetch	bl		; fetch	the address
 	fetch	bh
-	mov	[reg_pc],bx	; jump to it
+	and	ebx,0ffffh
+	mov	[reg_pc],ebx	; jump to it
 	endm
 
 _JSR macro
@@ -965,14 +981,15 @@ _JSR macro
 
 	slack_pop
 
-	push	ax
-	mov	ax,[reg_pc]	; ax is	the return address
+	push	eax
+	mov	eax,[reg_pc]	; ax is	the return address
 	zpush	ah		; we are automatically pushing return-1
 	zpush	al
-	pop	ax
+	pop	eax
 
 	fetch	bh		; now we fetch the top byte of PC
-	mov	[reg_pc],bx	; transfer control
+	and	ebx,0ffffh
+	mov	[reg_pc],ebx	; transfer control
 	endm
 
 _PHA macro
@@ -1006,36 +1023,38 @@ _RTI macro
 	slack_pop
 	zpop	dh		; pull PSW from stack
 	call	PutPSW		; and scatter the flags
-	push	ax
+	push	eax
 	zpop	al
 	zpop	ah		; pull return address
-	mov	[reg_pc],ax	; transfer control
-	pop	ax
+	and	eax,0ffffh
+	mov	[reg_pc],eax	; transfer control
+	pop	eax
 	endm
 
 _RTS macro
 	slack_fetch
 	slack_pop
-	push	ax
+	push	eax
 	zpop	al
 	zpop	ah		; pull return address
-	mov	[reg_pc],ax	; transfer control
-	pop	ax
+	and	eax,0ffffh
+	mov	[reg_pc],eax	; transfer control
+	pop	eax
 	slack_fetch
-	inc	[reg_pc]
+	inc	[wreg_pc]
 	endm
 
 
 ; load CPU registers
 
 LoadRegs macro
-	mov	ax,word ptr [reg_a]	; mov al,[reg_a]; mov ah,[flag_carry]
+	mov	eax,dword ptr [reg_a]	; mov al,[reg_a]; mov ah,[flag_carry]
 	endm
 
 ; save CPU registers
 
 SaveRegs macro
-	mov	word ptr [reg_a],ax	; mov [reg_a],al; mov [flag_carry],ah
+	mov	dword ptr [reg_a],eax	; mov [reg_a],al; mov [flag_carry],ah
 	endm
 
 ;*
@@ -1047,7 +1066,7 @@ do_Instruction:
 	LoadRegs			; load the CPU registers
 
 	fetch_opcode	ebx		; (fetchzx) get the opcode
-	call word ptr cs:[vectors + ebx*2]	; --> do the instruction
+	call 	[vectors + ebx*4]	; --> do the instruction
 	ClockRIOT
 
 	SaveRegs			; save the CPU registers
@@ -1060,11 +1079,12 @@ do_Instruction:
 
 Reset:
 	mov	[reg_sp],0FFh	; SP initialises to 255
-	mov	bx,0fffch	; get reset address
-	read	dl,bx
-	inc	bx
-	read	dh,bx
-	mov	[reg_pc],dx
+	mov	ebx,0fffch	; get reset address
+	read	dl,ebx
+	inc	ebx
+	read	dh,ebx
+	and	edx,0ffffh
+	mov	[reg_pc],edx
 	mov	[RClock],0
 	ret
 
@@ -1073,9 +1093,10 @@ Reset:
 ;*
 
 DoBranch:
-	mov	bx,[reg_pc]	; bh is	the current page
-	add	dx,[reg_pc]	; destination address
-	mov	[reg_pc],dx	; set the program counter
+	mov	ebx,[reg_pc]	; bh is	the current page
+	add	edx,[reg_pc]	; destination address
+	and	edx,0ffffh
+	mov	[reg_pc],edx	; set the program counter
 
 	cmp	bh,dh		; page changed ?
 	je	dbjn		;   no
@@ -1132,7 +1153,7 @@ PutPSW:	mov	[RNTest],dh	; PSW will do for N
 	setnz	[flag_V]
 	ret
 
-;.data
+.data
 
 ;*
 ;* opcode vector table
@@ -1141,23 +1162,23 @@ PutPSW:	mov	[RNTest],dh	; PSW will do for N
 ;*	  (since it is typically environment dependent)
 ;*
 
-vectors label word
-    dw _00,_01,jam,_03,_04,_05,_06,_07,_08,_09,_0a,_0b,_0c,_0d,_0e,_0f
-    dw _10,_11,jam,_13,_14,_15,_16,_17,_18,_19,_1a,_1b,_1c,_1d,_1e,_1f
-    dw _20,_21,jam,_23,_24,_25,_26,_27,_28,_29,_2a,_0b,_2c,_2d,_2e,_2f ;_2b=_0b
-    dw _30,_31,jam,_33,_34,_35,_36,_37,_38,_39,_3a,_3b,_3c,_3d,_3e,_3f
-    dw _40,_41,jam,_43,_44,_45,_46,_47,_48,_49,_4a,_4b,_4c,_4d,_4e,_4f
-    dw _50,_51,jam,_53,_54,_55,_56,_57,_58,_59,_5a,_5b,_5c,_5d,_5e,_5f
-    dw _60,_61,jam,_63,_64,_65,_66,_67,_68,_69,_6a,_6b,_6c,_6d,_6e,_6f
-    dw _70,_71,jam,_73,_74,_75,_76,_77,_78,_79,_7a,_7b,_7c,_7d,_7e,_7f
-    dw _80,_81,_82,_83,_84,_85,_86,_87,_88,_89,_8a,_8b,_8c,_8d,_8e,_8f
-    dw _90,_91,jam,_93,_94,_95,_96,_97,_98,_99,_9a,_9b,_9c,_9d,_9e,_9f
-    dw _a0,_a1,_a2,_a3,_a4,_a5,_a6,_a7,_a8,_a9,_aa,_ab,_ac,_ad,_ae,_af
-    dw _b0,_b1,jam,_b3,_b4,_b5,_b6,_b7,_b8,_b9,_ba,_bb,_bc,_bd,_be,_bf
-    dw _c0,_c1,_c2,_c3,_c4,_c5,_c6,_c7,_c8,_c9,_ca,_cb,_cc,_cd,_ce,_cf
-    dw _d0,_d1,jam,_d3,_d4,_d5,_d6,_d7,_d8,_d9,_da,_db,_dc,_dd,_de,_df
-    dw _e0,_e1,_e2,_e3,_e4,_e5,_e6,_e7,_e8,_e9,_ea,_e9,_ec,_ed,_ee,_ef ;_eb=_e9
-    dw _f0,_f1,jam,_f3,_f4,_f5,_f6,_f7,_f8,_f9,_fa,_fb,_fc,_fd,_fe,_ff
+vectors label dword
+    dd _00,_01,jam,_03,_04,_05,_06,_07,_08,_09,_0a,_0b,_0c,_0d,_0e,_0f
+    dd _10,_11,jam,_13,_14,_15,_16,_17,_18,_19,_1a,_1b,_1c,_1d,_1e,_1f
+    dd _20,_21,jam,_23,_24,_25,_26,_27,_28,_29,_2a,_0b,_2c,_2d,_2e,_2f ;_2b=_0b
+    dd _30,_31,jam,_33,_34,_35,_36,_37,_38,_39,_3a,_3b,_3c,_3d,_3e,_3f
+    dd _40,_41,jam,_43,_44,_45,_46,_47,_48,_49,_4a,_4b,_4c,_4d,_4e,_4f
+    dd _50,_51,jam,_53,_54,_55,_56,_57,_58,_59,_5a,_5b,_5c,_5d,_5e,_5f
+    dd _60,_61,jam,_63,_64,_65,_66,_67,_68,_69,_6a,_6b,_6c,_6d,_6e,_6f
+    dd _70,_71,jam,_73,_74,_75,_76,_77,_78,_79,_7a,_7b,_7c,_7d,_7e,_7f
+    dd _80,_81,_82,_83,_84,_85,_86,_87,_88,_89,_8a,_8b,_8c,_8d,_8e,_8f
+    dd _90,_91,jam,_93,_94,_95,_96,_97,_98,_99,_9a,_9b,_9c,_9d,_9e,_9f
+    dd _a0,_a1,_a2,_a3,_a4,_a5,_a6,_a7,_a8,_a9,_aa,_ab,_ac,_ad,_ae,_af
+    dd _b0,_b1,jam,_b3,_b4,_b5,_b6,_b7,_b8,_b9,_ba,_bb,_bc,_bd,_be,_bf
+    dd _c0,_c1,_c2,_c3,_c4,_c5,_c6,_c7,_c8,_c9,_ca,_cb,_cc,_cd,_ce,_cf
+    dd _d0,_d1,jam,_d3,_d4,_d5,_d6,_d7,_d8,_d9,_da,_db,_dc,_dd,_de,_df
+    dd _e0,_e1,_e2,_e3,_e4,_e5,_e6,_e7,_e8,_e9,_ea,_e9,_ec,_ed,_ee,_ef ;_eb=_e9
+    dd _f0,_f1,jam,_f3,_f4,_f5,_f6,_f7,_f8,_f9,_fa,_fb,_fc,_fd,_fe,_ff
 
 .code
 

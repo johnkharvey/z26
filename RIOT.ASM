@@ -1,8 +1,10 @@
 ;*
 ;* z26 RIOT emu
 ;*
+;* 07-19-02 -- 32-bit
+;*
 
-; z26 is Copyright 1997-2000 by John Saeger and is a derived work with many
+; z26 is Copyright 1997-2002 by John Saeger and is a derived work with many
 ; contributors.	 z26 is released subject to the terms and conditions of the 
 ; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ; Please see COPYING.TXT for details.
@@ -17,8 +19,8 @@ START_TIME = 07fffh			; 03ffffh
 .data
 
 Timer		dd	START_TIME	; the RIOT Timer
-                                        ; (gets initialized in INIT.ASM now)
-TimerReadVec	dw	ReadTimer1024	; timer read vector
+					; (gets initialized in INIT.ASM now)
+TimerReadVec	dd	ReadTimer1024	; timer read vector
 TimerByte	db	0		; a return value
 TimerIntReg	db	0		; Timer Interrupt Register
 
@@ -28,34 +30,34 @@ DDR_B		db	0
 
 ALIGN 2
 
-ReadRIOTTab label word
-	dw	ReadPortA		; 280h PA Data
-	dw	ReadDDR_A		; 281h PA Direction
-	dw	ReadPortB		; 282h PB Data
-	dw	ReadDDR_B		; 283h PB Direction
-	dw	ReadTimer		; 284h Read Timer
-	dw	ReadTimerIntReg		; 285h Read Timer Interrupt Register
-	dw	ReadTimer		; 286h Read Timer
-	dw	ReadTimerIntReg		; 287h Read Timer Interrupt Register
+ReadRIOTTab label dword
+	dd	ReadPortA		; 280h PA Data
+	dd	ReadDDR_A		; 281h PA Direction
+	dd	ReadPortB		; 282h PB Data
+	dd	ReadDDR_B		; 283h PB Direction
+	dd	ReadTimer		; 284h Read Timer
+	dd	ReadTimerIntReg		; 285h Read Timer Interrupt Register
+	dd	ReadTimer		; 286h Read Timer
+	dd	ReadTimerIntReg		; 287h Read Timer Interrupt Register
 
-WriteRIOTTab label word
-	dw	SetRIOTTimer1		; 294h
-	dw	SetRIOTTimer8		; 295h
-	dw	SetRIOTTimer64		; 296h
-	dw	SetRIOTTimer1024	; 297h
+WriteRIOTTab label dword
+	dd	SetRIOTTimer1		; 294h
+	dd	SetRIOTTimer8		; 295h
+	dd	SetRIOTTimer64		; 296h
+	dd	SetRIOTTimer1024	; 297h
 
 ; *EST* table
-WriteRIOTTab2 label word
-	dw	WritePortA		; 280h
-	dw	WriteDDR_A		; 281h
-	dw	WriteNothing		; 282h
-	dw	WriteDDR_B		; 283h
+WriteRIOTTab2 label dword
+	dd	WritePortA		; 280h
+	dd	WriteDDR_A		; 281h
+	dd	WriteNothing		; 282h
+	dd	WriteDDR_B		; 283h
 
 .code
 
 
 Init_Riot:
-	mov	dword ptr [Timer],START_TIME
+	mov	[Timer],START_TIME
 	mov	[TimerReadVec], offset ReadTimer1024
 	mov	[TimerByte],0
 	mov	[TimerIntReg],0
@@ -68,22 +70,22 @@ Init_Riot:
 
 ReadRIOT:
 	and	esi,07h
-	jmp	[ReadRIOTTab + esi*2]
+	jmp	[ReadRIOTTab + esi*4]
 
 ReadDDR_A:				; read data direction register A
-	mov	si,offset DDR_A
+	mov	esi,offset DDR_A
 	ret
 
 ReadDDR_B:				; read data direction rigister B
-	mov	si,offset DDR_B
+	mov	esi,offset DDR_B
 	ret
 
 ReadPortB:				; read console switches (port b)
-	mov	si,offset _IOPortB
+	mov	esi,offset _IOPortB
 	ret
 
 ReadPortA:				; read hand controllers (port a)
-        mov	si,offset _IOPortA
+	mov	esi,offset _IOPortA
 	ret
 
 ;*
@@ -92,22 +94,19 @@ ReadPortA:				; read hand controllers (port a)
 ;*
 
 WriteRIOT:
-;	 test	 si,014h		; removed by *EST*
-;	 jz	 WriteNothing
-
-	test	si,010h
+	test	esi,010h
 	jnz	WR_EST2
-	test	si,004h
+	test	esi,04h
 	jnz	WriteNothing
 
 	and	esi,03h
-	jmp	[WriteRIOTTab2 + esi*2]
+	jmp	[WriteRIOTTab2 + esi*4]
 WR_EST2:
-	test	si,004h
+	test	esi,04h
 	jz	WriteNothing
 
-	and	esi,03h			; was 3
-	jmp	[WriteRIOTTab + esi*2]
+	and	esi,03h
+	jmp	[WriteRIOTTab + esi*4]
 	
 
 WriteNothing:
@@ -115,13 +114,13 @@ WriteNothing:
 
 
 WritePortA:
-	push	ax
+	push	eax
 	mov	al,[WByte]
-        and     al,[DDR_A]              ; make sure that only output bits
-        mov     ah,[DDR_A]              ;   get written to SWCHA *EST*
-        xor     ah,0FFh                 ;
-        and     ah,[_IOPortA]           ;
-        or      al,ah                   ;
+	and	al,[DDR_A]		; make sure that only output bits
+	mov	ah,[DDR_A]		;   get written to SWCHA *EST*
+	xor	ah,0FFh			;
+	and	ah,[_IOPortA]		;
+	or	al,ah			;
 
 	cmp	[_KeyPad],2		; *EST* cheat for Star Raiders
 	jne	WPAapply		;   wouldn'd read Joystick
@@ -131,43 +130,46 @@ WritePortA:
 	or	al,ah			;
 WPAapply:
 	mov	[_IOPortA],al
-        cmp     [_KidVid],0             ; Kid Vid game?
-        je      WPAtestML
-        call    KidVidWrite             ; in keyboard.asm
-        pop     ax
-        ret
-WPAtestML:
-        test    [_Mindlink],3           ; Mindlink game?
-        jnz     [WPAhandleML]
-        pop     ax
-        cmp     [_BSType],10            ; CompuMate?
-        je      WPAhandleCM
-        call	HandleKeyPad
+	cmp	[_KidVid],0		; Kid Vid game?
+	je	WPAtestML
+	call	KidVidWrite		; in keyboard.asm
+	pop	eax
 	ret
+
+WPAtestML:
+	test	[_Mindlink],3		; Mindlink game?
+	jnz	[WPAhandleML]
+	pop	eax
+	cmp	[_BSType],10		; CompuMate?
+	je	WPAhandleCM
+	call	HandleKeyPad
+	ret
+
 WPAhandleCM:
-        call    HandleCompuMate
-        ret
+	call	HandleCompuMate
+	ret
+
 WPAhandleML:
-        test    al,[MindlinkTEST]       ; ready to receive next bit?
-        jz      WPAhML1
-        call    NextMindlinkBit         ; in mouse.asm
+	test	al,[MindlinkTEST]	; ready to receive next bit?
+	jz	WPAhML1
+	call	NextMindlinkBit		; in mouse.asm
 WPAhML1:
-        pop     ax
-        ret
+	pop	eax
+	ret
 
 
 WriteDDR_A:
-	push	ax
+	push	eax
 	mov	al,[WByte]
 	mov	[DDR_A],al
-	pop	ax
+	pop	eax
 	ret
 
 WriteDDR_B:
-	push	ax
+	push	eax
 	mov	al,[WByte]
 	mov	[DDR_B],al
-	pop	ax
+	pop	eax
 	ret
 
 ;*
@@ -211,7 +213,7 @@ read_timer macro op1,op2
 ReadTimer&op2:
 	shr	edx,op1
 	mov	[TimerByte],dl
-	mov	si,offset TimerByte
+	mov	esi,offset TimerByte
 
 	ret
 
@@ -230,11 +232,12 @@ ReadTimer:
 	mov	edx,[Timer]
 	test	edx,040000h		; has the timer overflowed yet ?
 	jnz	ReadOverflowed		;	 yes
-	jmp	[TimerReadVec]		;	 no, do appropriate read
+	mov	esi,[TimerReadVec]	;   no, do appropriate read
+	jmp	esi			; jmp [TimerReadVec] doesn't work in 16-bit segment 
 
 ReadOverflowed:
 	mov	[TimerByte],dl		; return this value
-	mov	si, offset TimerByte
+	mov	esi, offset TimerByte
 	ret
 
 ;*
@@ -256,7 +259,7 @@ ReadTimerIntReg:
 ;*
 
 	and	[Timer],START_TIME	; clear interrupt flag
-	mov	si,offset TimerIntReg
+	mov	esi,offset TimerIntReg
 	ret
 
 ;*
@@ -270,3 +273,16 @@ local NoPF2
 	sub	[Timer],edx		; subtract from timer
 
 	endm
+
+;*
+;* randomize RIOT timer
+;*
+
+RandomizeRIOTTimer:
+	mov	eax,314159265			; *** this could be better ***
+	and	eax,0ff00h
+	shl	eax,2
+	mov	[Timer],eax			;    see RIOT.ASM for details
+	ret
+
+

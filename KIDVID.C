@@ -13,7 +13,8 @@
 FILE *SampleFile, *SharedSampleFile;
 char SampleByte;
 int FileOpened=0;
-int kv_FilePointer, kv_TapeBusy, kv_SharedData, kv_Beep;
+dd kv_TapeBusy;
+int kv_FilePointer, kv_SharedData, kv_Beep;
 unsigned long int kv_SongCounter=0;
 
 
@@ -545,8 +546,7 @@ unsigned char Temp;
 void kv_GetNextSampleByte(void)
 {
 static int oddeven = 0;
-int Temp;
-   if(kv_SongCounter==0) SampleByte=0x80;
+   if(kv_SongCounter==0) SampleByte = (db) 0x80;
    else{
       oddeven=oddeven^1;
       if(oddeven&1){
@@ -556,7 +556,7 @@ int Temp;
          if(FileOpened){
             if(kv_SharedData) SampleByte=getc(SharedSampleFile);
             else SampleByte=getc(SampleFile);
-         }else SampleByte=0x80;
+         }else SampleByte = (db) 0x80;
          if((kv_Beep==0)&&(kv_SongCounter==0)) kv_SetNextSong();
       }
    }

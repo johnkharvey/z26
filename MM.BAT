@@ -1,15 +1,4 @@
-echo off
-ml /c /Cp /Zm guicore.asm
-if errorlevel 1 goto fail
-ml /c /Cp /Zm z26core.asm
-if errorlevel 1 goto fail
-tcc -c -v- -ml -O -a -w-par -w-pia z26.c
-if errorlevel 1 goto fail
-mlink C0l z26 z26core guicore,z26,z26,Cl;
-if errorlevel 1 goto fail
-echo z26 build O.K.
-goto exit
-:fail
-echo z26 build failed.
-:exit
-
+ml /coff /Fl /c /Cp /Zm /Zi z26core.asm
+gcc -c z26.c
+gcc z26.o z26core.obj -lmingw32 -lSDLmain -lSDL -mwindows -o z26.exe
+strip z26.exe

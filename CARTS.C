@@ -12,8 +12,8 @@
 
 db KoolAide;		/* do KoolAide cheat */
 db RSBoxing;		/* do RSBOXING cheat */
-dw UserCFirst;		/* user requests game start here */
-dw DefaultCFirst;	/* emu recommends game start here */
+dd UserCFirst;		/* user requests game start here */
+dd DefaultCFirst;	/* emu recommends game start here */
 db MPdirection;		/* direction mouse must move to emulate paddle */
 db MinVol;		/* minimum volume needed to make noise on PC-speaker */
 db LG_WrapLine;		/* light gun wrap line */
@@ -35,7 +35,7 @@ db Lookup(dd *table)
 void RecognizeCart(void)
 {
 	db paddle;
-        dw i,j;
+        dd i,j;
 
         if (crc == 0x9927a7ae) KidVid = 0x44;   /* Smurfs Save the Day */
         if (crc == 0x0b63f9e3) KidVid = 0x48;   /* The Berenstain Bears */
@@ -54,7 +54,7 @@ void RecognizeCart(void)
 	UserCFirst = CFirst;
 	DefaultCFirst = 0xffff;
 
-	if (crc == 0xe5314b6c) CFirst = 56;	/* aciddrop */
+        if (crc == 0xe5314b6c) CFirst = 50;     /* aciddrop */
 	if (crc == 0xb17b62db) CFirst = 1;	/* Balthazar */
 	if (crc == 0xfa07aa39) CFirst = 0;	/* pharhcrs -- vblank triggers frame */
 	if (crc == 0xbcb42d2b) CFirst = 0;	/* traffic  -- vblank triggers frame */
@@ -167,7 +167,6 @@ void RecognizeCart(void)
 	if (Lookup(BS_7)) BSType = 7;		/* M Network 16K */
 /*      if (Lookup(BS_8)) BSType = 8; */        /* Atari 32K */
         if (crc == 0xa01ebff4) BSType = 10;     /* Spectravideo CompuMate PAL */
-        if (Lookup(BS_12)) BSType = 12;         /* UA Ltd. prototypes */
 
         if(BSType==0)
         {

@@ -2,6 +2,7 @@
 ;*  generate a raster line	  
 ;*
 ;*  3-18-99  -- break ground
+;* 09-07-02 -- 32-bit
 ;*
 
 ; z26 is Copyright 1997-2000 by John Saeger and is a derived work with many
@@ -27,9 +28,9 @@
 
 .data
 
-LooseColour		dd     0ffffffffh     ; and this with pixels to turn
-					      ;	  frame gray *EST*
-					      ;	  see tiawrite.asm
+LooseColour	dd	0ffffffffh   ; and this with pixels to turn
+				     ;	  frame gray *EST*
+				     ;	  see tiawrite.asm
 
 ;*
 ;* Table of low level rendering routines.
@@ -49,77 +50,77 @@ align 2
 ;P0_BIT = 16
 ;M0_BIT = 32
 
-RenderingRoutine label word
+RenderingRoutine label dword
 
-	dw	RenderBackground	;	0
-	dw	RenderPlayfield		;	1
+	dd	RenderBackground	;  0
+	dd	RenderPlayfield		;  1
 
-	dw	BK_BL			;  2
-	dw	PF_BL			;  3
+	dd	BK_BL			;  2
+	dd	PF_BL			;  3
 
-	dw	BK_P1			;  4
-	dw	PF_P1			;  5
-	dw	BK_P1_BL		;	 6
-	dw	PF_P1_BL		;	 7
+	dd	BK_P1			;  4
+	dd	PF_P1			;  5
+	dd	BK_P1_BL		;  6
+	dd	PF_P1_BL		;  7
 
-	dw	BK_M1			;  8
-	dw	PF_M1			;  9
-	dw	BK_M1_BL		; 10
-	dw	PF_M1_BL		; 11
-	dw	BK_M1_P1		; 12
-	dw	PF_M1_P1		; 13
-	dw	BK_M1_P1_BL		; 14
-	dw	PF_M1_P1_BL		; 15
+	dd	BK_M1			;  8
+	dd	PF_M1			;  9
+	dd	BK_M1_BL		; 10
+	dd	PF_M1_BL		; 11
+	dd	BK_M1_P1		; 12
+	dd	PF_M1_P1		; 13
+	dd	BK_M1_P1_BL		; 14
+	dd	PF_M1_P1_BL		; 15
 
-	dw	BK_P0			; 16
-	dw	PF_P0			; 17
-	dw	BK_P0_BL		; 18
-	dw	PF_P0_BL		; 19
-	dw	BK_P0_P1		; 20
-	dw	PF_P0_P1		; 21
-	dw	BK_P0_P1_BL		; 22
-	dw	PF_P0_P1_BL		; 23
-	dw	BK_P0_M1		; 24
-	dw	PF_P0_M1		; 25
-	dw	BK_P0_M1_BL		; 26
-	dw	PF_P0_M1_BL		; 27
-	dw	BK_P0_M1_P1		; 28
-	dw	PF_P0_M1_P1		; 29
-	dw	BK_P0_M1_P1_BL		; 30
-	dw	PF_P0_M1_P1_BL		; 31
+	dd	BK_P0			; 16
+	dd	PF_P0			; 17
+	dd	BK_P0_BL		; 18
+	dd	PF_P0_BL		; 19
+	dd	BK_P0_P1		; 20
+	dd	PF_P0_P1		; 21
+	dd	BK_P0_P1_BL		; 22
+	dd	PF_P0_P1_BL		; 23
+	dd	BK_P0_M1		; 24
+	dd	PF_P0_M1		; 25
+	dd	BK_P0_M1_BL		; 26
+	dd	PF_P0_M1_BL		; 27
+	dd	BK_P0_M1_P1		; 28
+	dd	PF_P0_M1_P1		; 29
+	dd	BK_P0_M1_P1_BL		; 30
+	dd	PF_P0_M1_P1_BL		; 31
 
-	dw	BK_M0			; 32
-	dw	PF_M0			; 33
-	dw	BK_M0_BL		; 34
-	dw	PF_M0_BL		; 35
-	dw	BK_M0_P1		; 36
-	dw	PF_M0_P1		; 37
-	dw	BK_M0_P1_BL		; 38
-	dw	PF_M0_P1_BL		; 39
-	dw	BK_M0_M1		; 40
-	dw	PF_M0_M1		; 41
-	dw	BK_M0_M1_BL		; 42
-	dw	PF_M0_M1_BL		; 43
-	dw	BK_M0_M1_P1		; 44
-	dw	PF_M0_M1_P1		; 45
-	dw	BK_M0_M1_P1_BL		; 46
-	dw	PF_M0_M1_P1_BL		; 47
-	dw	BK_M0_P0		; 48
-	dw	PF_M0_P0		; 49
-	dw	BK_M0_P0_BL		; 50
-	dw	PF_M0_P0_BL		; 51
-	dw	BK_M0_P0_P1		; 52
-	dw	PF_M0_P0_P1		; 53
-	dw	BK_M0_P0_P1_BL		; 54
-	dw	PF_M0_P0_P1_BL		; 55
-	dw	BK_M0_P0_M1		; 56
-	dw	PF_M0_P0_M1		; 57
-	dw	BK_M0_P0_M1_BL		; 58
-	dw	PF_M0_P0_M1_BL		; 59
-	dw	BK_M0_P0_M1_P1		; 60
-	dw	PF_M0_P0_M1_P1		; 61
-	dw	BK_M0_P0_M1_P1_BL	; 62
-	dw	PF_M0_P0_M1_P1_BL	; 63
+	dd	BK_M0			; 32
+	dd	PF_M0			; 33
+	dd	BK_M0_BL		; 34
+	dd	PF_M0_BL		; 35
+	dd	BK_M0_P1		; 36
+	dd	PF_M0_P1		; 37
+	dd	BK_M0_P1_BL		; 38
+	dd	PF_M0_P1_BL		; 39
+	dd	BK_M0_M1		; 40
+	dd	PF_M0_M1		; 41
+	dd	BK_M0_M1_BL		; 42
+	dd	PF_M0_M1_BL		; 43
+	dd	BK_M0_M1_P1		; 44
+	dd	PF_M0_M1_P1		; 45
+	dd	BK_M0_M1_P1_BL		; 46
+	dd	PF_M0_M1_P1_BL		; 47
+	dd	BK_M0_P0		; 48
+	dd	PF_M0_P0		; 49
+	dd	BK_M0_P0_BL		; 50
+	dd	PF_M0_P0_BL		; 51
+	dd	BK_M0_P0_P1		; 52
+	dd	PF_M0_P0_P1		; 53
+	dd	BK_M0_P0_P1_BL		; 54
+	dd	PF_M0_P0_P1_BL		; 55
+	dd	BK_M0_P0_M1		; 56
+	dd	PF_M0_P0_M1		; 57
+	dd	BK_M0_P0_M1_BL		; 58
+	dd	PF_M0_P0_M1_BL		; 59
+	dd	BK_M0_P0_M1_P1		; 60
+	dd	PF_M0_P0_M1_P1		; 61
+	dd	BK_M0_P0_M1_P1_BL	; 62
+	dd	PF_M0_P0_M1_P1_BL	; 63
 
 
 ;*
@@ -129,19 +130,19 @@ RenderingRoutine label word
 ;* update registers to handle SCORE and PFP
 ;*
 
-ColorValue label word
+ColorValue label dword
 
-BK_Color	dw	0	; \
-PF_Color	dw	0	;  \  keep these in order so we can use
-P1_Color	dw	0	;  /  the old color translation table
-P0_Color	dw	0	; /
-BL_Color	dw	0	; ball color -- this is new
+BK_Color	dd	0	; \
+PF_Color	dd	0	;	 \  keep these in order so we can use
+P1_Color	dd	0	;	 /  the old color translation table
+P0_Color	dd	0	; /
+BL_Color	dd	0	; ball color -- this is new
 
-RenderingHBLANK	dw	-1
+RenderingHBLANK	db	-1
 
-ActiveObjects	dw	0
-CosmicScanLine	dw	0
-HBlanking	dw	0
+ActiveObjects	dd	0
+CosmicScanLine	dd	0
+HBlanking	db	0
 SetHBlanking	db	0
 Invisible	db	0
 HMOVE_Pending	db	0
@@ -159,13 +160,13 @@ CosmicGraphicsTable	db	040h,040h,0c0h,0
 
 DefineObjectVars macro arg1
 ALIGN 2
-arg1&_Table	  dw	  arg1&_Sprite
-arg1&_Position	  dw	  0
-arg1&_Size	  dw	  arg1&_SpriteSize
-arg1&_Motion	  dw	  0
-arg1&_Graphics	  db	  0
-arg1&_Delayed	  db	  0
-arg1&_TripleFlag  db	  0
+arg1&_Table	  dd	arg1&_Sprite
+arg1&_Position	  dd	0
+arg1&_Size	  dd	arg1&_SpriteSize
+arg1&_Motion	  dd	0
+arg1&_Graphics	  db	0
+arg1&_Delayed	  db	0
+arg1&_TripleFlag  db	0
 	endm
 
 DefineObjectVars BL
@@ -196,32 +197,6 @@ Init_TIA:
 
 	mov	[RenderingHBLANK],-1
 	ret
-
-;*
-;* object rendering macros
-;*
-;* they should OR their respective bits into BL
-;* AX, DL and SI are free registers that these routines can use
-;*
-
-SetObjectBit macro arg1
-local done, nowrap
-
-	movzx	si,cl
-	sub	si,[arg1&_Position]
-	jae	nowrap
-	add	si,160
-nowrap:	
-	cmp	si,[arg1&_Size]
-	ja	done
-	add	si,si
-	add	si,[arg1&_Table]
-	mov	al,[arg1&_Graphics]
-	test	al,[si]
-	jz	done
-	or	bl,arg1&_BIT
-done:
-	endm
 
 _BL	macro
 	SetObjectBit BL
@@ -263,18 +238,18 @@ local BKPFonly
 
 	cmp	bl,2
 	jb	BKPFonly
-	mov	ax,TIAColTab[ebx*2]
-	mov	si,[PixelColorTable]
-	or	[TIACollide],ax
-	mov	bl,[bx+si]
+	mov	eax,TIAColTab[ebx*4]
+	mov	esi,[PixelColorTable]
+	or	[TIACollide],eax
+	mov	bl,[ebx+esi]
 
 BKPFonly:
-	mov	ax,[ColorValue+ebx*2]
-	and	ax,word ptr [LooseColour]	; *EST*
-        add     di,1
-	and	ax,[RenderingHBLANK]
+	mov	al,byte ptr [ColorValue+ebx*4]
+	and	al,byte ptr [LooseColour]	; *EST*
+	inc	edi
+	and	al,[RenderingHBLANK]
 	inc	cl
-        mov     es:[di-1],al
+	gs_store [edi-1],al
 	cmp	cl,ch
 
 	endm
@@ -288,22 +263,23 @@ PF_PixelLoop macro arg1, arg2, arg3, arg4, arg5, arg6
 local PF_loop, PIX_loop, done
 ALIGN 2
 
-	movzx	bp,cl
-	and	bp,0fch
-	add	bp,[PF_Table]
-	sub	bp,68
+	movzx	ebp,cl
+	and	ebp,0fch
+	add	ebp,[PF_Table]
+	sub	ebp,68
 
 PF_loop:
+	xchg	ebp,esi
 	mov	edx,dword ptr [TIA+PF0]
-	test	edx,ds:[bp]
+	test	edx,[esi]
 	setnz	dh
-	add	bp,4
-
+	add	esi,4
+	xchg	ebp,esi
 PIX_loop:
 	RenderPixel arg1, arg2, arg3, arg4, arg5, arg6
 	ja	done
-	
-        test    di,3
+
+	test	edi,3
 	jnz	PIX_loop
 
 	jmp	PF_loop
@@ -416,75 +392,67 @@ BK_BL:			BK_PixelLoop	_BL			; 2
 ALIGN 2
 
 RenderPlayfield:
-	push	cx			; save old start and finish pointers
+	push	ecx			; save old start and finish pointers
 	sub	ch,cl
 	inc	ch			; pixel count
 
-	movzx	si,cl			; compute pointer into playfield bit mask table
-	and	si,0fch
-	add	si,[PF_Table]
-	sub	si,68
+	movzx	esi,cl			; compute pointer into playfield bit mask table
+	and	esi,0fch
+	add	esi,[PF_Table]
+	sub	esi,68
 
 	mov	ebp,dword ptr [TIA+PF0]	; get playfield bits
 
-	mov	ax,[BK_Color]
-	shl	eax,16
-	mov	ax,[BK_Color]		; 32-bit background color
-
+	mov	eax,[BK_Color]
 	and	eax,[LooseColour]	; *EST*
 
-	mov	dx,[PF_Color]
-	shl	edx,16
-	mov	dx,[PF_Color]		; 32-bit playfield color
-
+	mov	edx,[PF_Color]
 	and	edx,[LooseColour]	; *EST*
 
 NextPFTest:
-	test	ebp,[si]		; setting a playfield bit ?
+	test	ebp,[esi]		; setting a playfield bit ?
 	jnz	PFLoop			;	  yes
 
 BKLoop:
-        mov     es:[di],al
-        add     di,1
+	gs_store [edi],al
+	inc	edi
 	dec	ch			; done?
 	jz	RenderPlayfieldDone	;   yes
-        test    di,3                    ; more odd pixels to do?
+	test	edi,3			; more odd pixels to do?
 	jz	NextPFQuad		;   no
 	jmp	BKLoop
 
 PFLoop:
-        mov     es:[di],dl
-        add     di,1
+	gs_store [edi],dl
+	inc	edi
 	dec	ch			; done?
 	jz	RenderPlayfieldDone	;   yes
-        test    di,3                    ; more odd pixels to do?
+	test	edi,3			; more odd pixels to do?
 	jz	NextPFQuad		;   no
 	jmp	PFLoop
 
 NextPFQuad:
-	add	si,4
+	add	esi,4
 	test	ch,0fch			; any more quads to do?
 	jz	NextPFTest		;   no, check for more singles
-	test	ebp,[si]		; setting a playfield bit?
+	test	ebp,[esi]		; setting a playfield bit?
 	jnz	DoPFQuad		;   yes
 
-	mov	es:[di],eax		; render BK quad
-;        mov     es:[di+4],eax
-        add     di,4
+	gs_store [edi],eax		; render BK quad
+	add	edi,4
 	sub	ch,4			; done?
 	jnz	NextPFQuad		;   no, keep going
 	jmp	RenderPlayfieldDone
 
 DoPFQuad:
-	mov	es:[di],edx		; render PF quad
-;        mov     es:[di+4],edx
-        add     di,4
+	gs_store [edi],edx		; render PF quad	
+	add	edi,4
 	sub	ch,4			; done?
 	jnz	NextPFQuad		;   no, keep going
 
 
 RenderPlayfieldDone:
-	pop	cx			; done, restore old start and finish pointers
+	pop	ecx			; done, restore old start and finish pointers
 	mov	cl,ch
 	inc	cl			; point start at finish + 1
 
@@ -499,31 +467,27 @@ RenderPlayfieldDone:
 ALIGN 2
 
 RenderBackground:
-	mov	ax,[BK_Color]
-	shl	eax,16
-	mov	ax,[BK_Color]		; 32-bit background color
-
+	mov	eax,[BK_Color]
 	and	eax,[LooseColour]	; *EST*
 
 RenderSolid:				; << enter here to render EAX
-	push	cx
+	push	ecx
 	sub	ch,cl
-	movzx	cx,ch
+	movzx	ecx,ch
 	inc	cl			; pixel count
 	test	cl,1			; any odd pixels?
 	jz	SolidDouble		;   no
-        mov     es:[di],al              ;   yes, render single pixel
-        add     di,1
-	dec	cx			; done?
+	gs_store [edi],al		;   yes, render single pixel
+	inc	edi
+	dec	ecx			; done?
 	jz	SolidDone		;   yes
 
 SolidDouble:
-	shr	cx,1			; do the double pixels
-;        rep     stosd
-        rep     stosw
+	shr	ecx,1			; do the double pixels
+	gs_rep_stosw			; ** 16-bit routine **
 
 SolidDone:
-	pop	cx			; restore old start and finish pointers
+	pop	ecx			; restore old start and finish pointers
 	mov	cl,ch
 	inc	cl			; point start at finish + 1
 	ret
@@ -538,10 +502,10 @@ ALIGN 2
 RenderHBLANK:
 	cmp	[ActiveObjects],2
 	jb	RenderNothing
-	mov	si,[ActiveObjects]
+	mov	esi,[ActiveObjects]
 	and	esi,63
 	mov	[RenderingHBLANK],0
-	call	[RenderingRoutine + esi*2]	; call rendering routine
+	call	[RenderingRoutine + esi*4]	; call rendering routine
 	mov	[RenderingHBLANK],-1
 	ret
 
@@ -549,7 +513,7 @@ RenderHBLANK:
 ;*  render blackness
 ;*
 ;*  note:  This approach causes collisions not to be processed during
-;*	   vertical blanks.  This may not be correct.
+;*	   vertical blanks.	This may not be correct.
 ;*
 
 ALIGN 2
@@ -584,10 +548,10 @@ RenderPixels:
 	jbe	RenderHBLANK		;   yes, render blackness
 
 	mov	al,ch			;	 no, render pixels through HBlank
-	push	ax
+	push	eax
 	mov	ch,75
 	call	RenderHBLANK
-	pop	ax
+	pop	eax
 	mov	ch,al
 
 	mov	[HBlanking],-1		; turn off HBlanking
@@ -604,11 +568,11 @@ RenderPartial:
 	cmp	ch,147			; final pointer before mid-playfield?
 	jbe	RenderFinal		;   yes
 
-	mov	al,ch			;	 no, render pixels through mid-playfield
-	push	ax
+	mov	al,ch			;   no, render pixels through mid-playfield
+	push	eax
 	mov	ch,147
 	call	DoRender
-	pop	ax
+	pop	eax
 	mov	ch,al
 
 RenderFinal:
@@ -625,9 +589,9 @@ RenderShortcutBK:
 	cmp	[VBlanking],0		; doing VBlanking?
 	je	RenderNothing		;   yes, render blackness
 
-	mov	si,[ActiveObjects]
+	mov	esi,[ActiveObjects]
 	and	esi,63
-	jmp	[RenderingRoutine + esi*2]	; call rendering routine
+	jmp	[RenderingRoutine + esi*4]	; call rendering routine
 
 RenderDone:
 	ret
@@ -659,7 +623,7 @@ CatchUpPixels:
 	add	ch,ch
 	add	ch,[RClock]		;   no, compute last clock to render
 	dec	ch
-	add	ch,dl			;	     add the extra offset
+	add	ch,dl			;		    add the extra offset
 
 	cmp	ch,227			; request too many pixels?
 	jbe	CatchupGo		;   no
@@ -667,9 +631,9 @@ CatchUpPixels:
 CatchupLast:
 	mov	ch,227			;	  yes, limit to 227
 CatchupGo:
-	push	si			; for the sake of TIA write handlers
+	push	esi			; for the sake of TIA write handlers
 	call	RenderPixels
-	pop	si
+	pop	esi
 
 CatchupDone:
 	ret
@@ -686,16 +650,16 @@ local InstructionLoop, InstructionsDone
 
 	LoadRegs			; load the CPU registers
 
-        cmp     [RClock],CYCLESPERSCANLINE ; check if we need to skip a line *EST*
-        jae     InstructionsDone        ; (for WSYNC at cycle 74/75 fix)
+	cmp	[RClock],CYCLESPERSCANLINE ; check if we need to skip a line *EST*
+	jae	InstructionsDone	; (for WSYNC at cycle 74/75 fix)
 
 InstructionLoop:
 	fetch_opcode	ebx		; (fetchzx) get the opcode
-	call	cs:[vectors + ebx*2]	; --> do the instruction
+	call	[vectors + ebx*4]	; --> do the instruction
 	ClockRIOT			; clock the RIOT timer
 
-        cmp     [RClock],CYCLESPERSCANLINE
-        jb      InstructionLoop
+	cmp	[RClock],CYCLESPERSCANLINE
+	jb	InstructionLoop
 
 InstructionsDone:
 	SaveRegs			; save the CPU registers
@@ -709,10 +673,6 @@ endm
 ALIGN 2
 
 nTIALineTo:
-	push	gs			; have stosw point at graphics segment
-	pop	es			; es gets restored before returning
-					; to C program
-
 	call	_QueueSoundBytes	; put another 2 bytes in the sound queue
 
 	mov	dl,[HMOVE_Cycle]
@@ -726,34 +686,31 @@ nTIALineTo:
 	mov	[M0_Motion],17		; (17)
 	DoMotion M0
 	pop	[M0_Motion]
-	mov	bx,[CosmicScanLine]
+	mov	ebx,[CosmicScanLine]
 	inc	[CosmicScanLine]
-	and	bx,3
-	mov	dl,[CosmicGraphicsTable+bx]
+	and	ebx,3
+	mov	dl,[CosmicGraphicsTable+ebx]
 	mov	[M0_Graphics],dl
 
 NotCosmic:
-	mov	bx,[ScanLine]
-	cmp	bx,[TopLine]		; line before first displayable?
+	mov	ebx,[ScanLine]
+	cmp	ebx,[TopLine]		; line before first displayable?
 	jb	nTIANoGenerate		;	yes, don't render
-	cmp	bx,[BottomLine]		; line after last displayable?
+	cmp	ebx,[BottomLine]	; line after last displayable?
 	jae	nTIANoGenerate		;	 yes, don't render
 
-;	mov	ax,[_MaxLines]
-;	imul	ax,320
-
-	movzx	eax,[_MaxLines]
+	mov	eax,[_MaxLines]
 	lea	eax,[eax+eax*4]
-        shl     ax,5                    ; *160
+	shl	eax,5			; *160
 
-        add     ax,[_ScreenOfs]
+	add	eax,[_ScreenBuffer]
 
-	cmp	[DisplayPointer],ax	; render pointer past end of displayable?
+	cmp	[DisplayPointer],eax	; render pointer past end of displayable?
 	jae	nTIANoGenerate		;	 yes, don't render
 
-	push	bp			; rendering -- free up a register
+	push	ebp			; rendering -- free up a register
 
-	mov	di,[DisplayPointer]
+	mov	edi,[DisplayPointer]
 	mov	cl,68			; point TIARenderPointer at beginning of playfield
 
 	mov	[HBlanking],-1		; assume we're not HBlanking
@@ -778,9 +735,9 @@ nLastPixels:
 	call	RenderPixels
 
 nTIAExit:				; we've finished the scanline...
-	mov	[DisplayPointer],di
+	mov	[DisplayPointer],edi
 
-	pop	bp
+	pop	ebp
 	ret
 
 

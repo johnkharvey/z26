@@ -2,10 +2,12 @@
 ;* tiatab.asm -- tables needed for z26 TIA emulator
 ;*
 
-; z26 is Copyright 1997-2000 by John Saeger and is a derived work with many
+; z26 is Copyright 1997-2002 by John Saeger and is a derived work with many
 ; contributors.	 z26 is released subject to the terms and conditions of the 
 ; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ; Please see COPYING.TXT for details.
+
+; 09-07-02 -- 32-bit
 
 .data
 
@@ -112,71 +114,71 @@ PFClockToBitForward label dword
 ; pixel to collision word
 ;
 
-TIAColTab label word
-   dw 0		; 0
-   dw 0		; 0
-   dw 0		; 0
-   dw 8192	; 2000
-   dw 0		; 0
-   dw 128	; 80
-   dw 64	; 40
-   dw 8384	; 20c0
-   dw 0		; 0
-   dw 2048	; 800
-   dw 1024	; 400
-   dw 11264	; 2c00
-   dw 4		; 4
-   dw 2180	; 884
-   dw 1092	; 444
-   dw 11460	; 2cc4
-   dw 0		; 0
-   dw 32	; 20
-   dw 16	; 10
-   dw 8240	; 2030
-   dw 32768	; 8000
-   dw 32928	; 80a0
-   dw 32848	; 8050
-   dw 41200	; a0f0
-   dw 8		; 8
-   dw 2088	; 828
-   dw 1048	; 418
-   dw 11320	; 2c38
-   dw 32780	; 800c
-   dw 34988	; 88ac
-   dw 33884	; 845c
-   dw 44284	; acfc
-   dw 0		; 0
-   dw 512	; 200
-   dw 256	; 100
-   dw 8960	; 2300
-   dw 2		; 2
-   dw 642	; 282
-   dw 322	; 142
-   dw 9154	; 23c2
-   dw 16384	; 4000
-   dw 18944	; 4a00
-   dw 17664	; 4500
-   dw 28416	; 6f00
-   dw 16390	; 4006
-   dw 19078	; 4a86
-   dw 17734	; 4546
-   dw 28614	; 6fc6
-   dw 1		; 1
-   dw 545	; 221
-   dw 273	; 111
-   dw 9009	; 2331
-   dw 32771	; 8003
-   dw 33443	; 82a3
-   dw 33107	; 8153
-   dw 41971	; a3f3
-   dw 16393	; 4009
-   dw 18985	; 4a29
-   dw 17689	; 4519
-   dw 28473	; 6f39
-   dw 49167	; c00f
-   dw 51887	; caaf
-   dw 50527	; c55f
-   dw 61439	; efff
+TIAColTab label dword
+   dd 0		; 0
+   dd 0		; 0
+   dd 0		; 0
+   dd 8192	; 2000
+   dd 0		; 0
+   dd 128	; 80
+   dd 64	; 40
+   dd 8384	; 20c0
+   dd 0		; 0
+   dd 2048	; 800
+   dd 1024	; 400
+   dd 11264	; 2c00
+   dd 4		; 4
+   dd 2180	; 884
+   dd 1092	; 444
+   dd 11460	; 2cc4
+   dd 0		; 0
+   dd 32	; 20
+   dd 16	; 10
+   dd 8240	; 2030
+   dd 32768	; 8000
+   dd 32928	; 80a0
+   dd 32848	; 8050
+   dd 41200	; a0f0
+   dd 8		; 8
+   dd 2088	; 828
+   dd 1048	; 418
+   dd 11320	; 2c38
+   dd 32780	; 800c
+   dd 34988	; 88ac
+   dd 33884	; 845c
+   dd 44284	; acfc
+   dd 0		; 0
+   dd 512	; 200
+   dd 256	; 100
+   dd 8960	; 2300
+   dd 2		; 2
+   dd 642	; 282
+   dd 322	; 142
+   dd 9154	; 23c2
+   dd 16384	; 4000
+   dd 18944	; 4a00
+   dd 17664	; 4500
+   dd 28416	; 6f00
+   dd 16390	; 4006
+   dd 19078	; 4a86
+   dd 17734	; 4546
+   dd 28614	; 6fc6
+   dd 1		; 1
+   dd 545	; 221
+   dd 273	; 111
+   dd 9009	; 2331
+   dd 32771	; 8003
+   dd 33443	; 82a3
+   dd 33107	; 8153
+   dd 41971	; a3f3
+   dd 16393	; 4009
+   dd 18985	; 4a29
+   dd 17689	; 4519
+   dd 28473	; 6f39
+   dd 49167	; c00f
+   dd 51887	; caaf
+   dd 50527	; c55f
+   dd 61439	; efff
 
 
 TIADisplayToColour label byte
@@ -192,8 +194,8 @@ TIADisplayToColour2 label byte
  db 3,1,4,1,3,1,4,1,3,1,4,1,3,1,4,1
 
 
-PF_Table	dw	PFClockToBitForward	; current pointer to playfield mask bits
-PixelColorTable	dw	TIADisplayToColour	; pixel to color translation table
+PF_Table	dd	PFClockToBitForward	; current pointer to playfield mask bits
+PixelColorTable	dd	TIADisplayToColour	; pixel to color translation table
 
 
 ;*
@@ -661,16 +663,16 @@ MP_7 label byte		; Player NUSIZ = 7
 
 
 
-P0_RegularTable label word
-P1_RegularTable label word
-	dw	P_0
-	dw	P_1
-	dw	P_2
-	dw	P_3
-	dw	P_4
-	dw	P_5
-	dw	P_6
-	dw	P_7
+P0_RegularTable label dword
+P1_RegularTable label dword
+	dd	P_0
+	dd	P_1
+	dd	P_2
+	dd	P_3
+	dd	P_4
+	dd	P_5
+	dd	P_6
+	dd	P_7
 
 P0_SizeTable label byte
 P1_SizeTable label byte
@@ -683,16 +685,16 @@ P1_SizeTable label byte
 	db	P_6_Size
 	db	P_7_Size
 
-M0_RegularTable label word
-M1_RegularTable label word
-	dw	M_0
-	dw	M_1
-	dw	M_2
-	dw	M_3
-	dw	M_4
-	dw	M_5
-	dw	M_6
-	dw	M_7
+M0_RegularTable label dword
+M1_RegularTable label dword
+	dd	M_0
+	dd	M_1
+	dd	M_2
+	dd	M_3
+	dd	M_4
+	dd	M_5
+	dd	M_6
+	dd	M_7
 
 M0_SizeTable label byte
 M1_SizeTable label byte
@@ -705,30 +707,27 @@ M1_SizeTable label byte
 	db	M_6_Size
 	db	M_7_Size
 
+P0_MultipleTable label dword
+P1_MultipleTable label dword
+	dd	MP_0
+	dd	MP_1
+	dd	MP_2
+	dd	MP_3
+	dd	MP_4
+	dd	MP_5
+	dd	MP_6
+	dd	MP_7
 
-;IFDEF compileoldcode
-
-P0_MultipleTable label word
-P1_MultipleTable label word
-	dw	MP_0
-	dw	MP_1
-	dw	MP_2
-	dw	MP_3
-	dw	MP_4
-	dw	MP_5
-	dw	MP_6
-	dw	MP_7
-
-M0_MultipleTable label word
-M1_MultipleTable label word
-	dw	MM_0
-	dw	MM_1
-	dw	MM_2
-	dw	MM_3
-	dw	MM_4
-	dw	MM_5
-	dw	MM_6
-	dw	MM_7
+M0_MultipleTable label dword
+M1_MultipleTable label dword
+	dd	MM_0
+	dd	MM_1
+	dd	MM_2
+	dd	MM_3
+	dd	MM_4
+	dd	MM_5
+	dd	MM_6
+	dd	MM_7
 
 M4 = 0	; I'm not actually sure if this should be zero or -4.
 

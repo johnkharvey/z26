@@ -22,7 +22,7 @@ typedef unsigned short 		dw;
 typedef unsigned char  		db;
 */
 
-dw cpu_MAR;
+dd cpu_MAR;
 db cpu_Rbyte;
 
 unsigned char ReadROM(unsigned int adr)

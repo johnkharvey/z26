@@ -16,39 +16,39 @@
 
 void cli_LoadNextStarpath(void)
 {
-        int i,j, LoadCount, LoadNum;
-	unsigned int pageadr, pagebyte, pagecount;
-	unsigned char *p;
-	unsigned char *q;
+    dd i,j, LoadCount, LoadNum;
+	dd pageadr, pagebyte, pagecount;
+	db *p;
+	db *q;
 
         SC_StartAddress=0;
         LoadCount=4;
         LoadNum=SC_ControlByte;
         for (i = 1; i < 4; i++)
         {
-                if (Megaboy[i*8448 + 0x2005] == LoadNum) LoadCount=i;
+                if (CartRom[i*8448 + 0x2005] == LoadNum) LoadCount=i;
         }
         LoadNum=LoadCount;
 
         if (LoadNum == 4) return;
 
-        pagecount = Megaboy[LoadNum*8448 + 0x2003];
+        pagecount = CartRom[LoadNum*8448 + 0x2003];
 
 	for (i = 0; i < pagecount; i++)
 	{
-                pagebyte = Megaboy[LoadNum*8448 + 0x2010 + i];
+                pagebyte = CartRom[LoadNum*8448 + 0x2010 + i];
 		pageadr = ((pagebyte & 3) * 0x800) + ((pagebyte & 0x1f) >> 2) * 256;
 
                 p = CartRom + pageadr;
-                q = Megaboy + LoadNum*8448 + i*256;
+                q = CartRom + LoadNum*8448 + i*256;
 
 		for (j = 0; j < 256; j++)
 		{
 			*p++ = *q++;
 		}
 	}
-        SC_StartAddress=Megaboy[LoadNum*8448+0x2001]*256+Megaboy[LoadNum*8448+0x2000];
-        SC_ControlByte=Megaboy[LoadNum*8448+0x2002];
+        SC_StartAddress=CartRom[LoadNum*8448+0x2001]*256+CartRom[LoadNum*8448+0x2000];
+        SC_ControlByte=CartRom[LoadNum*8448+0x2002];
 }
 
 /*
@@ -57,16 +57,16 @@ void cli_LoadNextStarpath(void)
 
 void cli_ReloadStarpath(void)
 {
-	int i,j;
-	unsigned int pageadr, pagebyte, pagecount;
-	unsigned char *p;
-        unsigned char far *q;
+	dd i,j;
+	dd pageadr, pagebyte, pagecount;
+	db *p;
+        db *q;
 
         if(CartSize == 6144)
         {
                 for(i = 0; i < 6144; i++)
                 {
-                        CartRom[i]=Megaboy[i];
+                        CartRom[i]=CartRom[33792+i];
                 }
                 SC_StartAddress=CartRom[0x17fd]*256+CartRom[0x17fc];
                 SC_ControlByte=0x0d;
@@ -80,7 +80,7 @@ void cli_ReloadStarpath(void)
 		pageadr = ((pagebyte & 3) * 0x800) + ((pagebyte & 0x1f) >> 2) * 256;
 
                 p = CartRom + pageadr;
-                q = Megaboy + i*256;
+                q = CartRom + 33792 + i*256;
 		for (j = 0; j < 256; j++)
 		{
                         *p++ = *q++;
@@ -186,18 +186,18 @@ unsigned char SCBIOS[188] = {
 };
 
 	FILE *fp;
-        unsigned int i, j;
-	int ch;
-	unsigned int MBcount;
-	unsigned char *p;
+    dd i;
+	dd ch;
+	dd MBcount;
+	db *p;
 
 	init_crc();
 
 	fp = fopen(filename, "rb");
 	if (fp == NULL)	return(0);
 			
-/*        p = CartRom; */
-        p = Megaboy;
+        p = CartRom;
+//        p = Megaboy;
 	CartSize = 0;
 	Checksum = 0;
 	XChecksum = 0;
@@ -205,27 +205,13 @@ unsigned char SCBIOS[188] = {
 
 	while ( (ch = getc(fp)) != EOF )
 	{
-		*p++ = ch;
+		*p++ = (db) ch;
 		Checksum += ch;
-		ucrc(ch);
+		ucrc((db) ch);
 		if (XChecksum & 0x8000000) XChecksum |= 1;
 		XChecksum = (XChecksum << 1) ^ ch;
 		++CartSize;
-                if (CartSize > 33798) break;
-	}
-
-        for(i = 0; i < 0x8000; i++) CartRom[i] = Megaboy[i];
-
-        if(CartSize==33799)
-	{
-	   fseek(fp, 32768, SEEK_SET);
-	   MBcount=0;
-	   while ( (ch = getc(fp)) != EOF )
-	   {
-		Megaboy[MBcount] = ch;
-		++MBcount;
-		if (MBcount==32768) break;
-	   }
+                if (CartSize > 0x10000) break;
 	}
 
 	fclose(fp);
@@ -242,13 +228,12 @@ unsigned char SCBIOS[188] = {
                 ||(CartSize == 3*8448)||(CartSize == 33792))
         /* Starpath image -- reload according to page table */
 	{
-/*
-                for (i = 0; i < 8448; i++)       save first SC load 
+                for (i = 0; i < 8448; i++)      /* save first SC load */
                 {
-                        Megaboy[i] = CartRom[i];
+                        CartRom[i+33792] = CartRom[i];
                 }
-*/
-                for (i = 0; i < 0x2000; i++)	/* fill everything with Starpath halts */
+
+                for (i = 0; i < 0x2000; i++)    /* fill everything with Starpath halts */
 		{
 			CartRom[i] = 0x52;
 		}
@@ -275,7 +260,6 @@ unsigned char SCBIOS[188] = {
 **  ->	-b      black and white
 **	-c <n>  choose color palette <n>
 **  ->	-q	quiet
-**  ->	-v <n>  select video mode
 **  ->	-s <n>  sound options
 **	-x	print out checksum of cartridge
 **  ->	-r	don't wait for retrace (full speed), -r<n> run at <n> fps
@@ -289,7 +273,7 @@ unsigned char SCBIOS[188] = {
 **  ->	-1      player 1 hard
 **	-y <n>	emulate none <0>, left <1>, right <2> or both <3> keypads *EST*
 **      -w <n>  emulate driving which controllers *EST*
-**	-g	overrride bankswitching type detection *EST*
+**      -g <n>  overrride bankswitching type detection *EST*
 **	-m <n>	paddle to emulate with mouse; 0xff=joystick *EST*
 **	-o	simulate PAL colour loss *EST*
 **	-l <n>	emulate lightgun and adjust horizontally *EST*
@@ -298,12 +282,13 @@ unsigned char SCBIOS[188] = {
 **      -i      emulate Mindlink controller, <1> right, <2> left *EST*
 **      -4      allow all 4 directions on the joystick simultaniously *EST*
 **      -e      enable faster mode X copy routines
-**      -z      rotate screen 90ø counter-clockwise in linear modes
-**	-h	copy half screen (alternate scan lines)
-**      -! <n>  simulate interlace in mode 6, <0> even frames first, <1> odd frames first
+**      -h <n>  screen render and copy height *EST*
+**      -v <n>  video mode
+**      -z      don't compare new frame buffer with old FB before copying
+**      -!      simulate interlaced display in some video modes
 */
 
-FILE *log;
+FILE *zlog;
 
 void cli_InterpretParm(char *p)
 {
@@ -315,23 +300,23 @@ void cli_InterpretParm(char *p)
 
 	switch (ch)
 	{
-	case 'v':  	VideoMode = parm;			break;
 	case 'u':  	CFirst = parm;				break;
 	case 'q':  	quiet = 1;				break;
-	case 's':  	SoundMode = parm;			break;
 	case '0':  	IOPortB |= 64;				break;
 	case '1':  	IOPortB |= 128;				break;
-	case '5':	Use50Hz = 1;				break;
 	case 'b':  	IOPortB &= 0xc3;			break;
 	case 'x':  	DoChecksum = 1;				break;
-	case 'f':  	FrameExit = parm;			break;
+        case 'f':       {
+                                FrameExit = parm+1;
+                                ShowFPS = 1;
+                        }
+                        break;
 	case 'd':  	dsp = parm;				break;
 	case 'j':  	Joystick = parm;			break;
 	case 'c':  	PaletteNumber = parm;
 			UserPaletteNumber = parm;
                         if(parm == 2) {
                            IOPortB &= 0xf7;
-/*                           Use50Hz = 1; */
                         }
                         break;
 	case 'p':  	PaddleGame = (parm & 0xf) << 1;		break;
@@ -348,10 +333,11 @@ void cli_InterpretParm(char *p)
                         break;
 	case 't':  	if (parm) TraceCount = parm; else TraceCount = 0xff;
 			TraceEnabled = 1;
-			log = fopen("z26.log", "w");
-			if (log == NULL)
+			zlog = fopen("z26.log", "w");
+			if (zlog == NULL)
 			{
-				printf("Couldn't build log file.");
+				sprintf(msg, "Couldn't build log file.");
+				srv_print(msg);
 				TraceCount = 0;
 				TraceEnabled = 0;
 			}
@@ -359,7 +345,7 @@ void cli_InterpretParm(char *p)
 			break;
 
 	case 'r':  	if (parm == 0)
-				NoRetrace = 0xff;
+				NoRetrace = 0;
 			else
 				NoRetrace = parm;
 			break;
@@ -373,12 +359,23 @@ void cli_InterpretParm(char *p)
         case 'i':       Mindlink = parm & 3;                   break; /* *EST* */
         case '4':       AllowAll4 = 1;                         break; /* *EST* */
         case 'e':       EnableFastCopy = 1;                    break; /* *EST* */
-        case 'z':       TurnScreen = 1;                        break; /* *EST* */
-        case 'h':	HalfScreen = 1;			       break;
-        case '!':       Interlace = parm & 1;
-                        VideoMode = 6;
-                        break;                                  /* *EST* */
-        default:   	printf("Bad command line switch seen: -%c", ch);
+        case 'h':       MaxLines = parm;                       break; /* *EST* */
+        case 'v':       if (parm < 10)
+			{
+				VideoMode = parm;
+				InWindow = 0;
+			}
+			else
+			{
+				VideoMode = parm % 10;
+				InWindow = 1;
+			}
+			break;
+
+        case 'z':       DisableCompareCopy = 1;                break; /* *EST* */
+        case '!':       DoInterlace = 1;                       break; /* *EST* */
+        default:   	sprintf(msg, "Bad command line switch seen: -%c", ch);
+			srv_print(msg);
 		   	exit(1);
 	}
 }
@@ -392,7 +389,8 @@ void cli_WriteParms(int argc, char *argv[])
 	fp = fopen("z26.cli", "w");
 	if (fp == NULL)
 	{
-		printf("Couldn't build cli file.");
+		sprintf(msg, "Couldn't build cli file.");
+		srv_print(msg);
 		exit(1);
 	}
 
@@ -451,11 +449,12 @@ void cli_ReadParms(void)
 void cli_CommandLine(int argc, char *argv[])
 {
 	long int i;
-	long int parm;
-	int ch, cnt;
+	int cnt;
 	unsigned char *p;
 	char ROMLoaded = 0; char ROMSeen = 0;
-      char FileName[260];  /* to z26.c */
+        char FileName[260];     /* to z26.c */
+
+        ShowFPS=0;              /* resets flag for displaying FPS count - move to GLOBALS.C for GUI */
 
 	cli_ReadParms();
 
@@ -474,36 +473,44 @@ void cli_CommandLine(int argc, char *argv[])
 				strcat(FileName,".bin");
 			ROMLoaded = cli_LoadROM(FileName);
 			ROMSeen = 1;
-			if (TraceCount) fprintf(log,"%s\n\n", FileName);
+			if (TraceCount) fprintf(zlog,"%s\n\n", FileName);
 		}
 	}
 
 	if (!ROMSeen)
 	{
 		cli_WriteParms(argc, argv);
-		printf("\nParameters recorded.\nTo restore defaults delete the file z26.cli.\n");
+		sprintf(msg, "\nParameters recorded.\nTo restore defaults delete the file z26.cli.\n");
+		srv_print(msg);
 		exit(0);
 	}
 
 	if (!ROMLoaded)
 	{
-		printf("File not found... %s", FileName);
+		sprintf(msg, "File not found... %s", FileName);
+		srv_print(msg);
 		exit(1);
 	}
 /*
 	if (CartSize > 32768)
 	{
-		printf("Unsupported file.");
+		sprintf(msg, "Unsupported file.");
+		srv_print(msg);
 		exit(1);
 	}
 */
 	if (DoChecksum)
 	{
-		printf("%06lx checksum -- %08lx crc\n", Checksum, crc);
-		printf("%ld bytes", (long int) CartSize);
+		sprintf(msg, "%06lx checksum -- %08lx crc\n%ld bytes", Checksum, crc,(long int) CartSize);
+		srv_print(msg);
 		exit(1);
 	}
 
+	OriginalNoRetrace = NoRetrace;
+	if (InWindow && (NoRetrace == 0))
+	{
+		NoRetrace = -1;
+	}
 
 }
 

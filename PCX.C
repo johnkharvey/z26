@@ -13,23 +13,11 @@ dw PCXFileCounter = 0;
 void PCXWriteFile(void)
 {
 
-dw PCXMaxLines[15] = {
-                200,
-                200,
-                200,
-                204,
-                240,
-                240,
-                240,
-                400,
-                240,
-                400,
-                256,
-                256,
-                256,
-                400,
-                256,
+/*
+dw PCXMaxLines[1] = {
+                204
 };
+*/
 
 db PCXHeader[128] = { 0x0a,5,1,8,0,0,0,0,63,1,0xff,0,0,0,0,0,
                       0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -47,11 +35,18 @@ db PCXHeader[128] = { 0x0a,5,1,8,0,0,0,0,63,1,0xff,0,0,0,0,0,
         db ch;
         dw lines;
 
-        lines=PCXMaxLines[VideoMode];
+//        lines=PCXMaxLines[VideoMode];
+        lines=MaxLines;
         PCXHeader[10]=(lines - 1) & 0xff;
         PCXHeader[11]=(lines - 1) >> 8;
 
         fp = fopen(PCXFileName,"wb");
+		if (fp == NULL)
+		{
+			sprintf(msg, "couldn't open pcx file\n");
+			srv_print(msg);
+			exit(1);
+		}
         for(i=0; i<128; i++)
         {
                 fputc(PCXHeader[i], fp);

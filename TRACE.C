@@ -136,25 +136,17 @@ RIOTname RIOTList2[4] = {
 
 extern void cpu_Instruction(void);
 extern void cpu_Reset(void);
+extern dd ReallyReadROM();
+extern dd ReallyReadRAM();
 
-/*
-extern unsigned char ReadROM(unsigned int);
-*/
-
-/** these are declared in globals.c now **
-typedef unsigned long int   dd;
-typedef unsigned short 		dw;
-typedef unsigned char  		db;
-*/
-
-dw cpu_MAR;
+dd cpu_MAR;
 db cpu_Rbyte;
 
 unsigned char ReadROM(unsigned int adr)
 {
-        cpu_MAR = (adr & 0x1fff);
-	ReallyReadRom();
-        return(cpu_Rbyte);
+    cpu_MAR = (adr & 0x1fff);
+	ReallyReadROM();
+    return(cpu_Rbyte);
 }
 
 unsigned int ReadRAM(unsigned int adr)
@@ -171,56 +163,49 @@ unsigned int ret_adr;
 }
 
 
-dw cpu_pc;
+dd cpu_pc;
 db cpu_a, cpu_carry, cpu_x, cpu_y, cpu_sp;
 db cpu_ZTest, cpu_NTest, cpu_D, cpu_V, cpu_I, cpu_B;
 
-dw P0_Pos, P1_Pos, M0_Pos, M1_Pos, BL_Pos;
-
-dw adr, prevadr;
+dd P0_Pos, P1_Pos, M0_Pos, M1_Pos, BL_Pos;
 
 dd frame;
-dw line;
+dd line;
 db cycle;
 
-void ShowWeird(int Cycle)
+void ShowWeird(dd Cycle)
 {
-	fprintf(log,"<-- weird (%d)\n", Cycle);
+	fprintf(zlog,"<-- weird (%d)\n", Cycle);
 }
 
-void ShowDeep(int Now, int Prev, int Cycle)
+void ShowDeep(dd Now, dd Prev, dd Cycle)
 {
-	fprintf(log,"<-- deep (%d, %x, %x)\n", Cycle, Prev, Now);
+	fprintf(zlog,"<-- deep (%d, %x, %x)\n", Cycle, Prev, Now);
 }
 
-void ShowVeryDeep(int Now, int Prev, int Cycle)
+void ShowVeryDeep(dd Now, dd Prev, dd Cycle)
 {
-	fprintf(log,"<-- very deep (%d, %x, %x)\n", Cycle, Prev, Now);
+	fprintf(zlog,"<-- very deep (%d, %x, %x)\n", Cycle, Prev, Now);
 }
 
 void ShowAdjusted(void)
 {
-	fprintf(log,"Adjusted\n");
+	fprintf(zlog,"Adjusted\n");
 }
 
 void ShowUndocTIA(void)
 {
-	fprintf(log,"<-- Undoc TIA\n");
+	fprintf(zlog,"<-- Undoc TIA\n");
 }
 
 void ShowCollision(void)
 {
-	fprintf(log,"<-- Collision\n");
+	fprintf(zlog,"<-- Collision\n");
 }
 
 void ShowSCWrite(void)
 {
-	fprintf(log,"<-- SC Write\n");
-}
-
-void Showaddress(void)
-{
- 	fprintf(log, "\n(%04x %04x)", adr, prevadr);
+	fprintf(zlog,"<-- SC Write\n");
 }
 
 int ti_op8(void)
@@ -237,24 +222,24 @@ unsigned int ti_op16(void)
 
 void ti_show_imp(void)
 {
-        fprintf(log, "         ");
+        fprintf(zlog, "         ");
 }
 
 void ti_show_ac(void)
 {
-        fprintf(log, " a       ");
+        fprintf(zlog, " a       ");
 }
 
 void ti_show_zero_xy(unsigned int op)
 {
 	if (op & 0x80) {
-                fprintf(log, " %02x      ", op);
+                fprintf(zlog, " %02x      ", op);
         } else {
                 op &= 0x3f;
                 /* simplified check for write-only access  *EST* */
                 if (!((RROM & 0xe0) == 0x80))
                         op = (op & 0x0f) | 0x30;
-                fprintf(log, " %-8s", TIAList[op]);
+                fprintf(zlog, " %-8s", TIAList[op]);
         }
 }
 
@@ -265,28 +250,28 @@ void ti_show_zero(void)
 
 void ti_show_zero_x(void)
 {
-        fprintf(log, " %02x,x    =", ti_op8());
+        fprintf(zlog, " %02x,x    =", ti_op8());
         ti_show_zero_xy(ti_op8() + cpu_x);
 }
 
 void ti_show_zero_y(void)
 {
-        fprintf(log, " %02x,y    =", ti_op8());
+        fprintf(zlog, " %02x,y    =", ti_op8());
         ti_show_zero_xy(ti_op8() + cpu_y);
 }
 
 void ti_show_abs_xy(unsigned int op)
 {
 	if (op > 0x27f && op < 0x288) {
-                fprintf(log, " %-8s", RIOTList1[op - 0x280]);
+                fprintf(zlog, " %-8s", RIOTList1[op - 0x280]);
 	} else if (op > 0x293 && op < 0x298) {
-                fprintf(log, " %-8s", RIOTList2[op - 0x294]);
+                fprintf(zlog, " %-8s", RIOTList2[op - 0x294]);
 	} else {
 		/* if not ROM, RIOT or RIOT RAM, it must be TIA; *EST* */
                 if (!(op & 0x1280))
                         ti_show_zero_xy(op);
 		else
-                        fprintf(log, " %04x    ", op);
+                        fprintf(zlog, " %04x    ", op);
 	}
 }
 
@@ -297,20 +282,20 @@ void ti_show_abs(void)
 
 void ti_show_abs_y(void)
 {
-        fprintf(log, " %04x,y  =", ti_op16());
+        fprintf(zlog, " %04x,y  =", ti_op16());
         ti_show_abs_xy(ti_op16() + cpu_y);
 }
 
 void ti_show_abs_x(void)
 {
-        fprintf(log, " %04x,x  =", ti_op16());
+        fprintf(zlog, " %04x,x  =", ti_op16());
         ti_show_abs_xy(ti_op16() + cpu_x);
 }
 
 
 void ti_show_ind(void)
 {
-        fprintf(log, "(%04x)   ", ti_op16());
+        fprintf(zlog, "(%04x)   ", ti_op16());
 }
 
 void ti_show_ind_x(void)
@@ -318,7 +303,7 @@ void ti_show_ind_x(void)
 unsigned char real_TIA;
 
         real_TIA = ti_op8();
-        fprintf(log, "(%02x,x)   =", real_TIA);
+        fprintf(zlog, "(%02x,x)   =", real_TIA);
         real_TIA += cpu_x;
         ti_show_abs_xy(ReadRAM(real_TIA));
 }
@@ -328,13 +313,13 @@ void ti_show_ind_y(void)
 unsigned char real_TIA;
 
         real_TIA = ti_op8();
-        fprintf(log, "(%02x),y   =", real_TIA);
+        fprintf(zlog, "(%02x),y   =", real_TIA);
         ti_show_abs_xy(ReadRAM(real_TIA) + cpu_y);
 }
 
 void ti_show_immediate(void)
 {
-        fprintf(log, "#%02x      ", ti_op8());
+        fprintf(zlog, "#%02x      ", ti_op8());
 }
 
 void ti_show_relative(void)
@@ -343,7 +328,7 @@ void ti_show_relative(void)
 
 	target = (char) ti_op8();
 	target += cpu_pc + 2;
-        fprintf(log, " %04x    ", target);
+        fprintf(zlog, " %04x    ", target);
 }
 
 
@@ -371,14 +356,14 @@ void ShowInstruction(void)
 	int optype;
 
     optype = AccessList[RROM];
-    fprintf(log, "%04x: ", cpu_pc);
+    fprintf(zlog, "%04x: ", cpu_pc);
 
 /* ti_show_code */
 	switch (optype)
 	{
 		case _imp:
 		case _ac:
-            fprintf(log, "%02x       ", RROM);
+            fprintf(zlog, "%02x       ", RROM);
 			break;
 
 		case _rel:
@@ -387,19 +372,19 @@ void ShowInstruction(void)
 		case _zero_x:
 		case _ind_x:
 		case _ind_y:
-            fprintf(log, "%02x %02x    ", RROM, RROM1);
+            fprintf(zlog, "%02x %02x    ", RROM, RROM1);
 			break;
 
 		case _abs:
 		case _abs_x:
 		case _abs_y:
 		case _ind:
-            fprintf(log, "%02x %02x %02x ", RROM, RROM1, RROM2);
+            fprintf(zlog, "%02x %02x %02x ", RROM, RROM1, RROM2);
 			break;
 	}
 
 /* ti_show_op */
-    fprintf(log, "%s ", InstList[RROM]);
+    fprintf(zlog, "%s ", InstList[RROM]);
 
 	ti_show_op_fnc[optype]();
 }
@@ -411,24 +396,24 @@ void ShowRegisters(void)
         RROM2 = ReadROM(cpu_pc + 2);
 
 /*
-        fprintf(log, "\n(%3d %3d %3d) (%3d %3d) (%3d %3d %3d %3d %3d) ",
+        fprintf(zlog, "\n(%3d %3d %3d) (%3d %3d) (%3d %3d %3d %3d %3d) ",
            (int)frame, line, cycle, line-42, cycle*3-68,
            (P0_Pos-68+5)%160, (P1_Pos-68+5)%160, (M0_Pos-68+4)%160,
            (M1_Pos-68+4)%160, (BL_Pos-68+4)%160);
 */
 
-	fprintf(log, "\n(%3d %3d %3d %3d) (%3d %3d %3d %3d %3d) ",
+	fprintf(zlog, "\n(%3d %3d %3d %3d) (%3d %3d %3d %3d %3d) ",
 	   (int)frame, line, cycle, cycle*3-68,
 	   (P0_Pos-68+5)%160, (P1_Pos-68+5)%160, (M0_Pos-68+4)%160,
 	   (M1_Pos-68+4)%160, (BL_Pos-68+4)%160);
 
-	fprintf(log, cpu_NTest & 0x80 ? "N" : "n");
-	fprintf(log, cpu_V 			  ? "V" : "v");
-	fprintf(log, cpu_B 			  ? "B" : "b");
-	fprintf(log, cpu_D 			  ? "D" : "d");
-	fprintf(log, cpu_I 			  ? "I" : "i");
-	fprintf(log, !cpu_ZTest 	  ? "Z" : "z");
-	fprintf(log, cpu_carry 		  ? "C" : "c");
+	fprintf(zlog, cpu_NTest & 0x80 ? "N" : "n");
+	fprintf(zlog, cpu_V 			  ? "V" : "v");
+	fprintf(zlog, cpu_B 			  ? "B" : "b");
+	fprintf(zlog, cpu_D 			  ? "D" : "d");
+	fprintf(zlog, cpu_I 			  ? "I" : "i");
+	fprintf(zlog, !cpu_ZTest 	  ? "Z" : "z");
+	fprintf(zlog, cpu_carry 		  ? "C" : "c");
 
-        fprintf(log, " %02x %02x %02x %02x  ", cpu_a, cpu_x, cpu_y, cpu_sp);
+        fprintf(zlog, " %02x %02x %02x %02x  ", cpu_a, cpu_x, cpu_y, cpu_sp);
 }

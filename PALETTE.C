@@ -45,7 +45,7 @@ unsigned char set_luma(int luma, int val)
 
 void NTSC_Palette()
 {
-	int chroma, luma, red, green, blue, i;
+	int chroma, luma, i;
 
 	for (chroma = 0; chroma <=15; chroma++)
 		for (luma=0; luma<=7; luma++)
@@ -85,7 +85,7 @@ unsigned char PAL_RGB_table[] =
 
 void PAL_Palette()
 {
-	int chroma, luma, red, green, blue, i;
+	int chroma, luma, i;
 
 	for (chroma = 0; chroma <=15; chroma++)
 		for (luma=0; luma<=7; luma++)
@@ -117,7 +117,7 @@ unsigned char SECAM_RGB_table[] =
  255, 255, 255		/* white */
 };
 
-void SECAM_palette()
+void SECAM_Palette()
 {
 	int i,j;
 	unsigned char *d, *s;
@@ -129,5 +129,21 @@ void SECAM_palette()
 		s = SECAM_RGB_table;	/* source pointer */
 		for(j=1; j<=24; j++)
 			*d++ = *s++;
+	}
+}
+
+
+/*
+** generate appropriate palette
+*/
+
+void GeneratePalette()
+{
+	switch(PaletteNumber)
+	{
+	case 0:  NTSC_Palette();  break;
+	case 1:  PAL_Palette();   break;
+	case 2:  SECAM_Palette(); break;
+	default: NTSC_Palette();  break;
 	}
 }

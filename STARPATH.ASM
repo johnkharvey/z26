@@ -2,41 +2,40 @@
 ;* Starpath Supercharger support for z26
 ;*
 
-; z26 is Copyright 1997-1999 by John Saeger and is a derived work with many
-; contributors.  z26 is released subject to the terms and conditions of the 
+; z26 is Copyright 1997-2002 by John Saeger and is a derived work with many
+; contributors.	 z26 is released subject to the terms and conditions of the 
 ; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ; Please see COPYING.TXT for details.
 
-.data
+; 08-04-02 -- 32-bit
 
-SP_PulseDelay	dw	7		; # of cycles since last memory reference
+.data
 
 ; Starpath ROM Slices
 
-SP_Scheme label word			; table of bankswitch schemes
-	dw	2*800h,3*800h
-	dw	0*800h,3*800h
-	dw	2*800h,0*800h
-	dw	0*800h,2*800h
-	dw	2*800h,3*800h
-	dw	1*800h,3*800h
-	dw	2*800h,1*800h
-	dw	1*800h,2*800h
+SP_Scheme label dword			; table of bankswitch schemes
+	dd	2*800h,3*800h
+	dd	0*800h,3*800h
+	dd	2*800h,0*800h
+	dd	0*800h,2*800h
+	dd	2*800h,3*800h
+	dd	1*800h,3*800h
+	dd	2*800h,1*800h
+	dd	1*800h,2*800h
 
-SPSlice0	dw	0
-SPSlice1	dw	3*800h
+SPSlice0	dd	0
+SPSlice1	dd	3*800h
 
-SP_PrevAdr	dw	0
+SP_PrevAdr	dd	0
 
-SP_RamWord label word
-SP_RamByte	db	0,0		; byte to write to RAM (pad to allow word write)
+SP_RamWord label dword
+SP_RamByte	db	0,0,0,0		; byte to write to RAM (pad to allow dword write)
 
 Starpath	db	0		; global Starpath flag
 SP_WriteEnable	db	0		; SC RAM write enabled
 
-star_msg db	'Starpath call ','$'
+SP_PulseDelay	db	7		; # of cycles since last memory reference
 
-star_msg_load db 'Unable to find load ','$'
 
 .code
 
@@ -46,16 +45,16 @@ star_msg_load db 'Unable to find load ','$'
 
 SP_SetScheme macro
 
-	push	ax
-	shr	bx,2
+	push	eax
+	shr	ebx,2
 	setc	[SP_WriteEnable]
-	and	bx,7
-	shl	bx,2
-	mov	ax,[SP_Scheme+bx]
-	mov	[SPSlice0],ax
-	mov	ax,[SP_Scheme+bx+2]
-	mov	[SPSlice1],ax
-	pop	ax
+	and	ebx,7
+	shl	ebx,3
+	mov	eax,[SP_Scheme+ebx]
+	mov	[SPSlice0],eax
+	mov	eax,[SP_Scheme+ebx+4]
+	mov	[SPSlice1],eax
+	pop	eax
 
 	endm
 
@@ -78,119 +77,105 @@ Init_Starpath:
 ; <-- from banks.asm
 
 SetStarpath:
-	push	bx
-	mov	[ReadBank], offset RBank_SP
-	mov	[WriteBank], offset WBank_SP
+	push	ebx
+	mov	[_BSType],15
 	mov	[Starpath],1
-;	mov	bx, word ptr [_CartRom + 02000h]; pick up start adr
-;	mov	[reg_pc],bx			; tell CPU where to go
-;        mov     [_CartRom + 01800h],052h        ; plant Starpath JAM at ROM entry point
-;        mov     bl,[_CartRom + 02002h]          ; bank switch scheme at startup
-        mov     bl,0
-        or      bl,040h
-        mov     [RiotRam],bl                    ; Starpath loader does this I think
+	mov	bl,0
+	or	bl,040h
+	mov	[RiotRam],bl			; Starpath loader does this I think
 	
-        SP_SetScheme
+	SP_SetScheme
 
-	pop	bx
+	pop	ebx
 	ret
+
+;*
+;* Starpath exit routines
+;*
+
+StarpathLoadNotFound:
+	popad
+	mov	[_MessageCode],1	; Unable to find load
+;	call	_ShowMessage
+	jmp	GoDOS
+
+StarpathRealJAM:
+	popad
+	mov	eax,[reg_pc]
+	mov	[_cpu_pc],eax
+	mov	[_MessageCode],2	; Starpath call @
+;	call	_ShowMessage
+	jmp	GoDOS
 
 ;*
 ;* Starpath jam handler (game jumped to ROM)
 ;*
 
 StarpathJAM:
-        pushad
-        mov     ax,[reg_pc]
-        and     ax,01fffh
-;        cmp     ax,01800h
-        cmp     ax,01ff0h
-        jne     SPJ1
-	push	si
-        mov     si,[000faH]
+	pushad
+	mov	eax,[reg_pc]
+	and	eax,01fffh
+	cmp	eax,01ff0h
+	jne	SPJ1
+	push	esi
+	mov	esi,000faH
+	and	esi,0ffffh
 
 	mov	[debugflag],1
-        call    [ReadHardware]
+	call	ReadHardware
 	mov	[debugflag],0
 
-	mov	al,[si]
-        pop	si
-        mov     [_SC_ControlByte],al
+	mov	al,[esi]
+	pop	esi
+	mov	[_SC_ControlByte],al
 
-        push    es
-        call    _cli_LoadNextStarpath
-        pop     es
-        mov     ax,[_SC_StartAddress]
-        cmp     ax,0
-        je      StarpathLoadNotFound
-        mov     [reg_pc],ax
-        mov     bl,[_SC_ControlByte]            ; bank switch scheme at startup
+	call	_cli_LoadNextStarpath
+
+	mov	eax,[_SC_StartAddress]
+	test	eax,eax
+	je	StarpathLoadNotFound
+	mov	[reg_pc],eax
+	mov	bl,[_SC_ControlByte]		; bank switch scheme at startup
 	or	bl,040h
 	mov	[RiotRam],bl			; Starpath loader does this I think
 	
 	SP_SetScheme
 
-        popad
-        ret
+	popad
+	ret
+
 SPJ1:
-;        cmp     ax,0180ah
-        cmp     ax,01ff1h
-        jne     StarpathRealJAM
-        push    es
-        call    _cli_ReloadStarpath
-        pop     es
-        mov     ax,[_SC_StartAddress]
-        cmp     ax,0
-        je      StarpathLoadNotFound
-        mov     [reg_pc],ax
-        mov     bl,[_SC_ControlByte]            ; bank switch scheme at startup
+	cmp	eax,01ff1h
+	jne	StarpathRealJAM
+
+	call	_cli_ReloadStarpath
+
+	mov	eax,[_SC_StartAddress]
+	test	eax,eax
+	je	StarpathLoadNotFound
+	mov	[reg_pc],eax
+	mov	bl,[_SC_ControlByte]		; bank switch scheme at startup
 	or	bl,040h
 	mov	[RiotRam],bl			; Starpath loader does this I think
 	
 	SP_SetScheme
 
-        popad
-        ret
-
-StarpathLoadNotFound:
-        popad
-        call    TIATextMode
-        push    offset star_msg_load
-        call    _put_str
-        mov     al,[_SC_ControlByte]
-        call    ConHex
-        jmp     StarWaitEsc
-
-StarpathRealJAM:
-        popad
-        call	TIATextMode
-	push	offset star_msg
-	call	_put_str
-	mov	al,'@'
-	call	ConOut
-	mov	ax,[reg_pc]
-	call	ConWord		; display address
-
-StarWaitEsc:
-	test	[KeyTable+KeyEsc],128	; wait for ESC to be pressed
-	jz	StarWaitEsc
-
-	jmp	GoDOS
+	popad
+	ret
 
 ;*
 ;* Starpath bankswitch macros
 ;*
 
 SP_MapSlice macro
-	push	bx
-	mov	bx,si
-	and	bx,0fffh
-	shr	bx,11			; slice # we're in
-	shl	bx,1			; *2
-	and	si,07ffh		; mask low order bits
-	add	si,[SPSlice0 + bx]	; point to proper ROM slice
-	add	si,offset _CartRom
-	pop	bx
+	push	ebx
+	mov	ebx,esi
+	and	ebx,0800h
+	shr	ebx,9			; slice # we're in *4
+	and	esi,07ffh		; mask low order bits
+	add	esi,[SPSlice0 + ebx]	; point to proper ROM slice
+	add	esi,offset _CartRom
+	pop	ebx
 	endm
 
 ;*
@@ -201,13 +186,13 @@ SP_WriteRam macro
 local done
 
 	cmp	[SP_PulseDelay],5	; pulse delay in range?
-	jne	done			;   no
+	jne	done			;	no
 
-	push	si
+	push	esi
 	SP_MapSlice
 	mov	bl,[SP_RamByte]
-	mov	[si],bl			; write byte to memory
-	pop	si
+	mov	[esi],bl		; write byte to memory
+	pop	esi
 
 	mov	[SP_PulseDelay],7	; cancel write in progress
 
@@ -228,18 +213,18 @@ done:
 SP_Q_Adr macro
 local done, notbank, notrambyte, pulsedone
 
-	push	bx
+	push	ebx
 
-	and	si,01fffh
+	and	esi,01fffh
 	cmp	[SP_PulseDelay],5	; write pending?
 	ja	pulsedone		;   no
-	cmp	si,[SP_PrevAdr]		; a new memory address?
+	cmp	esi,[SP_PrevAdr]	; a new memory address?
 	je	pulsedone		;   no, don't count it
 	inc	[SP_PulseDelay]		;   yes, count it
-	mov	[SP_PrevAdr],si		; remember address for next time...
+	mov	[SP_PrevAdr],esi	; remember address for next time...
 
 pulsedone:
-	cmp	si,01ff8h		; bankswitch request ?
+	cmp	esi,01ff8h		; bankswitch request ?
 	jne	notbank			;   no
 
 	mov	bl,[SP_RamByte]		;   yes
@@ -249,16 +234,16 @@ pulsedone:
 	jmp	done
 
 notbank:
-	test	si,01000h		; adr in ROM?
+	test	esi,01000h		; adr in ROM?
 	jz	done			;   no
 	cmp	[SP_PulseDelay],5	; write pending?
 	jbe	notrambyte		;   yes, don't reset pulse delay
-	cmp	si,010ffh		; triggering a RAM write?
+	cmp	esi,010ffh		; triggering a RAM write?
 	ja	notrambyte		;   no
 
-	mov	[SP_RamWord],si		;   yes, adr is the byte to write
+	mov	[SP_RamWord],esi	;   yes, adr is the byte to write
 	mov	[SP_PulseDelay],0	; start up the pulse delay counter
-	mov	[SP_PrevAdr],si		; set up prev address
+	mov	[SP_PrevAdr],esi	; set up prev address
 	jmp	done
 
 notrambyte:
@@ -268,7 +253,7 @@ notrambyte:
 	SP_WriteRam			;   yes, write byte to memory
 
 done:
-	pop	bx
+	pop	ebx
 
 	endm
 
@@ -276,26 +261,9 @@ done:
 ;* actual bankswitch code
 ;*
 
-TraceAddress macro
-local done
-	cmp	[_TraceCount],0
-	jz	done
-
-	push	bx
-	mov	[_adr],si
-	mov	bx,[SP_PulseDelay]
-	mov	[_prevadr],bx
-	pop	bx
-	pushad
-	call	_Showaddress
-	popad
-done:
-	endm
-
 RBank_SP:
 	cmp	[debugflag],0		; ignore memory cycles from disassembler
 	jnz	debugread
-;	TraceAddress
 	SP_Q_Adr
 	test_hw_read
 	SP_MapSlice
@@ -307,7 +275,6 @@ debugread:
 	ret
 
 WBank_SP:
-;	TraceAddress
 	SP_Q_Adr
 	test_hw_write
 	ret

@@ -1,99 +1,92 @@
 ; trace.asm -- z26 trace stuff
 
-; z26 is Copyright 1997-2000 by John Saeger and is a derived work with many
+; z26 is Copyright 1997-2002 by John Saeger and is a derived work with many
 ; contributors.	 z26 is released subject to the terms and conditions of the 
 ; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ; Please see COPYING.TXT for details.
 
-;dw cpu_pc;
-;db cpu_a, cpu_carry, cpu_x, cpu_y, cpu_sp;
-;db cpu_ZTest, cpu_NTest, cpu_D, cpu_V, cpu_I, cpu_B;
+; 08-04-02 -- 32-bit
+
 
 .data
 
 debugflag	db	0
 
-
 .code
+
+;*
+;* trace routines
+;*
+;* so trace code written in C can access the assembler language machinery
+;*
 
 PUBLIC _ReallyReadROM
 
-;ALIGN 16 *EST*
-
-_ReallyReadROM proc far
-
-        pushad
-        push    es
-        push	si
-	mov	si,[_cpu_MAR]
+_ReallyReadROM:
+	pushad
+	mov	esi,[_cpu_MAR]
 
 	mov	[debugflag],1
-	call	[ReadBank]
+	mov	eax, [_BSType]
+	call	[RBankTab + eax*4]	; trashes eax
 	mov	[debugflag],0
 
-	mov	al,[si]
+	mov	al,[esi]
 	mov	[_cpu_Rbyte],al
 
-	pop	si
-        pop     es
-        popad
-
+	popad
 	ret
-_ReallyReadROM endp
+
 
 PUBLIC _ReallyReadRAM
 
-_ReallyReadRAM proc far
-
-        pushad
-        push    es
-        push	si
-        mov     si,[_cpu_MAR]
+_ReallyReadRAM:
+	pushad
+	mov	esi,[_cpu_MAR]
 
 	mov	[debugflag],1
-        call    [ReadHardware]
+	call	ReadHardware
 	mov	[debugflag],0
 
-	mov	al,[si]
+	mov	al,[esi]
 	mov	[_cpu_Rbyte],al
 
-	pop	si
-        pop     es
-        popad
-
+	popad
 	ret
-_ReallyReadRAM endp
 
-;ALIGN 16 *EST*
+
+
+;*
+;* trace routine so assembler routine can
+;* start the C trace routine
+;*
 
 TraceInstruction:
-
 	pushad
 
 	mov	[_cpu_a],al
 	mov	[_cpu_carry],ah
 
-	mov	eax,dword ptr [Frame]
-	mov	dword ptr [_frame],eax
-	mov	ax,[ScanLine]
-	mov	[_line],ax
+	mov	eax,[Frame]
+	mov	[_frame],eax
+	mov	eax,[ScanLine]
+	mov	[_line],eax
 	mov	al,[RClock]
 	mov	[_cycle],al
 
-	mov	ax,[BL_Position]
-	mov	[_BL_Pos],ax
-	mov	ax,[M0_Position]
-	mov	[_M0_Pos],ax
-	mov	ax,[M1_Position]
-	mov	[_M1_Pos],ax
-	mov	ax,[P0_Position]
-	mov	[_P0_Pos],ax
-	mov	ax,[P1_Position]
-	mov	[_P1_Pos],ax
+	mov	eax,[BL_Position]
+	mov	[_BL_Pos],eax
+	mov	eax,[M0_Position]
+	mov	[_M0_Pos],eax
+	mov	eax,[M1_Position]
+	mov	[_M1_Pos],eax
+	mov	eax,[P0_Position]
+	mov	[_P0_Pos],eax
+	mov	eax,[P1_Position]
+	mov	[_P1_Pos],eax
 
-	mov	ax,[reg_pc]
-	mov	[_cpu_pc],ax
-;        and     [_cpu_pc],01fffh
+	mov	eax,[reg_pc]
+	mov	[_cpu_pc],eax
 	mov	al,[reg_x]
 	mov	[_cpu_x],al
 	mov	al,[reg_y]
@@ -115,11 +108,7 @@ TraceInstruction:
 
 	call	_ShowRegisters
 	call	_ShowInstruction
-	
-;	dec	dword ptr [_TraceCount]		; this doesn't work anyway if _TraceCount > 30000 or so
-						; don't know why...
-						; so we trace forever every time...
-	
+
 	popad
 	ret
 

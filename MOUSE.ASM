@@ -2,54 +2,55 @@
 ;* z26 mouse code
 ;*
 
-; z26 is Copyright 1997-2000 by John Saeger and is a derived work with many
+; z26 is Copyright 1997-2002 by John Saeger and is a derived work with many
 ; contributors.	 z26 is released subject to the terms and conditions of the 
 ; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ; Please see COPYING.TXT for details.
 
+; 09-07-02 -- 32-bit
+
 .data
 MouseAvail		db	0
-;MPdirection		db	0	; gets changed in keyboard.asm
 
-MJ_Cnt			db	0
-MJ_Last_IOPortA		db	0
-MJ_Horiz		dw	0
-MJ_Vert			dw	0
+MJ_Cnt		db	0
+MJ_Last_IOPortA	db	0
+MJ_Horiz		dd	0
+MJ_Vert		dd	0
 
-_Threshold		dw	2
+_Threshold		dd	2
 
-MLG_mouseX		dw	320
-MLG_mouseY		dw	200
+MLG_mouseX		dd	320
+MLG_mouseY		dd	200
 
-MLG_Xpos		dw	0	; horizontal and vetical coordinates
-MLG_Ypos		dw	0	;   for LG marker dispaly
+MLG_Xpos		dd	1	; horizontal and vetical coordinates
+MLG_Ypos		dd	1	;   for LG marker dispaly
 MLG_Colour		db	0	; colour cycling the marker
 
-MLG_ShotCycle		db	0	; cycle and line of hit - gets
-MLG_ShotLine		dw	0	;   checked in cpuhand.asm
+MLG_ShotCycle	db	0	; cycle and line of hit - gets
+MLG_ShotLine	dd	0	;   checked in cpuhand.asm
 
-;LG_WrapLine		db	78	; for sentinel & shooting arcade
+;LG_WrapLine	db	78	; for sentinel & shooting arcade
 					;   75 for guntest4
 
-MindlinkPos             dw      02800h  ; position value in Mindlink controller
+MindlinkPos      dd	02800h  ; position value in Mindlink controller
                                         ; gets transferred bitwise (16 bits)
-MindlinkPos1            dw      02800h  ; position for player 1
-MindlinkPos2            dw      01000h  ; position for player 2
-MindlinkShift           dw      1       ; which bit to transfer next
-MindlinkAND             db      03fh    ; clear Mindlink-connected bit
-MindlinkOR              db      080h    ; set data bit
-MindlinkTEST            db      010h    ; test next out-bit signal
+MindlinkPos1     dd	02800h  ; position for player 1
+MindlinkPos2     dd	01000h  ; position for player 2
+MindlinkShift    dd	1       ; which bit to transfer next
+MindlinkAND      db	03fh    ; clear Mindlink-connected bit
+MindlinkOR       db	080h    ; set data bit
+MindlinkTEST     db	010h    ; test next out-bit signal
 
 .code
+
 
 ;*
 ;* initialize the mouse
 ;*
 
 MouseInit:
-	mov	ax,0			; reset mouse driver
-	int	33H
-	cmp	ax,0ffffH		; got mouse?
+	call	_init_mouse
+	cmp	eax,-1			; got mouse?
 	jne	MIend			;   no
 	mov	[MouseAvail],1		;   yes, mark it as available	  
 	mov	[MJ_Cnt],0		; clear the repeat counter
@@ -65,12 +66,12 @@ MIend:
 ;* get absolute value of mouse coordinates
 ;*
 
-GetAbs:	test	cx,cx
+GetAbs:	test	ecx,ecx
 	jns	MJ_abs1
-	neg	cx
-MJ_abs1:test	dx,dx
+	neg	ecx
+MJ_abs1:test	edx,edx
 	jns	MJ_abs2
-	neg	dx
+	neg	edx
 MJ_abs2:ret
 
 
@@ -79,20 +80,20 @@ MJ_abs2:ret
 ;*
 
 TestDominant:
-	mov	cx,[MJ_Horiz]
-	mov	dx,[MJ_Vert]
+	mov	ecx,[MJ_Horiz]
+	mov	edx,[MJ_Vert]
 	call	GetAbs
-	cmp	cx,dx			; horiz > vert?
+	cmp	ecx,edx			; horiz > vert?
 	ja	TD_horiz_bigger		;	 yes
-	shr	dx,1			; vert bigger -- shrink it
-	cmp	dx,cx			; still bigger?
+	shr	edx,1			; vert bigger -- shrink it
+	cmp	edx,ecx			; still bigger?
 	jb	TD_Ret			;	 no
 	mov	[MJ_Horiz],0		;   yes, vertical dominates, kill horizontal
 	jmp	TD_Ret
 
 TD_horiz_bigger:
-	shr	cx,1			; horiz bigger -- shrink it
-	cmp	cx,dx			; still bigger?
+	shr	ecx,1			; horiz bigger -- shrink it
+	cmp	ecx,edx			; still bigger?
 	jb	TD_Ret			;	 no
 	mov	[MJ_Vert],0		;   yes, horizontal dominates, kill vertical
 TD_Ret:	ret
@@ -111,13 +112,13 @@ TestThreshold:
 	ret				;   yes, be sensitive
 
 EnforceThreshold:
-	mov	cx,[MJ_Horiz]
-	mov	dx,[MJ_Vert]
+	mov	ecx,[MJ_Horiz]
+	mov	edx,[MJ_Vert]
 	call	GetAbs
-	cmp	cx,[_Threshold]		; horizontal displacement above threshold?
+	cmp	ecx,[_Threshold]	; horizontal displacement above threshold?
 	jae	TT1			;   yes
 	mov	[MJ_Horiz],0		;   no, kill it
-TT1:	cmp	dx,[_Threshold]		; vertical displacement above threshold?
+TT1:	cmp	edx,[_Threshold]	; vertical displacement above threshold?
 	jae	TT_Ret			;	  yes
 	mov	[MJ_Vert],0		;   no, kill it
 TT_Ret:	ret
@@ -128,10 +129,9 @@ TT_Ret:	ret
 ;*
 
 GetMickeys:
-	mov	ax,11
-	int	33h
-	mov	[MJ_Horiz],cx
-	mov	[MJ_Vert],dx
+	call	_get_mouse_movement
+	mov	[MJ_Horiz],ecx
+	mov	[MJ_Vert],edx
 	call	TestDominant
 	call	TestThreshold
 	ret
@@ -146,9 +146,9 @@ MouseAsJoystick:
 
 	call	GetMickeys
 
-	test	cx,cx			; any mickeys?
+	test	ecx,ecx			; any mickeys?
 	jnz	MJDoTest		;   yes
-	test	dx,dx
+	test	edx,edx
 	jnz	MJDoTest		;   yes
 
 	cmp	[MJ_Cnt],0		; shall we repeat?
@@ -167,9 +167,8 @@ MJDoTest:
 	mov	[MJ_Last_IOPortA],ah
 
 MJTestButton:
-	mov	ax,03H			; read mouse position and button status
-	int	33H
-	test	bx,7
+	call	_get_mouse_button_status
+	test	ebx,7
 	jz	MJret
 	mov	[InputLatch],0
 MJret:
@@ -181,26 +180,26 @@ MJret:
 ;*
 
 MJTestDirections:
-	mov	cx,[MJ_Horiz]
-	test	cx,cx
+	mov	ecx,[MJ_Horiz]
+	test	ecx,ecx
 	jns	MJright
 	and	ah,0ffh-64
 	jmp	MJvert
 
 MJright:
-	test	cx,cx				 
+	test	ecx,ecx				 
 	jz	MJvert
 	and	ah,0ffh-128
 
 MJvert:
-	mov	dx,[MJ_Vert]
-	test	dx,dx
+	mov	edx,[MJ_Vert]
+	test	edx,edx
 	jns	MJdown
 	and	ah,0ffh-16
 	ret
 
 MJdown:
-	test	dx,dx
+	test	edx,edx
 	jz	MJret
 	and	ah,0ffh-32
 	ret
@@ -213,8 +212,7 @@ MouseAsPaddle:
 	test	[MouseAvail],1
 	jz	MPret
 
-	mov	ax,0bH			; # of mickeys since last call
-	int	33H
+	call	_get_mouse_movement
 
         test    [_MouseBase],080H
         jnz     MouseAsDoublePaddle
@@ -224,26 +222,25 @@ MouseAsPaddle:
 	mov	ebx,[ChargeTrigger0 + esi*4]
 	test	[_MPdirection],1
 	jz	MP0
-	mov	cx,dx
+	mov	ecx,edx
 MP0:
 	test	[_MPdirection],2
 	jz	MP0a
-	add	bx,cx
+	add	ebx,ecx
 	jmp	MP0b
 MP0a:
-	sub	bx,cx
+	sub	ebx,ecx
 MP0b:
-	cmp	bx,TRIGMIN
+	cmp	ebx,TRIGMIN
 	jg	MP1a
-	mov	bx,TRIGMIN
+	mov	ebx,TRIGMIN
 MP1a:
-	cmp	bx ,TRIGMAX
+	cmp	ebx,TRIGMAX
 	jna	MP1b
-	mov	bx,TRIGMAX
+	mov	ebx,TRIGMAX
 MP1b:
 	mov	[ChargeTrigger0 + esi*4],ebx
-	mov	ax,03H
-	int	33H
+	call	_get_mouse_button_status
 	test	bx,7
 	jz	MP1
 	mov	dl,PaddleBits[esi]
@@ -262,18 +259,18 @@ MouseAsDoublePaddle:
 	mov	ebx,[ChargeTrigger0 + esi*4]
         test    [_MPdirection],1
         jz      MDP0a
-        add     bx,dx
+        add     ebx,edx
         jmp     MDP0b
 MDP0a:
-        sub     bx,dx
+        sub     ebx,edx
 MDP0b:
-	cmp	bx,TRIGMIN
+	cmp	ebx,TRIGMIN
         jg      MDP1a
-	mov	bx,TRIGMIN
+	mov	ebx,TRIGMIN
 MDP1a:
-	cmp	bx ,TRIGMAX
+	cmp	ebx,TRIGMAX
         jna     MDP1b
-	mov	bx,TRIGMAX
+	mov	ebx,TRIGMAX
 MDP1b:
 	mov	[ChargeTrigger0 + esi*4],ebx
 
@@ -284,30 +281,29 @@ MDP1b:
 	mov	ebx,[ChargeTrigger0 + esi*4]
         test    [_MPdirection],2
         jz      MDP1c
-        add     bx,cx
+        add     ebx,ecx
         jmp     MDP1d
 MDP1c:
-        sub     bx,cx
+        sub     ebx,ecx
 MDP1d:
-	cmp	bx,TRIGMIN
+	cmp	ebx,TRIGMIN
         jg      MDP2a
-	mov	bx,TRIGMIN
+	mov	ebx,TRIGMIN
 MDP2a:
-	cmp	bx ,TRIGMAX
+	cmp	ebx,TRIGMAX
         jna     MDP2b
-	mov	bx,TRIGMAX
+	mov	ebx,TRIGMAX
 MDP2b:
 	mov	[ChargeTrigger0 + esi*4],ebx
 
-	mov	ax,03H
-	int	33H
-        test    bx,2
+	call	_get_mouse_button_status
+        test    ebx,2
         jz      MDP3
         mov     dl,PaddleBits[esi]
 	not	dl
 	and	[_IOPortA],dl
 MDP3:
-        test    bx,1
+        test    ebx,1
         jz      MDP4
         movzx   esi,[_MouseBase]
         and     esi,3
@@ -320,44 +316,44 @@ MDP4:
 
 
 MouseAsLightgun:
-	mov	ax,0bH
-	int	33H
+	call	_get_mouse_movement
 
-	add	dx,[MLG_mouseY]
+	add	edx,[MLG_mouseY]
 
-	cmp	dx,0f000h
+	cmp	edx,0f000h	;0f000h
 	jb	MLG1
-	mov	dx,0
+	mov	edx,0
 MLG1:
-        cmp     dx,480
+        cmp     edx,480
 	jb	MLG1a
-        mov     dx,479
+        mov     edx,479
 MLG1a:
-	mov	[MLG_mouseY],dx
+	mov	[MLG_mouseY],edx
 
-	shr	dx,1
-	mov	[MLG_Ypos],dx
+	shr	edx,1
+	mov	[MLG_Ypos],edx
 
-        add     dx,[_CFirst]
-	add	dx,4
-	sub	dx,[_LGadjust]
-	mov	[MLG_ShotLine],dx
+        add     edx,[_CFirst]
+	add	edx,4
+	sub	edx,[_LGadjust]
+;	and	edx,0ffffh
+	mov	[MLG_ShotLine],edx
 
-	add	cx,[MLG_mouseX]
+	add	ecx,[MLG_mouseX]
 
-	cmp	cx,0f000h
+	cmp	ecx,0f000h	;0f00h
 	jb	MLG2
-	mov	cx,0
+	mov	ecx,0
 MLG2:
-	cmp	cx,637
+	cmp	ecx,637
 	jb	MLG2a
-	mov	cx,636
+	mov	ecx,636
 MLG2a:
-	mov	[MLG_mouseX],cx
+	mov	[MLG_mouseX],ecx
 
-        shr     cx,2
-	mov	[MLG_Xpos],cx
-	mov	ax,cx
+        shr     ecx,2
+	mov	[MLG_Xpos],ecx
+	mov	eax,ecx
 	mov	cl,3
 	div	cl
 	add	al,23
@@ -368,27 +364,31 @@ MLG2a:
 MLG3:
 	mov	[MLG_ShotCycle],al
 
-        push    gs
 	inc	[MLG_Colour]
 	and	[MLG_Colour],007h
-        mov     ax,[_ScreenSeg]
-        mov     gs,ax
-        mov     ax,[MLG_Ypos]
-        imul    ax,160
-        mov     di,ax
-        add     di,[_ScreenOfs]
-        add     di,[MLG_Xpos]
+        mov     eax,[MLG_Ypos]
+        imul    eax,160
+        mov     edi,eax
+	mov	eax,[_ScreenBuffer]
+	add	edi,eax
+        add     edi,[MLG_Xpos]
         mov     al,[MLG_Colour]
-        mov     gs:[di-160],al
-        mov     gs:[di+160],al
-        mov     gs:[di-1],al
-        mov     gs:[di+1],al
-        pop     gs
 
-	mov	ax,03H
-	int	33H
+	mov	edx,edi
+	sub	edx,160
+	cmp	edx,[_ScreenBuffer]	; there are better ways...
+	jbe	MLG_NoPaint
 
-	test	bx,7
+        gs_store [edi-160],al
+
+MLG_NoPaint:
+        gs_store [edi-1],al
+        gs_store [edi+1],al
+        gs_store [edi+160],al
+
+	call	_get_mouse_button_status
+
+	test	ebx,7
 	jz	MLGret
 	and	[_IOPortA],0efh
 
@@ -400,40 +400,38 @@ MouseAsMindlink:
 	test	[MouseAvail],1
         jz      MMret
 
-	mov	ax,0bH			; # of mickeys since last call
-	int	33H
+	call	_get_mouse_movement
 
-        mov     bx,[MindlinkPos1]
+        mov     ebx,[MindlinkPos1]
         test    [_MPdirection],1
         jz      MM1
-        mov     bx,[MindlinkPos2]
-        add     bx,01800h
+        mov     ebx,[MindlinkPos2]
+        add     ebx,01800h
 MM1:
-        and     bx,03fffh
-        shl     cx,3
-        add     bx,cx
+        and     ebx,03fffffffh
+        shl     ecx,3
+        add     ebx,ecx
 
-        cmp     bx,02800h
+        cmp     ebx,02800h
         ja      MM1a
-        mov     bx,02800h
+        mov     ebx,02800h
 MM1a:
-        cmp     bx,03900h
+        cmp     ebx,03900h
         jb      MM1b
-        mov     bx,03800h
+        mov     ebx,03800h
 MM1b:
         test    [_MPdirection],1
         jz      MM2
-        sub     bx,01800h
-        mov     [MindlinkPos2],bx
+        sub     ebx,01800h
+        mov     [MindlinkPos2],ebx
         jmp     MM3
 MM2:
-        mov     [MindlinkPos1],bx
+        mov     [MindlinkPos1],ebx
 MM3:
-        mov     [MindlinkPos],bx
+        mov     [MindlinkPos],ebx
         mov     [MindlinkShift],1
         call    NextMindlinkBit
-        mov	ax,03H
-	int	33H
+	call	_get_mouse_button_status
 	test	bx,7
         jz      MMret
         or      [MindlinkPos],04000h    ; this bit starts a game
@@ -443,17 +441,17 @@ MMret:
 ; <-- from riot.asm
 
 NextMindlinkBit:
-        push    ax
-        push    bx
+        push    eax
+        push    ebx
         mov     bl,[_IOPortA]
         and     bl,[MindlinkAND]        ; clear the Mindlink-connected bit
-        mov     ax,[MindlinkShift]      ; find current bit
-        test    [MindlinkPos],ax        ; is it set?
+        mov     eax,[MindlinkShift]      ; find current bit
+        test    [MindlinkPos],eax        ; is it set?
         jz      NMB1
         or      bl,[MindlinkOR]         ;   yes, set out-bit
 NMB1:
         mov     [_IOPortA],bl
-        pop     bx
-        pop     ax
+        pop     ebx
+        pop     eax
         shl     [MindlinkShift],1       ; use a different bit on next call
         ret

@@ -6,80 +6,81 @@
 ; Please see COPYING.TXT for details.
 
 ; 3-12-1999 -- break ground
+; 09-07-02 -- 32-bit
 
 .data
 
-TIARegHandler label word
+TIARegHandler label dword
 
-	dw	H_VSYNC		; 00 -- VSYNC
-	dw	H_VBLANK	; 01 -- VBLANK
-	dw	H_WSYNC		; 02 -- WSYNC
-	dw	H_Null		; 03 -- reset horizontal sync
-				;       for factory testing only !
+	dd	H_VSYNC		; 00 -- VSYNC
+	dd	H_VBLANK		; 01 -- VBLANK
+	dd	H_WSYNC		; 02 -- WSYNC
+	dd	H_Null		; 03 -- reset horizontal sync
+					;	  for factory testing only !
 
-	dw	H_NUSIZ0	; 04 -- NUSIZ0
-	dw	H_NUSIZ1	; 05 -- NUSIZ1
-	dw	H_COLUP0	; 06 -- COLUP0
-	dw	H_COLUP1	; 07 -- COLUP1
-	dw	H_COLUPF	; 08 -- COLUPF
-	dw	H_COLUBK	; 09 -- COLUBK
-	dw	H_CTRLPF	; 0a -- CTRLPF
-	dw	H_REFP0		; 0b -- REFP0
-	dw	H_REFP1		; 0c -- REFP1
-	dw	H_PF		; 0d -- PF0
-	dw	H_PF		; 0e -- PF1
-	dw	H_PF		; 0f -- PF2
-	dw	H_RESP0		; 10 -- RESP0
-	dw	H_RESP1		; 11 -- RESP1
-	dw	H_RESM0		; 12 -- RESM0
-	dw	H_RESM1		; 13 -- RESM1
-	dw	H_RESBL		; 14 -- RESBL
-	dw	H_Sound		; 15 -- AUDC0
-	dw	H_Sound		; 16 -- AUDC1
-	dw	H_Sound		; 17 -- AUDF0
-	dw	H_Sound		; 18 -- AUDF1
-	dw	H_Sound		; 19 -- AUDV0
-	dw	H_Sound		; 1a -- AUDV1
-	dw	H_GRP0		; 1b -- GRP0
-	dw	H_GRP1		; 1c -- GRP1
-	dw	H_ENAM0		; 1d -- ENAM0
-	dw	H_ENAM1		; 1e -- ENAM1
-	dw	H_ENABL		; 1f -- ENABL
-	dw	H_HMP0		; 20 -- HMP0
-	dw	H_HMP1		; 21 -- HMP1
-	dw	H_HMM0		; 22 -- HMM0
-	dw	H_HMM1		; 23 -- HMM1
-	dw	H_HMBL		; 24 -- HMBL
-	dw	H_VDELP0	; 25 -- VDELP0
-	dw	H_VDELP1	; 26 -- VDELP1
-	dw	H_VDELBL	; 27 -- VDELBL
-	dw	H_RESMP0	; 28 -- RESMP0
- 	dw	H_RESMP1	; 29 -- RESMP1
-	dw	H_HMOVE		; 2a -- HMOVE
-	dw	H_HMCLR		; 2b -- HMCLR
-	dw	H_CXCLR		; 2c -- CXCLR
+	dd	H_NUSIZ0		; 04 -- NUSIZ0
+	dd	H_NUSIZ1		; 05 -- NUSIZ1
+	dd	H_COLUP0		; 06 -- COLUP0
+	dd	H_COLUP1		; 07 -- COLUP1
+	dd	H_COLUPF		; 08 -- COLUPF
+	dd	H_COLUBK		; 09 -- COLUBK
+	dd	H_CTRLPF		; 0a -- CTRLPF
+	dd	H_REFP0		; 0b -- REFP0
+	dd	H_REFP1		; 0c -- REFP1
+	dd	H_PF			; 0d -- PF0
+	dd	H_PF			; 0e -- PF1
+	dd	H_PF			; 0f -- PF2
+	dd	H_RESP0		; 10 -- RESP0
+	dd	H_RESP1		; 11 -- RESP1
+	dd	H_RESM0		; 12 -- RESM0
+	dd	H_RESM1		; 13 -- RESM1
+	dd	H_RESBL		; 14 -- RESBL
+	dd	H_AUDC0		; 15 -- AUDC0
+	dd	H_AUDC1		; 16 -- AUDC1
+	dd	H_AUDF0		; 17 -- AUDF0
+	dd	H_AUDF1		; 18 -- AUDF1
+	dd	H_AUDV0		; 19 -- AUDV0
+	dd	H_AUDV1		; 1a -- AUDV1
+	dd	H_GRP0		; 1b -- GRP0
+	dd	H_GRP1		; 1c -- GRP1
+	dd	H_ENAM0		; 1d -- ENAM0
+	dd	H_ENAM1		; 1e -- ENAM1
+	dd	H_ENABL		; 1f -- ENABL
+	dd	H_HMP0		; 20 -- HMP0
+	dd	H_HMP1		; 21 -- HMP1
+	dd	H_HMM0		; 22 -- HMM0
+	dd	H_HMM1		; 23 -- HMM1
+	dd	H_HMBL		; 24 -- HMBL
+	dd	H_VDELP0		; 25 -- VDELP0
+	dd	H_VDELP1		; 26 -- VDELP1
+	dd	H_VDELBL		; 27 -- VDELBL
+	dd	H_RESMP0		; 28 -- RESMP0
+ 	dd	H_RESMP1		; 29 -- RESMP1
+	dd	H_HMOVE		; 2a -- HMOVE
+	dd	H_HMCLR		; 2b -- HMCLR
+	dd	H_CXCLR		; 2c -- CXCLR
 
-	dw	H_Null		; 2d -- these registers are undefined
-	dw	H_Null		; 2e
-	dw	H_Null		; 2f
-	dw	H_Null		; 30
-	dw	H_Null		; 31
-	dw	H_Null		; 32
-	dw	H_Null		; 33
-	dw	H_Null		; 34
-	dw	H_Null		; 35
-	dw	H_Null		; 36
-	dw	H_Null		; 37
-	dw	H_Null		; 38
-	dw	H_Null		; 39
-	dw	H_Null		; 3a
-	dw	H_Null		; 3b
-	dw	H_Null		; 3c
-	dw	H_Null		; 3d
-	dw	H_Null		; 3e
-	dw	H_Null		; 3f
+	dd	H_Null		; 2d -- these registers are undefined
+	dd	H_Null		; 2e
+	dd	H_Null		; 2f
+	dd	H_Null		; 30
+	dd	H_Null		; 31
+	dd	H_Null		; 32
+	dd	H_Null		; 33
+	dd	H_Null		; 34
+	dd	H_Null		; 35
+	dd	H_Null		; 36
+	dd	H_Null		; 37
+	dd	H_Null		; 38
+	dd	H_Null		; 39
+	dd	H_Null		; 3a
+	dd	H_Null		; 3b
+	dd	H_Null		; 3c
+	dd	H_Null		; 3d
+	dd	H_Null		; 3e
+	dd	H_Null		; 3f
 
-	dw	H_Null
+	dd	H_Null
 
 PFDelay db	4, 3, 2, 5	; delays for writes to PF registers
 
@@ -110,21 +111,40 @@ TIAReflect8 label byte
  db 15,143,79,207,47,175,111,239,31,159,95,223,63,191,127,255
 
 
-WeirdRespCorrection label word
- dw   0,  0,  0,  0,  0,  0,  1,  2,  2,  3
- dw   4,  5,  5,  6,  7,  8,  8,  9, 10, 11
- dw  11, 12, 13, 14, 14, 15
+WeirdRespCorrection label dword
+ dd   0,  0,  0,  0,  0,  0,  1,  2,  2,  3
+ dd   4,  5,  5,  6,  7,  8,  8,  9, 10, 11
+ dd  11, 12, 13, 14, 14, 15
 
-TempCFirst		dw	0
-MinCFirst		dw	0
-MinVBlankOff		dw	0
-FavorTop		dw	0
-StableCount		dw	0
-TopLineToCenter		dw	0
-MaxVisibleToCenter	dw	0
+TempCFirst	dd	0
 
 
 .code
+
+
+;*
+;* blank the remainder of the display each frame
+;*
+
+TIABlank:
+	pushad
+	xor	eax,eax
+	mov	edi,[DisplayPointer]
+	cmp	edi,15000
+	jb	TIABRet
+	mov	ebx,[_MaxLines]
+	imul	ebx,160
+TIABLoop:
+	cmp	edi,ebx			; reached end of display area?
+	jae	TIABRet			;   yes, done
+	gs_store [edi],eax
+	add	edi,4
+	jmp	TIABLoop
+
+TIABRet:
+	mov	[DisplayPointer],edi
+	popad
+	ret
 
 ;*
 ;* deep motion tracing macro
@@ -149,40 +169,40 @@ IsDeep:
 	jne	VeryDeep
 
 	pushad
-	movzx	dx,[RClock]
-	push	dx
-	movzx	dx,[TIA+si]
-	and	dx,0fh
-	push	dx
+	movzx	edx,[RClock]
+	push	edx
+	movzx	edx,[TIA+esi]
+	and	edx,0fh
+	push	edx
 	mov	dl,[WByte]
 	sar	dl,4
-	movzx	dx,dl
-	and	dx,0fh
-	push	dx
+	movzx	edx,dl
+	and	edx,0fh
+	push	edx
 	call	_ShowDeep
-	pop	dx
-	pop	dx
-	pop	dx
+	pop	edx
+	pop	edx
+	pop	edx
 	popad
 
 	jmp	NotDeep
 
 VeryDeep:
 	pushad
-	movzx	dx,[RClock]
-	push	dx
-	movzx	dx,[TIA+si]
-	and	dx,0fh
-	push	dx
+	movzx	edx,[RClock]
+	push	edx
+	movzx	edx,[TIA+esi]
+	and	edx,0fh
+	push	edx
 	mov	dl,[WByte]
 	sar	dl,4
-	movzx	dx,dl
-	and	dx,0fh
-	push	dx
+	movzx	edx,dl
+	and	edx,0fh
+	push	edx
 	call	_ShowVeryDeep
-	pop	dx
-	pop	dx
-	pop	dx
+	pop	edx
+	pop	edx
+	pop	edx
 	popad
 
 NotDeep:
@@ -203,10 +223,10 @@ IFDEF showdeep
 	je	NotWeird
 
 	pushad
-	movzx	dx,[RClock]
-	push	dx
+	movzx	edx,[RClock]
+	push	edx
 	call	_ShowWeird
-	pop	dx
+	pop	edx
 	popad
 
 NotWeird:
@@ -225,9 +245,12 @@ ENDIF
 NewTIA:	
 	SaveCPUState
 	and	esi,03fh
-	call	[TIARegHandler + esi*2]	; call the write handler
+	call	VecTIA		; call the write handler
 	RestoreCPUState
 	ret
+
+VecTIA:
+	jmp	[TIARegHandler + esi*4]
 
 
 ;*
@@ -262,96 +285,97 @@ H_VSYNC:
 	test	[VSyncFlag],2		; somebody hitting Vsync more than necessary?
 	jnz	VSyncAlreadySet		;	  yep
 
-	mov	dx,[_LinesInFrame]
-	mov	[_PrevLinesInFrame],dx
-	mov	dx,[ScanLine]
-	mov	[_LinesInFrame],dx	; *EST*
+	mov	edx,[_LinesInFrame]
+	mov	[_PrevLinesInFrame],edx
+	mov	edx,[ScanLine]
+	mov	[_LinesInFrame],edx	; *EST*
 	dec	[_LinesInFrame]
 
 DontUpdateLinesInFrame:
-	mov	dword ptr [LooseColour],0ffffffffh
+	mov	[LooseColour],0ffffffffh
 ;	cmp	[_PaletteNumber],1	; PAL palette?
 ;	jne	GrayFrame		;   no, don't simulate color loss
 	test	[_SimColourLoss],1
 	jz	GrayFrame
 	test	[_LinesInFrame],1
 	jz	GrayFrame
-	mov	dword ptr [LooseColour],007070707h ; see tialine.asm
+	mov	[LooseColour],007070707h ; see tialine.asm
 GrayFrame:
 	mov	[ScanLine],1		; back to screen top
 
-	cmp	dx,5			; a quick double hit (pickpile)?
-	jb	VSyncAlreadySet		;   yes, no new frame
+	cmp	edx,5			; a quick double hit (pickpile)?
+	jb	VSyncAlreadySet		;	 yes, no new frame
 	inc	[Frame]			; new frame.
 
 ;*
 ;* automatic adjustment of game position (and video mode)
 ;*
 
-	mov	dx,[_CFirst]
-	mov	[TempCFirst],dx	; to see how much we're changing by
+	mov	edx,[_CFirst]
+	mov	[TempCFirst],edx	; to see how much we're changing by
 
 	cmp	[Frame],5
 	je	AdjustUnstable		; force adjustment of unstable games (pickpile)
 
-	mov	dx,[_LinesInFrame]
-	cmp	dx,[_PrevLinesInFrame]
+	mov	edx,[_LinesInFrame]
+	cmp	edx,[_PrevLinesInFrame]
 	jne	AlreadyInPALMode	; don't change video mode if not matching previous frame (quadrun)
 
 	test	[_IOPortB],1		; reset being pressed?
-	jz	VSyncAlreadySet		;   yes, don't adjust
+	jz	VSyncAlreadySet		;	 yes, don't adjust
 
 AdjustUnstable:
 	cmp	[_LinesInFrame],282	; NTSC game? (pharhcrs 296 when fire button pressed ...
-					;	     (... air_raid 292, zoofun 291, dumbo 286, curtiss 286,
-					;	     (... tps 285, galaga 282, tomboy 277)
-	jb	AlreadyInPALMode	;   yes
+					;		    (... air_raid 292, zoofun 291, dumbo 286, curtiss 286,
+					;		    (... tps 285, galaga 282, tomboy 277)
+	jb	AlreadyInPALMode	;	 yes
 
 	cmp	[_PaletteNumber],1	; PAL mode already ?
-	jz	AlreadyInPALMode	;   yes
+	jz	AlreadyInPALMode	;	 yes
 	cmp	[_UserPaletteNumber],0ffh ; is there a palette override?
-	jnz	AlreadyInPALMode	;   yes, don't switch
+	jnz	AlreadyInPALMode	;	  yes, don't switch
 
-        test    [Frame],0ffffff00h      ; more than 256 frames passed?
-        jnz     AlreadyInPALMode        ;    yes, don't change TV type *EST*
+	test	[Frame],0ffffff00h	; more than 256 frames passed?
+	jnz	AlreadyInPALMode	;    yes, don't change TV type *EST*
 
 	mov	[_PaletteNumber],1	; set up PAL palette
 	pushad
-	call	TIAGraphicMode		; reset video mode for PAL games
+        call    _position_game          ; adjust starting line for PAL/NTSC
+        call	_srv_SetPalette		; reset video mode for PAL games
 	popad
 
 AlreadyInPALMode:
 	cmp	[_LinesInFrame],512	; game ridiculously large?
-	ja	VSyncAlreadySet		;   yes, no automatic adjustment
+	ja	VSyncAlreadySet		;	 yes, no automatic adjustment
 	cmp	[_LinesInFrame],220	; game ridiculously small?
 	ja	GameSizeOK		;   no
 	cmp	[_BailoutLine],512	; maybe BailoutLine is too small -- too big already?
 	ja	GameSizeOK
-	mov	dx,[_LinesInFrame]
-	add	dx,4			; match offset to below (aciddrop)
-	add	[_BailoutLine],dx
+	mov	edx,[_LinesInFrame]
+	add	edx,4			; match offset to below (aciddrop)
+	add	[_BailoutLine],edx
 	jmp	BailoutSet
 
 GameSizeOK:
-	mov	dx,[_LinesInFrame]
-	cmp	dx,[_PrevLinesInFrame]
+	mov	edx,[_LinesInFrame]
+	cmp	edx,[_PrevLinesInFrame]
 	jne	BailoutSet		; don't reset BailoutLine if not matching previous frame (quadrun)
-	add	dx,4			; minimum 6 is needed for aciddrop or it flashes
-	mov	[_BailoutLine],dx
+	add	edx,4			; minimum 6 is needed for aciddrop or it flashes
+	mov	[_BailoutLine],edx
 
 BailoutSet:
 
 VSyncAlreadySet:
-	mov	dx,[_CFirst]
-	cmp	dx,0			; forcing first line ?
+	mov	edx,[_CFirst]
+	cmp	edx,0			; forcing first line ?
 	jz	ZRET			;   no, let vblank take care of it
 
 	call	TIABlank
 
 DontBlank:
-	mov	[TopLine],dx
-	add	dx,[_MaxLines]
-	mov	[BottomLine],dx
+	mov	[TopLine],edx
+	add	edx,[_MaxLines]
+	mov	[BottomLine],edx
 ZRET:	mov	dl,[WByte]
 	mov	[VSyncFlag],dl	
  	Ret
@@ -371,10 +395,10 @@ H_VBLANK:
 	test	dl,2			; setting or clearing ?
 	jz	WVBClear		;	  clearing
 
-	mov	dx,[ScanLine]
-	cmp	dx,200
+	mov	edx,[ScanLine]
+	cmp	edx,200
 	jb	VBOnAlreadySet
-	mov	[_VBlankOn],dx
+	mov	[_VBlankOn],edx
 
 VBOnAlreadySet:
 	cmp	[_CFirst],0		; VBlank triggering new frame ?
@@ -388,18 +412,18 @@ WTB_1:
 	jmp	HandleDumpedInputs
 
 WVBClear:
-	mov	dx,[ScanLine]
+	mov	edx,[ScanLine]
 	cmp	[_PaletteNumber],1	; NTSC game?
 	jnz	DoNTSCTest		;   yes
-	cmp	dx,78			; allow penguin vblank
+	cmp	edx,78			; allow penguin vblank
 	ja	VBOffAlreadySet
-	mov	[_VBlankOff],dx
+	mov	[_VBlankOff],edx
 	jmp	VBOffAlreadySet
 
 DoNTSCTest:
-	cmp	dx,58			; allow brickick vblank
+	cmp	edx,58			; allow brickick vblank
 	ja	VBOffAlreadySet
-	mov	[_VBlankOff],dx
+	mov	[_VBlankOff],edx
 
 VBOffAlreadySet:
 	cmp	[_CFirst],0		; VBlank triggering new frame ?
@@ -408,15 +432,15 @@ VBOffAlreadySet:
 	jmp	HandleDumpedInputs
 
 WTB_2:
-	mov	dx,[ScanLine]
-	cmp	dx,[_CFirst]
+	mov	edx,[ScanLine]
+	cmp	edx,[_CFirst]
 	jae	WVBPastMin
-	mov	dx,[_CFirst]
+	mov	edx,[_CFirst]
 WVBPastMin:
-	inc	dx
-	mov	[TopLine],dx
-	add	dx,[_MaxLines]
-	mov	[BottomLine],dx
+	inc	edx
+	mov	[TopLine],edx
+	add	edx,[_MaxLines]
+	mov	[BottomLine],edx
 	jmp	HandleDumpedInputs	 
 
 
@@ -425,10 +449,10 @@ HandleDumpedInputs:
 	jz	HandleLatchedInputs	;   no
 	mov	dword ptr [ChargeCounter],0 ;   yes, zero the line counter
 
-        mov     [DumpPorts],0h          ; reset booster grip buttons
-        mov     [DumpPorts+1],0h        ;
-        mov     [DumpPorts+2],0h        ;
-        mov     [DumpPorts+3],0h        ;
+	mov	[DumpPorts],0h		; reset booster grip buttons
+	mov	[DumpPorts+1],0h	;
+	mov	[DumpPorts+2],0h	;
+	mov	[DumpPorts+3],0h	;
 
 HandleLatchedInputs:
 	ret
@@ -467,20 +491,67 @@ HBLnowrap:
 
 	cmp	bl,24			; affected by weirdness?
 	ja	HBLnotweird		;   no
-	mov	bx,[WeirdRespCorrection+2*ebx]
-	sub	bx,[arg1&_Motion]
-	add	bx,226
-	cmp	bx,234
+	mov	ebx,[WeirdRespCorrection+4*ebx]
+	sub	ebx,[arg1&_Motion]
+	add	ebx,226
+	cmp	ebx,234
 	jbe	HBLinrange
-	mov	bx,234
+	mov	ebx,234
 HBLinrange:	
-	cmp	bx,228
+	cmp	ebx,228
 	jb	HBLdone
-	sub	bx,160
+	sub	ebx,160
 
 HBLdone:
 	endm
 
+;*
+;* object rendering macros
+;*
+;* they should OR their respective bits into BL
+;* AX, DL and SI are free registers that these routines can use
+;*
+
+
+;*
+;* table update support macro
+;*
+
+UpdateTable macro arg1
+local regular_ok
+
+	movzx	esi,[TIA+NUSIZ&arg1]
+	and	esi,7
+	movzx	edx,[arg1&_SizeTable+esi]
+	mov	[arg1&_Size],edx
+	mov	edx,[arg1&_RegularTable+esi*4] ; assume regular table
+	cmp	[arg1&_TripleFlag],0
+	jnz	regular_ok
+	mov	edx,[arg1&_MultipleTable+esi*4] ; use multiple table
+
+regular_ok:
+	mov	[arg1&_Table],edx
+	endm
+
+
+SetObjectBit macro arg1
+local done, nowrap
+
+	movzx	esi,cl
+	sub	esi,[arg1&_Position]
+	jae	nowrap
+	add	esi,160
+nowrap:	
+	cmp	esi,[arg1&_Size]
+	ja	done
+	add	esi,esi			; index into table
+	AddTablePointer arg1
+	mov	al,[arg1&_Graphics]
+	test	al,[esi]
+	jz	done
+	or	bl,arg1&_BIT
+done:
+	endm
 
 ;*
 ;* get dl = object delay
@@ -492,26 +563,27 @@ GetObjectDelay macro arg1
 local done, nowrap
 
 	PositionObject arg1
-	mov	si,bx
+	mov	esi,ebx
 
 	xor	dl,dl			; assume delay 0
 	xor	al,al			; assume no triple flag
 
-	sub	si,[arg1&_Position]	  ; where the object is
+	sub	esi,[arg1&_Position]	; where the object is
 	jae	nowrap
-	add	si,160			
+	add	esi,160			
 nowrap:	
-	cmp	si,[arg1&_Size]		  ; beyond it's size?
+	cmp	esi,[arg1&_Size]	; beyond it's size?
 	ja	done			;   yes, no delay
-	add	si,si
-	inc	si			; point at delay byte
-	add	si,[arg1&_Table]	  ; object's table
-	mov	dl,[si]			; get delay byte
+	add	esi,esi			; index into table
+	inc	esi			; point at delay byte
+	AddTablePointer arg1
+	mov	dl,[esi]		; get delay byte
 	test	dl,080h			; triple flag set?
-	setnz	al			;	set al if so
+	setnz	al			;   set al if so
 	and	dl,07fh			; delay value
 done:
 	endm
+
 
 
 ;*
@@ -538,26 +610,30 @@ DeactivateObject macro arg1
 doUpdatePlayfieldColor:
 	mov	dl,[TIA+COLUPF]
 	mov	dh,dl			; 16-bit playfield color
-	mov	[BL_Color],dx		; ball is always this color
-	mov	[PF_Color],dx		; assume *normal* state of affairs
+	shl	edx,8
+	mov	dl,dh
+	shl	edx,8
+	mov	dl,dh			; 32-bit playfield color
+	mov	[BL_Color],edx		; ball is always this color
+	mov	[PF_Color],edx		; assume *normal* state of affairs
 
-	mov	dx,offset TIADisplayToColour
+	mov	edx,offset TIADisplayToColour
 	test	[TIA+CTRLPF],PFP	; does playfield have priority?
 	jz	UPFC_CheckScore		;	 no
-	mov	dx,offset TIADisplayToColour2
-	mov	[PixelColorTable],dx	;   yes, update pixel to color translation table
+	mov	edx,offset TIADisplayToColour2
+	mov	[PixelColorTable],edx	;   yes, update pixel to color translation table
 	jmp	UPFC_done		; don't pay attention to score mode...
 
 UPFC_CheckScore:
-	mov	[PixelColorTable],dx	; update pixel to color translation table
+	mov	[PixelColorTable],edx	; update pixel to color translation table
 	test	[TIA+CTRLPF],SCORE	; in score mode?
 	jz	UPFC_done		;   no
-	mov	dx,[P0_Color]		; assume Player 0 color
+	mov	edx,[P0_Color]		; assume Player 0 color
 	cmp	cl,147			; right side of playfield?
 	jbe	UPFC_SetReg		;   no
-	mov	dx,[P1_Color]		;	yes, use Player 1 color
+	mov	edx,[P1_Color]		;	yes, use Player 1 color
 UPFC_SetReg:
-	mov	[PF_Color],dx		; update the register
+	mov	[PF_Color],edx		; update the register
 
 UPFC_done:
 	ret
@@ -603,9 +679,9 @@ UBGtestball:
 	ActivateObject	BL_BIT		;   yes, ActivateObject
 	mov	dl,030h			; mask ball size
 	and	dl,[TIA+CTRLPF]
-	movzx	si,dl
-	shr	si,4
-	mov	dl,[BallSize + si]	; look up in table
+	movzx	esi,dl
+	shr	esi,4
+	mov	dl,[BallSize + esi]	; look up in table
 	mov	[BL_Graphics],dl	; set graphics register
 	ret
 
@@ -624,7 +700,7 @@ UBGnoball:
 UpdatePlayerGraphics macro arg1
 local UPnodelay, UPdone
 
-	mov	dl,[TIA+GR&arg1]	  ; assume regular graphics
+	mov	dl,[TIA+GR&arg1]		; assume regular graphics
 	test	[TIA+VDEL&arg1],1	  ; using delayed register?
 	jz	UPnodelay		;   no
 	mov	dl,[arg1&_Delayed]	  ;   yes, use delayed graphics
@@ -632,11 +708,11 @@ UPnodelay:
 	DeactivateObject arg1&_BIT	  ; assume not active
 	test	dl,dl			; graphics active?
 	jz	UPdone			;	 no, done
-	ActivateObject arg1&_BIT	  ;   yes, ActivateObject
+	ActivateObject arg1&_BIT	  ;	yes, ActivateObject
 	test	[TIA+REF&arg1],08h	  ; reflected?
 	jz	UPdone			;	 no
-	movzx	si,dl			;   yes
-	mov	dl,[TIAReflect8+si]	; reflect it
+	movzx	esi,dl			;   yes
+	mov	dl,[TIAReflect8+esi]	; reflect it
 UPdone:
 	mov	[arg1&_Graphics],dl	  ; update register
 	endm
@@ -677,13 +753,13 @@ local noMissile
 	mov	[arg1&_Graphics],0	  ; clear register
 	test	[TIA+RES&arg1&P],2	  ; missile locked to player?
 	jnz	noMissile		;   yes, no missile
-	test	[TIA+ENA&arg1],2	  ; missile enabled?
+	test	[TIA+ENA&arg1],2		 ; missile enabled?
 	jz	noMissile		;   no
-	ActivateObject arg1&_BIT	  ;   yes, ActivateObject
-	movzx	si,[TIA+NUSIZ&arg1]	  ; size is here
-	and	si,030h			; mask size bits
-	shr	si,4
-	mov	dl,[BallSize + si]	; look up in table
+	ActivateObject arg1&_BIT	  ;	yes, ActivateObject
+	movzx	esi,[TIA+NUSIZ&arg1]	  ; size is here
+	and	esi,030h			; mask size bits
+	shr	esi,4
+	mov	dl,[BallSize + esi]	; look up in table
 	mov	[arg1&_Graphics],dl	  ; update register
 noMissile:
 	endm
@@ -708,28 +784,6 @@ UpdateM1Graphics:
 	UpdateMissileGraphics M1
 
 	ret
-
-;*
-;* table update support macro
-;*
-
-UpdateTable macro arg1
-local regular_ok
-
-	movzx	si,[TIA+NUSIZ&arg1]
-	and	si,7
-	movzx	dx,[arg1&_SizeTable+si]
-	mov	[arg1&_Size],dx
-	shl	si,1
-	mov	dx,[arg1&_RegularTable+si] ; assume regular table
-	cmp	[arg1&_TripleFlag],0
-	jnz	regular_ok
-	mov	dx,[arg1&_MultipleTable+si] ; use multiple table
-
-regular_ok:
-	mov	[arg1&_Table],dx
-
-	endm
 
 ;*
 ;* update P0 Table
@@ -812,19 +866,19 @@ MissileOffset db 5, 5, 5, 5, 5, 8, 5, 12
 LockMissile macro arg1, arg2
 local nowrap
 
-	push	si
-	movzx	si,[TIA+NUSIZ&arg1]
-	and	si,7
-	movzx	dx,[MissileOffset+si]
-	pop	si
+	push	esi
+	movzx	esi,[TIA+NUSIZ&arg1]
+	and	esi,7
+	movzx	edx,[MissileOffset+esi]
+	pop	esi
 
-	add	dx,[arg2&_Position]
-	cmp	dx,227
+	add	edx,[arg2&_Position]
+	cmp	edx,227
 	jbe	nowrap
-	sub	dx,160
+	sub	edx,160
 nowrap:
 	mov	[TIA+RES&arg1],dl
-	mov	[arg1&_Position],dx
+	mov	[arg1&_Position],edx
 
 	endm
 
@@ -862,30 +916,6 @@ H_Null:	ret				; a null TIA register write
 
 
 ;*
-;* a TIA sound register write
-;*
-
-H_Sound:
-	cmp	[_quiet],0		; doing sound at all?
-	jnz	nTRQuiet		;   no
-	cmp	[_Sb_init],0		; SoundBlaster initialized ?
-	jz	nDoPCSpeaker		;   no, use speaker
-
-	mov	bx,si
-	mov	al,[WByte]
-
-	call	_Update_tia_sound
-
-nTRQuiet:
-	ret
-	
-nDoPCSpeaker:
-	mov	bx,si			; bl = register
-	mov	bh,[WByte]		; bh = data
-	call	Sound			; do some PC speaker sound stuff
-	ret
-
-;*
 ;* color setting support macro
 ;*
 
@@ -897,6 +927,10 @@ SetColor macro arg1
 	shr	dl,1			; pre shift right 1 bit
 	mov	[TIA+COLU&arg1],dl	  ; update the register
 	mov	dh,dl
+	shl	edx,8
+	mov	dl,dh
+	shl	edx,8
+	mov	dl,dh
 
 	endm
 
@@ -906,19 +940,19 @@ SetColor macro arg1
 
 H_COLUP0:
 	SetColor P0
-	mov	[P0_Color],dx
+	mov	[P0_Color],edx
 
 	ret
 
 H_COLUP1:
 	SetColor P1
-	mov	[P1_Color],dx
+	mov	[P1_Color],edx
 
 	ret
 
 H_COLUBK:
 	SetColor BK
-	mov	[BK_Color],dx	
+	mov	[BK_Color],edx	
 
 	ret
 
@@ -957,13 +991,13 @@ H_PF:
 	add	bl,bl
 	add	bl,[RClock]		; write occurred here
 
-	and	bx,3
-	mov	dl,[PFDelay+bx]		; render this far into the future
+	and	ebx,3
+	mov	dl,[PFDelay+ebx]		; render this far into the future
 
 	call	CatchUpPixels
 
 	mov	dl,[WByte]
-	mov	[TIA+si],dl		; update the register
+	mov	[TIA+esi],dl		; update the register
 
 	DeactivateObject PF_BIT
 	test	dword ptr [TIA+PF0],0ffffffh  ; test playfield bits
@@ -980,8 +1014,8 @@ H_PFRet:
 DoMotion macro arg1
 local positive, done
 
-	mov	dx,[arg1&_Motion]
-	sub	[arg1&_Position],dx
+	mov	edx,[arg1&_Motion]
+	sub	[arg1&_Position],edx
 	cmp	[arg1&_Position],68
 	jae	positive
 	add	[arg1&_Position],160
@@ -1037,16 +1071,16 @@ MaxMotion label byte
 FixupMotionLow macro arg1
 local MotionOK
 
-	movsx	dx,[TIA+HM&arg1]
-	push	bx
-	movzx	bx,[RClock]
-	movsx	bx,[MaxMotion+bx]
-	cmp	dx,bx
+	movsx	edx,[TIA+HM&arg1]
+	push	ebx
+	movzx	ebx,[RClock]
+	movsx	ebx,[MaxMotion+ebx]
+	cmp	edx,ebx
 	jl	MotionOK
-	mov	dx,bx
-	mov	[arg1&_Motion],dx
+	mov	edx,ebx
+	mov	[arg1&_Motion],edx
 MotionOK:
-	pop	bx
+	pop	ebx
 	endm
 
 ;*
@@ -1068,16 +1102,16 @@ H_HMOVE:
 	call	UpdateM0Graphics
 
 WasntConfused:
-	movsx	dx,[TIA+HMP0]		; xx_Motion is different from HMxx
-	mov	[P0_Motion],dx		; in case we decide to doHMOVE 
-	movsx	dx,[TIA+HMP1]		; somewhere else
-	mov	[P1_Motion],dx
-	movsx	dx,[TIA+HMM0]
-	mov	[M0_Motion],dx
-	movsx	dx,[TIA+HMM1]
-	mov	[M1_Motion],dx
-	movsx	dx,[TIA+HMBL]
-	mov	[BL_Motion],dx
+	movsx	edx,[TIA+HMP0]		; xx_Motion is different from HMxx
+	mov	[P0_Motion],edx		; in case we decide to doHMOVE 
+	movsx	edx,[TIA+HMP1]		; somewhere else
+	mov	[P1_Motion],edx
+	movsx	edx,[TIA+HMM0]
+	mov	[M0_Motion],edx
+	movsx	edx,[TIA+HMM1]
+	mov	[M1_Motion],edx
+	movsx	edx,[TIA+HMBL]
+	mov	[BL_Motion],edx
 
 	mov	[HMOVE_Pending],1	; also in case we doHMOVE elsewhere
 
@@ -1116,20 +1150,20 @@ HiTable db 14, 13, 12, 12, 11, 10, 9, 9, 8, 7, 6, 6, 5, 4, 3, 3, 2, 1, 0, 0
 FixupMotionHi macro arg1
 local SetMotion
 
-	movsx	dx,[TIA+HM&arg1]
-	add	dx,8
-	push	bx
-	movzx	bx,[RClock]
-	sub	bx,55
-	movsx	bx,[HiTable+bx]
-	sub	dx,bx
-	cmp	dx,0
+	movsx	edx,[TIA+HM&arg1]
+	add	edx,8
+	push	ebx
+	movzx	ebx,[RClock]
+	sub	ebx,55
+	movsx	ebx,[HiTable+ebx]
+	sub	edx,ebx
+	cmp	edx,0
 	jg	SetMotion
-	mov	dx,0
+	mov	edx,0
 
 SetMotion:
-	mov	[arg1&_Motion],dx
-	pop	bx
+	mov	[arg1&_Motion],edx
+	pop	ebx
 	endm
 
 
@@ -1183,12 +1217,12 @@ RBL_isweird:
 ;*
 
 RBL_goahead:
-	push	bx			; save object position
+	push	ebx			; save object position
 	call	CatchUpPixels
-	pop	bx			; restore object position
+	pop	ebx			; restore object position
 
 	mov	[TIA+RESBL],bl
-	mov	[BL_Position],bx
+	mov	[BL_Position],ebx
 
 	ret
 
@@ -1204,10 +1238,10 @@ local done
 	jz	done			;   no
 	cmp	[ScanLine],arg1
 	jne	done
-	cmp	bx,arg2+68-5
+	cmp	ebx,arg2+68-5
 	jne	done
 
-	mov	bx,arg3+68-5		  ;   yes, do the cheat
+	mov	ebx,arg3+68-5		  ;	  yes, do the cheat
 
 done:
 	endm
@@ -1219,17 +1253,17 @@ done:
 
 H_RESP0:
 	GetObjectDelay P0
-	push	bx			; save object position
+	push	ebx			; save object position
 	mov	[P0_TripleFlag],al
 	call	CatchUpPixels
 	call	UpdateP0Table
-	pop	bx			; restore object position
+	pop	ebx			; restore object position
 
 	CheatKoolAidePosition 40 54 52
 	CheatKoolAidePosition 49 63 61
 
 	mov	[TIA+RESP0],bl
-	mov	[P0_Position],bx
+	mov	[P0_Position],ebx
 
 	call	UpdateM0Locking
 
@@ -1242,17 +1276,17 @@ H_RESP0:
 
 H_RESP1:
 	GetObjectDelay P1
-	push	bx			; save object position
+	push	ebx			; save object position
 	mov	[P1_TripleFlag],al
 	call	CatchUpPixels
 	call	UpdateP1Table
-	pop	bx			; restore object position
+	pop	ebx			; restore object position
 
 	CheatKoolAidePosition 40 63 65
 	CheatKoolAidePosition 49 72 74
 
 	mov	[TIA+RESP1],bl
-	mov	[P1_Position],bx
+	mov	[P1_Position],ebx
 
 	call	UpdateM1Locking
 
@@ -1267,14 +1301,14 @@ H_RESM0:
 	jnz	noRESM0			;   yes, don't position
 
 	GetObjectDelay M0
-	push	bx			; save object position
+	push	ebx			; save object position
 	mov	[M0_TripleFlag],al
 	call	CatchUpPixels
 	call	UpdateM0Table
-	pop	bx			; restore object position
+	pop	ebx			; restore object position
 
 	mov	[TIA+RESM0],bl
-	mov	[M0_Position],bx
+	mov	[M0_Position],ebx
 
 noRESM0:
 	ret
@@ -1289,14 +1323,14 @@ H_RESM1:
 	jnz	noRESM1			;   yes, don't position
 
 	GetObjectDelay M1
-	push	bx			; save object position
+	push	ebx			; save object position
 	mov	[M1_TripleFlag],al
 	call	CatchUpPixels
 	call	UpdateM1Table
-	pop	bx			; restore object position
+	pop	ebx			; restore object position
 
 	mov	[TIA+RESM1],bl
-	mov	[M1_Position],bx
+	mov	[M1_Position],ebx
 
 noRESM1:
 	ret
@@ -1383,7 +1417,7 @@ NoCatchup:
 	call	UpdateM&arg1&Table
 
 	mov	dl,[P&arg1&_Graphics]
-	push	dx			; save current player graphics
+	push	edx			; save current player graphics
 	mov	[P&arg1&_Graphics],0	  ; set to zero to render nothing
 	GetObjectDelay P&arg1
 	test	dl,dl			; would table switch land us in a sprite?
@@ -1395,11 +1429,11 @@ NoCatchup:
 
 NoCheat:
 	call	CatchUpPixels		;	 yes, render nothing thru new sprite
-					;	      (** messes up rsboxing a little bit -- too far into future **)
-					;	      (** if I ever fix this right, it might fix PROWREST too **)
+					;		     (** messes up rsboxing a little bit -- too far into future **)
+					;		     (** if I ever fix this right, it might fix PROWREST too **)
 
 done:
-	pop	dx
+	pop	edx
 	mov	[P&arg1&_Graphics],dl	  ; restore player graphics
 	ENDM
 
@@ -1513,32 +1547,32 @@ H_GRP1:
 HandleMotion macro arg1
 local NormalMotion
 
-	push	bx
+	push	ebx
 
 	cmp	[HMOVE_Cycle],3
 	jne	NormalMotion
 
 	cmp	[RClock],26
 	jae	NormalMotion
-	movzx	bx,[TIA+HM&arg1]
-	and	bx,0fh
-	shl	bx,4
-	movzx	dx,[WByte]
-	shr	dx,4
-	and	dx,0fh
-	add	bx,dx
-	shl	bx,5
-	movzx	dx,[RClock]
-	and	dx,01fh
-	add	bx,dx
-	mov	dl,[DeepHMOVE + bx]
+	movzx	ebx,[TIA+HM&arg1]
+	and	ebx,0fh
+	shl	ebx,4
+	movzx	edx,[WByte]
+	shr	edx,4
+	and	edx,0fh
+	add	ebx,edx
+	shl	ebx,5
+	movzx	edx,[RClock]
+	and	edx,01fh
+	add	ebx,edx
+	mov	dl,[DeepHMOVE + ebx]
 	test	dl,dl
 	jz	NormalMotion
 	cmp	dl,99
 	je	NormalMotion		; cosmic is normal for now
-	movsx	dx,dl
-	neg	dx
-	mov	[arg1&_Motion],dx
+	movsx	edx,dl
+	neg	edx
+	mov	[arg1&_Motion],edx
 	DoMotion arg1
 	cmp	[_TraceCount],0
 	jz	NormalMotion
@@ -1551,7 +1585,7 @@ NormalMotion:
 	mov	dl,[WByte]
 	sar	dl,4			; pre-shift right 4 bits (preserve sign)
 	mov	[TIA+HM&arg1],dl
-	pop	bx
+	pop	ebx
 
 	endm
 
@@ -1605,7 +1639,7 @@ NotConfused:
 
 H_HMCLR:
 	mov	dl,[WByte]
-	push	dx
+	push	edx
 	mov	[WByte],0
 
 	CheckDeep
@@ -1626,7 +1660,7 @@ HMC_NotConfused:
 	HandleMotion P1
 	HandleMotion BL
 
-	pop	dx
+	pop	edx
 	mov	[WByte],dl
 	jmp	HMCLR_Done
 
