@@ -101,7 +101,10 @@ SetupBanks:
 	mov	[TVSlice0],0
 	mov	[TVSlice1],3*800h
 	mov	[TVSlice032],0
-	mov	[TVSlice132],15*800h
+        mov     eax,[_CartSize]         ; make last 2K bank fixed for 3F games
+        sub     eax,2048
+        mov     [TVSlice132],eax
+;        mov     [TVSlice132],15*800h
 	mov	[MNSlice0],0
 	mov	[MNSlice1],7*800h
 	mov	[MNRamSlice],0
@@ -129,20 +132,19 @@ DetectBySize:
 	je	Set32kMode		; 32K cart
 	cmp	eax,028ffh
 	je	SetPitfallII		; Pitfall II cart
-	cmp	eax,8448
-	je	SetStarpath		; Supercharger image
-	cmp	eax,8448*2
-	je	SetStarpath
-	cmp	eax,8448*3
-	je	SetStarpath
-	cmp	eax,8448*4
-	je	SetStarpath
-	cmp	eax,6144
-	je	SetStarpath
-;        cmp     eax,33799
         cmp     eax,65536
 	je	SMB			; Megaboy 64K cart *EST*
-	ret
+	cmp	eax,6144
+        je      SetStarpath             ; Supercharger image
+        mov     ebx,8448                ; file size is multiple of 8448 bytes?
+        xor     edx,edx
+        div     ebx
+        cmp     edx,0
+        je      SetStarpath             ; ... must be Supercharger game
+	mov	eax,[_CartSize]
+        cmp     eax,65536
+        ja      Set32kTVMode            ; large Tigervision game
+        ret
 
 
 ; Setup CompuMate
@@ -180,6 +182,10 @@ Set32kMode:
 
 SMB:	mov	[_BSType],18
 	ret
+
+Set32kTVMode:
+        mov     [_BSType],11
+        ret
 
 ;*
 ;* hardware read/write testing macros
@@ -599,6 +605,7 @@ WBank8pb:
 
 ;*
 ;* Tigervision 8K cart
+;* extended to 512K, but $1800-$1FFF still is the fixed bank
 ;*
 
 TV_SetSlice macro
@@ -608,7 +615,8 @@ local NoChange
 	ja	NoChange
 
 	mov	al,[WByte]
-	and	eax,3
+;        and     eax,3
+        and     eax,0ffh
 	shl	eax,11			; new bank
 	mov	[TVSlice0],eax
 
@@ -638,6 +646,7 @@ WBank8tv:
 
 ;*
 ;* Tigervision 32K cart
+;* extended to 512K - last 2K in ROM get used as fixed bank
 ;*
 
 TV_SetSlice32 macro

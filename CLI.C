@@ -14,6 +14,8 @@
 ** load next Starpath Rom
 */
 
+#define SC_LOAD0_SAVE 515330    // where in ROM buffer to save Load 0
+
 void cli_LoadNextStarpath(void)
 {
     dd i,j, LoadCount, LoadNum;
@@ -22,15 +24,15 @@ void cli_LoadNextStarpath(void)
 	db *q;
 
         SC_StartAddress=0;
-        LoadCount=4;
+        LoadCount=61;
         LoadNum=SC_ControlByte;
-        for (i = 1; i < 4; i++)
+        for (i = 1; i < 61; i++)
         {
                 if (CartRom[i*8448 + 0x2005] == LoadNum) LoadCount=i;
         }
         LoadNum=LoadCount;
 
-        if (LoadNum == 4) return;
+        if (LoadNum == 61) return;
 
         pagecount = CartRom[LoadNum*8448 + 0x2003];
 
@@ -66,7 +68,7 @@ void cli_ReloadStarpath(void)
         {
                 for(i = 0; i < 6144; i++)
                 {
-                        CartRom[i]=CartRom[33792+i];
+                        CartRom[i]=CartRom[SC_LOAD0_SAVE+i];
                 }
                 SC_StartAddress=CartRom[0x17fd]*256+CartRom[0x17fc];
                 SC_ControlByte=0x0d;
@@ -80,7 +82,7 @@ void cli_ReloadStarpath(void)
 		pageadr = ((pagebyte & 3) * 0x800) + ((pagebyte & 0x1f) >> 2) * 256;
 
                 p = CartRom + pageadr;
-                q = CartRom + 33792 + i*256;
+                q = CartRom + SC_LOAD0_SAVE + i*256;
 		for (j = 0; j < 256; j++)
 		{
                         *p++ = *q++;
@@ -224,13 +226,12 @@ unsigned char SCBIOS[188] = {
 		}
 	}
 
-        if ((CartSize == 6144)||(CartSize == 8448)||(CartSize == 2*8448)
-                ||(CartSize == 3*8448)||(CartSize == 33792))
+        if ((CartSize == 6144)||(CartSize % 8448 == 0))
         /* Starpath image -- reload according to page table */
 	{
                 for (i = 0; i < 8448; i++)      /* save first SC load */
                 {
-                        CartRom[i+33792] = CartRom[i];
+                        CartRom[i+SC_LOAD0_SAVE] = CartRom[i];
                 }
 
                 for (i = 0; i < 0x2000; i++)    /* fill everything with Starpath halts */
