@@ -166,8 +166,8 @@ WrTiaImmediateVector	dw	WrTiaVSync	; 0
 ; cycle offset table
 
 ;CO=-1	;default cycle offset
-CO=-1	; -1 for buck rogers
-C1=-2	; -1 for yars -2 for tron
+CO=0	; -1 for Oscar
+C1=-2	;(-2) -1 for yars -2 for tron
 C2=0	; 0 for vidcube
 C3=0	; -1
 C4=0	; -1

@@ -136,6 +136,11 @@ PAGE 66,132
 ; (1.04) June 15, 1998  work on CPU
 ;
 ; (1.05) June 19, 1998  work on CPU
+;
+; (1.06) June 27, 1998  new CPU design
+;			opcode definition macros
+;			timing in effective address calculation
+;			change timing of some TIA writes, CO=0
 
 
 ; assembly time definitions
@@ -191,7 +196,6 @@ entry:	jmp	start			; jump around our data
 	include trace.asm		; trace buffer stuff
 	include banks.asm		; bank switch code
 	include cpu.asm			; 6502 opcodes, macros and support routines
-	include pmath.asm		; Perazzoli's decimal arithmetic routines
 	include cpuhand.asm		; cpu memory & register handlers
 	include tia.asm			; <-- the main machine -- * start here *
 	include tiahand.asm		; TIA register handlers

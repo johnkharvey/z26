@@ -264,6 +264,8 @@ SSLINE:
 	je	Line34			; zoofun
 	cmp	ax,0f5b3h
 	je	Line34			; starempr
+	cmp	ax,05317h
+	je	Line36			; reactor
 
 
 	jmp	SSTR			; process Timer1 requests
