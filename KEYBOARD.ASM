@@ -6,15 +6,18 @@
 ;
 ; *****************************************************************************
 
+
+; April 11, 1998 -- Modified key assignments to match V-Stick
+
 ;*
 ;* a keyboard macro
 ;*
 
-ifpress macro   op1,op2                 ; if key #1 pressed drop bit
+ifpress macro   op1,op2			; if key #1 pressed drop bit
         local   M1
-        test    [KeyTable+op1],128  ; #2 of ah (128,64,32...1)
+        test    [KeyTable+op1],128	; #2 of ah (128,64,32...1)
         jz      M1
-        and     ah,255-op2               ; drop a bit
+        and     ah,255-op2		; drop a bit
 M1:
         endm
 
@@ -24,28 +27,33 @@ KeyEsc	=		1		; ESC (Quit to DOS)
 
 KeyF1	=		03Bh		; F1  (Reset)
 KeyF2	=		03Ch		; F2  (Select)
-KeyF3	=		03Dh		; F3  (unassigned)
-KeyF4	=		03Eh		; F4  (unassigned)
-KeyF5	=		03Fh		; F5  (unassigned)
-KeyF6	=		040h		; F6  (unassigned)
-KeyF7	=		041h		; F7  (unassigned)
-KeyF8	=		042h		; F8  (unassigned)
-KeyF9	=		043h		; F9  (Black and White)
-KeyF10	=		044h		; F10 (Color)
+KeyF3	=		03Dh		; F3  (B/W)
+KeyF4	=		03Eh		; F4  (Color)
+KeyF5	=		03Fh		; F5  (P0 easy)
+KeyF6	=		040h		; F6  (P0 hard)
+KeyF7	=		041h		; F7  (P1 easy)
+KeyF8	=		042h		; F8  (P1 hard)
+KeyF9	=		043h		; F9  (unassigned)
+KeyF10	=		044h		; F10 (unassigned)
 
 KeyLeft	=		04Bh		; Left arrow
 KeyRight =		04Dh		; Right	arrow
 KeyUp =			048h		; Up arrow
 KeyDown	=		050h		; Down arrow
-KeySpace =		039H		; Space Bar (Fire)
 
-;KeyRAlt	=		038h		; Right	Alt (fire)
+KeyCtrl = 		01dh		; Ctrl
 
-KeyZ =			02Ch		; Z (P2	left)
-KeyX =			02Dh		; X (P2	right)
-KeyC =			02Eh		; C (P2	down)
-KeyF =			021h		; F (P2	Up)
-KeyG =			022h		; G (P2	Fire)
+;KeyZ =			02Ch		; Z (P2	left)
+;KeyX =			02Dh		; X (P2	right)
+;KeyC =			02Eh		; C (P2	down)
+;KeyF =			021h		; F (P2	Up)
+;KeyG =			022h		; G (P2	Fire)
+
+KeyS =			01fh		; S (P2 left)
+KeyF =			021h		; F (P2 right)
+KeyE =			012h		; E (P2 up)
+KeyD =			020h		; D (P2 down)
+KeyN =			031h		; N (P2 fire)
 
 KeyP =			019H		; P (pause game)
 KeyEnter =		01CH		; Enter (resume game)
@@ -53,41 +61,72 @@ KeyEnter =		01CH		; Enter (resume game)
 KeyEquals =		00Dh		; = (do a screen dump)
 KeyMinus=		00Ch		; unassigned
 
+
+; define control keys
+
+P1Left = 	KeyLeft
+P1Right = 	KeyRight
+P1Up = 		KeyUp
+P1Down = 	KeyDown
+P1Fire = 	KeyCtrl
+
+P2Left = 	KeyS
+P2Right = 	KeyF
+P2Up = 		KeyE
+P2Down = 	KeyD
+P2Fire = 	KeyN
+
+ResetKey =	KeyF1
+SelectKey =	KeyF2
+BWKey =		KeyF3
+ColorKey = 	KeyF4
+P0Easy=		KeyF5
+P0Hard=		KeyF6
+P1Easy=		KeyF7
+P1Hard=		KeyF8
+
+
 Controls:
 	mov	ah,[IOPortB]		; turn on Select and Reset bits
 	or	ah,03h
-	test	[KeyTable+KeyF1],128
+	test	[KeyTable+ResetKey],128
 	jz	Ctrl1			; F1 pressed (Reset) - drop bit 0 (1)
 	and	ah,0FEh
-Ctrl1:	test	[KeyTable+KeyF2],128
-	jz	Ctrl1a			; F2 pressed (Select) - drop bit 1 (2)
+Ctrl1:	test	[KeyTable+SelectKey],128
+	jz	Ctrl1a			; (Select) - drop bit 1 (2)
 	and	ah,0FDh
-Ctrl1a:	test	[KeyTable+KeyF5],128	; F5 pressed (p0 easy) - drop bit 6 (64)
+Ctrl1a:	test	[KeyTable+P0Easy],128	; (p0 easy) - drop bit 6 (64)
 	jz	Ctrl1b
 	and	ah,0BFh
-Ctrl1b:	test	[KeyTable+KeyF6],128	; F6 pressed (p0 hard) - set bit 6 (64)
-	jz	Ctrl2
+Ctrl1b:	test	[KeyTable+P0Hard],128	; (p0 hard) - set bit 6 (64)
+	jz	Ctrl1c
 	or	ah,64
-Ctrl2:	test	[KeyTable+KeyF9],128
-	jz	Ctrl2a			; F9 pressed (Black and white) drop bit 3 (8)
+Ctrl1c:	test	[KeyTable+P1Easy],128	; (p1 easy) -- drop bit 7 (128)
+	jz	Ctrl1d
+	and	ah,07fh
+Ctrl1d:	test	[KeyTable+P1Hard],128	; (p1 hard) -- set bit 7 (128)
+	jz	Ctrl2
+	or	ah,128
+Ctrl2:	test	[KeyTable+BWKey],128
+	jz	Ctrl2a			; (Black and white) drop bit 3 (8)
 	and	ah,0F7h
-Ctrl2a:	test	[KeyTable+KeyF10],128
-	jz	Ctrl2b			; F10 pressed (Color) set bit 3 (8)
+Ctrl2a:	test	[KeyTable+ColorKey],128
+	jz	Ctrl2b			; (Color) set bit 3 (8)
 	or	ah,08h
 Ctrl2b: 
 	mov	[IOPortB],ah
 
 	mov	ah,0FFh			; now do the switches
 
-	ifpress	KeyRight,128
-	ifpress	KeyLeft,64
-	ifpress	KeyDown,32
-	ifpress	KeyUp,16
+	ifpress	P1Right,128
+	ifpress	P1Left,64
+	ifpress	P1Down,32
+	ifpress	P1Up,16
 
-	ifpress	KeyX,8
-	ifpress	KeyZ,4
-	ifpress	KeyC,2
-	ifpress	KeyF,1
+	ifpress	P2Right,8
+	ifpress	P2Left,4
+	ifpress	P2Down,2
+	ifpress	P2Up,1
 
 	mov	[IOPortA],ah		; save the Port	A Switches
 
@@ -95,10 +134,10 @@ Ctrl5:	mov	[InputLatch],080h
 	mov	[InputLatch+1],080h
 CTLatching:
 
-	test	[KeyTable+KeySpace],128
+	test	[KeyTable+P1Fire],128
 	jz	Ctrl3			; handle 'fire'	from p1
 	mov	[InputLatch],0h
-Ctrl3:	test	[KeyTable+KeyG],128
+Ctrl3:	test	[KeyTable+P2Fire],128
 	jz	Ctrl4			; handle 'fire'	from p2
 	mov	[InputLatch+1],0h
 Ctrl4:	test	[KeyTable+KeyP],128

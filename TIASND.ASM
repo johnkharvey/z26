@@ -208,8 +208,8 @@ _Tia_process	proc	near
 	mov	[buffer],ax
 	mov	ax,[bp+6]
 	mov	[n],ax
-	mov	[prev_sample],0
-	mov	[next_sample],0
+;	mov	[prev_sample],0
+;	mov	[next_sample],0
 
 TP_ProcessLoop:
 
@@ -328,9 +328,10 @@ TP_ProcessDone:
 	mov	bx,[buffer]
 	mov	[bx],al			; put byte in the buffer
 	inc	[buffer]		; bump buffer pointer
+
 	dec	[n]			; one less byte to do
-	cmp	[n],0
-	jne	TP_ProcessLoop
+;	cmp	[n],0
+	jnz	TP_ProcessLoop
 
 	pop	bp
 	ret	

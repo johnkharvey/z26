@@ -107,9 +107,12 @@ PAGE 66,132
 ;
 ; (0.98)  Apr  6, 1998  pure assembly language sound drivers
 ;
-; (0.98a) Apr  9, 1998  pure assembly language everything
+; (0.99)  Apr  9, 1998  pure assembly language everything
 ;                       (re-wrote Ron Fries' TIASound in asm)
-
+;
+; (1.00)  Apr 17, 1998  fixed a sound bug in DSP (introduced in 0.99)
+;			turn on hardware low pass filter on version 3.xx DSP
+;			re-map keyboard and support 2 player joystick games
 
 
 ; assembly time definitions

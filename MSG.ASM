@@ -6,23 +6,25 @@
 
 ; ShowCopyright messages (note: only last message is terminated)
 
-msg01	db	10, 10, 'z26 -- An Atari 2600 emulator (0.99)', 10
-msg02	db	'Copyright (C) 1997-1998 by John Saeger', 10, 10
+msg01	db	10, 10, 'z26 -- An Atari 2600 emulator (1.00)', 10
+msg02	db	'Copyright (C) 1997-1998 by John Saeger', 10
 msg03	db	'Home Page:  http://www.whimsey.com/z26', 10, 10
-msg04	db	'    F1 -- reset        F2 -- select    F5 -- P0 easy      F6 -- P0 hard', 10
-msg05	db	'    F9 -- B/W         F10 -- color      p -- pause     ENTER -- resume', 10
-msg06	db	' SPACE -- fire        ESC -- quit game  = -- PCX screen capture', 10, 10
-msg07	db	'The Atari joystick is emulated with the arrow keys.', 10, 10
+msg04	db	'    F1 -- reset      F2 -- select     F3 -- B/W        F4 -- Color', 10
+msg05	db	'    F5 -- P0 easy    F6 -- P0 hard    F7 -- P1 easy    F8 -- P1 hard', 10
+msg05a	db	'     p -- pause   ENTER -- resume    ESC -- quit        = -- PCX screen capture', 10, 10
+msg06	db	'Player 0 controls: CTRL -- fire, Use arrow keys to move.', 10
+msg07	db	'Player 1 controls:    n -- fire, s -- left, e -- up, f -- right, d -- down', 10, 10
 msg08	db	'Command Line Switches (put before filename)', 10, 10
-msg09	db	' -0    -- player 0 hard', 10
-msg10	db	' -r    -- do not wait for VGA retrace (full speed)', 10
+msg08a	db	' -0    -- player 0 hard, -1 -- player 1 hard', 10
+msg10	db	' -r    -- do not wait for VGA retrace (full speed) ', 10
+msg10a	db	' -r1   -- use old vertical sync code (if your system seems to hang)', 10
 msg11	db	' -q    -- quiet (no sound)', 10
 msg12	db	' -s    -- show sound diagnostic messages', 10
 msg13	db	' -f<n> -- run emulator for <n> frames and display timing results', 10
 msg14	db	' -d<n> -- use digital signal processing on sound (1=low, 2=high)', 10
 msg15	db	' -v<n> -- video mode (0=70Hz, 1=60Hz, 2=60Hz narrow, 3=60Hz 204 scan lines)', 10
 msg16	db	' -j<n> -- joystick (0=joystick off)', 10
-msg17	db	' -c    -- show credits (please do!)', 10, 10, '$'
+msg17	db	' -c    -- show credits (please do!)', 10,'$'
 
 ; ShowCredits messages (note: only last message is terminated)
 

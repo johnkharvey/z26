@@ -763,7 +763,14 @@ _SetupSoundBlaster:
 	mov	bx,31400		; assume faster playback freq
 	cmp	ax,0400h		; DSP version >= 4.00?
 	jge	SSB_SetPlayback		;   yes, normal DMA O.K.
-	mov	[HiSpeedDMA],1		; else need Hi-Speed DMA
+	mov	[HiSpeedDMA],1		; DSP == 3.xx -- need Hi-Speed DMA
+	mov	dx,[_sbBaseIOPort]
+	add	dx,4
+	mov	al,0eh			; select output filter register
+	out	dx,al
+	inc	dx			; point to mixer data port
+	xor	al,al
+	out	dx,al			; turn on output filter
 SSB_SetPlayback:
 	mov	[_playback_freq],bx
 
