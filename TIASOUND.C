@@ -7,6 +7,8 @@
 ** Jan  7, 1998 -- Moved modified Fillbuffer here for convenience.
 **
 ** Jan 16, 1998 -- Added digital signal processing.
+**
+** Mar 26, 1998 -- Changed DMABufToLoad to a static unsigned char
 */
 
 
@@ -215,8 +217,7 @@ int ShiftRegister9()
 ** modified by John Saeger (Jan 8, 1998) to use sb.c Sound Blaster routines
 */
 
-char Sb_init = 0;
-static unsigned short DMABufToLoad = 0;
+static unsigned char DMABufToLoad = 0;
 extern unsigned int gHalfBufSize;
 extern unsigned int dsp;
 

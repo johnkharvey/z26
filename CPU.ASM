@@ -181,6 +181,10 @@ absolutex_rmw macro			; * Perazzoli *
 	bumpclock
 	endm	
 
+x_absolutex_rmw macro
+	absolutex
+	endm
+
 absolutey macro                         ; absolute,y EAC
         absolute
         mov     dx,bx			; set up for pagechange test
@@ -192,6 +196,10 @@ absolutey_rmw macro			; * Perazzoli *
 	absolute
 	indexy
 	bumpclock
+	endm
+
+x_absolutey_rmw macro
+	absolutey
 	endm
 
 zeropagex macro                         ; zeropage,x EAC

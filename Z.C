@@ -46,12 +46,27 @@
 **                       fix the joystick games that previously didn't work with 
 **			 the joystick
 **
+** (0.96)  Mar 18, 1998  made sound initialization wait for Windows 95 to finish with
+**			 the sound card
+**
+**			 added timeouts to vertical sync code that causes automatic
+**			 reversion to old code if timeout occurs
+**
+**			 reverse sync on space invaders (still doesn't fix)
+**
+**			 sound off during pause for all sound cards
+**
+**	   Mar 27, 1998	 put part of sound drivers in assembly language
+**     			 based in part on Asteroids v3.02 (c) 1997 by Chris Pile
+**			 fixes rare sound related lockup on exit
+**
 */
 
 #include <stdio.h>		/* puts */
 #include <stdlib.h>		/* getenv */
 #include <dos.h>		/* _psp */
-#include <alloc.h>		/* farmalloc */
+
+char Sb_init = 0;		/* mark Sound Blaster currently not in use */
 
 #include "sb.c"			/* Sound Blaster driver code */
 #include "tiasound.c"		/* Ron Fries' sound code */
@@ -95,12 +110,12 @@ PressKeyToContinue()
 
 ShowBlaster()
 {
-    printf("           I/O port: %x (hex)\n",  gBlaster.BaseIOPort);
-    printf("          DMA 8-bit: %d\n",        gBlaster.DMAChan8Bit);
-    printf("         DMA 16-bit: %d\n",        gBlaster.DMAChan16Bit);
-    printf("                IRQ: %d\n",        gBlaster.IRQNumber);
-    printf("        DSP Version: %d.%02d\n",  (gBlaster.DSPVersion >> 8) & 0x00FF,
-				              (gBlaster.DSPVersion & 0x00FF));
+    printf("           I/O port: %x (hex)\n",  sbBaseIOPort);
+    printf("          DMA 8-bit: %d\n",        sbDMAChan8Bit);
+    printf("         DMA 16-bit: %d\n",        sbDMAChan16Bit);
+    printf("                IRQ: %d\n",        sbIRQNumber);
+    printf("        DSP Version: %d.%02d\n",  (sbDSPVersion >> 8) & 0x00FF,
+				              (sbDSPVersion & 0x00FF));
 }
 
 /*
@@ -112,14 +127,6 @@ StartSound()
   if (Sb_init)
   {
     ProgramDSP(gDMABufSize / 2, &gSoundStyle, AUTO_INIT);	/* turn on DMA */
-  }
-}
-
-StopSound()
-{
-  if (Sb_init)
-  {
-    ResetDSP(gBlaster.BaseIOPort);		/* turn off DMA */
   }
 }
 
@@ -149,10 +156,10 @@ main()
 
   if (DoCopyright)
   {
-    puts("\n\nz26 -- An Atari 2600 emulator (0.95)");
+    puts("\n\nz26 -- An Atari 2600 emulator (0.96)");
     puts("Copyright (C) 1997-1998 by John Saeger\n");
 
-    puts("Home Page:  http://www.whimsey.com/z26.html\n");
+    puts("Home Page:  http://www.whimsey.com/z26\n");
 
     puts("    F1 -- reset        F2 -- select    F5 -- P0 easy      F6 -- P0 hard");
     puts("    F9 -- B/W         F10 -- color      p -- pause     ENTER -- resume");
@@ -185,6 +192,9 @@ main()
     puts("60Hz chained video modes courtesy of Jim Leonard (Trixter / Hornet).");
     puts("                                                 (trixter@hornet.org)\n");
 
+    puts("Assembly language sound drivers based in part on Asteroids v3.02.");
+    puts("(c) 1997 by Chris Pile (pegasus@enterprise.net)\n");
+
     puts("z26 is provided without any warranty of any kind, either express or implied.");
     puts("Neither John Saeger, nor anyone who has worked on the code, may be held");
     puts("responsible for any damages caused by the use of z26.\n");
@@ -201,7 +211,7 @@ main()
 
   if (quiet) goto no_sound;
 
-  if (GetBlastEnv(&gBlaster) == FAIL)
+  if (GetBlastEnv() == FAIL)
   {
     if (verbose)
     {
@@ -211,7 +221,7 @@ main()
     goto no_sound;
   }
 
-  if (gBlaster.DSPVersion < 0x0200)  /* DSP version < 2.xx */
+  if (sbDSPVersion < 0x0200)  /* DSP version < 2.xx */
   {
     if (verbose)
     {
@@ -222,19 +232,18 @@ main()
     goto no_sound;
   }
 
-  if (gBlaster.DSPVersion == 0x200)  /* DSP version = 2.00 */
+  if (sbDSPVersion == 0x200)  /* DSP version = 2.00 */
   {
     playback_freq = SAMPLE_FREQ / 2;	/* was 15700 */
   }
 
   Tia_sound_init (sample_freq, playback_freq);
 
-  gDMABufSize = 256;		/* 64 bytes per interrupt */
-				/* experimental "a"=256/2 "b"=512/2 */
+  gDMABufSize = 256;		/* 128 bytes per interrupt */
 
   gHalfBufSize = gDMABufSize / 2;
 
-  DMABufPhysAddr = AllocateDMABuffer(&DMABuf, &gDMABufSize);
+  DMABufPhysAddr = AllocateDMABuffer();
   if (DMABufPhysAddr == FAIL)
   {
     puts("Couldn't allocate memory for sound buffer.");
@@ -242,8 +251,8 @@ main()
     return;
   }
 
-  memset(DMABuf, gDMABufSize, 0);	/* clear out sound buffer */
-					/* to minimize startup noises */
+  SilenceBuffer();		/* fill sound buffer with silence */
+
 
   gSoundStyle.BitsPerSample = 8;	/* 8 bit */
   gSoundStyle.Channels = 1;		/* mono */
@@ -262,23 +271,21 @@ main()
     PressKeyToContinue();
   }
 
-  ResetDSP(gBlaster.BaseIOPort);	/* knock-knock */
+  DMABufToLoad = 1;		/* next half buffer to load is top half */
+  gDMABufNowPlaying = 0;	/* altered by ISR when buffer done playing */
+  gHighSpeed = FALSE;		/* init to NOT hi-speed DMA */
 
-  DMABufToLoad = 1;			/* next half buffer to load is top half */
-  gDMABufNowPlaying = 0;		/* altered by ISR when buffer done playing */
-  gHighSpeed = FALSE;			/* init to NOT hi-speed DMA */
-
-  SetDmaISR(&gBlaster);  		/* setup the interrupt handler */
+  SetISR();			/* set up the interrupt handler */
 
   ProgramDMA(DMABufPhysAddr, &gSoundStyle, gDMABufSize);
 
 /*  ProgramDSP(gDMABufSize / 2, &gSoundStyle, AUTO_INIT); */
 
-  Sb_init = 1;				/* mark Sound Blaster initialized */
+  Sb_init = 1;			/* mark Sound Blaster initialized */
 
 no_sound:
 
-  emulator();				/* call emulator (tia.asm) */
+  emulator();			/* call emulator (tia.asm) */
 
 free_mem:
   free(CartRom);
@@ -286,9 +293,8 @@ free_mem:
 
   if (Sb_init)
   {
-    ResetDSP(gBlaster.BaseIOPort);	/* stop DMA */
-    RestoreOldISR(&gBlaster); 		/* restore old ISR */
-    free(DMABuf);
+    RestoreISR();		/* turn off DMA & restore old ISR */
+    free(MallocDMABuf);
   }
 
 }

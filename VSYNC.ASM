@@ -2,10 +2,15 @@
 ;* vertical synchronization code
 ;*
 
+; Mar 18, 1998  (0.96) added timeout code
+
 WaitForDisplayEnable macro
 local	enwait
 
+	xor	bx,bx
 enwait:	in	al,dx			; wait for display enable
+	inc	bx
+	jz	vsync_timeout
 	test	al,1
 	jnz	enwait
 	endm
@@ -13,7 +18,10 @@ enwait:	in	al,dx			; wait for display enable
 WaitForDisplayDisable macro
 local	diswait
 
+	xor	bx,bx
 diswait:in	al,dx			; wait for display disable
+	inc	bx
+	jz	vsync_timeout
 	test	al,1
 	jz	diswait
 	endm
@@ -21,10 +29,22 @@ diswait:in	al,dx			; wait for display disable
 LoopUntilDisplayEnable macro
 local	actwait
 
+	xor	bx,bx
 actwait:in	al,dx			; loop until display enable becomes active
+	inc	bx
+	jz	vsync_timeout
 	test	al,1
 	loopnz	actwait
 	endm
+
+;*
+;* if any of the above loops times out, default to old video mode
+;*
+
+vsync_timeout:
+	mov	[NoRetrace],1
+	pop	es
+	ret	
 
 
 
@@ -106,7 +126,7 @@ VSRet:
 .CEND
 .DATASEGMENT
 
-NDILoops	dw	0		; holds length of NDI * 1.5
+NDILoops	dw	0		; holds length of NDI * 2
 
 .DEND
 .CODESEGMENT

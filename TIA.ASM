@@ -5,7 +5,7 @@
 ALIGN_ENTRY
 
 EXTRN _StartSound:near;
-EXTRN _StopSound:near;
+;EXTRN _StopSound:near;
 
 
 start:
@@ -112,8 +112,9 @@ ALIGN_ENTRY
 
 EXTRN _Sb_init:BYTE
 EXTRN _Fillbuffer:near
-EXTRN _PauseDMA:near
-EXTRN _ContinueDMA:near
+
+;EXTRN _PauseDMA:near
+;EXTRN _ContinueDMA:near
 
 xmain:  
 	cmp	[FrameExit],0		; exiting after <n> frames ?
@@ -140,13 +141,14 @@ PausedLoop:
 PauseDMA:
 	cmp	[_Sb_init],0		; SoundBlaster initialized ?
 	jz	PDRET			;   no, just return
-	call	_PauseDMA		;   yes, pause DMA
+	call	_SilenceBuffer		;   yes, fill buffer with silence
+;	call	_PauseDMA		;   yes, pause DMA
 PDRET:	ret
 
 ContinueDMA:
 	cmp	[_Sb_init],0		; SoundBlaster initialized ?
 	jz	CDRET			;   no, just return
-	call	_ContinueDMA		;   yes, continue DMA
+;	call	_ContinueDMA		;   yes, continue DMA
 CDRET:	ret
 
 ;*
@@ -182,7 +184,7 @@ GoTIME:
 	sti
 
 	call	SoundOff		; turn sound off (PC speaker)
-	call	_StopSound		; turn sound off (Soundblaster)
+;	call	_StopSound		; turn sound off (Soundblaster)
 	call	TIATextMode
 	call	SetOldInt9
 
@@ -209,7 +211,7 @@ GoTIME:
 
 GoDOS:
 	call	SoundOff		; turn sound off (PC speaker)
-	call	_StopSound		; turn sound off (Soundblaster)
+;	call	_StopSound		; turn sound off (Soundblaster)
 	call	TIATextMode		; back to text mode
 	call	SetOldInt9		; reset the key handler
 

@@ -120,8 +120,11 @@ CtrlPCX:test	[KeyTable+KeyEquals],128
         mov [KeyTable+KeyEquals],0
 
 CtrlExit:
+	test	[GamePaused],1		; game paused ?
+	jnz	CtrlRet			;   yes, don't check joystick (sound off)	
 	call	Joystick		; peaceful coesistance between
 					; keyboard and joystick
+CtrlRet:
 	ret
 	
 

@@ -88,6 +88,7 @@ entry:	jmp	start			; jump around our data
 	include joy.asm			; joystick routines
 	include dosmem.asm		; DOS far memory allocator
 	include sound.asm		; PC speaker support
+	include sbdrv.asm		; sound blaster assembly code
 	include graphics.asm		; VGA graphics initialization
 	include vsync.asm		; vertical synchronization
 	include tia.asm			; <-- the main machine -- * start here *

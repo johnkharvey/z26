@@ -26,6 +26,8 @@ SetupSpecial:
 	je	SSReverse		; packong
 	cmp	ax,08b88h
 	je	SSReverse		; ramit
+	cmp	ax,0a402h
+	je	SSReverse		; spaceinv
 	cmp	ax,0deb1h
 	je	SSReverse		; supercce
 	cmp	ax,0ddb2h
