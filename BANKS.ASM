@@ -18,6 +18,8 @@ SetupBanks:
 	je	Set16kMode		; 16K cart
 	cmp	ax,08000h
 	je	Set32kMode		; 32K cart
+	cmp	ax,028ffh
+	je	SetPitfallII		; Pitfall II cart
 	ret
 
 Set8kMode:
@@ -51,6 +53,8 @@ Set8kMode:
 	je	SPB			; docastle
 	cmp	ax,09379h
 	je	SPB			; toothpro
+	cmp	eax,0e1923h
+	je	SPB			; jamebond
 
 	cmp	ax,0e35eh
 	je	STV			; riverp
@@ -70,9 +74,16 @@ Set8kMode:
 	cmp	ax,0f815h
 	je	SFE			; robotank
 
-
 	mov	[ReadBank], offset RBank8
 	mov	[WriteBank], offset WBank8
+
+	cmp	eax,0d7238h		; priveye
+	je	F8Backwards
+
+	mov	[RomBank],01000h	; need this for moonswep and lancelot
+	ret
+
+F8Backwards:
 	ret
 
 
@@ -140,8 +151,21 @@ Set16kMode:
 	ret
 
 Set32kMode:
+	mov	eax,[_Checksum]
+	cmp	eax,0299233h
+	je	SetFatalRun
+	mov	[ReadBank], offset RBank32tv
+	mov	[WriteBank], offset WBank32tv
+	ret
+
+SetFatalRun:
 	mov	[ReadBank], offset RBank32sc
 	mov	[WriteBank], offset WBank32sc
+	ret
+
+SetPitfallII:
+	mov	[ReadBank], offset RBank8P2
+	mov	[WriteBank], offset WBank8P2
 	ret
 
 
@@ -523,6 +547,50 @@ WBank8tv:
 
 
 ;*
+;* Tigervision 32K cart
+;*
+
+TV_SetSlice32 macro
+local NoChange
+
+	cmp	si,03fh
+	ja	NoChange
+
+	push	ax
+	mov	al,[WByte]
+	and	ax,0fh
+	shl	ax,11			; new bank
+	mov	[TVSlice032],ax
+	pop	ax
+
+NoChange:
+	endm
+
+TV_MapSlice32 macro
+	push	bx
+	mov	bx,si
+	and	bx,0fffh
+	shr	bx,11			; slice # we're in
+	shl	bx,1			; *2
+	and	si,07ffh		; mask low order bits
+	add	si,[TVSlice032 + bx]	; point to proper ROM slice
+	add	si,offset _CartRom
+	pop	bx
+	endm
+
+
+RBank32tv:
+	test_hw_read
+	TV_MapSlice32
+	ret
+
+WBank32tv:
+	TV_SetSlice32
+	test_hw_write
+	ret
+
+
+;*
 ;* FE 8K bankswitch scheme -- flat model
 ;*
 
@@ -545,6 +613,34 @@ RBank8FE:
 
 
 WBank8FE:
+	FE_SetBank
+	test_hw_write
+	ret
+
+
+;*
+;* Pitfall 2 experimental 8K bankswitch scheme -- flat model
+;*
+
+P2_SetBank macro
+	push	bx
+	mov	bx,2000h
+	and	bx,si			; isolate bank bit from address
+;	xor	bx,2000h		; don't invert for Pitfall II
+	shr	bx,1			; position it
+	mov	[RomBank],bx		; this is our bank
+	pop	bx
+	endm
+
+
+RBank8P2:
+	FE_SetBank
+	test_hw_read
+	MapRomBank
+	ret
+
+
+WBank8P2:
 	FE_SetBank
 	test_hw_write
 	ret

@@ -1128,7 +1128,7 @@ db	'       `oDan Boris`d -- Atari 2600 schematics.`n'
 db	'      `oMatt Conte`d -- Helped with digital voice.`n'
 db	'     `oJohn Dullea`d -- Fast, elegant 2600 graphics techniques.`n'
 db	'   `oBradford Mott`d -- Helped with object positioning.`n'
-db	'`oEckhard Stolberg`d -- Helped with object positioning, PAL colors and digital voice.`n`n'
+db	'`oEckhard Stolberg`d -- Helped with object positioning, PAL colors, digital voice`n                    and Cosmic Ark effect.`n`n'
 
 db	'`nThanks to one and all!!`n`n'
 

@@ -59,10 +59,12 @@ int cli_LoadROM(unsigned char *p)
 **  ->	-j <n>	do joystick
 **	-p <n>  do paddle game with sensitivity <n>
 **	-k <n>  set keyboard player base
+**      -t      trace instructions
 **  ->	-0      player 0 hard
 **  ->	-1      player 1 hard
 */
 
+FILE *log;
 
 cli_InterpretParm(char *p)
 {
@@ -74,29 +76,37 @@ cli_InterpretParm(char *p)
 
 	switch (ch)
 	{
-	case 'v':  VideoMode = parm;			break;
-	case 'u':  CFirst = parm;			break;
-	case 'q':  quiet = 1;				break;
-	case 's':  SoundMode = parm;			break;
-	case '0':  IOPortB |= 64;			break;
-	case '1':  IOPortB |= 128;			break;
-	case 'b':  IOPortB &= 0xc3;			break;
-	case 'x':  DoChecksum = 1;			break;
-	case 'f':  FrameExit = parm;			break;
-	case 'd':  dsp = parm;				break;
-	case 'j':  Joystick = parm;			break;
-	case 'c':  PaletteNumber = parm;		break;
-	case 'p':  PaddleGame = (parm & 0xf) << 1;	break;
-	case 'k':  KeyBase = parm & 3;			break;
+	case 'v':  	VideoMode = parm;			break;
+	case 'u':  	CFirst = parm;			break;
+	case 'q':  	quiet = 1;				break;
+	case 's':  	SoundMode = parm;			break;
+	case '0':  	IOPortB |= 64;			break;
+	case '1':  	IOPortB |= 128;			break;
+	case 'b':  	IOPortB &= 0xc3;			break;
+	case 'x':  	DoChecksum = 1;			break;
+	case 'f':  	FrameExit = parm;			break;
+	case 'd':  	dsp = parm;				break;
+	case 'j':  	Joystick = parm;			break;
+	case 'c':  	PaletteNumber = parm;		break;
+	case 'p':  	PaddleGame = (parm & 0xf) << 1;	break;
+	case 'k':  	KeyBase = parm & 3;			break;
+	case 't':  	TraceCount = 1;
+			log = fopen("z26.log", "w");
+			if (log == NULL)
+			{
+				printf("Couldn't build log file.");
+				TraceCount = 0;
+			}
+			break;
 
-	case 'r':  if (parm == 0)
-			NoRetrace = 0xff;
-		   else
-			NoRetrace = parm;
-		   break;
+	case 'r':  	if (parm == 0)
+				NoRetrace = 0xff;
+			else
+				NoRetrace = parm;
+			break;
 
-	default:   printf("Bad command line switch seen: -%c", ch);
-		   exit(1);
+	default:   	printf("Bad command line switch seen: -%c", ch);
+		   	exit(1);
 	}
 }
 

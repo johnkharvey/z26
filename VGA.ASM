@@ -29,9 +29,9 @@ LUMCoeff db	0,	80	; LUM 0
 ;* definitions for unsaturated colors
 ;*
 
-R = 36		; main RGB values
-G = 18
-B = 38
+R = 36		;  main RGB values
+G = 18		; 
+B = 38		; 
 
 MIX1 = 98	; mixing coefficients (*100)
 MIX2 = 94
@@ -150,14 +150,18 @@ PALPaletteTable db	0,		0,		0		; 00 -- (grey)
 		db	0,		0,		0		; 10 -- (grey)
 		db	H2,		H2,		H2		; 1E
 
-		db	R*MIX2/100,	PG*MIX2/100,	0		; 20 -- (gold)
-		db	H,		H,		L4		; 2E
+		db	R*MIX2/100,	PG*MIX3/100,	0		; 20 -- (gold)
+		db	H,		H2,		L4		; 2E
+;		db	R*MIX2/100,	PG*MIX2/100,	0		; 20 -- (gold)
+;		db	H,		H,		L4		; 2E
 
 		db	R*MIX5/100,	PG*MIX2/100,	0		; 30 -- (yellow green)
 		db	H3,		H,		L3		; 3E
 
-		db	R*MIX5/100,	PG*MIX5/100,	0		; 40 -- (orange brown)
-		db	H,		H,		L2		; 4E
+		db	R*MIX3/100,	PG*MIX5/100,	0		; 40 -- (orange brown)
+		db	H,		H2,		L2		; 4E
+;		db	R*MIX5/100,	PG*MIX5/100,	0		; 40 -- (orange brown)
+;		db	H,		H,		L2		; 4E
 
 		db	0,		PG,		0		; 50 -- (light green)
 		db	L0,		H,		L0		; 5E
@@ -168,8 +172,10 @@ PALPaletteTable db	0,		0,		0		; 00 -- (grey)
 		db	0,		PG*MIX2/100,	B*MIX4/100	; 70 -- (blue green)
 		db	L,		H2,		H3		; 7E
 
-		db	R*MIX2/100,	0,		B*MIX4/100	; 80 -- (purple)
-		db	H,		L,		H2		; 8E
+		db	R*MIX3/100,	0,		B*MIX4/100	; 80 -- (purple)
+		db	H2,		L,		H2		; 8E
+;		db	R*MIX2/100,	0,		B*MIX4/100	; 80 -- (purple)
+;		db	H,		L,		H2		; 8E
 
 		db	0,		PG*MIX5/100,	B*MIX3/100	; 90 -- (turquoise)
 		db	L1,		H2,		H		; 9E
@@ -295,8 +301,10 @@ SML1:	cmp	[_VideoMode],3
 	mov	[MaxLines],204		; mode 3 gets 204 lines
 	jmp	GeneratePalette
 
-SML2:	cmp	[_VideoMode],8		; anything above 8 ?
+SML2:	cmp	[_VideoMode],9		; anything above 9 ?
 	ja	Set200			;   yes, 200 lines
+	je	SetMode7
+	cmp	[_VideoMode],8
 	je	SetMode8		;   no, if mode 8 handle special
 	cmp	[_VideoMode],7		; mode 7 ?
 	je	SetMode7		;   yes, handle special

@@ -75,6 +75,28 @@ MX8Parms label word
 	dw	00516h	; vblank end
 MX8_PARM_LENGTH = (($-MX8Parms)/2)
 
+
+MX9Parms label word	; 360x480
+	dw	06b00h	; horz total
+	dw	05901h	; horz displ
+	dw	05a02h	; start horz blnk
+	dw	08e03h	; end horz blnk
+	dw	05e04h	; start h sync
+	dw	08a05h	; end h sync
+
+	dw	00d06h	; vert tot
+	dw	03e07h	; overflow
+	dw	04009h	; cell ht
+	dw	0ea10h	; vsync strt
+	dw	0ac11h	; vsync end
+	dw	0df12h	; vert displayed
+	dw	02d13h	;* offset
+	dw	00014h	;* turn off dword mode
+	dw	0e715h	; vblank start
+	dw	00616h	; vblank end
+	dw	0e317h	;* turn on byte mode
+MX9_PARM_LENGTH = (($-MX9Parms)/2)
+
 .code
 
 ;*
@@ -85,7 +107,7 @@ ModeXInit:
 	pusha
 	push	es
 
-	cmp	[_VideoMode],8		; doing mode 8 or less ?
+	cmp	[_VideoMode],9		; doing mode 9 or less ?
 	ja	MXPRet			;   no, ret for now
 
 	mov	[ModeX],1
@@ -128,7 +150,7 @@ ModeXInit:
 	jmp	MX4a
 
 MX5a:	cmp	[_VideoMode],8		; mode 8 ?
-	jb	MX6a			;   no
+	jne	MX6a			;   no
 	mov	al,0a7h			;   yes, misc output for mode 8 (28 Mhz clock)
 	jmp	MX4a
 
@@ -157,10 +179,18 @@ MX4a:	mov	dx,MISC_OUTPUT
 	mov	cx,CRT_PARM_LENGTH	;       # of table entries
 	jmp	MX4b
 
-MX5b:	cmp	[_VideoMode],8
+MX5b:	
+	cmp	[_VideoMode],9
+	je	MXMode9
+	cmp	[_VideoMode],8
 	jb	MX6b
 	mov	si,offset MX8Parms
 	mov	cx,MX8_PARM_LENGTH
+	jmp	MX4b
+
+MXMode9:
+	mov	si,offset MX9Parms
+	mov	cx,MX9_PARM_LENGTH
 	jmp	MX4b
 	
 MX6b:	mov	si,offset MX5Parms	;   yes, point to tweaked CRT parameter table
@@ -174,6 +204,8 @@ SetCRTParmsLoop:
 
 	sti
 
+	cmp	[_VideoMode],9
+	je	MXPRet
 	cmp	[_VideoMode],6		; doing mode 6 or 7 (scanline) ?
 	jb	MXPRet			;   no
 
@@ -264,6 +296,9 @@ NoFlipping:
 	cmp	[MaxLines],220		; doing partial screen
 	ja	MXRet			;   no
 	add	[ModeXDisplayPointer],800 ; yes, start 10 lines down
+	cmp	[_VideoMode],9
+	jne	MXRet
+	add	[ModeXDisplayPointer],100
 	ret
 
 
@@ -366,9 +401,12 @@ MX7Move4 macro op1
 	endm
 
 MX7CopyLine:
+	cmp	[_VideoMode],7
+	jne	MX7CopyContinue
 
-	add	[ModeXDisplayPointer],20
+	add	[ModeXDisplayPointer],20	; move mode 7 toward middle
 
+MX7CopyContinue:
 	mov	cx,10
 	mov	si,[ModeXBufferPointer]
 	mov	di,[ModeXDisplayPointer]
@@ -422,5 +460,12 @@ MX7Loop3:
 	jnz	MX7Loop3
 
 	add	[ModeXDisplayPointer],60
+	cmp	[_VideoMode],7
+	je	MXCRet			; if mode 7 we've added enough offset
+	add	[ModeXDisplayPointer],20
+	add	[ModeXDisplayPointer],10
 
 	jmp	MXCRet
+
+
+

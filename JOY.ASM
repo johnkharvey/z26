@@ -129,7 +129,7 @@ Joystick proc near
 	call	JoyRead
 	call	JoyStabilize
 
-	mov	ah,[IOPortA]
+	mov	ah,[_IOPortA]
 	cmp	[JoyLeft],si
 	ja	AtariLeft
 
@@ -146,7 +146,7 @@ JoyTestDown:
 	jb	AtariDown
 
 JoyTestButtons:
-	mov	[IOPortA],ah
+	mov	[_IOPortA],ah
 	mov	dx,0201h		; joystick port
 
 ; Why do we do this three times ?

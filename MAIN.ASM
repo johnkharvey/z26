@@ -96,6 +96,14 @@ STUP_4:
 	inc	[_FrameExit]		; do correct # of loops
 
 
+	mov	dx,[_CFirst]		; set up some things in case there's no vsync
+	mov	[TopLine],dx		; (like bowlg_tw.bin)
+	add	dx,[MaxLines]
+	mov	[BottomLine],dx
+
+
+
+
 ;*
 ;* the main outer loop
 ;*
@@ -223,7 +231,7 @@ ScanBailOut:
 	mov	ax,[ScanLine]		; do emergency bail-out test
 	cmp	ax,[OurBailoutLine]	; too many lines?
 	jl	NDret			;   not yet
-	mov	ax,[BailoutLine]	;   yes, sharpen the test
+	mov	ax,[BailoutLine]	;   yes, sharpen (or loosen) the test
 	mov	[OurBailoutLine],ax	
 DontSharpen:
 	inc	[Frame]			; to the next frame 

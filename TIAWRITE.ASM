@@ -42,7 +42,7 @@ TIARegHandler label word
 	dw	H_ENABL		; 1f -- ENABL
 	dw	H_Motion	; 20 -- HMP0
 	dw	H_Motion	; 21 -- HMP1
-	dw	H_Motion	; 22 -- HMM0
+	dw	H_HMM0		; 22 -- HMM0
 	dw	H_Motion	; 23 -- HMM1
 	dw	H_Motion	; 24 -- HMBL
 	dw	H_VDELP0	; 25 -- VDELP0
@@ -105,12 +105,110 @@ TIAReflect8 label byte
  db 15,143,79,207,47,175,111,239,31,159,95,223,63,191,127,255
 
 
+MaxCycle label byte
+;			         HMPx values
+;			 -Cyc-   0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f     
+
+	db	 7	;4C 76   0  +1  +2  +3  +4  +5  +6  +7  -8  -7  -6  -5  -4  -3  -2  -1
+	db	 7	;4D  1   0  +1  +2  +3  +4  +5  +6  +7  -8  -7  -6  -5  -4  -3  -2  -1
+	db	 7	;4E  2   0  +1  +2  +3  +4  +5  +6  +7  -8  -7  -6  -5  -4  -3  -2  -1
+	db	 7	;4F  3   0  +1  +2  +3  +4  +5  +6  +7  -8  -7  -6  -5  -4  -3  -2  -1
+	db	 6	;50  4   0  +1  +2  +3  +4  +5  +6  +6  -8  -7  -6  -5  -4  -3  -2  -1
+	db	 5	;51  5   0  +1  +2  +3  +4  +5  +5  +5  -8  -7  -6  -5  -4  -3  -2  -1
+	db	 5	;52  6   0  +1  +2  +3  +4  +5  +5  +5  -8  -7  -6  -5  -4  -3  -2  -1
+	db	 4	;53  7   0  +1  +2  +3  +4  +4  +4  +4  -8  -7  -6  -5  -4  -3  -2  -1
+	db	 3	;54  8   0  +1  +2  +3  +3  +3  +3  +3  -8  -7  -6  -5  -4  -3  -2  -1
+	db	 2	;55  9   0  +1  +2  +2  +2  +2  +2  +2  -8  -7  -6  -5  -4  -3  -2  -1
+	db	 2	;0A 10   0  +1  +2  +2  +2  +2  +2  +2  -8  -7  -6  -5  -4  -3  -2  -1
+	db	 1	;0B 11   0  +1  +1  +1  +1  +1  +1  +1  -8  -7  -6  -5  -4  -3  -2  -1
+	db	 0	;0C 12   0   0   0   0   0   0   0   0  -8  -7  -6  -5  -4  -3  -2  -1
+	db	-1	;0D 13  -1  -1  -1  -1  -1  -1  -1  -1  -8  -7  -6  -5  -4  -3  -2  -1
+	db	-1	;0E 14  -1  -1  -1  -1  -1  -1  -1  -1  -8  -7  -6  -5  -4  -3  -2  -1
+	db	-2	;0F 15  -2  -2  -2  -2  -2  -2  -2  -2  -8  -7  -6  -5  -4  -3  -2  -2
+	db	-3	;10 16  -3  -3  -3  -3  -3  -3  -3  -3  -8  -7  -6  -5  -4  -3  -3  -3
+	db	-4	;11 17  -4  -4  -4  -4  -4  -4  -4  -4  -8  -7  -6  -5  -4  -4  -4  -4
+	db	-4	;12 18  -4  -4  -4  -4  -4  -4  -4  -4  -8  -7  -6  -5  -4  -4  -4  -4
+	db	-5	;13 19  -5  -5  -5  -5  -5  -5  -5  -5  -8  -7  -6  -5  -5  -5  -5  -5
+	db	-6	;14 20  -6  -6  -6  -6  -6  -6  -6  -6  -8  -7  -6  -6  -6  -6  -6  -6
+			;15 21   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0     
+
+
+
 .code
 
 ;*
+;* deep motion tracing macro
+;*
+
+CheckDeep macro
+local NotDeep, VeryDeep
+IFDEF showdeep
+	cmp	[_TraceCount],0
+	jz	NotDeep
+
+	cmp	[RClock],27
+	ja	NotDeep
+	cmp	[HMOVE_Cycle],0
+	je	NotDeep
+	cmp	[HMOVE_Cycle],3
+	jne	VeryDeep
+
+	pusha
+	movzx	dx,[RClock]
+	push	dx
+	movzx	dx,[TIA+si]
+	and	dx,0fh
+	push	dx
+	mov	dl,[WByte]
+	sar	dl,4
+	movzx	dx,dl
+	and	dx,0fh
+	push	dx
+	call	_ShowDeep
+	pop	dx
+	pop	dx
+	pop	dx
+	popa
+
+	jmp	NotDeep
+
+VeryDeep:
+	pusha
+	call	_ShowVeryDeep
+	popa
+
+NotDeep:
+ENDIF
+	endm
+
+;*
+;* weird motion tracing macro
+;*
+
+CheckWeird macro
+local NotWeird
+IFDEF showdeep
+	cmp	[_TraceCount],0
+	jz	NotWeird
+
+	cmp	[RClock],3
+	jbe	NotWeird
+	cmp	[RClock],73
+	jae	NotWeird
+
+	pusha
+	movzx	dx,[RClock]
+	push	dx
+	call	_ShowWeird
+	pop	dx
+	popa
+
+NotWeird:
+ENDIF
+	endm
+
+;*
 ;* This is the new TIA write handler.
-;* Gets called when CPU detects a TIA write that isn't 
-;* an immediate command.
 ;*
 ;* on entry:
 ;*
@@ -229,16 +327,42 @@ HandleLatchedInputs:
 ;*
 
 ;*
-;* get object delay into dl
+;* get object position into bx
+;*
+
+PositionObject macro
+local HBLwrap, HBLdone
+
+	movzx	ebx,[RClock]
+	sub	ebx,CYCLESPERSCANLINE
+	jae	HBLwrap	
+	add	ebx,CYCLESPERSCANLINE
+HBLwrap:
+	lea	ebx,[ebx+ebx*2]
+
+	cmp	bl,67			; positioned in HBLANK area
+	ja	HBLdone			;   no
+	mov	bl,226			;   yes, position near end instead
+
+HBLdone:
+	endm
+
+
+;*
+;* get dl = object delay
+;*     al = triple flag
+;*     bx = object position
 ;*
 
 GetObjectDelay macro %1
 local done, nowrap
 
-	mov	dl,0			; assume delay 0
-	mov	al,0			; assume no triple flag
-	movzx	esi,[RClock]		; CPU clock
-	lea	esi,[esi+esi*2]		; *3
+	xor	dl,dl			; assume delay 0
+	xor	al,al			; assume no triple flag
+
+	PositionObject
+	mov	si,bx
+
 	sub	si,[%1&_Position]	; where the object is
 	jae	nowrap
 	add	si,160			
@@ -251,6 +375,26 @@ nowrap:
 	mov	dl,[si]			; get delay byte
 	test	dl,080h			; triple flag set?
 	setnz	al			;   set al if so
+	and	dl,07fh			; delay value
+done:
+	endm
+
+
+GetObjectDelay68 macro %1
+local done, nowrap
+
+	xor	dl,dl
+	mov	si,68			; beginning of scan line
+	sub	si,[%1&_Position]	; where the object is
+	jae	nowrap
+	add	si,160			
+nowrap:	
+	cmp	si,[%1&_Size]		; beyond it's size?
+	ja	done			;   yes, no delay
+	add	si,si
+	inc	si			; point at delay byte
+	add	si,[%1&_Table]		; object's table
+	mov	dl,[si]			; get delay byte
 	and	dl,07fh			; delay value
 done:
 	endm
@@ -280,22 +424,28 @@ DeactivateObject macro %1
 doUpdatePlayfieldColor:
 	mov	dl,[TIA+COLUPF]
 	mov	dh,dl			; 16-bit playfield color
+	mov	[BL_Color],dx		; ball is always this color
+	mov	[PF_Color],dx		; assume *normal* state of affairs
+
+	mov	dx,offset TIADisplayToColour
+	test	[TIA+CTRLPF],PFP	; does playfield have priority?
+	jz	UPFC_CheckScore		;   no
+	mov	dx,offset TIADisplayToColour2
+	mov	[PixelColorTable],dx	;   yes, update pixel to color translation table
+	jmp	UPFC_done		; don't pay attention to score mode...
+
+UPFC_CheckScore:
+	mov	[PixelColorTable],dx	; update pixel to color translation table
 	test	[TIA+CTRLPF],SCORE	; in score mode?
-	jz	UPFC_SetReg		;   no
+	jz	UPFC_done		;   no
 	mov	dx,[P0_Color]		; assume Player 0 color
 	cmp	cl,147			; right side of playfield?
 	jbe	UPFC_SetReg		;   no
 	mov	dx,[P1_Color]		;   yes, use Player 1 color
-
 UPFC_SetReg:
 	mov	[PF_Color],dx		; update the register
 
-	mov	dx,offset TIADisplayToColour
-	test	[TIA+CTRLPF],PFP	; does playfield have priority?
-	jz	UPFCdone		;   no
-	mov	dx,offset TIADisplayToColour2
-UPFCdone:
-	mov	[PixelColorTable],dx	; update pixel to color translation table
+UPFC_done:
 	ret
 
 
@@ -354,7 +504,7 @@ UBGnoball:
 
 
 ;*
-;* player graphics support macroo
+;* player graphics support macro
 ;*
 
 UpdatePlayerGraphics macro %1
@@ -450,12 +600,19 @@ UpdateM1Graphics:
 ;*
 
 UpdateTable macro %1
+local regular_ok
+
 	movzx	si,[TIA+NUSIZ&%1]
 	and	si,7
 	movzx	dx,[%1&_SizeTable+si]
 	mov	[%1&_Size],dx
 	shl	si,1
-	mov	dx,[%1&_RegularTable+si]
+	mov	dx,[%1&_RegularTable+si] ; assume regular table
+	cmp	[%1&_TripleFlag],0
+	jnz	regular_ok
+	mov	dx,[%1&_MultipleTable+si] ; use multiple table
+
+regular_ok:
 	mov	[%1&_Table],dx
 
 	endm
@@ -498,6 +655,75 @@ UpdateM1Table:
 
 	UpdateTable M1
 
+	ret
+
+;*
+;* set up multi-sprite trick
+;* call at beginning of each scanline
+;*
+
+;wrapsprites = 1
+
+SetupMultiSpriteTrick:
+
+IFDEF wrapsprites
+
+; This lead-in code to force render wrapped sprites is pretty kludgy and
+; I'm not leaving it in.  It replaces one problem with another.  What if 
+; graphics registers or enables are changed in HBLANK area?  This technique
+; doesn't account for it.  We really need a better solution...
+
+	xor	al,al		; see if any wrapped objects to render...
+	GetObjectDelay68 M0
+	cmp	dl,al
+	jbe	SMS1
+	mov	al,dl
+SMS1:	GetObjectDelay68 M1
+	cmp	dl,al
+	jbe	SMS2
+	mov	al,dl
+SMS2:	GetObjectDelay68 P0
+	cmp	dl,al
+	jbe	SMS3
+	mov	al,dl
+SMS3:	GetObjectDelay68 P1
+	cmp	dl,al
+	jbe	SMS4
+	mov	al,dl
+SMS4:	cmp	al,7		; never do more than 9 pixels
+	jbe	SMS5
+	mov	al,7
+SMS5:	test	al,al
+	jz	NoWrappedToRender
+	mov	ch,cl
+	add	ch,al
+	call	RenderPixels
+
+NoWrappedToRender:
+
+ENDIF
+
+	cmp	[M0_TripleFlag],1
+	je	SMS_M1
+	mov	[M0_TripleFlag],1
+	call	UpdateM0Table
+
+SMS_M1:	cmp	[M1_TripleFlag],1
+	je	SMS_P0
+	mov	[M1_TripleFlag],1
+	call	UpdateM1Table
+
+SMS_P0:	cmp	[P0_TripleFlag],1
+	je	SMS_P1
+	mov	[P0_TripleFlag],1
+	call	UpdateP0Table
+
+SMS_P1:	cmp	[P1_TripleFlag],1
+	je	SMS_done
+	mov	[P1_TripleFlag],1
+	call	UpdateP1Table
+
+SMS_done:	
 	ret
 
 
@@ -713,6 +939,25 @@ noHMOVE:
 	ret
 
 ;*
+;* macro to set up amount of motion for HMOVES near beginning of scan line
+;*
+
+FixupMotionLow macro %1
+local MotionOK
+
+	movsx	dx,[TIA+HM&%1]
+	push	bx
+	movzx	bx,[RClock]
+	movsx	bx,[MaxCycle+bx]
+	cmp	dx,bx
+	jl	MotionOK
+	mov	dx,bx
+	mov	[%1&_Motion],dx
+MotionOK:
+	pop	bx
+	endm
+
+;*
 ;* this is called at register write time
 ;*	
 
@@ -720,6 +965,17 @@ H_HMOVE:
 	mov	dl,0
 	call	CatchUpPixels
 
+	CheckWeird
+	
+	mov	dl,[RClock]
+	mov	[HMOVE_Cycle],dl	; remember where HMOVE was (cosmic)
+	cmp	[M0_Confused],0
+	jz	WasntConfused
+
+	mov	[M0_Confused],0		; HMOVE cancels confusion
+	call	UpdateM0Graphics
+
+WasntConfused:
 	movsx	dx,[TIA+HMP0]		; xx_Motion is different from HMxx
 	mov	[P0_Motion],dx		; in case we decide to doHMOVE 
 	movsx	dx,[TIA+HMP1]		; somewhere else
@@ -738,10 +994,17 @@ H_HMOVE:
 
 DoBlank:
 	mov	[HBlanking],0		; set up the HMOVE blank
+	FixupMotionLow P0
+	FixupMotionLow P1
+	FixupMotionLow M0
+	FixupMotionLow M1
+	FixupMotionLow BL
 	call	doHMOVE
 	ret
 
 HiBlank:
+	cmp	[RClock],54
+	jbe	NoMotion
 	cmp	[RClock],74
 	jbe	NoBlank
 	mov	[SetHBlanking],1
@@ -758,52 +1021,20 @@ NoBlank:
 	call	doHMOVE
 	ret
 
+NoMotion:
+	ret
+
 
 ;*
 ;* RESBL
 ;*
 
-PositionObject macro %1
-local HBLwrap, HBLdone
-
-	movzx	ebx,[RClock]
-	sub	ebx,CYCLESPERSCANLINE
-	jae	HBLwrap	
-	add	ebx,CYCLESPERSCANLINE
-HBLwrap:
-	lea	ebx,[ebx+ebx*2]
-
-	cmp	bl,67			; positioned in HBLANK area
-	ja	HBLdone			;   no
-	mov	bl,%1			;   yes, position near end instead
-
-HBLdone:
-	endm
-
-
-PositionBall macro
-	
-	PositionObject 226		; 227 fixes decathln
-
-	endm
-
-PositionPlayer macro
-
-	PositionObject 226
-
-	endm
-
-PositionMissile macro
-
-	PositionObject 226		; 227 fixes dbldragn
-
-	endm
 
 H_RESBL:
 	GetObjectDelay BL
 	call	CatchUpPixels
 
-	PositionBall
+	PositionObject
 	mov	[TIA+RESBL],bl
 	mov	[BL_Position],bx
 
@@ -816,9 +1047,12 @@ H_RESBL:
 
 H_RESP0:
 	GetObjectDelay P0
+	push	bx			; save object position
+	mov	[P0_TripleFlag],al
 	call	CatchUpPixels
+	call	UpdateP0Table
+	pop	bx			; restore object position
 
-	PositionPlayer
 	mov	[TIA+RESP0],bl
 	mov	[P0_Position],bx
 
@@ -833,9 +1067,12 @@ H_RESP0:
 
 H_RESP1:
 	GetObjectDelay P1
+	push	bx			; save object position
+	mov	[P1_TripleFlag],al
 	call	CatchUpPixels
+	call	UpdateP1Table
+	pop	bx			; restore object position
 
-	PositionPlayer
 	mov	[TIA+RESP1],bl
 	mov	[P1_Position],bx
 
@@ -848,12 +1085,16 @@ H_RESP1:
 ;*
 
 H_RESM0:
-	GetObjectDelay M0
-	call	CatchUpPixels
+	test	[TIA+RESMP0],2		; missile locked to player ?
+	jnz	noRESM0			;   yes, don't position
 
-	test	[TIA+RESMP0],2
-	jnz	noRESM0
-	PositionMissile
+	GetObjectDelay M0
+	push	bx			; save object position
+	mov	[M0_TripleFlag],al
+	call	CatchUpPixels
+	call	UpdateM0Table
+	pop	bx			; restore object position
+
 	mov	[TIA+RESM0],bl
 	mov	[M0_Position],bx
 
@@ -866,12 +1107,16 @@ noRESM0:
 ;*
 
 H_RESM1:
-	GetObjectDelay M1
-	call	CatchUpPixels
+	test	[TIA+RESMP1],2		; missile locked to player ?
+	jnz	noRESM1			;   yes, don't position
 
-	test	[TIA+RESMP1],2
-	jnz	noRESM1
-	PositionMissile
+	GetObjectDelay M1
+	push	bx			; save object position
+	mov	[M1_TripleFlag],al
+	call	CatchUpPixels
+	call	UpdateM1Table
+	pop	bx			; restore object position
+
 	mov	[TIA+RESM1],bl
 	mov	[M1_Position],bx
 
@@ -1044,13 +1289,38 @@ H_GRP1:
 
 	ret
 
-
-
 ;*
-;* handle a motion register
+;* handle a non-M0 motion register
 ;*
 
 H_Motion:
+	CheckDeep
+	mov	dl,[WByte]
+	sar	dl,4			; pre-shift right 4 bits (preserve sign)
+	mov	[TIA+si],dl
+	ret
+
+
+;*
+;* HMM0
+;*
+
+H_HMM0:
+	CheckDeep
+	cmp	[HMOVE_Cycle],3
+	jne	NotConfused
+	cmp	[RClock],24
+	jne	NotConfused
+	cmp	[M0_Motion],7
+	jne	NotConfused
+	cmp	[WByte],060h
+	jne	NotConfused
+	mov	[M0_Confused],1
+	mov	[CosmicScanLine],1
+	mov	[M0_Motion],2
+	DoMotion M0
+
+NotConfused:
 	mov	dl,[WByte]
 	sar	dl,4			; pre-shift right 4 bits (preserve sign)
 	mov	[TIA+si],dl
@@ -1061,6 +1331,7 @@ H_Motion:
 ;*
 
 H_HMCLR:
+	CheckDeep
 	mov	[TIA+HMP0],0
 	mov	[TIA+HMP1],0
 	mov	[TIA+HMM0],0
@@ -1087,7 +1358,7 @@ H_CXCLR:
 ;*
 
 H_REFP0:
-	mov	dl,0
+	mov	dl,1
 	call	CatchUpPixels
 
 	mov	dl,[WByte]
@@ -1102,7 +1373,7 @@ H_REFP0:
 ;*
 
 H_REFP1:
-	mov	dl,0
+	mov	dl,1
 	call	CatchUpPixels
 
 	mov	dl,[WByte]

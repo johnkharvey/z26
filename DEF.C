@@ -11,6 +11,7 @@ extern char Joystick;
 extern char PaletteNumber;
 extern long int PaddleGame;
 extern char KeyBase;
+extern long int TraceCount;
 
 char def_VideoMode;
 short int def_CFirst;
@@ -25,6 +26,7 @@ char def_Joystick;
 char def_PaletteNumber;
 long int def_PaddleGame;
 char def_KeyBase;
+long int def_TraceCount;
 
 def_SaveDefaults()
 {
@@ -40,6 +42,7 @@ def_SaveDefaults()
 	def_PaletteNumber = PaletteNumber;
 	def_PaddleGame = PaddleGame;
 	def_KeyBase = KeyBase;
+	def_TraceCount = TraceCount;
 	def_NoRetrace = NoRetrace;
 }
 
@@ -57,6 +60,7 @@ def_LoadDefaults()
 	PaletteNumber = def_PaletteNumber;
 	PaddleGame = def_PaddleGame;
 	KeyBase = def_KeyBase;
+	TraceCount = def_TraceCount;
 	NoRetrace = def_NoRetrace;
 }
 

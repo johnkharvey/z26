@@ -72,7 +72,7 @@ VSync:	cmp	[_NoRetrace],0ffh		; -r no param
 	cmp	[_NoRetrace],1
 	jae	FrameLimiter			; -r<n>, n >= 1
 
-	pushad					; default code -- look for Vsync pulse with a timeout
+	pushad					; default code -- look for display enable off long enough
 
 	and	dword ptr [hi_time],0ffffh 	; clear hi order bit in hi order time word
 					   	; (so we don't have to worry about overflow...)

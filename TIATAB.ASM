@@ -168,6 +168,8 @@ TIAColTab label word
    dw 51887	; caaf
    dw 50527	; c55f
    dw 61439	; efff
+
+IFDEF compileoldcode
 ;
 TIADisplayToColour label byte
  db 0,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2
@@ -180,7 +182,24 @@ TIADisplayToColour2 label byte
  db 3,1,1,1,3,1,1,1,3,1,1,1,3,1,1,1
  db 3,1,1,1,3,1,1,1,3,1,1,1,3,1,1,1
  db 3,1,1,1,3,1,1,1,3,1,1,1,3,1,1,1
+
+ENDIF
+
+;IFDEF compileoldcode
 ;
+TIADisplayToColour label byte
+ db 0,1,4,4,2,2,2,2,2,2,2,2,2,2,2,2
+ db 3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3
+ db 3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3
+ db 3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3
+;
+TIADisplayToColour2 label byte
+ db 0,1,4,1,2,1,4,1,2,1,4,1,2,1,4,1
+ db 3,1,4,1,3,1,4,1,3,1,4,1,3,1,4,1
+ db 3,1,4,1,3,1,4,1,3,1,4,1,3,1,4,1
+ db 3,1,4,1,3,1,4,1,3,1,4,1,3,1,4,1
+
+;ENDIF
 
 
 PF_Table	dw	PFClockToBitForward	; current pointer to playfield mask bits
@@ -191,13 +210,11 @@ PixelColorTable	dw	TIADisplayToColour	; pixel to color translation table
 ;* sprite definitions
 ;*
 ;* The top bit of the delay byte is the triple flag.
-;* This means subsequent RESPx outputs leading sprite in multi-mode.
+;* This means subsequent RESPx outputs the leading sprite.
 ;*
-;* Note:  There is an entry just before the first entry of a player
-;*        sprite that isn't there, that should have the triple flag
-;*        set.  That is there should be four entries with the triple
-;*        flag set.  Try to take care of this in the code.  (Look for
-;*        entry 159...)
+;* Note:  There is an entry just before the first entry of a single-width 
+;*        player sprite that isn't there, that should have the triple flag
+;*        set.  That is there should be four entries with the triple flag set.
 ;* 
 
 LeadingPlayer macro
@@ -312,7 +329,12 @@ WideGap macro
 	db	6*16 dup (0)
 	endm
 
+;*
+;* Medium and wide players have an extra leading clock.
+;* They have the extra triple flag too.
+
 MediumPlayer macro
+	db	0,		080h
 	db	0,		080h
 	db	0,		080h
 	db	0,		080h
@@ -342,6 +364,7 @@ MediumBlankPlayer macro
 	db	0,		080h
 	db	0,		080h
 	db	0,		080h
+	db	0,		080h
 	db	0,		18
 	db	0,		17
 	db	0,		16
@@ -365,6 +388,7 @@ MediumBlankPlayer macro
 
 
 WidePlayer macro
+	db	0,		080h
 	db	0,		080h
 	db	0,		080h
 	db	0,		080h
@@ -407,6 +431,7 @@ WidePlayer macro
 
 
 WideBlankPlayer macro
+	db	0,		080h
 	db	0,		080h
 	db	0,		080h
 	db	0,		080h
@@ -573,9 +598,6 @@ P_7 label byte		; Player NUSIZ = 7
 SpriteSize P_7
 
 
-
-IFDEF compileoldcode	; we're not using these yet...
-
 ;*
 ;* multi sprite definitions
 ;*	
@@ -647,9 +669,6 @@ MP_7 label byte		; Player NUSIZ = 7
 	WideBlankPlayer
 
 
-ENDIF
-
-
 
 P0_RegularTable label word
 P1_RegularTable label word
@@ -696,7 +715,7 @@ M1_SizeTable label byte
 	db	M_7_Size
 
 
-IFDEF compileoldcode
+;IFDEF compileoldcode
 
 P0_MultipleTable label word
 P1_MultipleTable label word
@@ -720,4 +739,3 @@ M1_MultipleTable label word
 	dw	MM_6
 	dw	MM_7
 
-ENDIF

@@ -2,21 +2,7 @@
 
 BailoutLine	dw	0
 
-LongTable label dword
-	dd	07a01ch		; coln
-	dd	06a939h		; opensesm
-	dd	06fc86h		; seamnstr
-	dd	0726efh		; spact_tw
-	dd	06f551h		; spactunl
-	dd	03e5beh		; tetris26
-	dd	-1
-
-
-
 .code
-
-
-
 
 ;*
 ;* do special setup for recognized cartridges
@@ -24,7 +10,7 @@ LongTable label dword
 
 SetupSpecial:
 	mov	eax,[_Checksum]
-	jmp	SSFudgeTimer
+	jmp	SSGRPx
 
 
 ;*
@@ -53,24 +39,16 @@ SSFIND_Done:
 
 
 ;*
-;* process requests to fudge timer
-;*
-
-SSFudgeTimer:
-	mov	dword ptr [TimerFudge],0
-	cmp	ax,0b2d7h
-	jne	SSGRPx
-	mov	[TimerFudge],dword ptr 22	; frogpond
-	jmp	SSGRPx
-
-;*
 ;* process GRPx delay requests
 ;*
 
 SSGRPx:
 	mov	[GRPxDelay],1		; assume 1
 	cmp	eax,0736a0h		; spidrftr
-	jne	SSCFF
+	je	SSGRP_M2
+	jmp	SSCFF
+
+SSGRP_M2:
 	mov	[GRPxDelay],-2
 	jmp	SSCFF
 
@@ -82,74 +60,29 @@ SSGRPx:
 ;*
 
 SSCFF:	mov	[MXDelayedClear],2
-	cmp	eax,0e3cfah
-	je	SSCFF_B			; congbong
-	cmp	eax,09b2d7h
-	je	SSCFF_A			; frogpond
+	cmp	eax,03d843h		; canyonb
+	je	SSCFF_C
+	cmp	eax,0e3cfah		; congbong
+	je	SSCFF_B			
+	cmp	eax,09b2d7h		; frogpond
+	je	SSCFF_A
+	cmp	eax,073c87h		; plantpat
+	je	SSCFF_C
 
-	jmp	SSTR
+	jmp	SSTALL
 
 SSCFF_A:
 	mov	[MXDelayedClear],2
-	jmp	SSTR
+	jmp	SSTALL
 
 SSCFF_B:
 	mov	[MXDelayedClear],3
-	jmp	SSTR
-
-
-;*
-;* process requests for Timer0
-;*
-
-
-SSTR:	
-	mov	[TimerVec], offset Timer1
-	cmp	ax,07d00h
-	je	SetT0			; berzerk
-	cmp	ax,06b3dh
-	je	SetT0			; boxing
-	cmp	ax,0f1d7h
-	je	SetT0			; checkact
-	cmp	ax,04d38h
-	je	SetT0			; espial
-	cmp	ax,0c3ceh
-	je	SetT0			; hero
-
-	jmp	SSWRAP
-
-SetT0:	mov	[TimerVec], offset Timer0
-	jmp	SSWRAP
-
-
-;*
-;* process requests for wrapping negative player positions to zero
-;*
-
-SSWRAP:	mov	[WrapZero],0
-	cmp	ax,06289h
-	je	WZero			; crackpot
-	cmp	ax,05b2ah
-	je	WZero			; dbldragn
-	cmp	ax,058a6h
-	je	WZero			; holehunt
-	cmp	ax,0deebh
-	je	WZero			; strwbery
-	cmp	eax,0d5653h
-	je	WZero			; qbrtqube
-	cmp	eax,0f56deh
-	je	WZero			; smurf_pl (makes house show up)
-	cmp	eax,0f2462h
-	je	WZero			; smurfres (makes house show up)
-	cmp	eax,0d1cd4h
-	je	WZero			; moonptrl
-	cmp	eax,0cf815h
-	je	WZero			; robotank
-
 	jmp	SSTALL
 
-WZero:	mov	[WrapZero],1
+SSCFF_C:
+	mov	[MXDelayedClear],8
 	jmp	SSTALL
+
 
 ;*
 ;* process requests for tall games
@@ -158,6 +91,23 @@ WZero:	mov	[WrapZero],1
 SSTALL:
 	mov	[MaxLines],204
 	mov	[InitialMaxLines],204
+
+	cmp	eax,043a0bh		; 32in1-07
+	je	SetMedium
+	cmp	eax,03db3ch		; 32in1-11
+	je	SetTall
+	cmp	eax,039081h		; 32in1-17
+	je	SetTall
+	cmp	eax,037dc3h		; 32in1-20
+	je	SetTall
+	cmp	eax,035038h		; 32in1-21
+	je	SetTall
+	cmp	eax,0393d1h		; 32in1-26
+	je	SetTall
+
+
+	cmp	eax,1d2f8eh		; aciddrop
+	je	SetTall
 	cmp	eax,078a61h		; air_raid
 	je	SetMedium
 	cmp	eax,07b0a9h		; alienret
@@ -168,6 +118,8 @@ SSTALL:
 	je	SetMedium
 	cmp	eax,0716beh		; bibi
 	je	SetTall
+	cmp	eax,0effc4h		; blueprnt
+	je	SetMedium
 	cmp	eax,06bf6fh		; bobby
 	je	SetTall
 	cmp	eax,077d16h		; carnival
@@ -225,7 +177,7 @@ SSTALL:
 	cmp	eax,070fc5h		; packong
 	je	SetMedium
 	cmp	eax,07187dh		; pandchse
-	je	SetMedium
+	je	SetTall
 	cmp	eax,0754f5h		; parachut
 	je	SetMedium
 	cmp	eax,0745aeh		; phantomt
@@ -275,7 +227,7 @@ SSTALL:
 	cmp	eax,0776e4h		; worldend
 	je	SetTall
 	cmp	eax,0762d5h		; zoofun
-	je	SetMedium
+	je	SetTall
 
 	jmp	SSLINE
 
@@ -371,8 +323,72 @@ SSLINE_SearchDone:
 
 LineTable label byte
 
+	dd	03c0f5h			; 32in1-00
+	db	80
+	dd	041004h			; 32in1-02
+	db	70
+	dd	03adcbh			; 32in1-03
+	db	67
+	dd	03d379h			; 32in1-04
+	db	69
+	dd	0401ceh			; 32in1-05
+	db	67
+	dd	03b89dh			; 32in1-06
+	db	67
+	dd	043a0bh			; 32in1-07
+	db	60
+	dd	03e311h			; 32in1-08
+	db	60
+	dd	03b0a9h			; 32in1-09
+	db	70
+	dd	0360f7h			; 32in1-10
+	db	60
+	dd	03db3ch			; 32in1-11
+	db	53
+	dd	03d19ch			; 32in1-12
+	db	67
+	dd	03df73h			; 32in1-13
+	db	67
+	dd	0393f5h			; 32in1-14
+	db	67
+	dd	038763h			; 32in1-15
+	db	67
+	dd	035da1h			; 32in1-16
+	db	67
+	dd	039081h			; 32in1-17
+	db	47
+	dd	0361fdh			; 32in1-18
+	db	60
+	dd	03933fh			; 32in1-19
+	db	60
+	dd	037dc3h			; 32in1-20
+	db	46
+	dd	035038h			; 32in1-21
+	db	59
+	dd	03b147h			; 32in1-22
+	db	66
+	dd	039a06h			; 32in1-23
+	db	66
+	dd	041866h			; 32in1-24
+	db	60
+	dd	0392f8h			; 32in1-25
+	db	67
+	dd	0393d1h			; 32in1-26
+	db	50
+	dd	038672h			; 32in1-27
+	db	60
+	dd	042cffh			; 32in1-28
+	db	56
+	dd	03db0ch			; 32in1-29
+	db	66
+	dd	03bb0ch			; 32in1-30
+	db	68
+	dd	03b208h			; 32in1-31
+	db	65
+
+
 	dd	01d2f8eh		; aciddrop
-	db	62
+	db	69
 	dd	08387h			; actionmn
 	db	68
 	dd	078a61h			; air_raid
@@ -407,6 +423,8 @@ LineTable label byte
 	db	45
 	dd	03baceh			; bowling
 	db	42
+;	dd	07779fh			; bowlg_tw (vblank triggers frame)
+;	db	0
 	dd	03cccdh			; braingms
 	db	42
 	dd	073ae7h			; brickick
@@ -450,7 +468,7 @@ LineTable label byte
 	dd	039135h			; concentr
 	db	43
 	dd	0e90bh			; condor
-	db	34
+	db	36
 	dd	03cfah			; congbong
 	db	46
 	dd	0712ech			; cosmcark
@@ -529,8 +547,8 @@ LineTable label byte
 	db	41
 	dd	074a05h			; frankmon
 	db	43
-	dd	0b2d7h			; frogpond (Vblank triggers frame)
-	db	0	
+;	dd	0b2d7h			; frogpond (Vblank triggers frame)
+;	db	0	
 	dd	00cb2h			; front_rk
 	db	43
 	dd	07325fh			; galaga
@@ -630,7 +648,7 @@ LineTable label byte
 	dd	09f1eh			; pacman
 	db	35
 	dd	07187dh			; pandchse
-	db	43
+	db	42
 	dd	045aeh			; phantomt
 	db	48
 	dd	04f0eh			; pharhcrs (Vblank triggers frame)
@@ -682,7 +700,9 @@ LineTable label byte
 	dd	0dde3ah			; skatebrd
 	db	37
 	dd	070a3eh			; skihunt
-	db	43
+	db	42
+	dd	06a5f1h			; ski_run
+	db	52
 	dd	0398afh			; skydiver
 	db	43
 	dd	03507bh			; slotmach
@@ -787,8 +807,8 @@ LineTable label byte
 	db	47
 	dd	07bfc2h			; walldfnd
 	db	38
-;	dd	0cbf85h			; wingwar
-;	db	51
+	dd	0cbf85h			; wingwar
+	db	51
 	dd	07f832h			; wordzapr
 	db	33
 	dd	0776e4h			; worldend
@@ -809,7 +829,8 @@ LineTable label byte
 ;*
 
 SSPADDLE:
-
+	cmp	eax,03b0a9h		; 32in1-09
+	je	SPG0
 	cmp	eax,078387h		; actionmn
 	je	SPG0
 	cmp	eax,054e06h		; bachelor
@@ -838,10 +859,14 @@ SSPADDLE:
 	je	SPG0
 	cmp	eax,070434h		; guardian
 	je	SPG0
+	cmp	eax,07ef53h		; jediaren
+	je	SPG1
 	cmp	eax,036c7ch		; kaboom
 	je	SPG0
 ;	cmp	eax,079f28h		; mangia
 ;	je	SPG0
+;	cmp	eax,06324eh		; mons
+;	je	SPG1
 	cmp	eax,8929fh		; mpong10
 	je	SPG0
 	cmp	eax,06d7fch		; muscmach
@@ -897,30 +922,73 @@ SPGSkipKeyBase:
 ;* process requests for special palette
 ;*
 
+;After taking a quick look through all my ROMs, (Never ask me a question
+;like this again, if you want a fast answer. ;-) ) I think that
+;Traffic, Zoo Fun, Farmyard Fun, Ski Run, Motorodeo, Klax, Open Sesame,
+;Col N and Clown Down Town should be PAL and Motocross should be NTSC.
+;There are some more games that seem to have the wrong set of colours,
+;but I guess that for those the ROM for PAL and NTSC is the same anyway.
+
+; don't have Traffic
+
 SSP:	cmp	[_PaletteNumber],0ffh	; did user specify a palette number ?
 	jne	SSAU			;   yes, don't override
-	cmp	eax,07c25eh		; marflegr
+
+	cmp	eax,03f28eh		; 32in1-01
+	je	SSPAL
+	cmp	eax,039081h		; 32in1-17
+	je	SSPAL
+	cmp	eax,037dc3h		; 32in1-20
 	je	SSPAL
 	cmp	eax,03d843h		; canyonb
 	je	SSNTSC
+	cmp	eax,070828h		; clwndown
+	je	SSPAL
+	cmp	eax,07a01ch		; coln
+	je	SSPAL
 	cmp	eax,072d81h		; dancplat
 	je	SSPAL
 	cmp	eax,07f16ch		; defender
 	je	SSNTSC
+	cmp	eax,06ee6dh		; farmyard
+	je	SSPAL
 	cmp	eax,078dcfh		; fb_pir8
 	je	SSNTSC
 	cmp	eax,0746b6h		; forest
 	je	SSPAL
 	cmp	eax,07325fh		; galaga
 	je	SSPAL
-	cmp	eax,0f2462h		; smurfres
+	cmp	eax,1a4f39h		; klax
+	je	SSPAL
+	cmp	eax,07c25eh		; marflegr
+	je	SSPAL
+	cmp	eax,077c2bh		; motocros
 	je	SSNTSC
+	cmp	eax,1606a4h		; motor
+	je	SSPAL
+	cmp	eax,06a939h		; opensesm
+	je	SSPAL
+	cmp	eax,07187dh		; pandchse
+	je	SSPAL
+	cmp	eax,0754f5h		; parachut
+	je	SSNTSC
+	cmp	eax,070a3eh		; skihunt
+	je	SSPAL
+	cmp	eax,06a5f1h		; ski_run
+	je	SSPAL
 	cmp	eax,070bb3h		; starmast
 	je	SSNTSC
-	cmp	eax,0754f5h		; parachut
+	cmp	eax,0f2462h		; smurfres
 	je	SSNTSC
 	cmp	eax,06d58dh		; tomboy
 	je	SSPAL
+	cmp	eax,07b179h		; traffic
+	je	SSPAL
+	cmp	eax,0cbf85h		; wingwar
+	je	SSPAL
+	cmp	eax,0762d5h		; zoofun
+	je	SSPAL
+
 	jmp	SSAU
 
 SSPAL:	mov	[_PaletteNumber],1
@@ -959,34 +1027,15 @@ SSAU:	mov	[MinVol],8
 	je	SSAUQ			; vidcheck
 
 
-	jmp	SetupScoreMode		; process column blanking requests
+	jmp	SetP1Hard
 
 SSAUQ:
 	mov	[MinVol],20		; Quiet Please!
-	jmp	SetupScoreMode
-
-; *
-; * process column blank requests *
-; *
-
-SSCB:	jmp	SetupScoreMode
-
-SetupScoreMode:
-	mov	[NoScoreMode],0
-	cmp	ax,0359ch
-	je	NoScore			; seaquest
-	cmp	ax,0fbedh
-	je	NoScore			; starraid
-	cmp	ax,0ffb5h
-	je	NoScore			; alphbeam
-	cmp	eax,042cc1h
-	je	NoScore			; bsktball
-
 	jmp	SetP1Hard
 
-NoScore:
-	mov	[NoScoreMode],1
-	jmp	SetP1Hard
+; *
+; * process player 1 hard requests
+; *
 
 
 SetP1Hard:
@@ -1001,16 +1050,104 @@ SP1HARD:
 	jmp	SetupLong
 
 
+;*
+;* select how sharp to make the auto-sync test (bailout)
+;*
+
 SetupLong:
-	mov	si,offset LongTable
-	call	SSFIND
-	cmp	edx,-1			; entry found ?
-	je	NotLong			;   no, short game
-	mov	[BailoutLine],340
-	jmp	SetupDone
+	cmp	eax,1d2f8eh	; *aciddrop
+	je	BailoutVeryLong
+	cmp	eax,06d1d4h	; astrowar
+	je	BailoutVeryLong
+	cmp	eax,0737ddh	; bermuda
+	je	BailoutVeryLong
+	cmp	eax,076f32h	; boombang
+	je	BailoutVeryLong
+	cmp	eax,0746b6h	; forest
+	je	BailoutVeryLong
+	cmp	eax,09b2d7h	; *frogpond
+	je	BailoutVeryLong
+	cmp	eax,07325fh	; galaga
+	je	BailoutVeryLong
+	cmp	eax,0749beh	; grescape
+	je	BailoutVeryLong
+	cmp	eax,06b109h	; iq180
+	je	BailoutVeryLong
+	cmp	eax,07cb15h	; karate
+	je	BailoutVeryLong
+	cmp	eax,0806aah	; *lockchse
+	je	BailoutVeryLong
+	cmp	eax,072a4bh	; nghtmare
+	je	BailoutVeryLong
+	cmp	eax,06f551h	; spactunl
+	je	BailoutVeryLong
+	cmp	eax,06a939h	; *opensesm
+	je	BailoutLong
+	cmp	eax,07187dh	; pandchse
+	je	BailoutVeryLong
+	cmp	eax,073c87h	; plantpat
+	je	BailoutVeryLong
+	cmp	eax,0736dbh	; scudiv_p
+	je	BailoutVeryLong
+	cmp	eax,06fc86h	; seamnstr
+	je	BailoutVeryLong
+	cmp	eax,068each	; shtlorbt
+	je	BailoutVeryLong
+	cmp	eax,070a3eh	; *skihunt
+	je	BailoutVeryLong
+	cmp	eax,06a5f1h	; ski_run
+	je	BailoutVeryLong
+	cmp	eax,0684b8h	; spacmast
+	je	BailoutVeryLong
+	cmp	eax,07274fh	; spacraid
+	je	BailoutVeryLong
+	cmp	eax,0726efh	; spact_tw
+	je	BailoutVeryLong
+	cmp	eax,0ccf71h	; springer
+	je	BailoutVeryLong
+	cmp	eax,0d18cch	; sq_fire
+	je	BailoutVeryLong
+	cmp	eax,06cc64h	; supferri
+	je	BailoutVeryLong
+	cmp	eax,0746d8h	; tanksbut
+	je	BailoutVeryLong
+	cmp	eax,03e5beh	; tetris26
+	je	BailoutVeryLong
+	cmp	eax,0779cfh	; timewarp
+	je	BailoutVeryLong
+	cmp	eax,06d58dh	; tomboy
+	je	BailoutVeryLong
+	cmp	eax,07b179h	; traffic
+	je	BailoutVeryLong
+	cmp	eax,07153bh	; tubybird
+	je	BailoutVeryLong
+	cmp	eax,060de3h	; wallball
+	je	BailoutVeryLong
+	cmp	eax,07bfc2h	; walldfnd
+	je	BailoutVeryLong
+	cmp	eax,0cbf85h	; wingwar
+	je	BailoutVeryLong
+	cmp	eax,0776e4h	; worldend
+	je	BailoutVeryLong
+	cmp	eax,0762d5h	; zoofun
+	je	BailoutVeryLong
 
 NotLong:
+	cmp	[_CFirst],0ffffh
+	je	BailoutShort
+	cmp	[_CFirst],44
+	jb	BailoutShort
+
+BailoutLong:
+	mov	[BailoutLine],350
+	jmp	SetupDone
+
+BailoutShort:
 	mov	[BailoutLine],270
+	jmp	SetupDone
+
+BailoutVeryLong:
+	mov	[BailoutLine],5000
 	jmp	SetupDone
 
 SetupDone:

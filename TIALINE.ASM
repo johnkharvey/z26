@@ -126,13 +126,17 @@ BK_Color	dw	0	; \
 PF_Color	dw	0	;  \  keep these in order so we can use
 P1_Color	dw	0	;  /  the old color translation table
 P0_Color	dw	0	; /
-
+BL_Color	dw	0	; ball color -- this is new
 
 ActiveObjects	dw	0
+CosmicScanLine	dw	0
 HBlanking	dw	0
 SetHBlanking	db	0
 Invisible	db	0
 HMOVE_Pending	db	0
+HMOVE_Cycle	db	0	; remember cycle of last HMOVE
+M0_Confused	db	0
+CosmicGraphicsTable	db	040h,040h,0c0h,0
 
 
 ;*
@@ -147,6 +151,7 @@ ALIGN 2
 %1&_Motion	dw	0
 %1&_Graphics	db	0
 %1&_Delayed	db	0
+%1&_TripleFlag	db	0
 	endm
 
 DefineObjectVars BL
@@ -167,6 +172,13 @@ InitTIA:
 	mov	[PF_Table], offset PFClockToBitForward
 	mov	[BK_Color],0
 	mov	[PF_Color],0
+	mov	[P0_Position],228-68
+	mov	[P1_Position],228-68
+	mov	[M0_Position],228-68
+	mov	[M1_Position],228-68
+	mov	[BL_Position],228-68
+
+	mov	[M0_Confused],0
 	ret
 
 ;*
@@ -219,10 +231,6 @@ _P1	macro
 
 ;*
 ;* RenderPixel -- render pixel with multiple objects
-;*
-;* note:  If the assembler weren't running out of room, I'd have separate
-;*        versions of the pixel loops with and without the delay code.
-;*        As it is, we put it in the inner loop.  Oh well...
 ;*
 
 RenderPixel macro %1, %2, %3, %4, %5, %6
@@ -640,7 +648,7 @@ local InstructionLoop, InstructionsDone
 InstructionLoop:
 	fetch_opcode	ebx		; (fetchzx) get the opcode
 	call	[vectors + ebx*2]	; --> do the instruction
-	call	[TimerVec]		; clock the RIOT timer
+	ClockRIOT			; clock the RIOT timer
 
 	cmp	[RClock],CYCLESPERSCANLINE
 	jb	InstructionLoop
@@ -664,6 +672,21 @@ nTIALineTo:
 	call	_QueueSoundByte		; put another 2 bytes in the sound queue
 	call	_QueueSoundByte
 
+	mov	[HMOVE_Cycle],0		; forget where last HMOVE was (cosmic)
+	cmp	[M0_Confused],0
+	jz	NotCosmic
+
+	push	[M0_Motion]
+	mov	[M0_Motion],17		; (17)
+	DoMotion M0
+	pop	[M0_Motion]
+	mov	bx,[CosmicScanLine]
+	inc	[CosmicScanLine]
+	and	bx,3
+	mov	dl,[CosmicGraphicsTable+bx]
+	mov	[M0_Graphics],dl
+
+NotCosmic:
 	mov	bx,[ScanLine]
 	cmp	bx,[TopLine]		; line before first displayable?
 	jb	nTIANoGenerate		;   yes, don't render
@@ -693,6 +716,8 @@ nTIALineTo:
 
 NoColumnBlank:
 	mov	[SetHBlanking],0	; clear the set HBlanking flag
+
+	call	SetupMultiSpriteTrick
 
 	cmp	[RClock],CYCLESPERSCANLINE ; done before we started ?
 	jae	nLastPixels		   ;   yes, WSYNC straddled a line

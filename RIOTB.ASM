@@ -14,6 +14,7 @@ TimerFudge	dd	0		; fudge timer by this amount (frogpond)
 TimerReadVec	dw	ReadTimer1024	; timer read vector
 TimerByte	db	0		; a return value
 TimerIntReg	db	0		; Timer Interrupt Register
+TimerOverflowed	db	0		; timer has overflowed
 RetFF		db	0FFh
 
 ALIGN 2
@@ -29,6 +30,11 @@ ReadRIOTTab label word
 	dw	ReadTimerIntReg		; 287h Read Timer Interrupt Register
 
 WriteRIOTTab label word
+;	dw	WriteNothing		; 290h \
+;	dw	WriteNothing		; 291h  \  were commented out
+;	dw	WriteNothing		; 292h  /
+;	dw	WriteNothing		; 293h /
+
 	dw	SetRIOTTimer1		; 294h
 	dw	SetRIOTTimer8		; 295h
 	dw	SetRIOTTimer64		; 296h
@@ -43,6 +49,7 @@ Init_Riot:
 	mov	[TimerReadVec], offset ReadTimer1024
 	mov	[TimerByte],0
 	mov	[TimerIntReg],0
+	mov	[TimerOverflowed],0
 
 	ret
 
@@ -63,7 +70,7 @@ ReadPortB:				; read console switches (port b)
 	ret
 
 ReadPortA:				; read hand controllers (port b)
-	mov	si,offset _IOPortA
+	mov	si,offset IOPortA
 	ret
 
 
@@ -72,6 +79,8 @@ ReadPortA:				; read hand controllers (port b)
 ;*
 
 WriteRIOT:
+	test	si,080h
+	jz	WriteNothing
 	test	si,014h
 	jz	WriteNothing
 
@@ -100,8 +109,13 @@ SetRIOTTimer&op2:
 	movzx	edx,[WByte]
 
 	shl	edx,op1
+
+	add	edx,[TimerFudge]	; fudge the timer (usually zero)
+
 	mov	[Timer],edx
 	mov	[TimerReadVec], offset ReadTimer&op2
+
+	mov	[TimerOverflowed],0
 	ret
 
 	endm
@@ -139,12 +153,15 @@ ReadTimer:
 	sub	[Timer],edx
 	mov	[RCycles],0		; prevent double clock
 
+	cmp	[TimerOverflowed],0
+;	jnz	ReadOverflowed
 	mov	edx,[Timer]
 	test	edx,040000h		; has the timer overflowed yet ?
 	jnz	ReadOverflowed		;   yes
 	jmp	[TimerReadVec]		;   no, do appropriate read
 
 ReadOverflowed:
+	mov	[TimerOverflowed],1
 	mov	[TimerByte],dl		; return this value
 	mov	si, offset TimerByte
 	ret
@@ -167,7 +184,7 @@ ReadTimerIntReg:
 ;* But another interrupt *does* come.  (Otherwise lockchse.bin fails.)
 ;*
 
-	and	[Timer],03ffffh		; (03ffffh) clear interrupt flag
+	and	[Timer],03ffffh		; clear interrupt flag
 	mov	si,offset TimerIntReg
 	ret
 

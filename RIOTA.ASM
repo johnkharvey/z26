@@ -29,6 +29,11 @@ ReadRIOTTab label word
 	dw	ReadTimerIntReg		; 287h Read Timer Interrupt Register
 
 WriteRIOTTab label word
+;	dw	WriteNothing		; 290h \
+;	dw	WriteNothing		; 291h  \  were commented out
+;	dw	WriteNothing		; 292h  /
+;	dw	WriteNothing		; 293h /
+
 	dw	SetRIOTTimer1		; 294h
 	dw	SetRIOTTimer8		; 295h
 	dw	SetRIOTTimer64		; 296h
@@ -63,7 +68,7 @@ ReadPortB:				; read console switches (port b)
 	ret
 
 ReadPortA:				; read hand controllers (port b)
-	mov	si,offset _IOPortA
+	mov	si,offset IOPortA
 	ret
 
 
@@ -72,6 +77,8 @@ ReadPortA:				; read hand controllers (port b)
 ;*
 
 WriteRIOT:
+	test	si,080h
+	jz	WriteNothing
 	test	si,014h
 	jz	WriteNothing
 
@@ -100,6 +107,9 @@ SetRIOTTimer&op2:
 	movzx	edx,[WByte]
 
 	shl	edx,op1
+
+	add	edx,[TimerFudge]	; fudge the timer (usually zero)
+
 	mov	[Timer],edx
 	mov	[TimerReadVec], offset ReadTimer&op2
 	ret
@@ -167,7 +177,7 @@ ReadTimerIntReg:
 ;* But another interrupt *does* come.  (Otherwise lockchse.bin fails.)
 ;*
 
-	and	[Timer],03ffffh		; (03ffffh) clear interrupt flag
+	and	[Timer],03ffffh		; clear interrupt flag
 	mov	si,offset TimerIntReg
 	ret
 

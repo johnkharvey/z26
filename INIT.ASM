@@ -1,7 +1,5 @@
 ; init.asm -- initialize all data in z26 asm modules
 
-PUBLIC IOPortA, InputLatch
-
 .data
 
 ALIGN 2
@@ -76,6 +74,11 @@ PBSlice3	dw	7*400h		; this one doesn't change
 TVSlice0	dw	0
 TVSlice1	dw	3*800h		; this one doesn't change
 					; points to 2K bank #3
+; Tigervision 32 ROM Slices
+
+TVSlice032	dw	0
+TVSlice132	dw	15*800h		; this one doesn't change
+					; points to 2K bank #15
 ; M-Network ROM Slices
 
 MNSlice0	dw	0
@@ -85,12 +88,6 @@ MNSlice1	dw	7*800h		; this one doesn't change
 ; M-Network RAM Slices
 
 MNRamSlice	dw	0		; which 256 byte ram slice
-
-
-; *** trace.asm ***
-
-trace_count	dd	0	; nonzero if tracing
-
 
 ; *** cpu.asm ***
 
@@ -152,17 +149,6 @@ InputLatch	db	080h		; Input latch (inp4)
 
 ALIGN 2
 
-; *** riot.asm ***
-
-Timer		dd	0		; the RIOT Timer
-TimerFudge	dd	0		; fudge timer by this amount (frogpond)
-TimerVec	dw	Timer1		; timer vector -- Timer0 for espial (why??)
-TimerReadVec	dw	ReadTimer1	; timer read vector
-TimerByte	db	0		; a return value
-TimerIntReg	db	080h		; Timer Interrupt Register
-RetFF		db	0FFh
-
-
 ; *** stuff that gets shared with "C" program ***
 ; (gets saved / initialized externally)
 
@@ -186,7 +172,9 @@ _SoundMode	db	0ffh		; sound mode
 
 PUBLIC _IOPortB
 _IOPortB	db	00Bh		; IO Port B (switches)
-IOPortA		db	0FFh		; IO Port A (joystick)
+
+PUBLIC _IOPortA
+_IOPortA	db	0FFh		; IO Port A (joystick)
 
 PUBLIC _DoChecksum
 _DoChecksum	db	0		; set if we should print out checksum
@@ -215,6 +203,9 @@ _KeyBase	db	0ffh		; which paddle to emulate
 PUBLIC _CartSize
 _CartSize	dw	0		; gets cart size (cmdline.asm)
 
+PUBLIC _TraceCount
+_TraceCount	dd	0		; gets trace count
+
 
 ; *** new stuff ***
 
@@ -226,6 +217,7 @@ BlasterLoopCount dd	0		; count # of trys initting the soundblaster
 
 InitData:
 	call	InitTIA
+	call	Init_Riot
 
 
 	mov	[OurBailoutLine],1000
@@ -240,13 +232,15 @@ InitData:
 	mov	[StartTicks],0
 	mov	[StopTicks],0
 	mov	[ScanLine],1
-	mov	[TopLine],0
-	mov	[BottomLine],0
+;	mov	[TopLine],0
+;	mov	[BottomLine],0
+
 	mov	[OldCFirst],0
 	mov	[DefaultCFirst],0ffffh
 	mov	[UserCFirst],0ffffh
 	mov	[InitialMaxLines],204
 	mov	[MaxLines],204
+
 	mov	[DisplayPointer],0
 	mov	[ColumnBlank],0
 	mov	[GamePaused],0
@@ -272,11 +266,11 @@ InitData:
 	mov	[PBSlice3],7*400h
 	mov	[TVSlice0],0
 	mov	[TVSlice1],3*800h
+	mov	[TVSlice032],0
+	mov	[TVSlice132],15*800h
 	mov	[MNSlice0],0
 	mov	[MNSlice1],7*800h
 	mov	[MNRamSlice],0
-
-	mov	[trace_count],0
 
 	mov	[reg_pc],0
 	mov	[reg_a],0
@@ -305,15 +299,6 @@ InitData:
 
 	mov	dword ptr [OldInt9],0
 	mov	[CtrlSkipFlag],0
-
-	mov	[Timer],0
-	mov	[TimerFudge],0
-	mov	[TimerVec], offset Timer1
-	mov	[TimerReadVec], offset ReadTimer1
-	mov	[TimerByte],0
-	mov	[TimerIntReg],080h
-	mov	[RetFF],0ffh
-
 
 	ret
 

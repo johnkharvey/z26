@@ -154,7 +154,7 @@ Ctrl2b:
 	ifpress	P2Down,2
 	ifpress	P2Up,1
 
-	mov	[IOPortA],ah		; save the Port	A Switches
+	mov	[_IOPortA],ah		; save the Port	A Switches
 
 
 Ctrl5:	mov	[InputLatch],080h
@@ -287,16 +287,19 @@ CtrlVid7:
 
 CtrlVid8:
 	test	[KeyTable+Key8],128	; video mode 8 ?
-	jz	CtrlVidDone
-;	test	[KeyTable+KeyLShift],128
-;	jnz	DoMode8Change
-;	test	[KeyTable+KeyRShift],128
-;	jz	CtrlVidDone
-
-DoMode8Change:
+	jz	CtrlVid9
 	mov	[_VideoMode],8
 	call	TIAGraphicMode
 	mov	[KeyTable+Key8],0
+
+CtrlVid9:
+	test	[KeyTable+Key9],128	; video mode 8 ?
+	jz	CtrlVidDone
+	mov	[_VideoMode],9
+	call	TIAGraphicMode
+	mov	[KeyTable+Key8],0
+
+	
 
 CtrlVidDone:
 CtrlExit:
@@ -311,38 +314,38 @@ CtrlExit:
 	mov	ah,[InputLatch+1]	; reverse buttons
 	mov	[InputLatch+1],al
 	mov	[InputLatch],ah
-	mov	al,[IOPortA]		; reverse direction switches
+	mov	al,[_IOPortA]		; reverse direction switches
 	mov	bl,0fh
 	and	bl,al			; isolate low nibble
 	and	al,0f0h			; isolate hi nibble
 	shr	al,4
 	shl	bl,4			; swap nibbles
 	add	al,bl			; combine
-	mov	[IOPortA],al
+	mov	[_IOPortA],al
 
 CtrlPaddles:
 	cmp	[_KeyBase],0ffh		; emulating a paddle with the keyboard ?
 	je	CtrlRet			;   no
 
 CtrlPad0:
-	test	[IOPortA],080h		; P1 right ?
+	test	[_IOPortA],080h		; P1 right ?
 	jnz	CtrlPad1		;   no
 	call	PaddleTriggerDown0	;   yes
 CtrlPad1:
-	test	[IOPortA],040h		; P1 left ?
+	test	[_IOPortA],040h		; P1 left ?
 	jnz	CtrlPad2		;   no
 	call	PaddleTriggerUp0	;   yes
 CtrlPad2:
-	test	[IOPortA],020h		; P1 down ?
+	test	[_IOPortA],020h		; P1 down ?
 	jnz	CtrlPad3		;   no
 	call	PaddleTriggerUp0	;   yes
 CtrlPad3:
-	test	[IOPortA],010h		; P1 up ?
+	test	[_IOPortA],010h		; P1 up ?
 	jnz	CtrlPad4		;   no
 	call	PaddleTriggerDown0	;   yes
 CtrlPad4:
 
-	mov	[IOPortA],0ffh		
+	mov	[_IOPortA],0ffh		
 	cmp	[InputLatch],0		; P1 fire pressed ?
 	jne	CtrlPad9		;   no
 	call	PaddleButton0

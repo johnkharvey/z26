@@ -7,14 +7,15 @@ page 66,132
 
 ; assembly time definitions
 
-;TRACE = 1
-NEWTIA = 1
+TRACE = 1
+showdeep = 1
 
-EXTRN _CartRom:byte
+NEWTIA = 1
 
 .model large				; if large module define ModuleReturnAdr -- dword
 .386					; allow 32-bit instructions
 
+	include extern.asm		; external to ASM, internal to C
 	include defs.asm		; our definitions
 	include init.asm		; initialized data
 

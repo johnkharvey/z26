@@ -92,6 +92,6 @@ PaddleButton0:
 	movzx	esi,[_KeyBase]		; which button pressed
 	mov	dl,PaddleBits[esi]	; convert to proper bit
 	not	dl
-	and	[IOPortA],dl		; clear bit in IOPortA
+	and	[_IOPortA],dl		; clear bit in IOPortA
 	pop	esi
 	ret

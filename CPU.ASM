@@ -98,7 +98,7 @@ fetchzx macro	op1
 fetch_opcode macro   op1	; special fetchzx for trace logging
 local fo_1
 IFDEF TRACE
-	cmp	[trace_count],0
+	cmp	[_TraceCount],0
 	jz	fo_1
 
 	call	TraceInstruction
@@ -1036,7 +1036,7 @@ ENDIF
 
 	fetch_opcode	ebx		; (fetchzx) get the opcode
 	call	[vectors + ebx*2]	; --> do the instruction
-	call	[TimerVec]		; clock the RIOT timer
+	ClockRIOT			; clock the RIOT timer
 
 	SaveRegs			; save the CPU registers
 IFNDEF NEWTIA

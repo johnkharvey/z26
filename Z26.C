@@ -3,12 +3,19 @@
 ** Copyright (C) 1997-1999 by John Saeger
 */
 
-#define version "z26 (1.28)"
+/*
+** If you hang onto the past you die a little every day.
+*/
+
+
+#define version "z26 (1.29)"
 
 #define rom_list "ROM List"
+
 /*
-#define rom_list "Preview version -- Please don't distribute."
+#define rom_list "Preview version D -- Please don't distribute."
 */
+
 
 #include <dos.h>		/* _psp */
 #include <ctype.h>
@@ -17,6 +24,7 @@
 #include <process.h>
 #include <stdlib.h>
 #include <time.h>
+
 
 extern short int psp;		/* (data.asm) */
 extern int CartSize;
@@ -27,7 +35,7 @@ unsigned char CartRom[32770];
 #include "def.c"
 #include "cli.c"
 #include "gui.c"
-
+#include "trace.c"
 
 main(int argc, char *argv[])
 {
