@@ -505,26 +505,6 @@ done:
 	endm
 
 
-GetObjectDelay68 macro arg1
-local done, nowrap
-
-	xor	dl,dl
-	mov	si,68			; beginning of scan line
-	sub	si,[arg1&_Position]	  ; where the object is
-	jae	nowrap
-	add	si,160			
-nowrap:	
-	cmp	si,[arg1&_Size]		  ; beyond it's size?
-	ja	done			;   yes, no delay
-	add	si,si
-	inc	si			; point at delay byte
-	add	si,[arg1&_Table]	  ; object's table
-	mov	dl,[si]			; get delay byte
-	and	dl,07fh			; delay value
-done:
-	endm
-
-
 ;*
 ;* Object activation/deactivation
 ;*

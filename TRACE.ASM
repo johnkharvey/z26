@@ -22,7 +22,9 @@ PUBLIC _ReallyReadROM
 
 _ReallyReadROM proc far
 
-	push	si
+        pushad
+        push    es
+        push	si
 	mov	si,[_cpu_MAR]
 
 	mov	[debugflag],1
@@ -33,6 +35,8 @@ _ReallyReadROM proc far
 	mov	[_cpu_Rbyte],al
 
 	pop	si
+        pop     es
+        popad
 
 	ret
 _ReallyReadROM endp
@@ -41,7 +45,9 @@ PUBLIC _ReallyReadRAM
 
 _ReallyReadRAM proc far
 
-	push	si
+        pushad
+        push    es
+        push	si
         mov     si,[_cpu_MAR]
 
 	mov	[debugflag],1
@@ -52,6 +58,8 @@ _ReallyReadRAM proc far
 	mov	[_cpu_Rbyte],al
 
 	pop	si
+        pop     es
+        popad
 
 	ret
 _ReallyReadRAM endp

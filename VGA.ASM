@@ -204,9 +204,13 @@ TIAGraphicMode:
 TGM_RemapVideo:
 	cmp	[_Use50Hz],0			; PAL modes allowed?
 	jz	TGM_SetMaxLines			;   no
+
+        cmp     [_PaletteNumber],2              ; SECAM mode ?
+        je      TGM_RealRemapVideo              ;   yes
 	cmp	[_PaletteNumber],1		; PAL mode ?
 	jne	TGM_SetMaxLines			;   no
 
+TGM_RealRemapVideo:
 	movzx	si,[_VideoMode]
 	mov	al,[Remap50Hz + si]
 	mov	[_VideoMode],al
@@ -235,8 +239,11 @@ TGM_SetMaxLines:
 	jne	TGM_TestUltimate		;   yes, use it
 
 	movzx	si,[_VideoMode]
-	cmp	[_PaletteNumber],1		; PAL mode ?
-	jne	DontRemapStartLine		;   no
+        cmp     [_PaletteNumber],2              ; SECAM mode ?
+        je      RemapStartLine                  ;   yes
+        cmp     [_PaletteNumber],1              ; PAL mode ?
+        jne     DontRemapStartLine              ;   no
+RemapStartLine:
 	movzx	si,[Remap50Hz + si]		;   yes, remap in case PAL in NTSC mode
 DontRemapStartLine:
 	shl	si,1
@@ -274,6 +281,8 @@ GeneratePalette:
 	je	GPUseNTSC		;   yes, use NTSC
 	cmp	[_PaletteNumber],1	; user specify palette 1 ?
 	je	GPUsePAL		;   yes, use PAL
+        cmp     [_PaletteNumber],2      ; user specify palette 2 ?
+        je      GPUseSECAM              ;   yes, use SECAM
 	cmp	[_DefaultCFirst],0ffffh	; is there a default starting line ?
 	je	GPUseNTSC		;   no, use NTSC
 	cmp	[_DefaultCFirst],50	; starting line < 50 ?
@@ -330,7 +339,30 @@ LUMDone:
 	inc	PaletteCount
 	cmp	[PaletteCount],16	; done 16 colors yet ?
 	jnz	PaletteLoop		;   not yet
-	
+
+        jz      HardwareStuff
+GPUseSECAM:
+        mov	di,offset PCXPalette
+        mov     dx,16                   ; do 16 colours
+        mov     ax,0ff00h               ; full (ah) or no (al) RGB setting
+SLoop1:
+        mov     ebx,000ef2a60h          ; bittable for 8*3 BGR values
+        mov     cx,24                   ; set 8*3 values in colour table
+SLoop2:
+        mov     [di],ah                 ; full intensity of R, G, or B
+        test    ebx,1                   ; replace with no intensity ?
+        jnz     noZero                  ;    no 
+        mov     [di],al                 ;    yes, do so
+noZero:
+        inc     di                      ; point to next RGB value in colour table
+        shr     ebx,1                   ; next value in bittable
+        dec     cx                      ; done 8*3 RGB values yet
+        jnz     SLoop2                  ;    no
+        dec     dx                      ; done 16 colours yet
+        jnz     SLoop1                  ;    no
+
+HardwareStuff:
+
 ; continue with hardware stuff
 
 	call	TIAPalette		; set up the palette

@@ -1,4 +1,6 @@
 /*
+** note: this is no longer used -- modify ct.c manually
+**
 ** mt.c -- create game compatibility tables for z26
 **
 ** usage:

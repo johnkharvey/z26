@@ -308,7 +308,11 @@ void cli_InterpretParm(char *p)
 	case 'j':  	Joystick = parm;			break;
 	case 'c':  	PaletteNumber = parm;
 			UserPaletteNumber = parm;
-			break;
+                        if(parm == 2) {
+                           IOPortB &= 0xf7;
+/*                           Use50Hz = 1; */
+                        }
+                        break;
 	case 'p':  	PaddleGame = (parm & 0xf) << 1;		break;
 	case 'k':  	KeyBase = parm & 3;			break;
 	case 'm':	MouseBase = parm & 3;			break;

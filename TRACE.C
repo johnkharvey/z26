@@ -5,6 +5,8 @@
 ** Please see COPYING.TXT for details.
 */
 
+db RROM, RROM1, RROM2;  /* contain the result of ReadROM(cpu_pc) */
+
 enum {_imp, _ac, _rel, _imm, _abs, _abs_x, _abs_y, _zero, _zero_x, _zero_y, _ind, _ind_x, _ind_y};
 
 
@@ -150,9 +152,9 @@ db cpu_Rbyte;
 
 unsigned char ReadROM(unsigned int adr)
 {
-	cpu_MAR = adr & 0x1fff;
+        cpu_MAR = (adr & 0x1fff);
 	ReallyReadRom();
-	return(cpu_Rbyte);
+        return(cpu_Rbyte);
 }
 
 unsigned int ReadRAM(unsigned int adr)
@@ -223,12 +225,14 @@ void Showaddress(void)
 
 int ti_op8(void)
 {
-	return (ReadROM(cpu_pc + 1));
+/*        return (ReadROM(cpu_pc + 1)); */
+        return (RROM1);
 }
 
-int ti_op16(void)
+unsigned int ti_op16(void)
 {
-	return (ReadROM(cpu_pc + 1) + 256*ReadROM(cpu_pc + 2));
+/*        return (ReadROM(cpu_pc + 1) + 256*ReadROM(cpu_pc + 2)); */
+        return (RROM1 + 256 * RROM2);
 }
 
 void ti_show_imp(void)
@@ -248,7 +252,7 @@ void ti_show_zero_xy(unsigned int op)
         } else {
                 op &= 0x3f;
                 /* simplified check for write-only access  *EST* */
-                if (!((ReadROM(cpu_pc) & 0xe0) == 0x80))
+                if (!((RROM & 0xe0) == 0x80))
                         op = (op & 0x0f) | 0x30;
                 fprintf(log, " %-8s", TIAList[op]);
         }
@@ -366,7 +370,7 @@ void ShowInstruction(void)
 {
 	int optype;
 
-    optype = AccessList[ReadROM(cpu_pc)];
+    optype = AccessList[RROM];
     fprintf(log, "%04x: ", cpu_pc);
 
 /* ti_show_code */
@@ -374,7 +378,7 @@ void ShowInstruction(void)
 	{
 		case _imp:
 		case _ac:
-            fprintf(log, "%02x       ", ReadROM(cpu_pc));
+            fprintf(log, "%02x       ", RROM);
 			break;
 
 		case _rel:
@@ -383,25 +387,29 @@ void ShowInstruction(void)
 		case _zero_x:
 		case _ind_x:
 		case _ind_y:
-            fprintf(log, "%02x %02x    ", ReadROM(cpu_pc), ReadROM(cpu_pc + 1));
+            fprintf(log, "%02x %02x    ", RROM, RROM1);
 			break;
 
 		case _abs:
 		case _abs_x:
 		case _abs_y:
 		case _ind:
-            fprintf(log, "%02x %02x %02x ", ReadROM(cpu_pc), ReadROM(cpu_pc + 1), ReadROM(cpu_pc + 2));
+            fprintf(log, "%02x %02x %02x ", RROM, RROM1, RROM2);
 			break;
 	}
 
 /* ti_show_op */
-    fprintf(log, "%s ", InstList[ReadROM(cpu_pc)]);
+    fprintf(log, "%s ", InstList[RROM]);
 
 	ti_show_op_fnc[optype]();
 }
 
 void ShowRegisters(void)
 {
+        RROM = ReadROM(cpu_pc);
+        RROM1 = ReadROM(cpu_pc + 1);
+        RROM2 = ReadROM(cpu_pc + 2);
+
 /*
         fprintf(log, "\n(%3d %3d %3d) (%3d %3d) (%3d %3d %3d %3d %3d) ",
            (int)frame, line, cycle, line-42, cycle*3-68,
@@ -422,5 +430,5 @@ void ShowRegisters(void)
 	fprintf(log, !cpu_ZTest 	  ? "Z" : "z");
 	fprintf(log, cpu_carry 		  ? "C" : "c");
 
-	fprintf(log, " %02x %02x %02x %02x  ", cpu_a, cpu_x, cpu_y, cpu_sp);
+        fprintf(log, " %02x %02x %02x %02x  ", cpu_a, cpu_x, cpu_y, cpu_sp);
 }
