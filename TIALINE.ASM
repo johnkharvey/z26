@@ -550,7 +550,7 @@ RenderPixels:
 RenderMiddle:
 	cmp	ch,227			; final request for this line?
 	jne	RenderPartial		;   no
-	test	[ActiveObjects],1	; PF active ?
+	test	[ActiveObjects],3	; PF or Ball active ?
 	jz	RenderShortcutBK	;   no, take a shortcut
 
 RenderPartial:

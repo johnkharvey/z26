@@ -3,7 +3,7 @@
 ** Copyright (C) 1997-1999 by John Saeger
 */
 
-#define version "z26 (1.26)"
+#define version "z26 (1.27)"
 
 #include <dos.h>		/* _psp */
 #include <ctype.h>
