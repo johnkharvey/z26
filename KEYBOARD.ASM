@@ -6,6 +6,15 @@
 ;
 ; *****************************************************************************
 
+
+.data
+
+; *** keyboard.asm ***
+
+OldInt9		dw	0,0	; old vector for int9
+
+CtrlSkipFlag	db	0	; skip this control key test
+
 .code
 
 ;*
@@ -102,7 +111,8 @@ P1Easy=		KeyF7
 P1Hard=		KeyF8
 
 
-Controls:
+Controls proc near
+
 	mov	ah,[_IOPortB]		; turn on Select and Reset bits
 	or	ah,03h
 	test	[KeyTable+ResetKey],128
@@ -165,9 +175,15 @@ Ctrl4:	test	[KeyTable+KeyP],128
 Ctrl6:	test	[KeyTable+KeyEnter],128
 	jz	Ctrl7
 	mov	[GamePaused],0		; resume game
+
+;*
+;* test for escape key
+;*
+
+
 Ctrl7:	test	[KeyTable+KeyEsc],128
-	jz	Ctrl8
-	jmp	GoDOS			; ESC pressed -	exit
+;	jz	Ctrl8
+;	jmp	GoDOS			; ESC pressed -	exit
 
 Ctrl8:	test	[KeyTable+KeyPgUp],128	; scroll up ?
 	jz	Ctrl9			;   no
@@ -336,6 +352,7 @@ CtrlPad9:
 CtrlRet:
 	ret
 
+Controls endp
 
 ; *****************************************************************************
 ;
@@ -348,7 +365,8 @@ CtrlRet:
 
 datasegsave	dw	0		; get a	copy of	our data seg
 
-SetNewInt9:
+SetNewInt9 proc near
+
 	push	es
 	push	si
 	push	bx
@@ -375,7 +393,10 @@ SetNewInt9:
 	pop	es
 	ret
 
-SetOldInt9:
+SetNewInt9 endp
+
+SetOldInt9 proc near
+
 	push	ds
 	cli
 	mov	ax,2509h		; set new INT 9
@@ -386,8 +407,12 @@ SetOldInt9:
 	pop	ds
 	ret
 
+SetOldInt9 endp
 
-NewInt9:push	ax
+
+NewInt9 proc near
+
+	push	ax
 	push	bx
 	push	ds
 	mov	ax,cs:datasegsave
@@ -409,4 +434,7 @@ NewInt9:push	ax
 	pop	ax
 	sti
 	iret
+
+NewInt9 endp
+
 

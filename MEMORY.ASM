@@ -1,5 +1,7 @@
 ; Memory space
 
+.data
+
 StartMemory	label	byte		; <- mark start of memory to be cleared
 
 TIABuffer	db 256 dup (?)		; TIA information buffer
@@ -19,7 +21,6 @@ PCXPalette 	db	128*3 dup (?)	; 384 -- generated palette goes here
 
 TIADisplay	db	320 dup (?)	; Display as currently setup
 
-_TraceBuffer	db	8192 dup (?)	; trace buffer
 _Ram		db	2048 dup (?)	; extra ram
 
 Bit9		db	511 dup (?)	; for sound generation
@@ -28,7 +29,7 @@ ModeXBuffer	db	320+64 dup (?)	; for ModeX line rendering (a little extra here)
 
 EndMemory	label	byte		; <- mark end of memory to be cleared
 
-global _CartRom
-_CartRom	db	32768 dup (?)	; cartridge memory
+;PUBLIC _CartRom
+;_CartRom	db	32768 dup (?)	; cartridge memory
 
 

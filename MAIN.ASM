@@ -2,9 +2,6 @@
 ;* main.asm -- main entry point here...
 ;*
 
-
-IFDEF module
-
 .data
 
 ModuleReturnAdr	dd	?		; word if small model, dword if medium
@@ -12,7 +9,7 @@ ModuleSP	dw	?
 
 .code
 
-global _emulator
+PUBLIC _emulator
 
 _emulator PROC FAR			; near if small model, far if medium
 
@@ -43,22 +40,12 @@ ModuleReturn:
 
 _emulator ENDP
 
-ENDIF
 
 ;*
 ;* main startup
 ;*
 
 start:
-
-IFDEF exefile
-	mov	ax,_DATA
-	mov	ds,ax			;set up data segment
-	mov	bx,es
-	mov	psp,bx			;save pointer to PSP
-	mov	es,ax			;set up extra segment (ES = DS)
-ENDIF
-
 	call	InitData		; initialize data
 
 	call	SetupSpecial
@@ -137,12 +124,12 @@ xm1:
 
 ClearDone:
 
-Paused:	call	[CtrlFn]		; check which keys pressed
+Paused:	call	Controls		; check which keys pressed
 	test	[GamePaused],1		; game paused ?
 	jz	xmain			;   no, next frame
 
 PausedLoop:
-	call	[CtrlFn]		; check which keys pressed
+	call	Controls		; check which keys pressed
 	test	[GamePaused],1		; game paused ?
 	jnz	PausedLoop		;   yes
 	jmp	xmain			; to next frame
@@ -191,23 +178,10 @@ Empty:	call	_kb_hit			; empty the keyboard buffer
 	jmp	Empty
 
 Quit:
-
-IFDEF module
 	jmp	ModuleReturn
-ENDIF
+
 
 ReallyQuit:
-;	mov	ax,[CFirst]
-;	cmp	ax,[OldCFirst]
-;	je	RQ1
-;	push	ax
-;	call	_crlf
-;	call	_put_dec
-;	call	_crlf
-;	call	_ShowChecksum
-;	call	_crlf
-
-RQ1:
 	mov	ah,04Ch			; and return to MSDOS
 	int	MSDOS
 
@@ -223,7 +197,14 @@ ScanFrameLoop:
 	mov	[TIAWritePointer],bx
 	mov	dword ptr [bx],-1	;* a dword pointer *
 
+IFDEF NEWTIA
+	call	nTIALineTo
+ELSE
 	call	TIALineTo		; generate a raster line
+ENDIF
+
+	test	[KeyTable+KeyEsc],128	; ESC pressed ?
+	jnz	GoDOS			;   yes
 
 	test	[ScanLine],0fh		; time to read the time ?
 	jnz	ScanNextLine		;   no
@@ -231,12 +212,12 @@ ScanFrameLoop:
 
 ScanNextLine:
 	inc	[ScanLine]		; Increment the scanline counter
-	sub  [RClock],CyclesPerScanLine ; adjust RClock for next line
+	sub  [RClock],CYCLESPERSCANLINE ; adjust RClock for next line
 
 	test	[VBlank],080h		; discharging capacitors ?
 	jnz	ScanBailOut		;   yes
 					;   no, put some charge on the capacitors
-	test [ChargeCounter],080000000h ; already fully charged ?
+	test dword ptr [ChargeCounter],080000000h ; already fully charged ?
 	jnz	ScanBailOut		;   yes, don't increment
 	inc	dword ptr [ChargeCounter] ;   no, add some charge
 

@@ -96,11 +96,11 @@ _gui_Font	proc	far
 	cmp	[_GUIFont],0
 	jz	FontZero
 
-	mov	[cs:FontHeight],5
+	mov	cs:[FontHeight],5
 	ret
 
 FontZero:
-	mov	[cs:FontHeight],8
+	mov	cs:[FontHeight],8
 	ret
 
 _gui_Font endp
@@ -992,7 +992,7 @@ DrawChar	proc	near
 ; Does not check for case where character is byte-aligned and
 ; no rotation and only one write is required.
 
-	mov	cx,[cs:FontHeight] ;FONT_CHARACTER_SIZE
+	mov	cx,cs:[FontHeight] ;FONT_CHARACTER_SIZE
 	mov	dx,GC_INDEX
 	
 	push	si
@@ -1010,7 +1010,7 @@ LeftCharLoop:
 	dec	cx
 	jnz	LeftCharLoop
 
-	mov	cx,[cs:FontHeight] ;FONT_CHARACTER_SIZE
+	mov	cx,cs:[FontHeight] ;FONT_CHARACTER_SIZE
 
 	pop	di
 	pop	si		; restore pointers
@@ -1125,7 +1125,7 @@ db	'     `oBob Colbert`d -- Information on object wrapping.`n'
 db	'    `oPiero Cavina`d -- Information on multiple missiles.`n'
 db	'    `oKevin Horton`d -- Information on bankswitching.`n'
 db	'       `oDan Boris`d -- Atari 2600 schematics.`n'
-db	'     `oJohn Dullea`d -- Information on Win98 timer and Pitfall II.`n'
+db	'     `oJohn Dullea`d -- Fast, elegant 2600 graphics techniques.`n'
 db	'   `oBradford Mott`d -- Information on player positioning.`n'
 db	'`oEckhard Stolberg`d -- Information on player positioning and PAL colors.`n`n'
 

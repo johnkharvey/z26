@@ -5,6 +5,8 @@
 
 /*
 ** load a ROM image
+**
+** gets called from gui also -- special ROM setup can go here
 */
 
 int cli_LoadROM(unsigned char *p)

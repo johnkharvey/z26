@@ -41,8 +41,6 @@ Frequency dw 39 ; 30000.00 Hz
  dw 1272 ; 937.50 Hz
 ;
 
-SVector dw	PCSound			; Vector for sound updates
-
 AudC0	db	-1			; Sound registers
 AudC1	db	-1
 AudF0	db	-1
@@ -64,7 +62,7 @@ MinVol	db	8			; minimum volume for PC Speaker
 ;
 ; *****************************************************************************
 
-Sound:  
+Sound proc near
 	push	ax
 	push	bx
 
@@ -79,12 +77,14 @@ Sound:
 	mov	al,AudC0[bx]		; al is	the control
 	mov	ah,AudF0[bx]		; ah is	the frequency
 	mov	bh,AudV0[bx]		; bh is	the volume
-	call	[SVector]		; do the sound update
+	call	PCSound			; do the sound update
 SoundExit:
 	pop	bx
 	pop	ax
         
 	ret
+
+Sound endp
 
 ; *****************************************************************************
 ;
@@ -170,11 +170,13 @@ CD93:	imul	cx,93
 ;
 ; *****************************************************************************
 
-SoundOff:
+SoundOff proc near
 	xor	ax,ax			; all values to	zero
 	xor	bx,bx
-	call	[SVector]
+	call	PCSound
 	inc	bl
-	jmp	[SVector]
+	call	PCSound
+	ret
 
-	
+SoundOff endp
+

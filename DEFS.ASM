@@ -3,77 +3,93 @@
 
 MSDOS =			021H		; MSDOS	caller
 
-CyclesPerScanLine = 	76		; TIA timing constant
-CyclesPerLeftHalf =	50		; cycles thru left half of screen
+CYCLESPERSCANLINE = 	76		; TIA timing constant
+
+;*
+;* TIA register definitions
+;*
+
+VSYNC =			00h		;* vertical sync set/clear       \
+VBLANK =		01h		;* vertical blank set/clear       \  immediate
+WSYNC =			02h		;* wait for horizontal blank      /  action
+RSYNC =			03h		;* reset horizontal sync counter /
+
+NUSIZ0 =		04h		; missile/player size controls
+NUSIZ1 =		05h
+COLUP0 =		06h		; colors
+COLUP1 =		07h
+COLUPF =		08h
+COLUBK =		09h
+CTRLPF =		0Ah		; REF, SCORE, PFP, ball width
+REFP0 =			0Bh		; reflect player
+REFP1 =			0Ch
+PF0 =			0Dh		; playfield bits
+PF1 =	 		0Eh
+PF2 =			0Fh
+RESP0 = 		10h		; horizonal position
+RESP1 = 		11h
+RESM0 = 		12h
+RESM1 = 		13h
+RESBL = 		14h
+
+AUDC0 =			15h		;* audio control
+AUDC1 =			16h		;*
+AUDF0 =			17h		;* audio frequency
+AUDF1 =			18h		;*
+AUDV0 =			19h		;* audio volume
+AUDV1 =			1Ah		;*
+
+GRP0 =			1Bh		; graphics
+GRP1 =			1Ch
+ENAM0 = 		1Dh		; enables
+ENAM1 = 		1Eh
+ENABL = 		1Fh
+HMP0 =			20h		; horizontal motion
+HMP1 =			21h
+HMM0 =			22h
+HMM1 =			23h
+HMBL =			24h
+VDELP0 = 		25h		; vertical delay
+VDELP1 = 		26h
+VDELBL = 		27h
+RESMP0 = 		28h		; missile locked to player
+RESMP1 = 		29h
+
+HMOVE =			2Ah		; apply horizontal motion
+HMCLR =			2Bh		; clear horizontal motion registers
+CXCLR =			2Ch		; clear collision latches
+
+;*
+;* to make macros easier to write
+;*
+
+NUSIZM0 = NUSIZ0
+NUSIZM1 = NUSIZ1
+NUSIZP0 = NUSIZ0
+NUSIZP1 = NUSIZ1
 
 
-;TIA register offsets
 
-TIANuSiz0 = 		04h		; Missile/Player size controls
-TIANuSiz1 = 		05h
-TIAColup0 = 		06h
-TIAColup1 = 		07h
-TIAColupf = 		08h
-TIAColubk = 		09h
-TIACtrlPf = 		0Ah		; Playfield control,priority,ball size
-TIARefP0 = 		0Bh		; Player reflections
-TIARefP1 = 		0Ch
-TIAPf0 = 		0Dh		; Playfield registers
-TIAPf1 = 		0Eh
-TIAPf2 = 		0Fh
-TIAResp0 = 		10h		; Horizonal position reset registers
-TIAResp1 = 		11h
-TIAResm0 = 		12h
-TIAResm1 = 		13h
-TIAResbl = 		14h
-TIAGrp0	= 		1Bh		; Graphic 0
-TIAGrp1	= 		1Ch		; Graphic 1
-TIAEnam0 = 		1Dh		; Enable Missile 0
-TIAEnam1 = 		1Eh		; Enable Missile 1
-TIAEnabl = 		1Fh		; Ball enable
-TIAHmp0	= 		20h
-TIAHmp1	= 		21h
-TIAHmm0	= 		22h
-TIAHmm1	= 		23h
-TIAHmbl	= 		24h
-TIAVDelp0 = 		25h
-TIAVDelp1 = 		26h
-TIAVDelbl = 		27h		; Ball enable vertical delay
-TIAResmp0 = 		28h		; Missile locked to player flag
-TIAResmp1 = 		29h
+;*
+;* TIA bit mask definitions
+;*
+
+REF =			01h		; (CTRLPF) reflect playfield
+SCORE =			02h		; (CTRLPF) score mode
+PFP =			04h		; (CTRLPF) playfield gets priority
 
 
-; TIA Information Buffer. Contains 4 byte records as follows
-;
-;	0 - Graphics Clock when	written	(TIAEnd	= end of buffer)
-;	1 - Register being written
-;	2 - Value being	written
-;	3 - <reserved>
+;*
+;* pixel  bit definitions
+;*
 
-TIAClock = 		0		; these must be these values ...
-TIAReg	 = 		1		; ... and in this order
-TIAVal	 =		2
-
-TIAEnd	= 		255		; end of tia buffer marker
-TIAInvalid = 		254		; invalid entry
-
-
-; TIA Graphic Line  bit definitions
-
-TGPlay = 		1		; Bit for playfield
-TGBall = 		2		; Bit for ball
-TGPlayer1 = 		4		; Bit for P1
-TGMissile1 = 		8		; Bit for M1
-TGPlayer0 = 		16		; Bit for P0
-TGMissile0 = 		32		; Bit for M0
-
-
-; displacements into TIAColourTable
-
-TCTBK =			0		;backround
-TCTPF =			1		;playfield
-TCTP1 =			2		;player 1
-TCTP0 =			3		;player 0
+PF_BIT = 1
+BL_BIT = 2
+P1_BIT = 4
+M1_BIT = 8
+P0_BIT = 16
+M0_BIT = 32
+DL_BIT = 64
 
 
 ; some display related stuff

@@ -1,8 +1,9 @@
 /*
 ** z26 -- an Atari 2600 emulator
+** Copyright (C) 1997-1999 by John Saeger
 */
 
-#define version "z26 (1.25)"
+#define version "z26 (1.26)"
 
 #include <dos.h>		/* _psp */
 #include <ctype.h>
@@ -16,7 +17,7 @@ extern short int psp;		/* (data.asm) */
 extern int CartSize;
 extern long int Checksum;
 
-extern unsigned char CartRom[];
+unsigned char CartRom[32770];
 
 #include "def.c"
 #include "cli.c"

@@ -234,8 +234,8 @@ ModeXFlipPage:
 
 FlipThrottleLoop:
 	call	_GetTime		; prevent false alarms if running in a fast refresh mode (mode 8)
-	sub	eax,[LastVsyncTime]	; (see vsync.asm for LastVsyncTime and PreGap)
-	cmp	eax,[PreFlip]		; at least 7/8 of a frame or so since last Vsync?
+	sub	eax,dword ptr [LastVsyncTime]	; (see vsync.asm for LastVsyncTime and PreGap)
+	cmp	eax,dword ptr [PreFlip]		; at least 7/8 of a frame or so since last Vsync?	
 	jb	FlipThrottleLoop	;   no, keep waiting
 
 DoFlipping:

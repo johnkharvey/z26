@@ -148,7 +148,10 @@ _ShowBlasterDetected:
 	call	_ShowBlaster
 	push	offset msg702
 	call	_put_str
-	push	BUF_SIZE		; DMA buffer size
+
+	mov	ax,BUF_SIZE
+	push    ax		; DMA buffer size
+
 	call	_put_dec
 	call	_crlf
 	push	offset msg703

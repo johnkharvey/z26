@@ -439,7 +439,7 @@ gui_ShowMainPanel()
 {
 	gui_Panel(0,0,639,479, 3,4,2);
 	gui_DrawString(8, 470, 1, "\x0f");
-	gui_DrawString(16, 470, 1, "1997-1998 by John Saeger                                                     http://www.whimsey.com/z26");
+	gui_DrawString(16, 470, 1, "1997-1999 by John Saeger                                                     http://www.whimsey.com/z26");
 }
 
 /* show main inset */

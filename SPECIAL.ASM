@@ -4,7 +4,7 @@
 
 SetupSpecial:
 	mov	eax,[_Checksum]
-	jmp	SSFudgeMissile
+	jmp	SSFudgeTimer
 
 
 ;*
@@ -33,27 +33,25 @@ SSFIND_Done:
 
 
 ;*
-;* fudge missile for icehocky
-;*
-
-SSFudgeMissile:
-	mov	[OldMissile],0
-	cmp	eax,07df74h		; icehocky
-	jne	SSFudgeTimer
-	mov	[OldMissile],1
-	jmp	SSFudgeTimer
-
-
-
-;*
 ;* process requests to fudge timer
 ;*
 
 SSFudgeTimer:
 	mov	dword ptr [TimerFudge],0
 	cmp	ax,0b2d7h
-	jne	SSCFF
+	jne	SSGRPx
 	mov	[TimerFudge],dword ptr 22	; frogpond
+	jmp	SSGRPx
+
+;*
+;* process GRPx delay requests
+;*
+
+SSGRPx:
+	mov	[GRPxDelay],1		; assume 1
+	cmp	eax,0736a0h		; spidrftr
+	jne	SSCFF
+	mov	[GRPxDelay],-2
 	jmp	SSCFF
 
 ;*
@@ -928,101 +926,17 @@ SSAU:	mov	[MinVol],8
 	je	SSAUQ			; vidcheck
 
 
-	jmp	SSCB			; process column blanking requests
+	jmp	SetupScoreMode		; process column blanking requests
 
 SSAUQ:
 	mov	[MinVol],20		; Quiet Please!
-	jmp	SSCB
+	jmp	SetupScoreMode
 
 ; *
 ; * process column blank requests *
 ; *
 
-SSCB:	mov	[ColumnBlank],0
-	mov	si,offset ColumnBlankTable
-	call	SSFIND			; lookup checksum
-	cmp	edx,-1
-	je	SetupScoreMode		;   not found
-	mov	[ColumnBlank],8		;   found, blank first 8 columns
-	jmp	SetupScoreMode
-
-.data
-
-ColumnBlankTable label byte
-
-	dd	0359ch			; seaquest
-	dd	0d0e6h			; pitfall
-	dd	0912ch			; chopper command
-	dd	0006bh			; keystone kapers
-	dd	048fbh			; river raid
-	dd	070c3h			; freeway
-	dd	08ac5h			; barnstorming
-	dd	0676ch			; commando
-	dd	03f40h			; crossbow
-	dd	05b2ah			; dbldragn
-	dd	06fd1h			; rivraid2
-	dd	04094h			; kung_fu
-	dd	0de3ah			; skatebrd
-	dd	06289h			; crackpot
-	dd	068d0h			; csmcomtr
-	dd	0220fh			; dolphin
-	dd	04159h			; frostbit
-	dd	0d872h			; grandprx
-	dd	058a6h			; holehunt
-	dd	05974h			; megmania
-	dd	0c658h			; pitf_cce
-	dd	07ef2h			; plaqattk
-	dd	090d8h			; pyrmdwar
-	dd	0935dh			; seahwk
-	dd	0274fh			; spacraid
-	dd	0cbe1h			; tacscan
-	dd	0d58dh			; tomboy
-	dd	0186eh			; vidcheck
-	dd	0392dh			; vidchess
-	dd	06b3dh			; boxing
-	dd	0f608h			; rs_baseb
-	dd	00fdah			; spcshutl
-	dd	07852ah			; suprbase
-	dd	01cd4h			; moonptrl (switches)
-	dd	0b429h			; pressure
-	dd	09538h			; lasrblst
-	dd	046b6h			; forest
-	dd	0b1d0h			; homerun
-	dd	0c25eh			; marflegr
-	dd	057cah			; mogulman (** it switches! **)
-	dd	0bf9ah			; roadrunr
-	dd	0ecc2h			; beamride
-	dd	0dd61h			; endro_tw
-	dd	0f69ah			; enduro
-	dd	0ad52h			; decathln
-	dd	0f815h			; robotank
-	dd	0b491h			; skyjinks
-;	dd	094a9h			; he_man (** it switches! **)
-
-	dd	0d5653h			; qbrtqube
-	dd	0299233h		; fatalrun
-	dd	0729f3h			; firefite (** only partial! **)
-	dd	072300h			; mash
-	dd	07bfe1h			; oink
-	dd	07444bh			; rsvolley
-	dd	0cdbcch			; rstennis
-	dd	03b491h			; skyjinks
-	dd	01ca757h		; solaris
-	dd	0684b8h			; spacmast
-					; spikpeak (switches!)
-	dd	07554fh			; starfox
-	dd	06cd03h			; supferar
-	dd	06cc64h			; supferri
-	dd	06d1d4h			; astrowar
-	dd	0737ddh			; bermuda
-	dd	076f32h			; boombang
-	dd	07657eh			; crusmisl
-	dd	0e96a5h			; jnglhunt
-	dd	069e43h			; metdef
-
-	dd	-1
-
-.code
+SSCB:	jmp	SetupScoreMode
 
 SetupScoreMode:
 	mov	[NoScoreMode],0
@@ -1045,31 +959,14 @@ NoScore:
 SetP1Hard:
 	cmp	ax,094a9h
 	je	SP1HARD
-	jmp	SetupWrapWsync
+	jmp	SetupDone
 
 SP1HARD:
 	mov	dl,[_IOPortB]		; p1 hard
 	or	dl,128
 	mov	[_IOPortB],dl
-	jmp	SetupWrapWsync
-
-SetupWrapWsync:
-	mov	[WrapWsync],0
-	cmp	ax,09f21h
-	je	DoWrapWsync		; crosfrce
-	cmp	ax,0e0e9h
-	je	DoWrapWsync		; astroidc
-	cmp	ax,08ae0h
-	je	DoWrapWsync		; astroids
-	cmp	ax,03cfah
-	je	DoWrapWsync		; congbong
 	jmp	SetupDone
 
-DoWrapWsync:
-	mov	[WrapWsync],1
-	jmp	SetupDone
-
-	
 
 SetupDone:
 	ret

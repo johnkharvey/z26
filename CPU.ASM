@@ -5,85 +5,106 @@
 ; 06-27-98 -- new design
 ; 07-17-98 -- simplify
 
+; CPU doesn't use cx, bp, di -- trashes ax, bx, dx, si
+
+.data
+
+jam_msg	db	'Halt ','$'
 
 .code
+
+SaveCPUState macro
+	push	ax
+	push	bx
+	push	dx
+	push	si
+	endm
+
+RestoreCPUState macro
+	pop	si
+	pop	dx
+	pop	bx
+	pop	ax
+	endm
 
 ;*
 ;* memory accessing macros -- get/put data via op2
 ;*
 
-read    macro   op1,op2			; read memory
-        mov     si,op2
-        call    [ReadBank]
+read	macro	op1,op2		; read memory
+	mov	si,op2
+	call	[ReadBank]
 
 IFDEF z64
 	mov	op1,[RByte]
 ELSE
-        mov     op1,byte ptr [si]
+	mov	op1,byte ptr [si]
 ENDIF
 
-        endm
+	endm
       
-readsx  macro   op1,op2			; sign extended
-        mov     si,op2
-        call    [ReadBank]
+readsx	macro	op1,op2		; sign extended
+	mov	si,op2
+	call	[ReadBank]
 
 IFDEF z64
 	movsx	op1,[RByte]
 ELSE
-        movsx   op1,byte ptr [si]
+	movsx	op1,byte ptr [si]
 ENDIF
 
-        endm
+	endm
 
-readzx  macro   op1,op2			; zero extended
-        mov     si,op2
-        call    [ReadBank]
+readzx	macro	op1,op2		; zero extended
+	mov	si,op2
+	call	[ReadBank]
 
 IFDEF z64
 	movzx	op1,[RByte]
 ELSE
-        movzx   op1,byte ptr [si]
+	movzx	op1,byte ptr [si]
 ENDIF
 
-        endm
+	endm
 
-write   macro   op1,op2			; write memory
-        mov     si,op2
-        mov     [WByte],op1
-        call    [WriteBank]
-        endm
+write	macro	op1,op2		; write memory
+	mov	si,op2
+	mov	[WByte],op1
+	call	[WriteBank]
+	endm
 
 ;*
 ;* opcode (and immediate data) fetching macros
 ;*
 
-fetch   macro   op1
-        read    op1,di
-        inc     di
-        endm
+fetch	macro	op1
+	read	op1,[reg_pc]
+	inc	[reg_pc]
+	endm
 
-fetchsx macro   op1
-        readsx  op1,di
-        inc     di
-        endm
+fetchsx macro	op1
+	readsx	op1,[reg_pc]
+	inc	[reg_pc]
+	endm
 
-fetchzx macro   op1
-        readzx  op1,di
-        inc     di
-        endm
+fetchzx macro	op1
+	readzx	op1,[reg_pc]
+	inc	[reg_pc]
+	endm
 
-fetch_opcode macro   op1		; special fetchzx for trace logging
+fetch_opcode macro   op1	; special fetchzx for trace logging
 local fo_1
-
+IFDEF TRACE
 	cmp	[trace_count],0
 	jz	fo_1
 
 	call	TraceInstruction
 
-fo_1:	readzx  op1,di
-        inc     di
-        endm
+fo_1:	
+ENDIF
+	readzx	 op1,[reg_pc]
+	inc	[reg_pc]
+	endm
 
 ;*
 ;* 6507 stack macros
@@ -108,25 +129,25 @@ zpop	macro	op1
 ;*
 
 absolute macro
-        fetch   bl
-        fetch   bh
-        endm
+	fetch	bl
+	fetch	bh
+	endm
 
 zeropage macro
 	fetchzx	bx
-        endm
+	endm
 
-_index macro    op1
-        add     bx,word ptr[op1]        ; this is not a cheat
-        endm
+_index macro	op1
+	add	bx,word ptr[op1]	; this is not a cheat
+	endm
 
-indexx  macro
-        _index  reg_x
-        endm
+indexx	macro
+	_index	reg_x
+	endm
         
-indexy  macro
-        _index  reg_y
-        endm
+indexy	macro
+	_index	reg_y
+	endm
 
 bumpclock macro
 	inc	[RClock]
@@ -134,75 +155,75 @@ bumpclock macro
 	endm
 
 pagechange macro
-        local   M1
+	local	M1
         
-        cmp     dh,bh                   ; page changed ?
-        jz      M1
+	cmp	dh,bh		; page changed ?
+	jz	M1
 	bumpclock
 M1:
-        endm
+	endm
 
-readaddress macro                       ; read data in bx -> bx
-        and	bx,0ffh			; must be in page zero
-        read    dl,bx
-        inc     bl
-        read    dh,bx
-        mov     bx,dx
-        endm
+readaddress macro		; read data in bx -> bx
+	and	bx,0ffh		; must be in page zero
+	read	dl,bx
+	inc	bl
+	read	dh,bx
+	mov	bx,dx
+	endm
 
 absolutex macro
-        absolute
-        mov     dx,bx			; set up for pagechange test
-        indexx
+	absolute
+	mov	dx,bx		; set up for pagechange test
+	indexx
 	pagechange
-        endm
+	endm
 
 absolutex_nopc macro
-        absolute
-        indexx
-        endm
+	absolute
+	indexx
+	endm
 
 absolutey macro
-        absolute
-        mov     dx,bx			; set up for pagechange test
-        indexy
+	absolute
+	mov	dx,bx		; set up for pagechange test
+	indexy
 	pagechange
-        endm
+	endm
 
 absolutey_nopc macro
-        absolute
-        indexy
-        endm
+	absolute
+	indexy
+	endm
 
 zeropagex macro
-        zeropage
-        add     bl,[reg_x]
-        endm
+	zeropage
+	add	bl,[reg_x]
+	endm
 
 zeropagey macro
-        zeropage
-        add     bl,[reg_y]
-        endm
+	zeropage
+	add	bl,[reg_y]
+	endm
 
 indirectx macro
-        zeropage
-        indexx
-        readaddress
-        endm
+	zeropage
+	indexx
+	readaddress
+	endm
 
 indirecty macro
-        zeropage
-        readaddress
-        mov     dx,bx			; set up for pagechange macro
-        indexy
+	zeropage
+	readaddress
+	mov	dx,bx		; set up for pagechange test
+	indexy
 	pagechange
-        endm
+	endm
 
 indirecty_nopc macro
-        zeropage
-        readaddress
-        indexy
-        endm
+	zeropage
+	readaddress
+	indexy
+	endm
 
 ;*
 ;* memory addressing macros (and instruction timing)
@@ -346,7 +367,7 @@ zero_y_write macro
 ;*
 
 op_register macro op1, op2, op3
-_&op1:	implied
+op1:	implied
 	mov	dl,op3
 	_&op2
 	mov	op3,dl
@@ -354,14 +375,14 @@ _&op1:	implied
 	endm
 
 op_transfer macro op1, op2, op3
-_&op1:	implied
+op1:	implied
 	mov	dl,op3
 	mov	op2,dl
 	ret
 	endm
 
 op_transfertest macro op1, op2, op3
-_&op1:	implied
+op1:	implied
 	mov	dl,op3
 	mov	op2,dl
 	usetest	dl
@@ -369,21 +390,21 @@ _&op1:	implied
 	endm
 
 op_immediate macro op1, op2
-_&op1:	immediate
+op1:	immediate
 	fetch	dl
 	_&op2
 	ret
 	endm
 
 op_read macro op1,op2,op3
-_&op1:	op3&_read
+op1:	op3&_read
 	read	dl,bx
 	_&op2
 	ret
 	endm
 
 op_rmw macro op1,op2,op3
-_&op1:	op3&_rmw
+op1:	op3&_rmw
 	read	dl,bx
 	_&op2
 	write	dl,bx
@@ -391,22 +412,22 @@ _&op1:	op3&_rmw
 	endm
 
 op_write macro op1,op2,op3
-_&op1:	op3&_write
+op1:	op3&_write
 	_&op2
 	write	dl,bx
 	ret
 	endm
 
 op_branch macro op1,op2,op3,op4
-_&op1:	relative
+op1:	relative
 	test	op2,op3
 	op4	DoBranch
-	inc	di
+	inc	[reg_pc]
 	ret
 	endm
 
 op_weird macro op1,op2
-_&op1:	_&op2
+op1:	_&op2
 	ret
 	endm
 
@@ -414,18 +435,18 @@ _&op1:	_&op2
 ;* flag setting macros
 ;*
 
-useztest macro  op1                     ; use to test Z
-        mov     [RZTest],op1
-        endm
+useztest macro	op1			; use to test Z
+	mov	[RZTest],op1
+	endm
 
-usentest macro  op1                     ; use to test N      
-        mov     [RNTest],op1
-        endm
+usentest macro	op1			; use to test N	     
+	mov	[RNTest],op1
+	endm
 
-usetest macro   op1                     ; use to test both N and Z (normal)
-        useztest op1
-        usentest op1
-        endm
+usetest macro	op1			; use to test both N and Z (normal)
+	useztest op1
+	usentest op1
+	endm
 
 ;*
 ;* compare macros
@@ -600,8 +621,8 @@ ARR_5:
 _ASL macro
 	shl	dl,1
 	setc	ah
-        usetest dl
-        endm
+	usetest dl
+	endm
 
 _ASR macro
 	and	al,dl
@@ -684,10 +705,10 @@ _LDY macro
 	endm
 
 _LSR macro
-        shr     dl,1
+	shr	dl,1
 	setc	ah
-        usetest dl
-        endm
+	usetest dl
+	endm
 
 _LXA macro
 	or	al,0eeh
@@ -713,18 +734,18 @@ _RLA macro
 	endm
 
 _ROL macro
-        shr     ah,1
-        rcl     dl,1
-        setc	ah
-        usetest dl
-        endm
+	shr	ah,1
+	rcl	dl,1
+	setc	ah
+	usetest dl
+	endm
 
 _ROR macro
-        shr     ah,1
-        rcr     dl,1
+	shr	ah,1
+	rcr	dl,1
 	setc	ah
-        usetest dl
-        endm
+	usetest dl
+	endm
 
 _RRA macro
 	shr	ah,1
@@ -745,7 +766,7 @@ _SBC macro
 DoSBC:	cmp	[flag_D],0
 	jnz	SBCBCD
 	shr	ah,1
-	cmc				; set carry
+	cmc			; set carry
 	sbb	al,dl
 	seto	[flag_V]
 	usetest	al
@@ -759,37 +780,37 @@ SBCBCD:	push	cx
 
 	xor	ah,1
 	sahf
-	sbb	al,dl			; set flags using binary subtraction
+	sbb	al,dl		; set flags using binary subtraction
 	usetest	al
 	setnc	[_flag_carry]
 	seto	[flag_V]
 
-	mov	al,[_reg_a]		; now do decimal subtraction
+	mov	al,[_reg_a]	; now do decimal subtraction
 	and	dx,0fh
 	add	dl,ah
 	and	ax,0fh
-	sub	ax,dx			; subtract bottom nybbles with carry
-	mov	cx,ax			; save result
+	sub	ax,dx		; subtract bottom nybbles with carry
+	mov	cx,ax		; save result
 	mov	al,[_reg_a]
 	and	ax,0f0h
 	mov	dl,[_value]
 	and	dx,0f0h
-	sub	ax,dx			; subtract top nybbles
-	test	cx,010h			; bottom nybble underflow ?
+	sub	ax,dx		; subtract top nybbles
+	test	cx,010h		; bottom nybble underflow ?
 	je	SBCD_5
-	add	ax,-16			;   yes, fixup
+	add	ax,-16		;   yes, fixup
 	mov	dx,cx
 	add	dx,-6
 	jmp	SBCD_6
 
 SBCD_5:	mov	dx,cx
 SBCD_6:	and	dx,0fh
-	or	ax,dx			; combine lower and upper nybble result
-	test	ax,0100h		; upper nybble underflow ?
+	or	ax,dx		; combine lower and upper nybble result
+	test	ax,0100h	; upper nybble underflow ?
 	je	SBCD_7
-	sub	ax,060h			;   yes, fixup
+	sub	ax,060h		;   yes, fixup
 SBCD_7:	mov	ah,[_flag_carry]
-	mov	dl,[_value]		; SBC must preserve dl for ISB
+	mov	dl,[_value]	; SBC must preserve dl for ISB
 
 	pop	cx
 	ret	
@@ -861,17 +882,17 @@ _STY macro
 
 ;*
 ;* weird opcodes -- they don't match a pattern
-;*                  they must be timed manually
+;*		    they must be timed manually
 ;*
 
 _BRK macro
 	inc_clock 7
 
 	mov	[flag_B],1	; set break flag
-	inc	di
-	mov	dx,di		; push return address
+	inc	[reg_pc]
+	mov	dx,[reg_pc]	; push return address
 	zpush	dh
-	mov	dx,di
+	mov	dx,[reg_pc]
 	zpush	dl
 
 	call	_08		; push PSW
@@ -882,7 +903,7 @@ _BRK macro
 	read	al,bx
 	inc	bx
 	read	ah,bx
-	mov	di,ax		; and transfer control
+	mov	[reg_pc],ax	; and transfer control
 	pop	ax
 	endm
 
@@ -893,10 +914,10 @@ _JMPI macro
 	read	dl,bx
 	inc	bl		; stay in current page
 	read	dh,bx
-	mov	di,dx		; and jump to it
+	mov	[reg_pc],dx	; and jump to it
 
 IFDEF z64
-	cmp	di,0ff00h
+	cmp	[reg_pc],0ff00h
 	jae	KernalHandler
 ENDIF
 	endm
@@ -905,10 +926,10 @@ _JMPW macro
 	inc_clock 3
 
 	absolute		; fetch	the address
-	mov	di,bx		; jump to it
+	mov	[reg_pc],bx	; jump to it
 
 IFDEF z64
-	cmp	di,0ff00h
+	cmp	[reg_pc],0ff00h
 	jae	KernalHandler
 ENDIF
 	endm
@@ -918,15 +939,15 @@ _JSR macro
 
 	absolute		; call address in bx now
 	push	ax
-	mov	ax,di		; ax is	the return address
-	mov	di,bx		; transfer control
+	mov	ax,[reg_pc]	; ax is	the return address
+	mov	[reg_pc],bx	; transfer control
 	dec	ax		; push return-1
 	zpush	ah
 	zpush	al
 	pop	ax
 
 IFDEF z64
-	cmp	di,0ff00h
+	cmp	[reg_pc],0ff00h
 	jae	KernalHandler
 ENDIF
 	endm
@@ -967,7 +988,7 @@ _RTI macro
 	push	ax
 	zpop	al
 	zpop	ah		; pull return address
-	mov	di,ax		; transfer control
+	mov	[reg_pc],ax	; transfer control
 	pop	ax
 	endm
 
@@ -977,8 +998,8 @@ _RTS macro
 	push	ax
 	zpop	al
 	zpop	ah		; pull return address
-	mov	di,ax		; transfer control
-	inc	di
+	mov	[reg_pc],ax	; transfer control
+	inc	[reg_pc]
 	pop	ax
 	endm
 
@@ -987,14 +1008,14 @@ _RTS macro
 
 LoadRegs macro
 	mov	ax,word ptr [reg_a]	; mov al,[reg_a]; mov ah,[flag_carry]
-	mov	di,[reg_pc]
+;	mov	di,[reg_pc]
 	endm
 
 ; save CPU registers
 
 SaveRegs macro
 	mov	word ptr [reg_a],ax	; mov [reg_a],al; mov [flag_carry],ah
-	mov	[reg_pc],di
+;	mov	[reg_pc],di
 	endm
 
 ;*
@@ -1002,9 +1023,11 @@ SaveRegs macro
 ;*
 
 DoInstruction macro
+IFNDEF NEWTIA
 	push	dx
-	push	di
+;	push	di
 	push	si
+ENDIF
 	LoadRegs			; load the CPU registers
 
 	fetch_opcode	ebx		; (fetchzx) get the opcode
@@ -1012,19 +1035,21 @@ DoInstruction macro
 	call	[TimerVec]		; clock the RIOT timer
 
 	SaveRegs			; save the CPU registers
+IFNDEF NEWTIA
 	pop	si
-	pop	di
+;	pop	di
 	pop	dx
-
+ENDIF
 	endm
+
 
 IFDEF z64
 
 do_instruction:
 	DoInstruction
 	ret
-
 ENDIF
+
 
 ;*
 ;* jam handler 
@@ -1033,13 +1058,13 @@ ENDIF
 jam:	call	TIATextMode
 	push	offset jam_msg
 	call	_put_str
-	dec	di			; point at jam instruction
-	read	al,di
-	call	ConHex			; display it
+	dec	[reg_pc]	; point at jam instruction
+	read	al,[reg_pc]
+	call	ConHex		; display it
 	mov	al,'@'
 	call	ConOut
-	mov	ax,di
-	call	ConWord			; display address
+	mov	ax,[reg_pc]
+	call	ConWord		; display address
 
 IFNDEF z64
 WaitEsc:test	[KeyTable+KeyEsc],128	; wait for ESC to be pressed
@@ -1051,9 +1076,9 @@ ENDIF
 ;* Reset the CPU
 ;*
 
-Reset:	mov	[reg_sp],0FFh		; SP initialises to 255
-	mov	bx,0FFFCh		; get reset address
-	read	dl,bx			; from 0fffc,0fffd
+Reset:	mov	[reg_sp],0FFh	; SP initialises to 255
+	mov	bx,0FFFCh	; get reset address
+	read	dl,bx		; from 0fffc,0fffd
 	inc	bx
 	read	dh,bx
 	mov	[reg_pc],dx
@@ -1064,16 +1089,16 @@ Reset:	mov	[reg_sp],0FFh		; SP initialises to 255
 ;*
 
 DoBranch:
-        fetchsx dx			; sign-extended branch offset into dx
+	fetchsx dx		; sign-extended branch offset into dx
 
-	mov	bx,di			; bh is	the current page
-	add	dx,di			; destination address
-	mov	di,dx			; set the program counter
+	mov	bx,[reg_pc]	; bh is	the current page
+	add	dx,[reg_pc]	; destination address
+	mov	[reg_pc],dx	; set the program counter
 
-	bumpclock			; branch is taken -- one extra cycle
-	cmp	bh,dh			; page changed ?
+	bumpclock		; branch is taken -- one extra cycle
+	cmp	bh,dh		; page changed ?
 	je	dbjn
-	bumpclock			;   yes, another cycle
+	bumpclock		;   yes, another cycle
 dbjn:	ret
 
 ;*
@@ -1150,259 +1175,259 @@ vectors label word
 ;* opcode handlers
 ;*
 
-op_weird	00,BRK
-op_read		01,ORA,ind_x
+op_weird	_00,BRK
+op_read		_01,ORA,ind_x
 
-op_rmw		03,SLO,ind_x
-op_read		04,NOP,zero
-op_read		05,ORA,zero
-op_rmw		06,ASL,zero
-op_rmw		07,SLO,zero
-op_weird	08,PHP
-op_immediate	09,ORA
-op_register	0a,ASL,al
-op_immediate	0b,ANC
-op_read		0c,NOP,abs
-op_read		0d,ORA,abs
-op_rmw		0e,ASL,abs
-op_rmw		0f,SLO,abs
-op_branch	10,[RNTest],128,jz
-op_read		11,ORA,ind_y
+op_rmw		_03,SLO,ind_x
+op_read		_04,NOP,zero
+op_read		_05,ORA,zero
+op_rmw		_06,ASL,zero
+op_rmw		_07,SLO,zero
+op_weird	_08,PHP
+op_immediate	_09,ORA
+op_register	_0a,ASL,al
+op_immediate	_0b,ANC
+op_read		_0c,NOP,abs
+op_read		_0d,ORA,abs
+op_rmw		_0e,ASL,abs
+op_rmw		_0f,SLO,abs
+op_branch	_10,[RNTest],128,jz
+op_read		_11,ORA,ind_y
 
-op_rmw		13,SLO,ind_y
-op_read		14,NOP,zero_x
-op_read		15,ORA,zero_x
-op_rmw		16,ASL,zero_x
-op_rmw		17,SLO,zero_x
-op_transfer	18,ah,0
-op_read		19,ORA,abs_y
-op_transfer	1a,al,al
-op_rmw		1b,SLO,abs_y
-op_read		1c,NOP,abs_x
-op_read		1d,ORA,abs_x
-op_rmw		1e,ASL,abs_x
-op_rmw		1f,SLO,abs_x
-op_weird	20,JSR
-op_read		21,AND,ind_x
+op_rmw		_13,SLO,ind_y
+op_read		_14,NOP,zero_x
+op_read		_15,ORA,zero_x
+op_rmw		_16,ASL,zero_x
+op_rmw		_17,SLO,zero_x
+op_transfer	_18,ah,0
+op_read		_19,ORA,abs_y
+op_transfer	_1a,al,al
+op_rmw		_1b,SLO,abs_y
+op_read		_1c,NOP,abs_x
+op_read		_1d,ORA,abs_x
+op_rmw		_1e,ASL,abs_x
+op_rmw		_1f,SLO,abs_x
+op_weird	_20,JSR
+op_read		_21,AND,ind_x
 
-op_rmw		23,RLA,ind_x
-op_read		24,BIT,zero
-op_read		25,AND,zero
-op_rmw		26,ROL,zero
-op_rmw		27,RLA,zero
-op_weird	28,PLP
-op_immediate	29,AND
-op_register	2a,ROL,al
+op_rmw		_23,RLA,ind_x
+op_read		_24,BIT,zero
+op_read		_25,AND,zero
+op_rmw		_26,ROL,zero
+op_rmw		_27,RLA,zero
+op_weird	_28,PLP
+op_immediate	_29,AND
+op_register	_2a,ROL,al
 
-op_read		2c,BIT,abs
-op_read		2d,AND,abs
-op_rmw		2e,ROL,abs
-op_rmw		2f,RLA,abs
-op_branch	30,[RNTest],128,jnz
-op_read		31,AND,ind_y
+op_read		_2c,BIT,abs
+op_read		_2d,AND,abs
+op_rmw		_2e,ROL,abs
+op_rmw		_2f,RLA,abs
+op_branch	_30,[RNTest],128,jnz
+op_read		_31,AND,ind_y
 
-op_rmw		33,RLA,ind_y
-op_read		34,NOP,zero
-op_read		35,AND,zero_x
-op_rmw		36,ROL,zero_x
-op_rmw		37,RLA,zero_x
-op_transfer	38,ah,1
-op_read		39,AND,abs_y
-op_transfer	3a,al,al
-op_rmw		3b,RLA,abs_y
-op_read		3c,NOP,abs_x
-op_read		3d,AND,abs_x
-op_rmw		3e,ROL,abs_x
-op_rmw		3f,RLA,abs_x
-op_weird	40,RTI
-op_read		41,EOR,ind_x
+op_rmw		_33,RLA,ind_y
+op_read		_34,NOP,zero
+op_read		_35,AND,zero_x
+op_rmw		_36,ROL,zero_x
+op_rmw		_37,RLA,zero_x
+op_transfer	_38,ah,1
+op_read		_39,AND,abs_y
+op_transfer	_3a,al,al
+op_rmw		_3b,RLA,abs_y
+op_read		_3c,NOP,abs_x
+op_read		_3d,AND,abs_x
+op_rmw		_3e,ROL,abs_x
+op_rmw		_3f,RLA,abs_x
+op_weird	_40,RTI
+op_read		_41,EOR,ind_x
 
-op_rmw		43,SRE,ind_x
-op_read		44,NOP,zero
-op_read		45,EOR,zero
-op_rmw		46,LSR,zero
-op_rmw		47,SRE,zero
-op_weird	48,PHA
-op_immediate	49,EOR
-op_register	4a,LSR,al
-op_immediate	4b,ASR
-op_weird	4c,JMPW
-op_read		4d,EOR,abs
-op_rmw		4e,LSR,abs
-op_rmw		4f,SRE,abs
-op_branch	50,[flag_V],0ffh,jz
-op_read		51,EOR,ind_y
+op_rmw		_43,SRE,ind_x
+op_read		_44,NOP,zero
+op_read		_45,EOR,zero
+op_rmw		_46,LSR,zero
+op_rmw		_47,SRE,zero
+op_weird	_48,PHA
+op_immediate	_49,EOR
+op_register	_4a,LSR,al
+op_immediate	_4b,ASR
+op_weird	_4c,JMPW
+op_read		_4d,EOR,abs
+op_rmw		_4e,LSR,abs
+op_rmw		_4f,SRE,abs
+op_branch	_50,[flag_V],0ffh,jz
+op_read		_51,EOR,ind_y
 
-op_rmw		53,SRE,ind_y
-op_read		54,NOP,zero_x
-op_read		55,EOR,zero_x
-op_rmw		56,LSR,zero_x
-op_rmw		57,SRE,zero_x
-op_transfer	58,[flag_I],0
-op_read		59,EOR,abs_y
-op_transfer	5a,al,al
-op_rmw		5b,SRE,abs_y
-op_read		5c,NOP,abs_x
-op_read		5d,EOR,abs_x
-op_rmw		5e,LSR,abs_x
-op_rmw		5f,SRE,abs_x
-op_weird	60,RTS
-op_read		61,ADC,ind_x
+op_rmw		_53,SRE,ind_y
+op_read		_54,NOP,zero_x
+op_read		_55,EOR,zero_x
+op_rmw		_56,LSR,zero_x
+op_rmw		_57,SRE,zero_x
+op_transfer	_58,[flag_I],0
+op_read		_59,EOR,abs_y
+op_transfer	_5a,al,al
+op_rmw		_5b,SRE,abs_y
+op_read		_5c,NOP,abs_x
+op_read		_5d,EOR,abs_x
+op_rmw		_5e,LSR,abs_x
+op_rmw		_5f,SRE,abs_x
+op_weird	_60,RTS
+op_read		_61,ADC,ind_x
 
-op_rmw		63,RRA,ind_x
-op_read		64,NOP,zero
-op_read		65,ADC,zero
-op_rmw		66,ROR,zero
-op_rmw		67,RRA,zero
-op_weird	68,PLA
-op_immediate	69,ADC
-op_register	6a,ROR,al
-op_immediate	6b,ARR
-op_weird	6c,JMPI
-op_read		6d,ADC,abs
-op_rmw		6e,ROR,abs
-op_rmw		6f,RRA,abs
-op_branch	70,[flag_V],0ffh,jnz
-op_read		71,ADC,ind_y
+op_rmw		_63,RRA,ind_x
+op_read		_64,NOP,zero
+op_read		_65,ADC,zero
+op_rmw		_66,ROR,zero
+op_rmw		_67,RRA,zero
+op_weird	_68,PLA
+op_immediate	_69,ADC
+op_register	_6a,ROR,al
+op_immediate	_6b,ARR
+op_weird	_6c,JMPI
+op_read		_6d,ADC,abs
+op_rmw		_6e,ROR,abs
+op_rmw		_6f,RRA,abs
+op_branch	_70,[flag_V],0ffh,jnz
+op_read		_71,ADC,ind_y
 
-op_rmw		73,RRA,ind_y
-op_read		74,NOP,zero_x
-op_read		75,ADC,zero_x
-op_rmw		76,ROR,zero_x
-op_rmw		77,RRA,zero_x
-op_transfer	78,[flag_I],1
-op_read		79,ADC,abs_y
-op_transfer	7a,al,al
-op_rmw		7b,RRA,abs_y
-op_read		7c,NOP,abs_x
-op_read		7d,ADC,abs_x
-op_rmw		7e,ROR,abs_x
-op_rmw		7f,RRA,abs_x
-op_immediate	80,NOP
-op_write	81,STA,ind_x
-op_immediate	82,NOP
-op_write	83,SAX,ind_x
-op_write	84,STY,zero
-op_write	85,STA,zero
-op_write	86,STX,zero
-op_write	87,SAX,zero
-op_register	88,DEC,[reg_y]
-op_immediate	89,NOP
-op_transfertest	8a,al,[reg_x]
-op_immediate	8b,ANE
-op_write	8c,STY,abs
-op_write	8d,STA,abs
-op_write	8e,STX,abs
-op_write	8f,SAX,abs
-op_branch	90,ah,ah,jz
-op_write	91,STA,ind_y
+op_rmw		_73,RRA,ind_y
+op_read		_74,NOP,zero_x
+op_read		_75,ADC,zero_x
+op_rmw		_76,ROR,zero_x
+op_rmw		_77,RRA,zero_x
+op_transfer	_78,[flag_I],1
+op_read		_79,ADC,abs_y
+op_transfer	_7a,al,al
+op_rmw		_7b,RRA,abs_y
+op_read		_7c,NOP,abs_x
+op_read		_7d,ADC,abs_x
+op_rmw		_7e,ROR,abs_x
+op_rmw		_7f,RRA,abs_x
+op_immediate	_80,NOP
+op_write	_81,STA,ind_x
+op_immediate	_82,NOP
+op_write	_83,SAX,ind_x
+op_write	_84,STY,zero
+op_write	_85,STA,zero
+op_write	_86,STX,zero
+op_write	_87,SAX,zero
+op_register	_88,DEC,[reg_y]
+op_immediate	_89,NOP
+op_transfertest	_8a,al,[reg_x]
+op_immediate	_8b,ANE
+op_write	_8c,STY,abs
+op_write	_8d,STA,abs
+op_write	_8e,STX,abs
+op_write	_8f,SAX,abs
+op_branch	_90,ah,ah,jz
+op_write	_91,STA,ind_y
 
-op_write	93,SHA,ind_y
-op_write	94,STY,zero_x
-op_write	95,STA,zero_x
-op_write	96,STX,zero_y
-op_write	97,SAX,zero_y
-op_transfertest	98,al,[reg_y]
-op_write	99,STA,abs_y
-op_transfer	9a,[reg_sp],[reg_x]
-op_write	9b,SHS,abs_y
-op_write	9c,SHY,abs_x
-op_write	9d,STA,abs_x
-op_write	9e,SHX,abs_y
-op_write	9f,SHA,abs_y
-op_immediate	a0,LDY
-op_read		a1,LDA,ind_x
-op_immediate	a2,LDX
-op_read		a3,LAX,ind_x
-op_read		a4,LDY,zero
-op_read		a5,LDA,zero
-op_read		a6,LDX,zero
-op_read		a7,LAX,zero
-op_transfertest	a8,[reg_y],al
-op_immediate	a9,LDA
-op_transfertest	aa,[reg_x],al
-op_immediate	ab,LXA
-op_read		ac,LDY,abs
-op_read		ad,LDA,abs
-op_read		ae,LDX,abs
-op_read		af,LAX,abs
-op_branch	b0,ah,ah,jnz
-op_read		b1,LDA,ind_y
+op_write	_93,SHA,ind_y
+op_write	_94,STY,zero_x
+op_write	_95,STA,zero_x
+op_write	_96,STX,zero_y
+op_write	_97,SAX,zero_y
+op_transfertest	_98,al,[reg_y]
+op_write	_99,STA,abs_y
+op_transfer	_9a,[reg_sp],[reg_x]
+op_write	_9b,SHS,abs_y
+op_write	_9c,SHY,abs_x
+op_write	_9d,STA,abs_x
+op_write	_9e,SHX,abs_y
+op_write	_9f,SHA,abs_y
+op_immediate	_a0,LDY
+op_read		_a1,LDA,ind_x
+op_immediate	_a2,LDX
+op_read		_a3,LAX,ind_x
+op_read		_a4,LDY,zero
+op_read		_a5,LDA,zero
+op_read		_a6,LDX,zero
+op_read		_a7,LAX,zero
+op_transfertest	_a8,[reg_y],al
+op_immediate	_a9,LDA
+op_transfertest	_aa,[reg_x],al
+op_immediate	_ab,LXA
+op_read		_ac,LDY,abs
+op_read		_ad,LDA,abs
+op_read		_ae,LDX,abs
+op_read		_af,LAX,abs
+op_branch	_b0,ah,ah,jnz
+op_read		_b1,LDA,ind_y
 
-op_read		b3,LAX,ind_y
-op_read		b4,LDY,zero_x
-op_read		b5,LDA,zero_x
-op_read		b6,LDX,zero_y
-op_read		b7,LAX,zero_y
-op_transfer	b8,[flag_V],0
-op_read		b9,LDA,abs_y
-op_transfertest	ba,[reg_x],[reg_sp]
-op_read		bb,LAS,abs_y
-op_read		bc,LDY,abs_x
-op_read		bd,LDA,abs_x
-op_read		be,LDX,abs_y
-op_read		bf,LAX,abs_y
-op_immediate	c0,CPY
-op_read		c1,CMP,ind_x
-op_immediate	c2,NOP
-op_rmw		c3,DCP,ind_x
-op_read		c4,CPY,zero
-op_read		c5,CMP,zero
-op_rmw		c6,DEC,zero
-op_rmw		c7,DCP,zero
-op_register	c8,INC,[reg_y]
-op_immediate	c9,CMP
-op_register	ca,DEC,[reg_x]
-op_immediate	cb,SBX
-op_read		cc,CPY,abs
-op_read		cd,CMP,abs
-op_rmw		ce,DEC,abs
-op_rmw		cf,DCP,abs
-op_branch	d0,[RZTest],0ffh,jnz
-op_read		d1,CMP,ind_y
+op_read		_b3,LAX,ind_y
+op_read		_b4,LDY,zero_x
+op_read		_b5,LDA,zero_x
+op_read		_b6,LDX,zero_y
+op_read		_b7,LAX,zero_y
+op_transfer	_b8,[flag_V],0
+op_read		_b9,LDA,abs_y
+op_transfertest	_ba,[reg_x],[reg_sp]
+op_read		_bb,LAS,abs_y
+op_read		_bc,LDY,abs_x
+op_read		_bd,LDA,abs_x
+op_read		_be,LDX,abs_y
+op_read		_bf,LAX,abs_y
+op_immediate	_c0,CPY
+op_read		_c1,CMP,ind_x
+op_immediate	_c2,NOP
+op_rmw		_c3,DCP,ind_x
+op_read		_c4,CPY,zero
+op_read		_c5,CMP,zero
+op_rmw		_c6,DEC,zero
+op_rmw		_c7,DCP,zero
+op_register	_c8,INC,[reg_y]
+op_immediate	_c9,CMP
+op_register	_ca,DEC,[reg_x]
+op_immediate	_cb,SBX
+op_read		_cc,CPY,abs
+op_read		_cd,CMP,abs
+op_rmw		_ce,DEC,abs
+op_rmw		_cf,DCP,abs
+op_branch	_d0,[RZTest],0ffh,jnz
+op_read		_d1,CMP,ind_y
 
-op_rmw		d3,DCP,ind_y
-op_read		d4,NOP,zero_x
-op_read		d5,CMP,zero_x
-op_rmw		d6,DEC,zero_x
-op_rmw		d7,DCP,zero_x
-op_transfer	d8,[flag_D],0
-op_read		d9,CMP,abs_y
-op_transfer	da,al,al
-op_rmw		db,DCP,abs_y
-op_read		dc,NOP,abs_x
-op_read		dd,CMP,abs_x
-op_rmw		de,DEC,abs_x
-op_rmw		df,DCP,abs_x
-op_immediate	e0,CPX
-op_read		e1,SBC,ind_x
-op_immediate	e2,NOP
-op_rmw		e3,ISB,ind_x
-op_read		e4,CPX,zero
-op_read		e5,SBC,zero
-op_rmw		e6,INC,zero
-op_rmw		e7,ISB,zero
-op_register	e8,INC,[reg_x]
-op_immediate	e9,SBC
-op_transfer	ea,al,al
+op_rmw		_d3,DCP,ind_y
+op_read		_d4,NOP,zero_x
+op_read		_d5,CMP,zero_x
+op_rmw		_d6,DEC,zero_x
+op_rmw		_d7,DCP,zero_x
+op_transfer	_d8,[flag_D],0
+op_read		_d9,CMP,abs_y
+op_transfer	_da,al,al
+op_rmw		_db,DCP,abs_y
+op_read		_dc,NOP,abs_x
+op_read		_dd,CMP,abs_x
+op_rmw		_de,DEC,abs_x
+op_rmw		_df,DCP,abs_x
+op_immediate	_e0,CPX
+op_read		_e1,SBC,ind_x
+op_immediate	_e2,NOP
+op_rmw		_e3,ISB,ind_x
+op_read		_e4,CPX,zero
+op_read		_e5,SBC,zero
+op_rmw		_e6,INC,zero
+op_rmw		_e7,ISB,zero
+op_register	_e8,INC,[reg_x]
+op_immediate	_e9,SBC
+op_transfer	_ea,al,al
 
-op_read		ec,CPX,abs
-op_read		ed,SBC,abs
-op_rmw		ee,INC,abs
-op_rmw		ef,ISB,abs
-op_branch	f0,[RZTest],0ffh,jz
-op_read		f1,SBC,ind_y
+op_read		_ec,CPX,abs
+op_read		_ed,SBC,abs
+op_rmw		_ee,INC,abs
+op_rmw		_ef,ISB,abs
+op_branch	_f0,[RZTest],0ffh,jz
+op_read		_f1,SBC,ind_y
 
-op_rmw		f3,ISB,ind_y
-op_read		f4,NOP,zero_x
-op_read		f5,SBC,zero_x
-op_rmw		f6,INC,zero_x
-op_rmw		f7,ISB,zero_x
-op_transfer	f8,[flag_D],1
-op_read		f9,SBC,abs_y
-op_transfer	fa,al,al
-op_rmw		fb,ISB,abs_y
-op_read		fc,NOP,abs_x
-op_read		fd,SBC,abs_x
-op_rmw		fe,INC,abs_x
-op_rmw		ff,ISB,abs_x
+op_rmw		_f3,ISB,ind_y
+op_read		_f4,NOP,zero_x
+op_read		_f5,SBC,zero_x
+op_rmw		_f6,INC,zero_x
+op_rmw		_f7,ISB,zero_x
+op_transfer	_f8,[flag_D],1
+op_read		_f9,SBC,abs_y
+op_transfer	_fa,al,al
+op_rmw		_fb,ISB,abs_y
+op_read		_fc,NOP,abs_x
+op_read		_fd,SBC,abs_x
+op_rmw		_fe,INC,abs_x
+op_rmw		_ff,ISB,abs_x

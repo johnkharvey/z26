@@ -1,18 +1,11 @@
 ; init.asm -- initialize all data in z26 asm modules
 
-.data
+PUBLIC IOPortA, InputLatch
 
-; *** data.asm ***
+.data
 
 ALIGN 2
 
-; *** keep next 4 variables in order !!!!
-; they are arranged to match the order of the entries in TIAColourTable
-
-BackgroundColor	dd	0
-PlayfieldColor	dd	0
-Player1Color	dd	0
-Player0Color	dd	0
 Frame		dd	0		; Frame Counter
 PrevFrame	dd	0		; Previous value frame counter
 
@@ -43,7 +36,7 @@ CPUOffset	db	66		; 64 default offset for CPU clock
 CPUClock	db	0
 WrapZero	db	0		; wrap negative player pos to zero
 WrapWsync	db	0		; push late Wsyncs to next line
-OldMissile	db	0		; use old missile code for resmpx
+GRPxDelay	db	1		; delay for write to GRPx register
 
 WByte		db	0		; byte to write
 
@@ -159,37 +152,6 @@ InputLatch	db	080h		; Input latch (inp4)
 
 ALIGN 2
 
-; *** joy.asm ***
-
-JH1			dw	0
-JH2			dw	0
-JH3			dw	0
-JH4			dw	0
-
-JV1			dw	0
-JV2			dw	0
-JV3			dw	0
-JV4			dw	0
-
-JoyHorizontalCenter	dw	0
-JoyVerticalCenter	dw	0
-
-JoyLeft			dw	0
-JoyRight		dw	0
-JoyUp			dw	0
-JoyDown			dw	0
-
-DoJoystick		db	1
-
-
-; *** keyboard.asm ***
-
-OldInt9		dw	0,0	; old vector for int9
-
-CtrlSkipFlag	db	0	; skip this control key test
-
-
-ALIGN 2
 ; *** riot.asm ***
 
 Timer		dd	0		; the RIOT Timer
@@ -204,53 +166,53 @@ RetFF		db	0FFh
 ; *** stuff that gets shared with "C" program ***
 ; (gets saved / initialized externally)
 
-global _psp
+PUBLIC _psp
 _psp		dw	0		; gets set by calling C program
 
-global _Checksum
+PUBLIC _Checksum
 _Checksum	dd	0		; gets cart checksum
 
-global _dsp
+PUBLIC _dsp
 _dsp		db	0		; do digital signal processing
 
-global _VideoMode
+PUBLIC _VideoMode
 _VideoMode	db	0ffh		; default video mode
 
-global _CFirst
+PUBLIC _CFirst
 _CFirst		dw	0ffffh		; <-- gets changed by SetupSpecial
 					; (zero has VBlank trigger a new frame)
-global _SoundMode
+PUBLIC _SoundMode
 _SoundMode	db	0ffh		; sound mode
 
-global _IOPortB
+PUBLIC _IOPortB
 _IOPortB	db	00Bh		; IO Port B (switches)
 IOPortA		db	0FFh		; IO Port A (joystick)
 
-global _DoChecksum
+PUBLIC _DoChecksum
 _DoChecksum	db	0		; set if we should print out checksum
 
-global _NoRetrace
+PUBLIC _NoRetrace
 _NoRetrace	db	0		; don't wait for retrace (if 0ffh) otherwise framerate
 
-global _FrameExit
+PUBLIC _FrameExit
 _FrameExit	dd	0		; do this many frames and exit
 
-global _Joystick
+PUBLIC _Joystick
 _Joystick	db	1		; do joystick
 
-global _quiet
+PUBLIC _quiet
 _quiet		db	0		; set if we want no sound
 
-global _PaletteNumber
+PUBLIC _PaletteNumber
 _PaletteNumber	db	0ffh		; gets set by cmdline.asm
 
-global _PaddleGame
+PUBLIC _PaddleGame
 _PaddleGame	dd	0		; this is a paddle game (sensitivity)
 
-global _KeyBase
+PUBLIC _KeyBase
 _KeyBase	db	0ffh		; which paddle to emulate
 
-global _CartSize
+PUBLIC _CartSize
 _CartSize	dw	0		; gets cart size (cmdline.asm)
 
 
@@ -263,13 +225,12 @@ BlasterLoopCount dd	0		; count # of trys initting the soundblaster
 .code
 
 InitData:
+	call	InitTIA
+
+
 	mov	[BlasterLoopCount],0
 	mov	[InTextMode],0
 
-	mov	[BackgroundColor],0
-	mov	[PlayfieldColor],0
-	mov	[Player1Color],0
-	mov	[Player0Color],0
 	mov	[Frame],0
 	mov	[PrevFrame],0
 	mov	[OriginalFrameExit],0
@@ -290,7 +251,6 @@ InitData:
 	mov	[CPUOffset],66
 	mov	[WrapZero],0
 	mov	[WrapWsync],0
-	mov	[OldMissile],0
 	mov	[WByte],0
 	mov	[VDP0Gr],0
 	mov	[VDP1Gr],0
@@ -342,22 +302,6 @@ InitData:
 	mov	dword ptr [DumpPorts],0
 	mov	word ptr [InputLatch],08080h
 
-	mov	[JH1],0
-	mov	[JH2],0
-	mov	[JH3],0
-	mov	[JH4],0
-	mov	[JV1],0
-	mov	[JV2],0
-	mov	[JV3],0
-	mov	[JV4],0
-	mov	[JoyHorizontalCenter],0
-	mov	[JoyVerticalCenter],0
-	mov	[JoyLeft],0
-	mov	[JoyRight],0
-	mov	[JoyUp],0
-	mov	[JoyDown],0
-	mov	[DoJoystick],1
-
 	mov	dword ptr [OldInt9],0
 	mov	[CtrlSkipFlag],0
 
@@ -368,6 +312,7 @@ InitData:
 	mov	[TimerByte],0
 	mov	[TimerIntReg],080h
 	mov	[RetFF],0ffh
+
 
 	ret
 

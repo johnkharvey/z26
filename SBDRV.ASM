@@ -97,7 +97,7 @@ sound_int:
 	push	dx
 	push	ds
 
-	mov	ax,[cs:sbDataSegSave]	; set up by SetISR
+	mov	ax,cs:[sbDataSegSave]	; set up by SetISR
 	mov	ds,ax
 	mov	dx,[_sbBaseIOPort]
 	add	dx,14
@@ -143,7 +143,7 @@ _SetISR:
 	cli
 
 	mov	ax,ds
-	mov	[cs:sbDataSegSave],ax	; save DS where ISR can find it
+	mov	cs:[sbDataSegSave],ax	; save DS where ISR can find it
 
 	mov	al,11111110b		;Shifter for IRQ mask
 	mov	bl,_sbIRQNumber		

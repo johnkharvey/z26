@@ -20,7 +20,7 @@ PCXHexTable      DB '0123456789ABCDEF'
 
 .code
 
-PCXWriteFile:
+PCXWriteFile proc near
 	pusha
 	push es
 
@@ -164,3 +164,6 @@ PCXHexLoop:
 PCXDone:
 	popa
    ret
+
+PCXWriteFile endp
+

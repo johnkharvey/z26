@@ -91,8 +91,10 @@ next_sample	db	0
 
 _Update_tia_sound	proc	near
 
+IFNDEF NEWTIA
 	movzx	bx,byte ptr TIAReg[di]
 	mov	al,TIAVal[di]
+ENDIF
 
 	sub	bx,21		; offset to AUDC
 	cmp	bx,5

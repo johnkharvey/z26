@@ -2,15 +2,55 @@
 ;* z26 joystick code
 ;*
 
+.data
+
+JH1			dw	0
+JH2			dw	0
+JH3			dw	0
+JH4			dw	0
+
+JV1			dw	0
+JV2			dw	0
+JV3			dw	0
+JV4			dw	0
+
+JoyHorizontalCenter	dw	0
+JoyVerticalCenter	dw	0
+
+JoyLeft			dw	0
+JoyRight		dw	0
+JoyUp			dw	0
+JoyDown			dw	0
+
+DoJoystick		db	1
+
 .code
+
 
 ;*
 ;* call this routine at start of game
 ;* we assume joystick is centered at start
 ;*
 
-JoyCenter:
+JoyCenter proc near
 	pushad
+
+	mov	[JH1],0
+	mov	[JH2],0
+	mov	[JH3],0
+	mov	[JH4],0
+	mov	[JV1],0
+	mov	[JV2],0
+	mov	[JV3],0
+	mov	[JV4],0
+	mov	[JoyHorizontalCenter],0
+	mov	[JoyVerticalCenter],0
+	mov	[JoyLeft],0
+	mov	[JoyRight],0
+	mov	[JoyUp],0
+	mov	[JoyDown],0
+	mov	[DoJoystick],1
+
 	mov	al,[_Joystick]
 	mov	[DoJoystick],al		; copy joystick parameter
 
@@ -71,6 +111,8 @@ NoJoy:	mov	[DoJoystick],0		; turn off the joystick
 	popad
 	ret
 
+JoyCenter endp
+
 
 ;*
 ;* read the joystick and give the emulator a clue
@@ -79,7 +121,7 @@ NoJoy:	mov	[DoJoystick],0		; turn off the joystick
 ;*
 
 
-Joystick:
+Joystick proc near
 	pushad
 	cmp	[DoJoystick],0
 	jz	NoJoy
@@ -150,6 +192,7 @@ AtariDown:				; stick is down
 	and	ah,0ffh-32
 	jmp	JoyTestButtons
 
+Joystick endp
 
 
 ;*
@@ -159,7 +202,7 @@ AtariDown:				; stick is down
 ;*              by Randall Hyde
 ;*
 
-JoyRead:
+JoyRead proc near
 	mov	cx,1000h	;Max times through loop
 	xor	si,si		;We’ll put readings in SI and
 	xor	di,di		; di.
@@ -180,11 +223,14 @@ JoyLoop:
 JoyReadDone:
 	ret
 
+JoyRead endp
+
+
 ;*
 ;* stabilize the joystick reading
 ;*
 
-JoyStabilize:
+JoyStabilize proc near
 
 	mov	ax,[JH1]	; do a moving average of 4 values
 	add	ax,[JH2]
@@ -229,8 +275,10 @@ JoyStabilize:
 
 	ret
 
+JoyStabilize endp
 
-JoyStabilizeInit:
+
+JoyStabilizeInit proc near
 	mov	[JH1],si
 	mov	[JH2],si
 	mov	[JH3],si
@@ -243,4 +291,5 @@ JoyStabilizeInit:
 
 	ret
 
+JoyStabilizeInit endp
 

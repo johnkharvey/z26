@@ -1,5 +1,7 @@
 ; console.asm -- z26 console output routines
 
+.code
+
 ; Here's the integer output routine from TECO for a PDP-10 by RC CLEMENTS
 ; This version is dated 1970.
 
