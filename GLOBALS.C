@@ -19,7 +19,7 @@ dd XChecksum=0;		/* gets alternative checksum */
 
 dd DelayTime=0;		/* gets long delay value */
 
-db CartRom[34000]; 	/* ROM image goes here */
+db CartRom[34000]; 	/* 34000 ROM image goes here */
 db FileName[260];	/* filename of current ROM being run */
 
 db far *Megaboy;	/* pointer to Megaboy ROM */

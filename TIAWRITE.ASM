@@ -270,8 +270,8 @@ H_VSYNC:
 
 DontUpdateLinesInFrame:
 	mov	dword ptr [LooseColour],0ffffffffh
-	cmp	[_PaletteNumber],1	; PAL palette?
-	jne	GrayFrame		;   no, don't simulate color loss
+;	cmp	[_PaletteNumber],1	; PAL palette?
+;	jne	GrayFrame		;   no, don't simulate color loss
 	test	[_SimColourLoss],1
 	jz	GrayFrame
 	test	[_LinesInFrame],1

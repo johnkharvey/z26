@@ -12,4 +12,4 @@ copy mmn.bat .\releases\%1
 copy release.bat .\releases\%1
 cd .\releases\%1
 pkzip z26%1s.zip *.c *.asm *.f8 *.das *.bat copying.txt
-pkzip z26%1x.zip *.exe *.txt
+pkzip z26%1x.zip *.exe *.txt z26.ico

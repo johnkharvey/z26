@@ -10,15 +10,19 @@
 */
 
 
-#define version "z26 (1.39)"
 
-
-#define rom_list "ROM List"
-
+#define version "z26 (1.40)"
 
 /*
-#define rom_list "Preview version J -- Please don't distribute."
+#define version "Pre 1.40-C"
 */
+
+/*
+#define rom_list "ROM List"
+*/
+
+#define rom_list ""
+
 
 #include <dos.h>		/* _psp */
 #include <ctype.h>
@@ -29,18 +33,19 @@
 #include <time.h>
 
 #include "globals.c"
+#include "ct.c"
 #include "carts.c"
 #include "cli.c"
 #include "gui.c"
 #include "trace.c"
 
-
 void main(int argc, char *argv[])
 {
 	def_LoadDefaults();
-	Megaboy=(char *) calloc(32768,sizeof(char));
+	Megaboy=(char *) calloc(39000,sizeof(char));
 	MBseg=FP_SEG(Megaboy);
 	MBofs=FP_OFF(Megaboy);
+
 	if (argc != 1)
 	{
 	   	cli_CommandLine(argc, argv);
@@ -75,6 +80,7 @@ void main(int argc, char *argv[])
 		DelayTime = 250000;
 		LongDelay();
 
+                gui_CheckLFN();		/* check for long filename support */
 		gui_CheckMouse();
 		gui_GraphicsMode();
 		gui_SetPalette(35, 40, 45);
