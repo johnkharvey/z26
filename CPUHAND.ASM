@@ -282,7 +282,7 @@ WrTiaWSync:
 	call	[TimerVec]		; do timing for current instruction
 	mov	bl,CyclesPerScanLine	; number of cycles left in the line
 	sub	bl,byte ptr [RClock]	; number of clocks left to do.
-	js	WSret			; if clock > 76 do nothing
+	js	WSret			; (was js) if clock > 76 do nothing
 WSyncLoop:
 	cmp	bl,8			; max of 8 cycles at once.
 	jl	WSyncExit		; if < 8 do the last few

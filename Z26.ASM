@@ -25,6 +25,10 @@ PAGE 66,132
 ; 11-26-97  --  (0.83) add column blanking
 ; 11-26-97  --  (0.83) tune top lines and column blanking for many games
 ; 11-28-97  --  (0.83) more palette tweaking
+; 12-02-97  --  (0.84) got Seaquest & opening screen of Starraiders right color by playing
+;		       games with score mode (playfield taking on color of players)
+; 12-02-97  --  (0.84) got tetris26, space invaders, taxavoid, catmouse to stop jiggling
+;		       by playing games with CyclesPerScanLine
 
 
 ; assembly time definitions

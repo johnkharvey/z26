@@ -277,6 +277,10 @@ SetupSpecial:
 ;	je	Line60			; moonswep
 	cmp	ax,0e5beh
 	je	Line40			; Tetris26
+	cmp	ax,08e07h
+	je	Line42			; catmouse
+;	cmp	ax,08ab0h
+;	je	Line40			; firebird (doesn't fix)
 
 	jmp	SSTR			; process Timer1 requests
 
@@ -428,8 +432,8 @@ SSCB:	cmp	ax,0359ch
 	je	SSCB8			; keystone kapers
 	cmp	ax,048fbh
 	je	SSCB8			; river raid
-	cmp	ax,0a402h
-	je	SSCB8			; space invaders
+;	cmp	ax,0a402h
+;	je	SSCB8			; spaceinv
 	cmp	ax,070c3h
 	je	SSCB8			; freeway
 	cmp	ax,08ac5h
@@ -491,14 +495,70 @@ SSCB:	cmp	ax,0359ch
 ;	cmp	ax,057cah
 ;	je	SSCB8			; mogulman (it switches!)
 
-	jmp	SetupDone
+	jmp	SetupScoreMode
 
 
 SSCB8:	mov	[ColumnBlank],8		; blank first 8 columns
-	jmp	SetupDone
+	jmp	SetupScoreMode
 
 SSCB4:	mov	[ColumnBlank],4		; blank first 4 columns
+	jmp	SetupScoreMode
+
+
+SetupScoreMode:
+	cmp	ax,0359ch
+	je	NoScore			; seaquest
+	cmp	ax,0fbedh
+	je	NoScore			; starraid
+	jmp	SetupCyclesPerScanLine
+
+NoScore:
+	mov	[NoScoreMode],1
+	jmp	SetupCyclesPerScanLine
+
+
+SetupCyclesPerScanLine:
+	cmp	ax,0e5beh
+	je	Cycles1			; tetris26
+	cmp	ax,0a402h
+	je	Cycles3			; spaceinv
+	cmp	ax,00eb4h
+	je	Cycles1			; taxavoid
+	cmp	ax,08e07h
+	je	Cycles3			; catmouse
+;	cmp	ax,0e90bh
+;	je	Cycles3			; condor (doesn't help much)
+	cmp	ax,022abh
+	je	Cycles1			; cosmcrep
+;	cmp	ax,09f21h
+;	je	Cycles1			; crosfrce (doesn't fix)
+;	cmp	ax,0217fh
+;	je	Cycles3			; gopher (doesn't fix)
+;	cmp	ax,07a61h
+;	je	Cycles1			; imagslct (doesn't fix)
+;	cmp	ax,0a9c2h
+;	je	Cycles3			; jawbreak (doesn't fix)
+;	cmp	ax,04cebh
+;	je	Cycles3			; offrockr (doesn't fix)
+;	cmp	ax,04f0eh
+;	je	Cycles3			; pharhcrs (doesn't fix)
+;	cmp	ax,03cd9h
+;	je	Cycles3			; quickstp (doesn't fix)
+;	cmp	ax,07be3h
+;	je	Cycles1			; shootin (doesn't fix)
+;	cmp	ax,0df79h
+;	je	Cycles3			; spitfire (doesn't fix)
+
 	jmp	SetupDone
+
+Cycles1:
+	mov	[CyclesPerLine],CyclesPerScanLine-1
+	jmp	SetupDone
+
+Cycles3:
+	mov	[CyclesPerLine],CyclesPerScanLine-3
+	jmp	SetupDone
+	
 
 SetupDone:
 	ret

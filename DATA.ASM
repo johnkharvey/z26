@@ -75,14 +75,13 @@ MaxLines	dw	200		;max # of lines to scan
 DisplayPointer	dw	0		;pointer into display RAM
 DisplayTranslate dw offset TIADisplayToColour ;display to color translation table
 
-DoChecksum	dw	0		; do a checksum of the cartridge (if 1)
+DoChecksum	db	0		; do a checksum of the cartridge (if 1)
 Checksum	dw	0		; checksum goes here
-
-NoRetrace	dw	0		; don't wait for retrace (if 1)
-
-ColumnBlank	dw	0		; blank this many columns
-
-GamePaused	dw	0		; game paused
+NoRetrace	db	0		; don't wait for retrace (if 1)
+ColumnBlank	db	0		; blank this many columns
+GamePaused	db	0		; game paused
+NoScoreMode	db	0		; set if we don't want PF to take on player colors
+CyclesPerLine	db	CyclesPerScanLine-2 ; # of cycles to execute instructions for each line
 
 ReadBank	dw	RBank4		; Bank switching function (Read)
 WriteBank	dw	WBank4		; were RBank4 and WBank4
@@ -175,7 +174,9 @@ MinVol	db	8			; minimum volume for PC Speaker
 ;CO=-1	;default cycle offset
 CO=-1
 C1=-2
-C2=-2	;play with this for video cube
+;C2=-2	;play with this for video cube
+C2=-2
+
 
 CycleOffset	db	68+CO	;00	VSYNC
 		db	68+CO	;01	VBLANK

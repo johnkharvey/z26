@@ -108,7 +108,11 @@ InstructionLoop:
 
 ualnext:usetest al			; <-- instruction done
 next:	call	[TimerVec]		; <-- instruction done, clock the RIOT timer
-	cmp	[RClock],CyclesPerScanLine-2	;* why -2?
+	mov	bh,[CyclesPerLine]	; normally CyclesPerScanLine-2
+	cmp	[RClock],bh		; * why -2?   -1 fixes tetris26 *
+					;             -3 fixes space invaders
+					;             -1 fixes taxavoid
+					;             -3 is best for catmouse
 	jl	InstructionLoop
 
 ;*
@@ -226,18 +230,20 @@ WaitEsc:test	[KeyTable+KeyEsc],128	; wait for ESC to be pressed
 ;*
 
 CollisionTest macro op1
+local Clear, Next
+
 	mov	bl,op1[si]
 	cmp	bl,3
-	jb	TIACollisionNext&op1
+	jb	Next
 	shl	bl,1    
-	jc	TIACollisionClear&op1	;   if collision reset bit set
+	jc	Clear		;   if collision reset bit set
 	or	di,TIAColTab[bx]
-	jmp	TIACollisionNext&op1
+	jmp	Next
         
-TIACollisionClear&op1:
+Clear:
 	xor	di,di
 	or	di,TIAColTab[bx]
-TIACollisionNext&op1:
+Next:
 
 	endm
 
@@ -310,14 +316,15 @@ ConvertBlank4 macro
 ;*   there's a stripe in the middle when playfield takes on player color wrongly
 ;* 
 
-PlayfieldBit macro
+xPlayfieldBit macro
 local PFDoIt, PFSkip, L1, L2
+	
 	mov	[TIAColourTable+TCTPF],TIAColupf
 	test	[TIA+TIACtrlPf],2	; if colour split, pf col = p0 col
 	jz	L2
 	mov	[TIAColourTable+TCTPF],TIAColup0
 L2:    	cmp	dl,80			; do a playfield bit, at center of screen ?
-	jne	PFDoIt			;   no, just do it
+	jne	PFDoIt			;(was jne)   no, just do it
 
 	test	[TIA+TIACtrlPf],2	;   yes, if colour split, pf col = p1 col
 	jz	L1
@@ -334,6 +341,45 @@ PFDoIt:					; note: one pf bit = 4 color clocks
 	or	dword ptr [si],TGPlay*01000000h+TGPlay*010000h+TGPlay*0100h+TGPlay
 PFSkip:
 	endm
+
+LeftPlayfieldBit macro
+local  PFSkip, L2
+	
+	cmp	[NoScoreMode],0		; doing scores?
+	jnz	L2			;   no
+	mov	[TIAColourTable+TCTPF],TIAColupf
+	test	[TIA + TIACtrlPf],2	; if colour split, pf col = p0 col
+	jz	L2			;(was L2)
+	mov	[TIAColourTable+TCTPF],TIAColup0
+
+L2:					; note: one pf bit = 4 color clocks
+	mov	bx,cx
+	mov	eax,dword ptr [TIA+TIAPf0]
+	test	eax,PfClockToBitTable[bx]
+	jz	PFSkip
+	or	dword ptr [si],TGPlay*01000000h+TGPlay*010000h+TGPlay*0100h+TGPlay
+PFSkip:
+	endm
+
+RightPlayfieldBit macro
+local  PFSkip, L2
+	
+	cmp	[NoScoreMode],0		; doing scores?
+	jnz	L2			;   no
+	mov	[TIAColourTable+TCTPF],TIAColupf
+	test	[TIA + TIACtrlPf],2	; if colour split, pf col = p1 col
+	jz	L2			;(was L2)
+	mov	[TIAColourTable+TCTPF],TIAColup1
+
+L2:					; note: one pf bit = 4 color clocks
+	mov	bx,cx
+	mov	eax,dword ptr [TIA+TIAPf0]
+	test	eax,PfClockToBitTable[bx]
+	jz	PFSkip
+	or	dword ptr [si],TGPlay*01000000h+TGPlay*010000h+TGPlay*0100h+TGPlay
+PFSkip:
+	endm
+
 
 ;*
 ;* macro to process objects
@@ -387,15 +433,15 @@ TIAGenerate:
 	xor	dl,dl			; start position
 	xor	cx,cx			; clear playfield clock
 
-TIALoop:
+TIALeftLoop:
 	DoObjects
-	PlayfieldBit
+	LeftPlayfieldBit
 	add	dl,4			; increment color clock
 	add	cx,4			; increment playfield clock
 	
 	DoObjects
 	
-	mov	ax,ColumnBlank
+	mov	al,ColumnBlank
 	cmp	dl,al
 	ja	RealConvert
 	ConvertBlank4
@@ -407,11 +453,30 @@ RealConvert:
 DoCollisionTest:
 	Collision4
 
-ConvertDone:
+	add	si,4			; increment pf write / collision pointer
+	cmp	dl,80			; reached end of line?
+	jae	TIARightBegin		;   yes, exit
+	jmp	TIALeftLoop
+
+TIARightBegin:
+	test	[TIA+TIACtrlPf],1	; reversing the current line ?
+	jnz	TIARightLoop		;    yes, continue
+	xor	cx,cx			;    no, restart from beginning
+
+TIARightLoop:
+	DoObjects
+	RightPlayfieldBit
+	add	dl,4			; increment color clock
+	add	cx,4			; increment playfield clock
+	
+	DoObjects
+	Convert4
+	Collision4
+
 	add	si,4			; increment pf write / collision pointer
 	cmp	dl,160			; reached end of line?
 	jae	TIAExit			;   yes, exit
-	jmp	TIALoop
+	jmp	TIARightLoop
 
 TIAExit:				; we've finished the line scan...
 	ret
