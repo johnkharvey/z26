@@ -40,8 +40,8 @@ _GUIFont	dw	0			; select font
 FontPointer	dd	?			; font offset
 FontHeight	dw	8			; # of scanlines in a char
 
-
-SimplexFont label byte				; z26 GUI font
+PUBLIC SimplexFont                              ; used in modex.asm too
+SimplexFont label byte                          ; z26 GUI font
 
 	include simplex5.asm
 
@@ -1125,7 +1125,8 @@ db      '`oAlt 4 `d-- 320x240 60Hz (standard Mode-X)`n'
 db      '`oAlt 5 `d-- 320x240 60Hz narrow`n'
 db      '`oAlt 6 `d-- 320x240 60Hz scanline`n'
 db      '`oAlt 7 `d-- 320x480 60Hz very narrow and tall`n'
-db      '`oAlt 8 `d-- 320x240 60Hz intense scanline`n`n'
+db      '`oAlt 8 `d-- 320x240 60Hz intense scanline`n'
+db      '`oAlt 8 `d-- 360x480 60Hz shows number of scanlines in frame`n`n'
 
 db	'`y`UScrolling the Screen`u`d`n`n'
 db      ' `oPgUp`d -- scroll screen up.`n'

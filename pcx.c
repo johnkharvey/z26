@@ -5,9 +5,10 @@
 ** Please see COPYING.TXT for details.
 */
 
-dw PCXFileCounter = 0;
 
 char PCXFileName[13]={'z','2','6','p','0','0','0','0','.','p','c','x',0};
+
+dw PCXFileCounter = 0;
 
 void PCXWriteFile(void)
 {

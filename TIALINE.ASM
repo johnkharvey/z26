@@ -686,13 +686,16 @@ local InstructionLoop, InstructionsDone
 
 	LoadRegs			; load the CPU registers
 
+        cmp     [RClock],CYCLESPERSCANLINE ; check if we need to skip a line *EST*
+        jae     InstructionsDone        ; (for WSYNC at cycle 74/75 fix)
+
 InstructionLoop:
 	fetch_opcode	ebx		; (fetchzx) get the opcode
 	call	cs:[vectors + ebx*2]	; --> do the instruction
 	ClockRIOT			; clock the RIOT timer
 
-	cmp	[RClock],CYCLESPERSCANLINE
-	jb	InstructionLoop
+        cmp     [RClock],CYCLESPERSCANLINE
+        jb      InstructionLoop
 
 InstructionsDone:
 	SaveRegs			; save the CPU registers

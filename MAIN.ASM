@@ -131,6 +131,10 @@ xm1:
 	call	VS_PreGap		; this is how we ignore false triggers
 	call	VSync			; now look for vblank
         call    ModeXCopyScreen         ; copy screenbuffer to video RAM
+        cmp     [_VideoMode],9          ; are we in mode 9 ?
+        jne     NoLineNr
+        call    MX9PutLineNr            ; ... yes, display number of lines in frame
+NoLineNr:
 	call	ScanFrame
 
 Paused:	call	Controls		; check which keys pressed

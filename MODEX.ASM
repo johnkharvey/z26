@@ -36,7 +36,7 @@ Remap50Hz label byte		; remap 60Hz mode to 50Hz mode if PAL game
 	db	12		; 6
 	db	13		; 7
 	db	14		; 8
-	db	13		; 9
+	db	9		; 9 -- was 13 (no remap so lines per frame shows up)
 	db	10		; 10
 	db	11		; 11
 	db	12		; 12
@@ -77,23 +77,6 @@ DoubleScanTable label byte	; if nonzero, mode doesn't do doublescan
 	db	1		; 12
 	db	1		; 13
 	db	0		; 14
-
-;ScanLineTable label byte        ; if nonzero, mode is a simulated scanline mode
-        db      0               ; 0
-        db      0               ; 1
-        db      0               ; 2
-        db      0               ; 3
-;        db      0               ; 4
-;        db      0               ; 5
-;        db      1               ; 6
-;        db      0               ; 7
-;        db      0               ; 8
-;        db      0               ; 9
-;        db      0               ; 10
-;        db      0               ; 11
-;        db      1               ; 12
-;        db      0               ; 13
-;        db      0               ; 14
 
 FlipTable label byte		; if nonzero, mode can do page flipping
 	db	0		; 0
@@ -166,21 +149,21 @@ FastCopyTable label word
         dw      FDoRegularCopy   ; 14
 
 StartLineTable label word
-        dw      32              ; 0
-        dw      32              ; 1
-        dw      32              ; 2
-        dw      30              ; 3
-        dw      20              ; 4  (22)
-        dw      20              ; 5
-        dw      20              ; 6
-        dw      1               ; 7
-        dw      20              ; 8
-        dw      1               ; 9
-        dw      38              ; 10 (38)
-        dw      38              ; 11
-        dw      38              ; 12
-        dw      1               ; 13
-        dw      38              ; 14
+	dw	32		; 0
+	dw	32		; 1
+	dw	32		; 2
+	dw	30		; 3
+	dw	20		; 4  (22)
+	dw	20		; 5
+	dw	20		; 6
+	dw	1		; 7
+	dw	20		; 8
+	dw	1		; 9
+	dw	38		; 10 (38)
+	dw	38		; 11
+	dw	38		; 12
+	dw	1		; 13
+	dw	38		; 14
 
 MaxLineTable label word
 	dw	200		; 0
@@ -360,6 +343,9 @@ MX14Parms label word
 
 
 .code
+
+EXTRN SimplexFont:byte                   ; z26 GUI font
+                                         ; see guicore.asm
 
 ;*
 ;* initialize mode x
@@ -1112,4 +1098,75 @@ FMX7Loop3:
         jmp     FMXCRet
 
 
+; -> from main.asm
+; displays the number of scanlines per frame
+; works in mode 9 only
 
+MX9PutLineNr:
+        push    es
+
+        mov     ax,[_LinesInFrame]
+        mov     bx,10
+        xor     cx,cx
+DecConv:
+        xor     dx,dx
+        div     bx              ; _LinesInFrame / 10 -> remainder in DX
+        push    dx              ; remember digit
+        inc     cx
+        or      ax,ax           ; stop if already 0 (nothing left to divide)
+        jne     DecConv
+        cmp     cx,3            ; done all 3 digits ?
+        je      NoZero
+        mov     ax,0                
+        push    ax              ; ... no, remember 0 for display
+        cmp     cx,2            ; done at least 2 digits ?
+        je      NoZero
+        push    ax              ; ... no, remember 0 for display
+NoZero:
+	mov	dx,SC_INDEX
+	mov	ax,0f02h
+        out     dx,ax           ; enable writes to all four planes
+
+        mov     ax,0a000h
+        mov     es,ax           ; es points to VGA RAM
+        mov     di,157          ; screen position of first digit
+
+        mov     bh,3            ; display 3 digits
+CharLoop:
+        pop     ax                      ; get a digit
+        add     al,'0'                  ; make digit a char
+        shl     ax,3                    ; font is 8 lines high
+        add     ax,offset SimplexFont   ; make it a PTR into font data
+        mov     si,ax
+
+        mov     ch,7                    ; 8 lines per character
+                                        ; (last line is blank)
+ColLoop:                                
+        mov     al,cs:[si]              ; get char line from font data
+        mov     cl,5                    ; 8 pixels per line per char
+                                        ; (only 5 are used)
+RowLoop:
+        mov     bl,7                    ; white
+        sal     al,1                    ; get next pixel
+        jb      PutFG                   ; pixel set ?
+        mov     bl,0                    ; ... no, load black for background
+PutFG:
+        mov     dl,4                    ; repeat each line 4 times
+MoreLines:
+        mov     es:[di],bl              ; write pixel
+        add     di,90                   ; VGA line is 90 bytes long
+        dec     dl
+        jnz     MoreLines
+        sub     di,4*90-1               ; position for next pixel in char line
+        dec     cl
+        jnz     RowLoop                 ; get next pixel
+        inc     si
+        add     di,4*90-5               ; position for next line
+        dec     ch
+        jnz     ColLoop                 ; get next char line byte
+        sub     di,4*7*90-7             ; position for next char
+        dec     bh
+        jnz     CharLoop                ; get next char
+
+        pop     es
+        ret

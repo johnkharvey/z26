@@ -268,6 +268,11 @@ RemapStartLine:
 DontRemapStartLine:
 	shl	si,1
 	mov	si,[StartLineTable + si]
+
+        cmp     [_PaletteNumber],0              ; NTSC game ?
+        je      DontAdjust60Hz                  ;   yes, don't shift screen
+        cmp     [_PaletteNumber],0ffh            ; no palette specified (NTSC is default)
+        je      DontAdjust60Hz                  ;   yes, don't shift screen
         cmp     [_Use50Hz],1                    ; 50Hz modes are larger
         je      DontAdjust60Hz                  ;   so adjust screen postion
         add     si,7                            ;   for 60Hz modes
