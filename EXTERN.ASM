@@ -7,38 +7,14 @@
 ; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ; Please see COPYING.TXT for details.
 
-;*
-;* variables
-;*
-
 EXTRN _CartRom:byte
-EXTRN _PCXPalette:byte
-EXTRN _KeyTable:byte
-EXTRN _RiotRam:byte
-EXTRN _TIA:byte
-EXTRN _Ram:byte
-EXTRN _Bit9:byte
-EXTRN _sb_buf_size:word
-EXTRN _BaseDMABuf:byte
-
-EXTRN _P2_Flags:byte
-EXTRN _P2_Counters:byte
-EXTRN _P2_Top:byte
-EXTRN _P2_Bottom:byte
-EXTRN _P2_Enable:byte
-EXTRN _P2_Music_Top:word
-EXTRN _P2_Music_Bottom:word
-EXTRN _P2_Music_Count:word
-
-EXTRN _Pitfall2:byte
-EXTRN _P2_sreg:word
-EXTRN _P2_Rbyte:byte
-EXTRN _P2_AUDV:byte
-
 EXTRN _MBseg:word
 EXTRN _MBofs:word
+
 EXTRN _ScreenSeg:word
 EXTRN _ScreenOfs:word
+EXTRN _PCXPalette:byte
+
 EXTRN _psp:word
 EXTRN _CartSize:word
 EXTRN _Checksum:dword
@@ -125,10 +101,6 @@ EXTRN _P1_Pos:word
 
 EXTRN _adr:word
 EXTRN _prevadr:word
-
-;*
-;* functions
-;*
 
 EXTRN _InitCVars:far
 

@@ -24,9 +24,28 @@ PIC1		equ	0A1h
 EOI0		equ	020h
 EOI1		equ	0A0h
 
+BUF_SIZE	equ	2048	; DMA buffer size (*** don't change this ***)
+				; hardware buffer size and DMA stuff HARD-CODED below
+
+				;(256 was maximum)
+
+				;(8   gives an interrupt frequency of 31400/4  = 7850       hz)
+				;(note:  8 is not recommended -- Cyrix 6x86 PR166 clogs here )
+				;(       4 pretty much locks up the system all together )
+
+				;(16  gives an interrupt frequency of 31400/8   = 3925      hz)
+				;(32  gives an interrupt frequency of 31400/16  = 1962.5    hz)
+				;(64  gives an interrupt frequency of 31400/32  =  981.25   hz)  
+				;(128 gives an interrupt frequency of 31400/64  =  490.625  hz)
+				;(256 gives an interrupt frequency of 31400/128 =  245.3125 hz)
+
 FAIL		equ	0
 SUCCESS		equ	1
 SB_EXIT		equ	2
+
+.data?
+
+;_BaseDMABuf	db	BUF_SIZE*2+2 dup (?)	; Sound Blaster DMA buffer
 
 .data
 
@@ -93,10 +112,7 @@ sound_int:
 	mov	dx,[_sbBaseIOPort]
 	add	dx,14
 	in	al,dx			; ACK the Sound Blaster
-	
-	mov	dx,[_sb_buf_size]
-	shr	dx,1
-	xor	[_gDMABufNowPlaying],dx
+	xor	[_gDMABufNowPlaying],BUF_SIZE/2
 
 	mov	ax,[_DMABufToLoad]
 	cmp	ax,[_gDMABufNowPlaying]	; buffer ready for filling ?
@@ -107,10 +123,7 @@ sound_int:
 	call	_GetTime		; keep time up to date
 
 	call	_Tia_process		; fill buffer
-
-	mov	dx,[_sb_buf_size]	
-	shr	dx,1
-	xor	[_DMABufToLoad],dx
+	xor	[_DMABufToLoad],BUF_SIZE/2
 
 	popad
 
@@ -627,14 +640,11 @@ _SetupDMABuffer:
 	shl	eax,4
 	add	eax,ecx			; physical address of DMA buffer
 	mov	ebx,eax
-	mov	dx,[_sb_buf_size]
-	dec	dx
 	clc
-	add	bx,dx			; is end of buffer ...
+	add	bx,BUF_SIZE - 1		; is end of buffer ...
 	jnc	BaseOk			; ... in same page as start ?
-	movzx	edx,[_sb_buf_size]
-	add	eax,edx			;   no, use next half of buffer
-	add	cx,[_sb_buf_size]
+	add	eax,BUF_SIZE		;   no, use next half of buffer
+	add	cx,BUF_SIZE
 BaseOk:	mov	[_sbDMAOffset],ax
 	shr	eax,16
 	mov	[_sbDMAPage],al
@@ -816,9 +826,7 @@ SSB_Slow:
 SSB_NoMsg:
 	call	_SetupDMABuffer		; setup DMA buffer (page change check)
 
-	mov	dx,[_sb_buf_size]
-	shr	dx,1
-	mov	[_DMABufToLoad],dx	; init buffer flags
+	mov	[_DMABufToLoad],BUF_SIZE/2	; init buffer flags
 	mov	[_gDMABufNowPlaying],0
 
 

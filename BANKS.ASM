@@ -67,6 +67,7 @@ SetupBanks:
 	mov	[MNSlice0],0
 	mov	[MNSlice1],7*800h
 	mov	[MNRamSlice],0
+	mov	[Pitfall2],0
 	mov	[Starpath],0
 
 	mov	al,[_BSType]		; bankswitching type specified
@@ -87,11 +88,13 @@ SetupBanks:
 	cmp	al,7
 	je	SMN			; 16K M-Network
 	cmp	al,8
-	je	SetFatalRun		; Atari 32K
+        je      SetFatalRun             ; 32K superchip
 	cmp	al,9
 	je	F8Backwards		; 8K with banks backwards
         cmp     al,10
         je      SCM                     ; CompuMate computer module
+        cmp     al,11
+        je      STV32                   ; 32K Tigervision
 
 DetectBySize:
 	mov	ax,[_CartSize]
@@ -171,6 +174,12 @@ STV:	mov	[ReadBank], offset RBank8tv
 	mov	[WriteBank], offset WBank8tv
 	ret
 
+; set up Tigervision 32K bank switch scheme
+
+STV32:  mov     [ReadBank], offset RBank32tv
+        mov     [WriteBank], offset WBank32tv
+	ret
+
 
 ; set up FE (flat model) bank switch scheme
 
@@ -189,8 +198,8 @@ Set16kMode:
 	ret
 
 Set32kMode:
-	mov	[ReadBank], offset RBank32tv
-	mov	[WriteBank], offset WBank32tv
+        mov     [ReadBank], offset RBank32
+        mov     [WriteBank], offset WBank32
 	ret
 
 SetFatalRun:
@@ -552,7 +561,7 @@ WBankCM:
         ret
 
 ;*
-;* standard 32K cart with Super-Chip (F4+sc)
+;* standard 32K cart (F4)
 ;*
 
 SetBank_32 macro
@@ -572,6 +581,21 @@ local NoChange
 
 NoChange:
 	endm
+
+RBank32:
+	test_hw_read
+	SetBank_32
+	MapRomBank
+	ret
+
+WBank32:
+	test_hw_write
+	SetBank_32
+	ret
+
+;*
+;* standard 32K cart with Super-Chip (F4+sc)
+;*
 
 RBank32sc:
 	test_hw_read

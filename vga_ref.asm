@@ -12,6 +12,147 @@ newpalette = 1
 .data
 
 OldVideoMode	db	0
+PaletteCount	db	0
+
+;*
+;* palette coefficients
+;* 
+;* these numbers define relative brightness of the LUM values
+;*
+
+LUMGray db      0,      76      ; LUM 0
+        db      21,     76
+	db	35,	76
+	db	47,	76
+	db	57,	76
+	db	65,	76
+	db	71,	76
+	db	76,	76	; LUM 7
+
+LUMCoeff db      0,      92      ; LUM 0
+	db	17,	92
+	db	32,	92
+	db	46,	92
+	db	59,	92
+	db	71,	92
+	db	82,	92
+	db	92,	92	; LUM 7
+	
+;*
+;* definitions for unsaturated colors
+;*
+
+R = 34          ; main RGB values
+G = 34          ; 
+B = 34          ; 
+
+;*
+;* definitions for saturated colors
+;*
+
+H  = 63         ; Hi levels
+L  = 44         ; Lo levels
+
+NTSCPaletteTable label byte
+IFNDEF newpalette
+
+		db	0,		0,		0		; 00 -- (grey)
+		db	H*95/100,	H*95/100,	H*95/100	; 0E
+
+		db	R*50/100,	G*50/100,	0		; 10 -- (gold)
+		db	H,		H,		L*60/100	; 1E
+
+		db	R*85/100,	G*30/100,	0		; 20 -- (yellow orange)
+		db	H*95/100,	H*80/100,	L*70/100	; 2E
+
+		db	R*98/100,	G*20/100,	0		; 30 -- (yars' bright orange)
+		db	H,		H*75/100,	L*85/100	; 3E
+
+		db	R,		0,		0 		; 40 -- *(pink)
+		db	H,		L*103/100,	L*103/100	; 4E
+
+		db	R*90/100,	0,		B*70/100	; 50 -- (purple)
+		db	H*95/100,	L,		H*90/100	; 5E
+
+		db	R*55/100,	0,		B*90/100	; 60 -- (purple-blue)
+		db	H*85/100,	L,		H		; 6E
+
+		db	R*15/100,	0,		B*98/100	; 70 -- (atlantis right blinker blue)
+		db	H*75/100,	L*103/100,	H		; 7E
+
+		db	0,		0,		B		; 80 -- *(blue)
+		db	L*95/100,	L*105/100,	H		; 8E
+
+		db	0,		G*20/100,	B*93/100	; 90 -- (light blue)
+		db	L*95/100,	H*80/100,	H		; 9E
+
+		db	0,		G*35/100,	B*70/100	; A0 -- (atlantis turquoise)
+		db	L*95/100,	H*90/100,	H		; AE
+
+		db	0,		G*45/100,	B*35/100	; B0 -- (green-blue)
+		db	L*95/100,	H,		H*85/100	; BE
+
+		db	0,		G*47/100,	0		; C0 -- *(light green)
+		db	L*105/100,	H,		L*105/100	; CE
+
+		db	R*15/100,	G*42/100,	0		; D0 -- (yellow-green)
+		db	H*80/100,	H,		L*95/100	; DE
+
+		db	R*35/100,	G*38/100,	0		; E0 -- (orange-green)
+		db	H*90/100,	H*95/100,	L*90/100	; EE
+
+		db	R*50/100,	G*30/100,	0		; F0 -- (light-orange)
+		db	H,		H*90/100,	L*80/100	; FE
+
+ENDIF
+
+PALPaletteTable db	0,		0,		0		; 00 -- (grey)
+		db	H*95/100,	H*95/100,	H*95/100	; 0E
+
+		db	0,		0,		0		; 10 -- (grey)
+		db	H*95/100,	H*95/100,	H*95/100	; 1E
+
+		db	R*95/100,	G*65/100,	0		; 20 -- (gold)
+		db	H,		H*90/100,	L		; 2E
+
+		db	R*50/100,	G*70/100,	0		; 30 -- (yellow green)
+		db	H*85/100,	H,		L		; 3E
+
+		db	R*85/100,	G*40/100,	0		; 40 -- (orange brown)
+		db	H,		H*85/100,	L		; 4E
+
+		db	0,		G*75/100,	B*15/100	; 50 -- (light green)
+		db	L,		H,		H*80/100	; 5E
+
+		db	R*85/100,	0,		B*15/100	; 60 -- (pink)
+		db	H,		L,		H*80/100	; 6E
+
+		db	0,		G*70/100,	B*70/100	; 70 -- (blue green)
+		db	L,		H*95/100,	H*95/100	; 7E
+
+		db	R*85/100,	0,		B*70/100	; 80 -- (purple)
+		db	H*90/100,	L,		H*90/100	; 8E
+
+		db	0,		G*45/100,	B*85/100	; 90 -- (turquoise)
+		db	L*95/100,	H*90/100,	H		; 9E
+
+		db	R*65/100,	0,		B*85/100	; A0 -- (lilac)
+		db	H*85/100,	L,		H		; AE
+
+		db	0,		G*25/100,	B*85/100	; B0 -- (light blue)
+		db	L*95/100,	H*80/100,	H		; BE
+
+		db	R*45/100,	0,		B*95/100	; C0 -- (purple-blue)
+		db	H*80/100,	L,		H		; CE
+
+		db	0,		0,		B		; D0 -- *(blue)
+		db	L,		L,		H		; DE
+
+		db	0,		0,		0		; E0 -- (grey)
+		db	H*95/100,	H*95/100,	H*95/100	; EE
+
+		db	0,		0,		0		; F0 -- (grey)
+		db	H*95/100,	H*95/100,	H*95/100	; FE
 
 
 SECAMPaletteTable db      0,   0,   0           ; black
@@ -23,6 +164,163 @@ SECAMPaletteTable db      0,   0,   0           ; black
                   db    255, 255,  63           ; yellow
                   db    255, 255, 255           ; white
 ;                         R    G    B
+
+
+
+;*
+;* NTSC palette -- taken from b16_16_16_16b.bmp
+;*
+
+_Accu_NTSC label byte
+
+IFDEF newpalette			; *** <<< remove if we ever get enough space
+
+	db	  0,   0,   0	; 61,  61,  61	; (00) -- grey
+	db	 81,  81,  81
+	db	100, 100, 100
+	db	121, 121, 121
+	db	140, 140, 140
+	db	160, 160, 160
+	db	180, 180, 180
+	db	200, 200, 200
+
+	db	 70,  85,   0	; (10) -- gold 
+	db	 88, 104,   0
+	db	108, 124,   0
+	db	128, 144,   2
+	db	147, 163,   6
+	db	167, 184,  17
+	db	187, 203,  32
+	db	207, 223,  52
+	
+	db	105,  57,   0	; (20) -- yellow orange
+	db	123,  77,   1	
+	db	144,  97,   7
+	db	163, 117,  19
+	db	182, 136,  36
+	db	203, 156,  56
+	db	223, 175,  76
+	db	238, 196,  96
+	
+	db	124,  38,  12	; (30) -- yars' bright orange
+	db	143,  58,  25
+	db	163,  77,  45
+	db	183,  97,  63
+	db	201, 116,  84
+	db	222, 137, 103
+	db	238, 156, 124
+	db	249, 176, 142
+	
+	db	126,  25,  66	; (40) -- pink
+	db	146,  43,  84
+	db	166,  63, 105
+	db	185,  83, 124
+	db	205, 102, 145
+	db	225, 122, 163
+	db	240, 142, 184
+	db	251, 162, 203
+	
+	db	116,  20, 115	; (50) -- purple
+	db	136,  39, 133
+	db	155,  58, 153
+	db	175,  78, 172
+	db	194,  97, 192
+	db	215, 117, 212
+	db	233, 137, 232
+	db	247, 158, 245
+	
+	db	 94,  22, 153	; (60) -- blue purple
+	db	113,  41, 171
+	db	133,  61, 191
+	db	153,  81, 210
+	db	172, 101, 229
+	db	193, 121, 244
+	db	212, 140, 252
+	db	232, 160, 255
+	
+	db	 65,  33, 169	; (70) -- atlantis right blinker blue
+	db	 86,  52, 189
+	db	104,  71, 208
+	db	125,  92, 228
+	db	144, 111, 242
+	db	165, 131, 252
+	db	184, 151, 255
+	db	205, 171, 255
+	
+	db	 37,  50, 159	; (80) -- blue
+	db	 57,  68, 178
+	db	 77,  88, 198
+	db	 97, 107, 217
+	db	115, 127, 236
+	db	137, 147, 248
+	db	155, 167, 254
+	db	176, 186, 255
+	
+	db	 17,  65, 127	; (90) -- light blue
+	db	 36,  83, 150
+	db	 55, 104, 168
+	db	 77, 122, 189
+	db	 95, 142, 207
+	db	115, 162, 228
+	db	135, 182, 244
+	db	156, 201, 253
+	
+	db	 10,  79,  84	; (a0) -- atlantis turquoise
+	db	 25,  98, 103
+	db	 44, 117, 123
+	db	 65, 137, 145
+	db	 84, 156, 162
+	db	104, 176, 184
+	db	123, 196, 202
+	db	144, 216, 225
+	
+	db	 10,  86,  42	; (b0) -- green blue
+	db	 25, 105,  64
+	db	 44, 125,  82
+	db	 64, 144, 104
+	db	 83, 164, 122
+	db	104, 184, 144
+	db	123, 204, 161
+	db	143, 223, 184
+	
+	db	 18,  86,   9	; (c0) -- light green
+	db	 36, 105,  26
+	db	 56, 125,  45
+	db	 76, 145,  65
+	db	 95, 164,  85
+	db	115, 184, 105
+	db	135, 204, 125
+	db	155, 225, 146
+	
+	db	 34,  82,   0	; (d0) -- yellow green
+	db	 52, 102,   7
+	db	 73, 121,  20
+	db	 92, 141,  43
+	db	111, 160,  60
+	db	131, 181,  80
+	db	151, 201, 101
+	db	171, 221, 121
+	
+	db	 54,  71,   0	; (e0) -- orange green
+	db	 73,  91,   6
+	db	 92, 111,  20
+	db	112, 131,  41
+	db	132, 150,  59
+	db	151, 170,  80
+	db	171, 190, 100
+	db	192, 210, 119
+	
+	db	 71,  62,   0	; (f0) -- light orange
+	db	 90,  82,   9
+	db	109, 102,  25
+	db	129, 121,  45
+	db	149, 140,  64
+	db	168, 161,  84
+	db	188, 180, 104
+	db	209, 201, 124
+
+ENDIF				; *** <<< remove if we ever get enough space
+	
 
 .code
 
@@ -170,36 +468,118 @@ TGM_Done:
 ;*
 
 GeneratePalette:
+	mov	si,offset NTSCPaletteTable
 	cmp	[_PaletteNumber],0	; user specify palette 0 ?
 	je	GPUseNTSC		;   yes, use NTSC
 	cmp	[_PaletteNumber],1	; user specify palette 1 ?
 	je	GPUsePAL		;   yes, use PAL
         cmp     [_PaletteNumber],2      ; user specify palette 2 ?
         je      GPUseSECAM              ;   yes, use SECAM
+        cmp     [_PaletteNumber],9
+        je      xGPUseNTSC              ; palette 9 is the *classic* NTSC
 	cmp	[_DefaultCFirst],0ffffh	; is there a default starting line ?
 	je	GPUseNTSC		;   no, use NTSC
 	cmp	[_DefaultCFirst],50	; starting line < 50 ?
 	jb	GPUseNTSC		;   no, use NTSC
-	jmp	GPUseNTSC		; else use NTSC
-
-
-GPUseSECAM:
-	call	_SECAM_Palette
-	jmp	HardwareStuff
-
-GPUseNTSC:
-	call	_NTSC_Palette
-	jmp	HardwareStuff
 
 GPUsePAL:
-	call	_PAL_Palette
-	jmp	HardwareStuff        
+	mov	si,offset PALPaletteTable
+	mov	[_PaletteNumber],1	; mark PAL mode
+xGPUseNTSC:
+        mov     di,offset _PCXPalette
+	mov	[PaletteCount],0	; do 16 colors
+PaletteLoop:				; <-- for each color
+	xor	ecx,ecx			; initialize 8 values of LUM
+LUMLoop:
+	mov	dx,3			; do 3 values of RGB
+RGBLoop:
+	movzx	ax,byte ptr 3[si]	; [RHi]
+	movzx	bx,byte ptr 0[si]	; [RLo]
+	sub	ax,bx			; al = RHi - RLo
+
+	cmp	[_PaletteNumber],1
+	je	doLUMNormal
+	cmp	[PaletteCount],0
+	jz	doLUMGray
+
+doLUMNormal:
+	mov	bl,[LUMCoeff + ecx*2]
+	mul	bl			; multiply by first coefficient
+	mov	bl,[LUMCoeff + 1 + ecx*2]
+	div	bl			; divide by second coefficient
+	jmp	LUMDone
+
+doLUMGray:
+	mov	bl,[LUMGray + ecx*2]
+	mul	bl			; multiply by first coefficient
+	mov	bl,[LUMGray + 1 + ecx*2]
+	div	bl			; divide by second coefficient
+
+LUMDone:
+	mov	bl,0[si]		; [RLo]
+	add	al,bl			; compute color value
+	shl	al,2
+	mov	[di],al			; put it in palette
+	inc	di			; next palette entry
+	inc	si			; next RGB value
+	dec	dx			; done all three RGB values ?
+	jnz	RGBLoop			;   not yet
+
+	sub	si,3			; back at beginning of this RGB set
+	inc	cx
+	cmp	cx,8			; done eight LUM's yet ?
+	jnz	LUMLoop			;   no
+	add	si,6			;	yes, to next RGB set (color)
+	inc	PaletteCount
+	cmp	[PaletteCount],16	; done 16 colors yet ?
+	jnz	PaletteLoop		;   not yet
+
+        jz      HardwareStuff
+GPUseSECAM:
+        mov     di,offset _PCXPalette
+        mov     dx, 16                  ; do 16 colours
+SLoop1:
+        mov     bx,0                    
+SLoop2:
+        mov     al,SECAMPaletteTable[bx] ; copy RGB values directly
+        mov     [di],al
+        inc     di
+        inc     bx
+        cmp     bx,24                   ; done 8 lums * 3 RGB bytes yet
+        jne     SLoop2                  ;   not yet
+        dec     dx                      ; done 16 colours yet ?
+        jnz     SLoop1                  ;   not yet
+        jmp	HardwareStuff
         
+
+;*
+;* set up the accurate NTSC palette
+;*
+
+GPUseNTSC:
+
+IFNDEF newpalette
+	jmp	xGPUseNTSC		; *** <<< remove if we ever get enough space
+ENDIF
+	mov	si,offset _Accu_NTSC
+GPdopalette:
+        mov     di,offset _PCXPalette
+        mov	cx,16*8*3
+AccuLoop:
+	mov	al,[si]
+	mov	[di],al
+	inc	si
+	inc	di
+	dec	cx
+	jnz	AccuLoop
+        
+        
+
+HardwareStuff:
 
 ; continue with hardware stuff
 
-HardwareStuff:
-	call	TIAPalette		; set up the hardware palette
+	call	TIAPalette		; set up the palette
 
 ;        mov     ax,0a000h
         mov     ax,[_ScreenSeg]

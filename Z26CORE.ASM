@@ -28,6 +28,7 @@ CHEATS = 1
 
 	include console.asm		; console output
 	include msg.asm			; messages
+;	include special.asm		; process special cartridges
 
 	include vga.asm			; VGA graphics initialization
 	include	modex.asm		; Mode-X support
@@ -54,6 +55,10 @@ CHEATS = 1
 	include keyboard.asm		; convert keyboard into Atari joystick
 	include joy.asm			; joystick routines
 	include sound.asm		; PC speaker support
+;        include pcx.asm                 ; Ronnie Greene's PCX file dumper
+
+	include memory.asm		; RIOT ram, cart ROM, & optional stack
+
 	include mouse.asm
 
 	END	start

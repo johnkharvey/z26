@@ -32,7 +32,7 @@ jam:
 	mov	ax,[reg_pc]
 	call	ConWord		; display address
 
-WaitEsc:test	[_KeyTable+KeyEsc],128	; wait for ESC to be pressed
+WaitEsc:test	[KeyTable+KeyEsc],128	; wait for ESC to be pressed
 	jz	WaitEsc
 
 	jmp	GoDOS

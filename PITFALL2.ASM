@@ -11,6 +11,29 @@
 ; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ; Please see COPYING.TXT for details.
 
+.data
+
+; global Pitfall2 flag 
+
+Pitfall2	db	0		; tell RIOT timer to clock the music
+
+;P2_Flags	db	8 dup (?)	; \
+;P2_Counters	db	16 dup (?)	;  \
+;P2_Top		db	8 dup (?)	;	  these are in memory.asm
+;P2_Bottom	db	8 dup (?)	;  /
+;P2_Enable	db	8 dup (?)	; /
+;P2_Music_Top	dw	8 dup (?)
+;P2_Music_Bottom dw	8 dup (?)
+;P2_Music_Count	dw	8 dup (?)
+
+P2_sreg		dw	1		; initialize shift register to non-zero val
+
+P2_Rbyte	db	0		; return value for CPU read commands
+P2_AUDV		db	0		; create an AUDV byte here
+
+ALIGN 2
+
+
 .code
 
 P2_Vectors label word
@@ -153,11 +176,21 @@ P2_Vectors label word
 	dw	P2_NoIO			; 7e -- not used
 	dw	P2_NoIO			; 7f -- not used
 
+;.code
+
+;*
+;* Pitfall 2 initialization
+;*
+
+Init_P2:				; <-- from init.asm
+	mov	[P2_sreg],1		; random # generator (must be non-zero)
+	ret
+
 SetPitfallII:				; <-- from banks.asm
 	mov	[ReadBank], offset RBank8P2
 	mov	[WriteBank], offset WBank8P2
 	mov	[RomBank],01000h	; don't know if this is needed...
-	mov	[_Pitfall2],1		; tell RIOT to clock the music
+	mov	[Pitfall2],1		; tell RIOT to clock the music
 	ret
 
 ;*
@@ -246,11 +279,11 @@ Tune_Music macro
 P2_WriteTop:
 	and	esi,7
 	mov	dl,[WByte]		; pick up byte to write
-	mov	[_P2_Top + si],dl	; save in TOP
+	mov	[P2_Top + si],dl	; save in TOP
 	cmp	si,5
 	jb	P2_WriteDone
 	Tune_Music
-	mov	[_P2_Music_Top + esi*2],dx
+	mov	[P2_Music_Top + esi*2],dx
 
 P2_WriteDone:
 	ret
@@ -262,11 +295,11 @@ P2_WriteDone:
 P2_WriteBottom:
 	and	esi,7
 	mov	dl,[WByte]		; pick up byte to write
-	mov	[_P2_Bottom + si],dl	; save in BOTTOM
+	mov	[P2_Bottom + si],dl	; save in BOTTOM
 	cmp	si,5
 	jb	P2_WriteDone
 	Tune_Music
-	mov	[_P2_Music_Bottom + esi*2],dx
+	mov	[P2_Music_Bottom + esi*2],dx
 	ret
 
 ;*
@@ -276,11 +309,11 @@ P2_WriteBottom:
 P2_WriteCounterLow:
 	and	esi,7
 	mov	dl,[WByte]		; pick up byte to write
-	mov	[_P2_Counters + esi*2],dl ; save in LOW counter byte
+	mov	[P2_Counters + esi*2],dl ; save in LOW counter byte
 	cmp	si,5
 	jb	P2_WriteDone
 	Tune_Music
-	mov	[_P2_Music_Count + esi*2],dx
+	mov	[P2_Music_Count + esi*2],dx
 	ret
 
 ;*
@@ -290,10 +323,10 @@ P2_WriteCounterLow:
 P2_WriteCounterHigh:
 	and	esi,7
 	mov	dl,[WByte]		; pick up byte to write
-	mov	[_P2_Enable + si],dl	; save whole thing in enable
+	mov	[P2_Enable + si],dl	; save whole thing in enable
 	and	dl,7			; mask bottom 3 bits for a total of 11
-	mov	[_P2_Counters + esi*2 + 1],dl ; save in HIGH counter byte
-	mov	[_P2_Flags + si],0	; this also clears the FLAG
+	mov	[P2_Counters + esi*2 + 1],dl ; save in HIGH counter byte
+	mov	[P2_Flags + si],0	; this also clears the FLAG
 	ret
 
 ;*
@@ -301,7 +334,7 @@ P2_WriteCounterHigh:
 ;*
 
 P2_ResetRandom:
-	mov	[_P2_sreg],1
+	mov	[P2_sreg],1
 	ret
 
 ;*
@@ -310,7 +343,7 @@ P2_ResetRandom:
 
 P2_ReadFlags:
 	and	si,7
-	add	si,offset _P2_Flags
+	add	si,offset P2_Flags
 	ret
 
 ;*
@@ -321,26 +354,26 @@ Read_DF macro
 local P2_FlagOne, P2_FlagZero, P2_Cont
 	and	esi,7
 	push	bx
-	mov	dl,[_P2_Counters + esi*2]	; use old counter value for flag test
-	dec	word ptr [_P2_Counters + esi*2]	; decrement for current fetch
-	cmp	dl,[_P2_Top + si]		; equal to top value?
+	mov	dl,[P2_Counters + esi*2]	; use old counter value for flag test
+	dec	word ptr [P2_Counters + esi*2]	; decrement for current fetch
+	cmp	dl,[P2_Top + si]		; equal to top value?
 	je	P2_FlagOne			;   yes, set flag
-	cmp	dl,[_P2_Bottom + si]		; equal to bottom value?
+	cmp	dl,[P2_Bottom + si]		; equal to bottom value?
 	je	P2_FlagZero			;   yes, clear flag
 	jmp	P2_Cont
 
 P2_FlagOne:
-	mov	[_P2_Flags + si],0ffh		; set flag
+	mov	[P2_Flags + si],0ffh		; set flag
 	jmp	P2_Cont
 
 P2_FlagZero:
-	mov	[_P2_Flags + si],0		; clear flag
+	mov	[P2_Flags + si],0		; clear flag
 
 P2_Cont:
-	mov	bx,word ptr [_P2_Counters + esi*2] ; get current counter
+	mov	bx,word ptr [P2_Counters + esi*2] ; get current counter
 	neg	bx				; fetch data
 	mov	dl,[_CartRom + 027feh + bx]	; yes it *is* magic
-	mov	[_P2_Rbyte],dl			; save data
+	mov	[P2_Rbyte],dl			; save data
 	pop	bx
 	endm
 
@@ -350,7 +383,7 @@ P2_Cont:
 
 P2_Read_DF:
 	Read_DF
-	mov	si,offset _P2_Rbyte		; pointer for CPU
+	mov	si,offset P2_Rbyte		; pointer for CPU
 	ret
 
 ;*
@@ -359,9 +392,9 @@ P2_Read_DF:
 
 P2_Read_DF_Flag:
 	Read_DF
-	mov	dl,[_P2_Flags + si]		; pick up flag
-	and	[_P2_Rbyte],dl			; AND data
-	mov	si,offset _P2_Rbyte		; restore pointer for CPU
+	mov	dl,[P2_Flags + si]		; pick up flag
+	and	[P2_Rbyte],dl			; AND data
+	mov	si,offset P2_Rbyte		; restore pointer for CPU
 	ret
 
 ;*
@@ -374,18 +407,18 @@ P2_Read_DF_Flag:
 
 P2_Read_Random:
 	push	ax
-	mov	ax,[_P2_sreg]
+	mov	ax,[P2_sreg]
 	and	ax,1				; bit 9 (register output & return val)
-	mov	dx,[_P2_sreg]
+	mov	dx,[P2_sreg]
 	and	dx,16
 	shr	dx,4				; position bit 5 at bottom
 	xor	dx,ax				; xor with bit 9 = new bit 1
-	shr	[_P2_sreg],1			; shift the register
+	shr	[P2_sreg],1			; shift the register
 	shl	dx,8				; position the feedback bit
-	or	[_P2_sreg],dx			; or it in
-	mov	dl,byte ptr [_P2_sreg]
-	mov	[_P2_Rbyte],dl
-	mov	si,offset _P2_Rbyte
+	or	[P2_sreg],dx			; or it in
+	mov	dl,byte ptr [P2_sreg]
+	mov	[P2_Rbyte],dl
+	mov	si,offset P2_Rbyte
 	pop	ax
 	ret	
 
@@ -401,7 +434,7 @@ P2_Read_Random:
 ;*
 
 P2_Read_Sound:
-	mov	si,offset _P2_AUDV
+	mov	si,offset P2_AUDV
 	ret
 
 
@@ -412,21 +445,21 @@ P2_Read_Sound:
 Clock_Channel macro arg1
 local MusicZero, ChannelDone
 
-	test	[_P2_Enable + arg1],010h	  ; channel enabled?
+	test	[P2_Enable + arg1],010h		  ; channel enabled?
 	jz	ChannelDone			;   no
-	mov	dx,[_P2_Music_Count + arg1*2]	  ; use old counter value for flag test
-	dec	word ptr [_P2_Music_Count + arg1*2]; decrement for current fetch
-	cmp	dx,[_P2_Music_Bottom + arg1*2]	  ; equal to bottom value?
+	mov	dx,[P2_Music_Count + arg1*2]	  ; use old counter value for flag test
+	dec	word ptr [P2_Music_Count + arg1*2]; decrement for current fetch
+	cmp	dx,[P2_Music_Bottom + arg1*2]	  ; equal to bottom value?
 	je	MusicZero			;   yes, clear flag
 	cmp	dx,-1				; time to reset?
 	jnz	ChannelDone			;   no
-	mov	dx,[_P2_Music_Top + arg1*2]	  ;   yes, reset counter
-	mov	word ptr [_P2_Music_Count + arg1*2],dx
-	mov	[_P2_Flags + arg1],0ffh		  ; set flag
+	mov	dx,[P2_Music_Top + arg1*2]	  ;   yes, reset counter
+	mov	word ptr [P2_Music_Count + arg1*2],dx
+	mov	[P2_Flags + arg1],0ffh		  ; set flag
 	jmp	ChannelDone
 
 MusicZero:
-	mov	[_P2_Flags + arg1],0		  ; clear flag
+	mov	[P2_Flags + arg1],0		  ; clear flag
 
 ChannelDone:
 	endm
@@ -458,16 +491,16 @@ Mix_AUDV db 0, 6, 5, 0bh, 4, 0ah, 9, 0fh
 .code
 
 Build_AUDV macro
-	movzx	bx,byte ptr [_P2_Flags + 5]
-	mov	dl,byte ptr [_P2_Flags + 6]
-	mov	dh,byte ptr [_P2_Flags + 7]
+	movzx	bx,byte ptr [P2_Flags + 5]
+	mov	dl,byte ptr [P2_Flags + 6]
+	mov	dh,byte ptr [P2_Flags + 7]
 	and	bl,1
 	and	dl,2
 	and	dh,4
 	or	bl,dl
 	or	bl,dh
 	mov	dl,[Mix_AUDV + bx]
-	mov	[_P2_AUDV],dl
+	mov	[P2_AUDV],dl
 	endm
 
 ;*
@@ -491,3 +524,4 @@ ClockP2NoClock:
 	pop	dx
 	pop	ebx
 	ret
+

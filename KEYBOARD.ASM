@@ -113,7 +113,7 @@ KVData80        db      11110111b       ; marks end of tape (green/yellow screen
 
 ifpress macro   op1,op2                 ; if key #1 pressed drop bit
         local   M1
-        test    [_KeyTable+op1],128      ; #2 of ah (128,64,32...1)
+        test    [KeyTable+op1],128      ; #2 of ah (128,64,32...1)
         jz      M1
         and     ah,255-op2              ; drop a bit
 M1:
@@ -269,28 +269,28 @@ Controls proc near
 
         mov     ah,[_IOPortB]           ; turn on Select and Reset bits
         or      ah,03h
-        test    [_KeyTable+ResetKey],128
+        test    [KeyTable+ResetKey],128
         jz      Ctrl1                   ; F1 pressed (Reset) - drop bit 0 (1)
         and     ah,0FEh
-Ctrl1:  test    [_KeyTable+SelectKey],128
+Ctrl1:  test    [KeyTable+SelectKey],128
         jz      Ctrl1a                  ; (Select) - drop bit 1 (2)
         and     ah,0FDh
-Ctrl1a: test    [_KeyTable+P0Easy],128   ; (p0 easy) - drop bit 6 (64)
+Ctrl1a: test    [KeyTable+P0Easy],128   ; (p0 easy) - drop bit 6 (64)
         jz      Ctrl1b
         and     ah,0BFh
-Ctrl1b: test    [_KeyTable+P0Hard],128   ; (p0 hard) - set bit 6 (64)
+Ctrl1b: test    [KeyTable+P0Hard],128   ; (p0 hard) - set bit 6 (64)
         jz      Ctrl1c
         or      ah,64
-Ctrl1c: test    [_KeyTable+P1Easy],128   ; (p1 easy) -- drop bit 7 (128)
+Ctrl1c: test    [KeyTable+P1Easy],128   ; (p1 easy) -- drop bit 7 (128)
         jz      Ctrl1d
         and     ah,07fh
-Ctrl1d: test    [_KeyTable+P1Hard],128   ; (p1 hard) -- set bit 7 (128)
+Ctrl1d: test    [KeyTable+P1Hard],128   ; (p1 hard) -- set bit 7 (128)
         jz      Ctrl2
         or      ah,128
-Ctrl2:  test    [_KeyTable+BWKey],128
+Ctrl2:  test    [KeyTable+BWKey],128
         jz      Ctrl2a                  ; (Black and white) drop bit 3 (8)
         and     ah,0F7h
-Ctrl2a: test    [_KeyTable+ColorKey],128
+Ctrl2a: test    [KeyTable+ColorKey],128
         jz      Ctrl2b                  ; (Color) set bit 3 (8)
         or      ah,08h
 Ctrl2b:
@@ -329,14 +329,14 @@ SLnoDU:
 ;        mov     [DumpPorts],0h
 ;        mov     [DumpPorts+1],0h
 
-        test    [_KeyTable+P1Fire],128
+        test    [KeyTable+P1Fire],128
         jz      Ctrl3                   ; handle 'fire' from p1
         mov     [InputLatch],0h
 Ctrl3:
-        test    [_KeyTable+P1TriggerBG],128
+        test    [KeyTable+P1TriggerBG],128
         jz      Ctrl3a                  ; check for booster grip *EST*
         mov     [DumpPorts],080h
-Ctrl3a: test    [_KeyTable+P1BoosterBG],128
+Ctrl3a: test    [KeyTable+P1BoosterBG],128
         jz      StickR                  ; check for booster grip *EST*
         mov     [DumpPorts+1],080h
 
@@ -373,13 +373,13 @@ SRnoDU:
 ;        mov     [DumpPorts+2],0h
 ;        mov     [DumpPorts+3],0h
 
-        test    [_KeyTable+P2Fire],128
+        test    [KeyTable+P2Fire],128
         jz      Ctrl3b                  ; handle 'fire' from p2
         mov     [InputLatch+1],0h
-Ctrl3b: test    [_KeyTable+P2TriggerBG],128
+Ctrl3b: test    [KeyTable+P2TriggerBG],128
         jz      Ctrl3c                  ; check for booster grip *EST*
         mov     [DumpPorts+2],080h
-Ctrl3c: test    [_KeyTable+P2BoosterBG],128
+Ctrl3c: test    [KeyTable+P2BoosterBG],128
         jz      StickEnd                ; check for booster grip *EST*
         mov     [DumpPorts+3],080h
 
@@ -387,10 +387,10 @@ StickEnd:
         mov     [_IOPortA],ah           ; save the Port A Switches
 
 ;CTLNoJoy:
-Ctrl4:  test    [_KeyTable+KeyBackSpace],128
+Ctrl4:  test    [KeyTable+KeyBackSpace],128
         jz      Ctrl6
         mov     [GamePaused],1          ; pause game
-Ctrl6:  test    [_KeyTable+KeyEnter],128
+Ctrl6:  test    [KeyTable+KeyEnter],128
         jz      Ctrl7
         mov     [GamePaused],0          ; resume game
 
@@ -399,7 +399,7 @@ Ctrl6:  test    [_KeyTable+KeyEnter],128
 ;*
 
 
-Ctrl7:  test    [_KeyTable+KeyEsc],128
+Ctrl7:  test    [KeyTable+KeyEsc],128
 ;       jz      Ctrl8
 ;       jmp     GoDOS                   ; ESC pressed - exit
 
@@ -407,7 +407,7 @@ Ctrl7:  test    [_KeyTable+KeyEsc],128
 ;* handle screen positioning
 ;*
 
-Ctrl8:  test    [_KeyTable+KeyPgUp],128  ; scroll up ?
+Ctrl8:  test    [KeyTable+KeyPgUp],128  ; scroll up ?
         jz      Ctrl9                   ;   no
         cmp     [_CFirst],0             ; scrolling disabled ?
         je      CtrlPCX                 ;    yes, skip scrolling
@@ -423,7 +423,7 @@ Ctrl8:  test    [_KeyTable+KeyPgUp],128  ; scroll up ?
                                         ; (and remember if video mode changes)
 
 
-Ctrl9:  test    [_KeyTable+KeyPgDn],128  ; scroll down ?
+Ctrl9:  test    [KeyTable+KeyPgDn],128  ; scroll down ?
         jz      CtrlPCX                 ;   no
         cmp     [_CFirst],0             ; scrolling disabled ?
         je      CtrlPCX                 ;   yes, skip scrolling
@@ -443,7 +443,7 @@ CtrlPCX:cmp     [CtrlSkipFlag],0        ; skip flag already zero ?
         jz      CtrlPCX1                ;   yes
         dec     [CtrlSkipFlag]          ;   no, decrement it
 CtrlPCX1:
-        test    [_KeyTable+KeyHome],128  ; home key pressed ?
+        test    [KeyTable+KeyHome],128  ; home key pressed ?
         jz      CtrlPCX3                ;   no
         cmp     [OldCFirst],0           ; is OldCFirst zero ?
         jz      CtrlPCX3                ;   yes, don't home the display
@@ -453,7 +453,7 @@ CtrlPCX1:
         mov     [_CFirst],dx
 
 CtrlPCX3:
-        test    [_KeyTable+KeyEquals],128
+        test    [KeyTable+KeyEquals],128
         jz      CtrlVid
 
         push    es
@@ -463,87 +463,87 @@ CtrlPCX3:
         ;kludge - make it think the key has already been released
         ; hope it doesn't make it write out PCX files constantly
 
-        mov [_KeyTable+KeyEquals],0
+        mov [KeyTable+KeyEquals],0
 
 
 CtrlVid:
-        test    [_KeyTable+KeyAlt],128   ; change video mode only when Alt
+        test    [KeyTable+KeyAlt],128   ; change video mode only when Alt
         jz      CtrlVidDone             ;   key is pressed *EST*
 
 CtrlVid0:
-        test    [_KeyTable+Key0],128     ; video mode 0 ?
+        test    [KeyTable+Key0],128     ; video mode 0 ?
         jz      CtrlVid1
         mov     [_VideoMode],0
         call    TIAGraphicMode
-        mov     [_KeyTable+Key0],0
+        mov     [KeyTable+Key0],0
 
 CtrlVid1:
-        test    [_KeyTable+Key1],128     ; video mode 1 ?
+        test    [KeyTable+Key1],128     ; video mode 1 ?
         jz      CtrlVid2
         mov     [_VideoMode],1
         call    TIAGraphicMode
-        mov     [_KeyTable+Key1],0
+        mov     [KeyTable+Key1],0
 
 CtrlVid2:
-        test    [_KeyTable+Key2],128     ; video mode 2 ?
+        test    [KeyTable+Key2],128     ; video mode 2 ?
         jz      CtrlVid3
         mov     [_VideoMode],2
         call    TIAGraphicMode
-        mov     [_KeyTable+Key2],0
+        mov     [KeyTable+Key2],0
 
 CtrlVid3:
-        test    [_KeyTable+Key3],128     ; video mode 3 ?
+        test    [KeyTable+Key3],128     ; video mode 3 ?
         jz      CtrlVid4
         mov     [_VideoMode],3
         call    TIAGraphicMode
-        mov     [_KeyTable+Key3],0
+        mov     [KeyTable+Key3],0
 
 CtrlVid4:
-        test    [_KeyTable+Key4],128     ; video mode 4 ?
+        test    [KeyTable+Key4],128     ; video mode 4 ?
         jz      CtrlVid5
         mov     [_VideoMode],4
         call    TIAGraphicMode
-        mov     [_KeyTable+Key4],0
+        mov     [KeyTable+Key4],0
 
 CtrlVid5:
-        test    [_KeyTable+Key5],128     ; video mode 5 ?
+        test    [KeyTable+Key5],128     ; video mode 5 ?
         jz      CtrlVid6
         mov     [_VideoMode],5
         call    TIAGraphicMode
-        mov     [_KeyTable+Key5],0
+        mov     [KeyTable+Key5],0
 
 CtrlVid6:
-        test    [_KeyTable+Key6],128     ; video mode 6 ?
+        test    [KeyTable+Key6],128     ; video mode 6 ?
         jz      CtrlVid7
         mov     [_VideoMode],6
         call    TIAGraphicMode
-        mov     [_KeyTable+Key6],0
+        mov     [KeyTable+Key6],0
 
 CtrlVid7:
-        test    [_KeyTable+Key7],128     ; video mode 7 ?
+        test    [KeyTable+Key7],128     ; video mode 7 ?
         jz      CtrlVid8
         mov     [_VideoMode],7
         call    TIAGraphicMode
-        mov     [_KeyTable+Key7],0
+        mov     [KeyTable+Key7],0
 
 CtrlVid8:
-        test    [_KeyTable+Key8],128     ; video mode 8 ?
+        test    [KeyTable+Key8],128     ; video mode 8 ?
         jz      CtrlVid9
         mov     [_VideoMode],8
         call    TIAGraphicMode
-        mov     [_KeyTable+Key8],0
+        mov     [KeyTable+Key8],0
 
 CtrlVid9:
-        test    [_KeyTable+Key9],128     ; video mode 8 ?
+        test    [KeyTable+Key9],128     ; video mode 8 ?
         jz      CtrlVidDone
         mov     [_VideoMode],9
         call    TIAGraphicMode
-        mov     [_KeyTable+Key8],0
+        mov     [KeyTable+Key8],0
 
 CtrlVidDone:
-        test    [_KeyTable+KeyMinus],128 ; user wants to change palette ?
+        test    [KeyTable+KeyMinus],128 ; user wants to change palette ?
         jz      CtrlMouseDirection
-        mov     [_KeyTable+KeyMinus],0   ; debounce key
+        mov     [KeyTable+KeyMinus],0   ; debounce key
         inc     [_PaletteNumber]
         cmp     [_PaletteNumber],0       ; 0xFF = palette was autotected to NTSC
         jne     NoDetectPalette          ; if that was the case ...
@@ -558,13 +558,13 @@ NoPaletteReset:
 
 
 CtrlMouseDirection:
-        test    [_KeyTable+KeyTab],128
+        test    [KeyTable+KeyTab],128
         jz      CtrlTrace
         dec     [_MPdirection]          ; switch mouse-paddle direction *EST*
         and     [_MPdirection],003h
-        mov     [_KeyTable+KeyTab],0
+        mov     [KeyTable+KeyTab],0
 CtrlTrace:
-        test    [_KeyTable+KeyF11],128   ; turn on trace?
+        test    [KeyTable+KeyF11],128   ; turn on trace?
         jz      CtrlTraceOff            ;   no
         cmp     [_TraceEnabled],0       ; trace enabled?
         jz      CtrlTraceDone           ;   no
@@ -574,7 +574,7 @@ CtrlTrace:
         jmp     CtrlTraceDone
 
 CtrlTraceOff:
-        test    [_KeyTable+KeyF12],128   ; turn off trace?
+        test    [KeyTable+KeyF12],128   ; turn off trace?
         jz      CtrlTraceDone           ;   no
         cmp     [_TraceEnabled],0       ; trace enabled?
         jz      CtrlTraceDone           ;   no
@@ -751,201 +751,201 @@ HandleCompuMate:
 
         and     al,07fh         ;????
 
-        test    [_KeyTable+KeyLShift],128
+        test    [KeyTable+KeyLShift],128
         jz      CMnoShift
         mov     [DumpPorts+3],080h
 CMnoShift:
-        test    [_KeyTable+KeyCtrl],128
+        test    [KeyTable+KeyCtrl],128
         jz      CMnoFunc
         mov     [DumpPorts],080h
 CMnoFunc:
 CM00:
         cmp     [CM_Collumn],0
         jne     CM10
-        test    [_KeyTable+Key7],128
+        test    [KeyTable+Key7],128
         jz      CM01
         mov     [InputLatch],0
 CM01:
-        test    [_KeyTable+KeyU],128
+        test    [KeyTable+KeyU],128
         jz      CM02
         and     al,0fbh
 CM02:
-        test    [_KeyTable+KeyJ],128
+        test    [KeyTable+KeyJ],128
         jz      CM03
         mov     [InputLatch+1],0
 CM03:
-        test    [_KeyTable+KeyM],128
+        test    [KeyTable+KeyM],128
         jz      CM10
         and     al,0f7h
         jmp     CMend
 CM10:
         cmp     [CM_Collumn],1
         jne     CM20
-        test    [_KeyTable+Key6],128
+        test    [KeyTable+Key6],128
         jz      CM11
         mov     [InputLatch],0
 CM11:
-        test    [_KeyTable+KeyY],128
+        test    [KeyTable+KeyY],128
         jz      CM12
         and     al,0fbh
 CM12:
-        test    [_KeyTable+KeyH],128
+        test    [KeyTable+KeyH],128
         jz      CM13
         mov     [InputLatch+1],0
 CM13:
-        test    [_KeyTable+KeyN],128
+        test    [KeyTable+KeyN],128
         jz      CM20
         and     al,0f7h
         jmp     CMend
 CM20:
         cmp     [CM_Collumn],2
         jne     CM30
-        test    [_KeyTable+Key8],128
+        test    [KeyTable+Key8],128
         jz      CM21
         mov     [InputLatch],0
 CM21:
-        test    [_KeyTable+KeyI],128
+        test    [KeyTable+KeyI],128
         jz      CM22
         and     al,0fbh
 CM22:
-        test    [_KeyTable+KeyK],128
+        test    [KeyTable+KeyK],128
         jz      CM23
         mov     [InputLatch+1],0
 CM23:
-        test    [_KeyTable+KeyComma],128
+        test    [KeyTable+KeyComma],128
         jz      CM30
         and     al,0f7h
         jmp     CMend
 CM30:
         cmp     [CM_Collumn],3
         jne     CM40
-        test    [_KeyTable+Key2],128
+        test    [KeyTable+Key2],128
         jz      CM31
         mov     [InputLatch],0
 CM31:
-        test    [_KeyTable+KeyW],128
+        test    [KeyTable+KeyW],128
         jz      CM32
         and     al,0fbh
 CM32:
-        test    [_KeyTable+KeyS],128
+        test    [KeyTable+KeyS],128
         jz      CM33
         mov     [InputLatch+1],0
 CM33:
-        test    [_KeyTable+KeyX],128
+        test    [KeyTable+KeyX],128
         jz      CM40
         and     al,0f7h
         jmp     CMend
 CM40:
         cmp     [CM_Collumn],4
         jne     CM50
-        test    [_KeyTable+Key3],128
+        test    [KeyTable+Key3],128
         jz      CM41
         mov     [InputLatch],0
 CM41:
-        test    [_KeyTable+KeyE],128
+        test    [KeyTable+KeyE],128
         jz      CM42
         and     al,0fbh
 CM42:
-        test    [_KeyTable+KeyD],128
+        test    [KeyTable+KeyD],128
         jz      CM43
         mov     [InputLatch+1],0
 CM43:
-        test    [_KeyTable+KeyC],128
+        test    [KeyTable+KeyC],128
         jz      CM50
         and     al,0f7h
         jmp     CMend
 CM50:
         cmp     [CM_Collumn],5
         jne     CM60
-        test    [_KeyTable+Key0],128
+        test    [KeyTable+Key0],128
         jz      CM51
         mov     [InputLatch],0
 CM51:
-        test    [_KeyTable+KeyP],128
+        test    [KeyTable+KeyP],128
         jz      CM52
         and     al,0fbh
 CM52:
-        test    [_KeyTable+KeyColon],128
+        test    [KeyTable+KeyColon],128
         jz      CM53
         mov     [InputLatch+1],0
 CM53:
-        test    [_KeyTable+KeySlash],128
+        test    [KeyTable+KeySlash],128
         jz      CM60
         and     al,0f7h
         jmp     CMend
 CM60:
         cmp     [CM_Collumn],6
         jne     CM70
-        test    [_KeyTable+Key9],128
+        test    [KeyTable+Key9],128
         jz      CM61
         mov     [InputLatch],0
 CM61:
-        test    [_KeyTable+KeyO],128
+        test    [KeyTable+KeyO],128
         jz      CM62
         and     al,0fbh
 CM62:
-        test    [_KeyTable+KeyL],128
+        test    [KeyTable+KeyL],128
         jz      CM63
         mov     [InputLatch+1],0
 CM63:
-        test    [_KeyTable+KeyDot],128
+        test    [KeyTable+KeyDot],128
         jz      CM70
         and     al,0f7h
         jmp     CMend
 CM70:
         cmp     [CM_Collumn],7
         jne     CM80
-        test    [_KeyTable+Key5],128
+        test    [KeyTable+Key5],128
         jz      CM71
         mov     [InputLatch],0
 CM71:
-        test    [_KeyTable+KeyT],128
+        test    [KeyTable+KeyT],128
         jz      CM72
         and     al,0fbh
 CM72:
-        test    [_KeyTable+KeyG],128
+        test    [KeyTable+KeyG],128
         jz      CM73
         mov     [InputLatch+1],0
 CM73:
-        test    [_KeyTable+KeyB],128
+        test    [KeyTable+KeyB],128
         jz      CM80
         and     al,0f7h
         jmp     CMend
 CM80:
         cmp     [CM_Collumn],8
         jne     CM90
-        test    [_KeyTable+Key1],128
+        test    [KeyTable+Key1],128
         jz      CM81
         mov     [InputLatch],0
 CM81:
-        test    [_KeyTable+KeyQ],128
+        test    [KeyTable+KeyQ],128
         jz      CM82
         and     al,0fbh
 CM82:
-        test    [_KeyTable+KeyA],128
+        test    [KeyTable+KeyA],128
         jz      CM83
         mov     [InputLatch+1],0
 CM83:
-        test    [_KeyTable+KeyZ],128
+        test    [KeyTable+KeyZ],128
         jz      CM90
         and     al,0f7h
         jmp     CMend
 CM90:
         cmp     [CM_Collumn],9
         jne     CMend
-        test    [_KeyTable+Key4],128
+        test    [KeyTable+Key4],128
         jz      CM91
         mov     [InputLatch],0
 CM91:
-        test    [_KeyTable+KeyR],128
+        test    [KeyTable+KeyR],128
         jz      CM92
         and     al,0fbh
 CM92:
-        test    [_KeyTable+KeyF],128
+        test    [KeyTable+KeyF],128
         jz      CM93
         mov     [InputLatch+1],0
 CM93:
-        test    [_KeyTable+KeyV],128
+        test    [KeyTable+KeyV],128
         jz      CMend
         and     al,0f7h
 
@@ -973,60 +973,60 @@ CP1Row10:
         test    [_IOPortA],128
         jnz     CP1Row20
 CP1Row11:
-        test    [_KeyTable+P1PadPound],128
+        test    [KeyTable+P1PadPound],128
         jz      CP1Row12
         mov     [InputLatch],0h
 CP1Row12:
-        test    [_KeyTable+P1Pad0],128
+        test    [KeyTable+P1Pad0],128
         jz      CP1Row13
         mov     [DumpPorts+1],0h
 CP1Row13:
-        test    [_KeyTable+P1PadStar],128
+        test    [KeyTable+P1PadStar],128
         jz      CP1Row20
         mov     [DumpPorts],0h
 CP1Row20:
         test    [_IOPortA],64
         jnz     CP1Row30
 CP1Row21:
-        test    [_KeyTable+P1Pad9],128
+        test    [KeyTable+P1Pad9],128
         jz      CP1Row22
         mov     [InputLatch],0h
 CP1Row22:
-        test    [_KeyTable+P1Pad8],128
+        test    [KeyTable+P1Pad8],128
         jz      CP1Row23
         mov     [DumpPorts+1],0h
 CP1Row23:
-        test    [_KeyTable+P1Pad7],128
+        test    [KeyTable+P1Pad7],128
         jz      CP1Row30
         mov     [DumpPorts],0h
 CP1Row30:
         test    [_IOPortA],32
         jnz     CP1Row40
 CP1Row31:
-        test    [_KeyTable+P1Pad6],128
+        test    [KeyTable+P1Pad6],128
         jz      CP1Row32
         mov     [InputLatch],0h
 CP1Row32:
-        test    [_KeyTable+P1Pad5],128
+        test    [KeyTable+P1Pad5],128
         jz      CP1Row33
         mov     [DumpPorts+1],0h
 CP1Row33:
-        test    [_KeyTable+P1Pad4],128
+        test    [KeyTable+P1Pad4],128
         jz      CP1Row40
         mov     [DumpPorts],0h
 CP1Row40:
         test    [_IOPortA],16
         jnz     CheckPad2
 CP1Row41:
-        test    [_KeyTable+P1Pad3],128
+        test    [KeyTable+P1Pad3],128
         jz      CP1Row42
         mov     [InputLatch],0h
 CP1Row42:
-        test    [_KeyTable+P1Pad2],128
+        test    [KeyTable+P1Pad2],128
         jz      CP1Row43
         mov     [DumpPorts+1],0h
 CP1Row43:
-        test    [_KeyTable+P1Pad1],128
+        test    [KeyTable+P1Pad1],128
         jz      CheckPad2
         mov     [DumpPorts],0h
 
@@ -1040,60 +1040,60 @@ CP2Row10:
         test    [_IOPortA],8
         jnz     CP2Row20
 CP2Row11:
-        test    [_KeyTable+P2PadPound],128
+        test    [KeyTable+P2PadPound],128
         jz      CP2Row12
         mov     [InputLatch+1],0h
 CP2Row12:
-        test    [_KeyTable+P2Pad0],128
+        test    [KeyTable+P2Pad0],128
         jz      CP2Row13
         mov     [DumpPorts+3],0h
 CP2Row13:
-        test    [_KeyTable+P2PadStar],128
+        test    [KeyTable+P2PadStar],128
         jz      CP2Row20
         mov     [DumpPorts+2],0h
 CP2Row20:
         test    [_IOPortA],4
         jnz     CP2Row30
 CP2Row21:
-        test    [_KeyTable+P2Pad9],128
+        test    [KeyTable+P2Pad9],128
         jz      CP2Row22
         mov     [InputLatch+1],0h
 CP2Row22:
-        test    [_KeyTable+P2Pad8],128
+        test    [KeyTable+P2Pad8],128
         jz      CP2Row23
         mov     [DumpPorts+3],0h
 CP2Row23:
-        test    [_KeyTable+P2Pad7],128
+        test    [KeyTable+P2Pad7],128
         jz      CP2Row30
         mov     [DumpPorts+2],0h
 CP2Row30:
         test    [_IOPortA],2
         jnz     CP2Row40
 CP2Row31:
-        test    [_KeyTable+P2Pad6],128
+        test    [KeyTable+P2Pad6],128
         jz      CP2Row32
         mov     [InputLatch+1],0h
 CP2Row32:
-        test    [_KeyTable+P2Pad5],128
+        test    [KeyTable+P2Pad5],128
         jz      CP2Row33
         mov     [DumpPorts+3],0h
 CP2Row33:
-        test    [_KeyTable+P2Pad4],128
+        test    [KeyTable+P2Pad4],128
         jz      CP2Row40
         mov     [DumpPorts+2],0h
 CP2Row40:
         test    [_IOPortA],1
         jnz     HKPEnd
 CP2Row41:
-        test    [_KeyTable+P2Pad3],128
+        test    [KeyTable+P2Pad3],128
         jz      CP2Row42
         mov     [InputLatch+1],0h
 CP2Row42:
-        test    [_KeyTable+P2Pad2],128
+        test    [KeyTable+P2Pad2],128
         jz      CP2Row43
         mov     [DumpPorts+3],0h
 CP2Row43:
-        test    [_KeyTable+P2Pad1],128
+        test    [KeyTable+P2Pad1],128
         jz      HKPEnd
         mov     [DumpPorts+2],0h
 
@@ -1109,15 +1109,15 @@ HKPEnd:
 ; *****************************************************************************
 KidVidFrame:
         mov     bh,2
-        test    [_KeyTable+Key1],128
+        test    [KeyTable+Key1],128
         jnz     KVFstartTape
         inc     bh
-        test    [_KeyTable+Key2],128
+        test    [KeyTable+Key2],128
         jnz     KVFstartTape
         inc     bh
-        test    [_KeyTable+Key3],128
+        test    [KeyTable+Key3],128
         jnz     KVFstartTape
-        test    [_KeyTable+KeyF1],128
+        test    [KeyTable+KeyF1],128
         jnz     KVFresetTape
         cmp     [_KidVidTape],0
         je      KVFend
@@ -1301,7 +1301,7 @@ NewInt9 proc near
         xor     bh,bh
         and     al,080h                 ; isolate the on off bit
         xor     al,080h                 ; bit 7 0 if key pressed,reverse it
-        mov     _KeyTable[bx],al         ; write it into the table
+        mov     KeyTable[bx],al         ; write it into the table
 
         mov     al,20h                  ; reset something or other....
         out     20h,al

@@ -51,7 +51,7 @@ ReadHardwarePage0:
 	test	si,080h			; RAM Read?
 	jz	ReadTIA			;	  no
 	and	si,0ffh
-	add	si,offset _RiotRam-128
+	add	si,offset RiotRam-128
 	ret
 
 ReadRiotMaybe:
@@ -199,7 +199,7 @@ WriteHardwarePage0:
 	jz	NewTIA			;	 no
 	and	si,0ffh
 	mov	dl,[WByte]		; writing to RAM
-	mov	[_RiotRam-128 + si],dl
+	mov	[RiotRam-128 + si],dl
 	ret
 
 WriteRiotMaybe:

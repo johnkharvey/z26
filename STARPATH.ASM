@@ -88,7 +88,7 @@ SetStarpath:
 ;        mov     bl,[_CartRom + 02002h]          ; bank switch scheme at startup
         mov     bl,0
         or      bl,040h
-        mov     [_RiotRam],bl                    ; Starpath loader does this I think
+        mov     [RiotRam],bl                    ; Starpath loader does this I think
 	
         SP_SetScheme
 
@@ -126,7 +126,7 @@ StarpathJAM:
         mov     [reg_pc],ax
         mov     bl,[_SC_ControlByte]            ; bank switch scheme at startup
 	or	bl,040h
-	mov	[_RiotRam],bl			; Starpath loader does this I think
+	mov	[RiotRam],bl			; Starpath loader does this I think
 	
 	SP_SetScheme
 
@@ -145,7 +145,7 @@ SPJ1:
         mov     [reg_pc],ax
         mov     bl,[_SC_ControlByte]            ; bank switch scheme at startup
 	or	bl,040h
-	mov	[_RiotRam],bl			; Starpath loader does this I think
+	mov	[RiotRam],bl			; Starpath loader does this I think
 	
 	SP_SetScheme
 
@@ -172,7 +172,7 @@ StarpathRealJAM:
 	call	ConWord		; display address
 
 StarWaitEsc:
-	test	[_KeyTable+KeyEsc],128	; wait for ESC to be pressed
+	test	[KeyTable+KeyEsc],128	; wait for ESC to be pressed
 	jz	StarWaitEsc
 
 	jmp	GoDOS
