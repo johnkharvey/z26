@@ -19,8 +19,9 @@ dd XChecksum=0;		/* gets alternative checksum */
 
 dd DelayTime=0;		/* gets long delay value */
 
-db CartRom[34000]; 	/* 34000 ROM image goes here */
-db FileName[260];	/* filename of current ROM being run */
+db CartRom[32770];      /* 34000 ROM image goes here */
+
+/*db FileName[260];*/	/* filename of current ROM being run */
 
 db PCXPalette[384];     /* palette information for PCX files goes here */
 
@@ -43,7 +44,7 @@ dw SC_ControlByte;	/* supercharger control byte */
 db InTextMode;		/* in TIA text mode outputting a message */
 
 dd crc;			/* holds accumulated CRC */
-dd crctab[256];		/* table to help CRC calculation */
+/* dd crctab[256]; */		/* table to help CRC calculation */
 
 
 
@@ -61,6 +62,7 @@ void InitCVars(void)
 	LinesInFrame=262;
 	BailoutLine=320;
 	InTextMode=0;
+
 }
 
 
@@ -103,6 +105,7 @@ db Mindlink;            /* emulate Mindlink controller in which port *EST* */
 db AllowAll4;           /* allow all 4 directions on the joystick simultaniously */
 db EnableFastCopy;      /* use 32 bit mode X copy routines */
 db TurnScreen;          /* rotate screen 90ø counter-clockwise in linear modes *EST* */
+db HalfScreen;		/* copy alternate scanlines to screen */
 /*
 ** reinitialize the above variables
 */
@@ -140,4 +143,5 @@ void def_LoadDefaults(void)
         AllowAll4 = 0;
         EnableFastCopy = 0;
         TurnScreen = 0;
+        HalfScreen = 0;
 }

@@ -607,7 +607,7 @@ _ProgramDSP:
 	mov	ah,[_sbTimeConstant]	;256-(1000000 / playback_freq)
 	call	send_dsp		;Send it
 
-	mov	ah,48h			;Set buffer size (size / 2) - 1
+	mov	ah,48h			;Set buffer size (256 / 2) - 1
 	call	send_dsp		;Send it
 	mov	ah,255			;Low (***)
 	call	send_dsp		;Send it

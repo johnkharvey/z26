@@ -571,6 +571,8 @@ ModeXCopyScreen:
         ja      NoTurnedScreen          ;   yes, don't rotate screen
         test    [_TurnScreen],1         ; rotating enabled ?
         jne     DoLinearTurn            ;   yes, jump directly to copy routine
+        test	[_HalfScreen],1		; half screen ?
+        jne	HDoLinearCopy		;   yes
 NoTurnedScreen:
 	shl	si,1
         test    [_EnableFastCopy],1
@@ -608,6 +610,38 @@ FDLCLoop:
 	pop	es
 	pop	ds
 
+        jmp     MXCRet
+        
+;*
+;* half-screen linear copy screen (160 pixels)
+;* (inspired by A26 -s squeezed screen)
+;*
+
+HDoLinearCopy:
+	mov	ax,128		; do this many scanlines
+        mov     si,[_ScreenOfs]
+        mov     di,80+160*14	; position in middle 14 lines down
+        
+	push	ds
+	push	es
+
+	push	es
+	pop	ds	; make ds source
+	push	gs
+	pop	es	; make es dest
+
+HDLCLoop:
+	mov	cx,40
+	rep	movsd
+	
+	add	si,160	; skip a scanline
+	add	di,160	; skip a display line
+	dec	ax
+	jnz	HDLCLoop
+
+	pop	es
+	pop	ds
+	
         jmp     MXCRet
         
 ;*

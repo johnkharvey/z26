@@ -19,7 +19,7 @@ TIA		db 	64 dup (?)	; TIA Registers (also should be zero)
 
 ;PCXPalette      db      128*3 dup (?)   ; 384 -- generated palette goes here
 
-TIADisplay	db	320 dup (?)	; Display as currently setup
+;TIADisplay	db	320 dup (?)	; Display as currently setup
 
 _Ram		db	2048 dup (?)	; extra ram
 

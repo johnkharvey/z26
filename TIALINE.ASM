@@ -688,7 +688,7 @@ local InstructionLoop, InstructionsDone
 
 InstructionLoop:
 	fetch_opcode	ebx		; (fetchzx) get the opcode
-	call	[vectors + ebx*2]	; --> do the instruction
+	call	cs:[vectors + ebx*2]	; --> do the instruction
 	ClockRIOT			; clock the RIOT timer
 
 	cmp	[RClock],CYCLESPERSCANLINE

@@ -730,8 +730,6 @@ M1_MultipleTable label word
 	dw	MM_6
 	dw	MM_7
 
-
-
 M4 = 0	; I'm not actually sure if this should be zero or -4.
 
 DeepHMOVE label byte
@@ -1007,5 +1005,4 @@ DeepHMOVE label byte
  db 0,0,0,0,0,0, 2, 2, 2, 2, 2, 2,99,99,99,M4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0,0	; d
  db 0,0,0,0,0,0, 1, 1, 1, 1, 1, 1, 1,99,99,M4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0,0	; e
  db 0,0,0,0,0,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0,0	; f
-
 

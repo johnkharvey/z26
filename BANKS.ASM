@@ -116,7 +116,7 @@ DetectBySize:
         je      SetStarpath
         cmp     ax,6144
         je      SetStarpath
-        cmp	ax,33999
+        cmp     ax,33799
 	je	SMB			; Megaboy 64K cart *EST*
 	ret
 

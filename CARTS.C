@@ -188,6 +188,7 @@ void RecognizeCart(void)
            break;
            case 0x8000:
               BSType=8;                         /* 32K superchip (Fatal Run) */
+
               for(i=0; i<8; i++)
               {
                  for(j=0; j<256; j++)

@@ -232,6 +232,14 @@ TGM_RealRemapVideo:
 
 TGM_SetMaxLines:
 	movzx	si,[_VideoMode]
+	cmp	si,3				; a linear video mode ?
+	ja	RegularMaxLines			;   no
+	test	[_HalfScreen],1			; half-screen mode ?
+	jz	RegularMaxLines			;   no
+	mov	[_MaxLines],256			;   yes, force 256 lines
+	jmp	SetupCFirst
+	
+RegularMaxLines:	
 	shl	si,1
 	mov	si,[MaxLineTable + si]
 	mov	[_MaxLines],si
@@ -240,6 +248,7 @@ TGM_SetMaxLines:
 ;* set up CFirst (first line to display)
 ;*
 
+SetupCFirst:
 	mov	dx,[_UserCFirst]
 	mov	[_CFirst],dx
 	cmp	[_UserCFirst],0ffffh		; did user specify a line number?

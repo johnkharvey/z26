@@ -5,6 +5,10 @@
 ** Please see COPYING.TXT for details.
 */
 
+
+void PCXWriteFile(void)
+{
+
 char PCXFileName[13]={'z','2','6','p','0','0','0','0','.','p','c','x',0};
 
 dw PCXFileCounter = 0;
@@ -38,8 +42,6 @@ db PCXHeader[128] = { 0x0a,5,1,8,0,0,0,0,63,1,0xff,0,0,0,0,0,
                       0,0,0,0,0,0,0,0,0
                     };
 
-void PCXWriteFile(void)
-{
         FILE *fp;
         int i, j, count;
         db ch;

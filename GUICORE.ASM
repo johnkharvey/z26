@@ -1199,7 +1199,8 @@ db      '  `o-x`d  -- print out checksum of cartridge`n`n'
 db      '  `o-y`yN`d -- emulate keyboard controller  (`y1`d = left   `y2`d = right   `y3`d = both)`n`n'
 db      '  `o-4`d  -- allow all 4 directions on the joystick to be pressed simultaniously`n`n'
 db      '  `o-e`d  -- enable 32-bit Mode-X and 160 pixel linear video modes`n`n'
-db      '  `o-z`d  -- rotate screen 90 degrees counter-clockwise (video modes 0 - 3 only)`n'
+db      '  `o-z`d  -- rotate screen 90 degrees counter-clockwise (video modes 0 - 3 only)`n`n'
+db	'  `o-h`d  -- enable half-sized (alternate scanline) display (video modes 0 - 3 only)`n'
 
 
 db	0

@@ -1047,7 +1047,7 @@ do_Instruction:
 	LoadRegs			; load the CPU registers
 
 	fetch_opcode	ebx		; (fetchzx) get the opcode
-	call word ptr [vectors + ebx*2]	; --> do the instruction
+	call word ptr cs:[vectors + ebx*2]	; --> do the instruction
 	ClockRIOT
 
 	SaveRegs			; save the CPU registers
@@ -1132,7 +1132,7 @@ PutPSW:	mov	[RNTest],dh	; PSW will do for N
 	setnz	[flag_V]
 	ret
 
-.data
+;.data
 
 ;*
 ;* opcode vector table

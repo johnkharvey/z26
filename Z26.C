@@ -11,11 +11,11 @@
 
 
 
-#define version "z26 (1.49)"
+#define version "z26 (1.50)"
 
 
 /*
-#define version "Pre 1.49-A"
+#define version "Pre 1.50-D"
 */
 
 /*
@@ -39,7 +39,14 @@
 #include "carts.c"
 #include "cli.c"
 #include "gui.c"
+
+
 #include "trace.c"
+
+/*
+#include "tracex.c"
+*/
+
 #include "pcx.c"
 
 
@@ -75,10 +82,10 @@ void main(int argc, char *argv[])
 	   	emulator();		   /* call emulator		 (main.asm) */
 	   	if(ShowLineCount) 
 		{
-			printf("Filename %s\n", FileName);
-			printf("%06lx checksum -- %08lx crc\n", Checksum, crc);
+			/* printf("Filename %s\n", FileName); */
+			/* printf("%06lx checksum -- %08lx crc\n", Checksum, crc); */
 			printf("%u scanlines in last frame\n",LinesInFrame);
-			printf("CFirst %u\n", CFirst);
+			/* printf("CFirst %u\n", CFirst); */
 	   		DelayTime = 250000;
 	   		LongDelay();
 		}

@@ -33,6 +33,9 @@ P2_AUDV		db	0		; create an AUDV byte here
 
 ALIGN 2
 
+
+.code
+
 P2_Vectors label word
 
 ;*
@@ -173,7 +176,7 @@ P2_Vectors label word
 	dw	P2_NoIO			; 7e -- not used
 	dw	P2_NoIO			; 7f -- not used
 
-.code
+;.code
 
 ;*
 ;* Pitfall 2 initialization
@@ -218,7 +221,7 @@ R_P2:
 	cmp	si,1040h		; read in range?
 	jae	P2_NoIO			;   no
 	and	esi,07fh
-	jmp	[P2_Vectors+esi*2]
+	jmp	cs:[P2_Vectors+esi*2]
 
 ;*
 ;* write Pitfall 2 register
@@ -228,7 +231,7 @@ W_P2:
 	cmp	si,1040h		; write in range?
 	jb	P2_NoIO			;	  no
 	and	esi,07fh
-	jmp	[P2_Vectors+esi*2]
+	jmp	cs:[P2_Vectors+esi*2]
 
 ;*
 ;* Pitfall 2 register handlers

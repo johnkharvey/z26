@@ -48,6 +48,7 @@ EXTRN _Mindlink:byte
 EXTRN _AllowAll4:byte
 EXTRN _EnableFastCopy:byte
 EXTRN _TurnScreen:byte
+EXTRN _HalfScreen:byte
 
 EXTRN _LinesInFrame:word	; *EST*
 EXTRN _PrevLinesInFrame:word

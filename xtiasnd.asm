@@ -105,7 +105,7 @@ Div_n_cnt 	db	2 dup (0)
 Div_n_max 	db	2 dup (0)
 
 
-SQ_MAX = 3072	; 1024
+SQ_MAX = 768	; 1024
 
 ;SoundQ		db	(SQ_MAX + 2) dup (?)
 SQ_Input	dw	offset SoundQ	; point to next avail byte for storing
@@ -322,30 +322,27 @@ _Tia_process	proc	near
 	pushf
 	cli
 
-	cmp	[SQ_Count],BUF_SIZE/2	; enough sound available?
-	jbe	SoundBufferBail		;   no, bail out
-
 	mov	cx,BUF_SIZE/2		; # of bytes
 
-	mov	di,[_DMABuf]
-	add	di,[_DMABufToLoad]	; address of buffer to fill
-	mov	si,[SQ_Output]
+	mov	si,[_DMABuf]
+	add	si,[_DMABufToLoad]	; address of buffer to fill
+	mov	[SoundPointer],si
 
 SoundFillLoop:
-	mov	al,[si]
-	inc	si
-	cmp	si,[SQ_Top]
-	jb	SF_done
-	mov	si,offset SoundQ
-SF_done:mov	[di],al			; put it in soundblaster buffer
-	inc	di
+	cmp	[SQ_Count],0		; anything in the sound queue?
+	jz	RemainingSoundBytes	;   no, go generate
+	SQ_Fetch			;   yes, get a byte
+	mov	si,[SoundPointer]	
+	mov	[si],al			; put it in soundblaster buffer
+	inc	[SoundPointer]
 	dec	cx			; more room in soundblaster buffer?
-	jnz	SoundFillLoop		;   yes, get more
+	jz	SoundBufferFull		;   no, we're done
+	jmp	SoundFillLoop		;   yes, see if more bytes in queue
 
-	sub	[SQ_Count],BUF_SIZE/2
-	mov	[SQ_Output],si
-	
-SoundBufferBail:
+RemainingSoundBytes:
+	call	_FillSoundBuffer	; generate sound into the soundblaster buffer
+
+SoundBufferFull:
 	popf
 	ret
 
@@ -357,19 +354,15 @@ _Tia_process endp
 ;*
 
 QueueSoundByte macro
-local SoundQueueFull, SoundQueueLoop
+local SoundQueueFull
 
 	cmp	[SQ_Count],SQ_MAX	; sound queue already full?
 	jae	SoundQueueFull		;   yes, don't queue anything
-
-SoundQueueLoop:	
 	mov	cx,1
 	mov	[SoundPointer],offset SoundByte
 	call	_FillSoundBuffer	;   no, generate a single sound byte
 	mov	al,[SoundByte]
 	SQ_Store			; put it in the sound queue
-	cmp	[SQ_Count],SQ_MAX/2	; keep sound queue at least 1/2 full
-	jbe	SoundQueueLoop
 
 SoundQueueFull:
 	endm
