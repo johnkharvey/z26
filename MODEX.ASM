@@ -555,26 +555,10 @@ MXMove4 macro op1
 
 	endm
 
-xMXMove4 macro op1
-
-        mov     al,es:[si+op1]
-        mov     ah,es:[si+op1+2]
-        mov     gs:[di],al
-        mov     gs:[di+1],ah
-        mov     al,es:[si+op1+4]
-        mov     ah,es:[si+op1+6]
-        mov     gs:[di+2],al
-        mov     gs:[di+3],ah
-        add     si,8
-	add	di,4
-
-	endm
-
-
 ModeXCopyScreen:
 	pusha
 	push	es
-        push    gs                      ;???? *EST*
+        push    gs                      ; *EST*
 
         mov     ax,0a000h
         mov     gs,ax
@@ -583,6 +567,11 @@ ModeXCopyScreen:
         mov     es,ax                   ; dest segment is ScreenBuffer
 
 	movzx	si,[_VideoMode]
+        cmp     si,3                    ; linear video mode ?
+        ja      NoTurnedScreen          ;   yes, don't rotate screen
+        test    [_TurnScreen],1         ; rotating enabled ?
+        jne     DoLinearTurn            ;   yes, jump directly to copy routine
+NoTurnedScreen:
 	shl	si,1
         test    [_EnableFastCopy],1
         jnz     JumpToFast
@@ -628,28 +617,67 @@ FDLCLoop:
 DoLinearCopy:
         mov     cx,[CopyCounterTable + si]
         mov     si,[_ScreenOfs]
-        mov     di,0
+        mov     di,-8
 
-	push	ebx
+        push    ebx
 
-DLCLoop:
-        mov     al,es:[si+1]
-        mov     bl,es:[si+3]
-        mov     ah,al
-        mov     bh,bl
-	shl	eax,16
-	shl	ebx,16
+        mov     ax,es
+        push    ds
+        mov     ds,ax
+
+; optimized for original P5 (without MMX)
+DLCLoop:                        ; u v   execution pipes
+        mov     ax,[si]         ; 1     or more, depends on cache
+        add     di,8            ;   1
+        mov     dx,ax           ; 1
+        mov     al,ah           ;   1
+        shl     eax,16          ; 2     instruction size prefix (pairs in u-pipe only, one extra decode cycle)
+        mov     dh,dl           ;   1
+        mov     bx,[si+2]       ; 1     or more, depends on cache
+        mov     ax,dx           ;   1
+        mov     dx,bx           ; 1
+        mov     bl,bh           ;   1
+        mov     gs:[di],eax     ; 3     segment and instruction size prefix (pairs in u-pipe only, two extra decode cycles)
+        mov     dh,dl           ;   1
+        shl     ebx,16          ; 2     instruction size prefix (pairs in u-pipe only, one extra decode cycle)
+        add     si,4            ;   1
+        mov     bx,dx           ; 1
+        dec     cx              ;   1
+        mov     gs:[di+4],ebx   ; 3     segment and instruction size prefix (pairs in u-pipe only, two extra decode cycles)
+        jnz     DLCLoop         ;   1
+                                ;15     total cycles
+        pop     ds
+        pop     ebx
+
+        jmp     MXCRet
+
+
+;*
+;* linear copy turned 90 degrees counter-clockwise
+;*
+
+DoLinearTurn:
+        mov     si,[_ScreenOfs]
+        mov     di,320*179+56
+
+        mov     bx,51
+DLTLine:
+        mov     cx,160
+DLTLoop:
+        mov     al,es:[si+320]
+        mov     ah,es:[si+480]
+        shl     eax,16
         mov     al,es:[si]
-        mov     bl,es:[si+2]
-        mov     ah,al
-        mov     bh,bl
+        mov     ah,es:[si+160]
         mov     gs:[di],eax
-        add     si,4
-        mov     gs:[di+4],ebx
-        add     di,8
-	loop	DLCLoop
-
-	pop	ebx
+        sub     di,320
+        inc     si
+        dec     cx
+        jnz     DLTLoop
+        add     di,320*160+4
+        add     si,480
+        dec     bx
+        jnz     DLTLine
 
         jmp     MXCRet
 

@@ -282,6 +282,7 @@ int cli_LoadROM(unsigned char *filename)
 **      -i      emulate Mindlink controller, <1> right, <2> left *EST*
 **      -4      allow all 4 directions on the joystick simultaniously *EST*
 **      -e      enable faster mode X copy routines
+**      -z      rotate screen 90ø counter-clockwise in linear modes
 */
 
 FILE *log;
@@ -345,6 +346,7 @@ void cli_InterpretParm(char *p)
         case 'i':       Mindlink = parm & 3;                   break; /* *EST* */
         case '4':       AllowAll4 = 1;                         break; /* *EST* */
         case 'e':       EnableFastCopy = 1;                    break; /* *EST* */
+        case 'z':       TurnScreen = 1;                        break; /* *EST* */
         default:   	printf("Bad command line switch seen: -%c", ch);
 		   	exit(1);
 	}

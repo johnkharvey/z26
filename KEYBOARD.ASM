@@ -124,13 +124,14 @@ KeyBackSpace =          00EH            ; Back Space (pause game)
 KeyEnter =		01CH		; Enter (resume game)
 
 KeyEquals =		00Dh		; = (do a screen dump)
-KeyMinus=		00Ch		; unassigned
+KeyMinus =              00Ch            ; switch between palettes
 
-KeyPgUp=		0049h		; scroll up
-KeyPgDn=		0051h		; scroll down
-KeyHome=		0047h		; back to default screen position
+KeyPgUp =               0049h           ; scroll up
+KeyPgDn =               0051h           ; scroll down
+KeyHome =               0047h           ; back to default screen position
 ;KeyNumLock =		 045h		 ; switch mouse-paddle L/R - U/D *EST*
 KeyTab =		00Fh		; switch mouse control in paddle mode
+
 
 ; define control keys
 
@@ -456,6 +457,18 @@ CtrlVid9:
 	mov	[KeyTable+Key8],0
 
 CtrlVidDone:
+        test    [KeyTable+KeyMinus],128 ; user wants to change palette ?
+        jz      CtrlMouseDirection
+        mov     [KeyTable+KeyMinus],0   ; debounce key
+        dec     [_PaletteNumber]
+        cmp     [_PaletteNumber],2      ; greater than SECAM ?
+        jna      NoPaletteReset
+        mov     [_PaletteNumber],2      ;    yes, reset to SECAM
+NoPaletteReset:
+        call    TIAGraphicMode          ; reset video mode with new palette
+
+
+CtrlMouseDirection:
 	test	[KeyTable+KeyTab],128
 	jz	CtrlTrace
 	dec	[_MPdirection]		; switch mouse-paddle direction *EST*

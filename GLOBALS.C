@@ -102,6 +102,7 @@ dw ShowLineCount;	/* display stats on game exit */
 db Mindlink;            /* emulate Mindlink controller in which port *EST* */
 db AllowAll4;           /* allow all 4 directions on the joystick simultaniously */
 db EnableFastCopy;      /* use 32 bit mode X copy routines */
+db TurnScreen;          /* rotate screen 90ø counter-clockwise in linear modes *EST* */
 /*
 ** reinitialize the above variables
 */
@@ -138,4 +139,5 @@ void def_LoadDefaults(void)
         Mindlink = 0;
         AllowAll4 = 0;
         EnableFastCopy = 0;
+        TurnScreen = 0;
 }

@@ -1139,6 +1139,9 @@ db      '`y`UTrace Mode`u`d`n`n'
 db      '  `oF11`d -- resume tracing`n'
 db      '  `oF12`d -- interrupt tracing`n`n'
 
+db      '`y`UPalette Change`u`d`n`n'
+db      '    `o-`d -- switch between NTSC -> SECAM -> PAL palettes (set B/W switch manually for SECAM)`n`n'
+
 db	0
 
 
@@ -1195,7 +1198,8 @@ db      '  `o-w`d  -- emulate driving controllers`n`n'
 db      '  `o-x`d  -- print out checksum of cartridge`n`n'
 db      '  `o-y`yN`d -- emulate keyboard controller  (`y1`d = left   `y2`d = right   `y3`d = both)`n`n'
 db      '  `o-4`d  -- allow all 4 directions on the joystick to be pressed simultaniously`n`n'
-db      '  `o-e`d  -- enable 32-bit Mode-X and 160 pixel linear video modes`n'
+db      '  `o-e`d  -- enable 32-bit Mode-X and 160 pixel linear video modes`n`n'
+db      '  `o-z`d  -- rotate screen 90 degrees counter-clockwise (video modes 0 - 3 only)`n'
 
 
 db	0

@@ -60,14 +60,9 @@ ReadRiotMaybe:
 
 ReadTIA:
 	push	ax
-        and     si,3fh
-	xor	al,al
         mov     al,[BusState]           ; set undefined bits depending
                                         ;   on the state of the data bus
-        and     ax,07fh
-        test    si,08h
-        jnz     ReadTIAZero             ; collision register?
-        and     ax,03fh                 ;   yes, one more bit is defined
+        and     ax,03fh                 ; topmost two bits are always defined
 
 ReadTIAZero:
         and     si,0fh

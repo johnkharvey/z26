@@ -311,6 +311,10 @@ AdjustUnstable:
 	jz	AlreadyInPALMode	;   yes
 	cmp	[_UserPaletteNumber],0ffh ; is there a palette override?
 	jnz	AlreadyInPALMode	;   yes, don't switch
+
+        test    [Frame],0ffffff00h      ; more than 256 frames passed?
+        jnz     AlreadyInPALMode        ;    yes, don't change TV type *EST*
+
 	mov	[_PaletteNumber],1	; set up PAL palette
 	pushad
 	call	TIAGraphicMode		; reset video mode for PAL games

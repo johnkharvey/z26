@@ -140,7 +140,10 @@ void gui_GraphicsMode(void)
 	if (outregs.h.al != 0x12)
 	{
 		gui_RestoreVideoMode();
-		printf("You need a VGA to run z26.");
+		printf("You need a VGA to run z26.\n\n");
+		printf("If you are running in a Windows environment and you get this message, try\n");
+		printf("right-clicking on z26.exe from the Windows Explorer and under properties,\n");
+		printf("set the screen usage to full-screen.\n");
 		exit(1);
 	}
 }
