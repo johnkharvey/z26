@@ -149,6 +149,17 @@ PALPaletteTable db	0,		0,		0		; 00 -- (grey)
 		db	0,		0,		0		; F0 -- (grey)
 		db	H*95/100,	H*95/100,	H*95/100	; FE
 
+
+SECAMPaletteTable db      0,   0,   0           ; black
+                  db     33,  33, 255           ; blue
+                  db    240,  60, 121           ; red
+                  db    255,  60, 255           ; magenta
+                  db    127, 255,   0           ; green
+                  db    127, 255, 255           ; cyan
+                  db    255, 255,  63           ; yellow
+                  db    255, 255, 255           ; white
+;                         R    G    B
+
 .code
 
 TIASaveVideoMode:
@@ -343,23 +354,18 @@ LUMDone:
         jz      HardwareStuff
 GPUseSECAM:
         mov	di,offset PCXPalette
-        mov     dx,16                   ; do 16 colours
-        mov     ax,0ff00h               ; full (ah) or no (al) RGB setting
+        mov     dx, 16                  ; do 16 colours
 SLoop1:
-        mov     ebx,000ef2a60h          ; bittable for 8*3 BGR values
-        mov     cx,24                   ; set 8*3 values in colour table
+        mov     bx,0                    
 SLoop2:
-        mov     [di],ah                 ; full intensity of R, G, or B
-        test    ebx,1                   ; replace with no intensity ?
-        jnz     noZero                  ;    no 
-        mov     [di],al                 ;    yes, do so
-noZero:
-        inc     di                      ; point to next RGB value in colour table
-        shr     ebx,1                   ; next value in bittable
-        dec     cx                      ; done 8*3 RGB values yet
-        jnz     SLoop2                  ;    no
-        dec     dx                      ; done 16 colours yet
-        jnz     SLoop1                  ;    no
+        mov     al,SECAMPaletteTable[bx] ; copy RGB values directly
+        mov     [di],al
+        inc     di
+        inc     bx
+        cmp     bx,24                   ; done 8 lums * 3 RGB bytes yet
+        jne     SLoop2                  ;   not yet
+        dec     dx                      ; done 16 colours yet ?
+        jnz     SLoop1                  ;   not yet
 
 HardwareStuff:
 
