@@ -187,11 +187,8 @@ ScanNextLine:
 
 ; do emergency bail-out test
 
-	mov	al,[VBlankFrame]	; vblank causes new frame (bowling?)
-	cmp	al,0
-	jnz	NDret			;   yes, skip emergency bail-out test
 	mov	ax,[ScanLine]		; 
-	cmp	ax,2000			; have we done way too many scan lines yet?
+	cmp	ax,1000			; have we done way too many scan lines yet?
 	jl	NDret			;   not yet
 	inc	[Frame]			;   yes, to the next frame (allow escape to work)
 	mov	[ScanLine],0
@@ -289,13 +286,9 @@ InstructionLoop:
 	call	[vectors + ebx*2]	; --> do the instruction
 	call	[TimerVec]		; clock the RIOT timer
 
-	cmp	[DoVsyncPending],0
-	je	SkipVsyncPending
-
 	cmp	[VsyncPending],0	; was Vsync set this instruction ?
 	jne	InstructionsDone	;    yes, fast exit
 
-SkipVsyncPending:
 	mov	bh,[LastCycle]
 	cmp	[RClock],bh
 	jl	InstructionLoop
@@ -343,7 +336,7 @@ local BackgroundPFOnly
 
 BackgroundPFOnly:
 	mov	di,cx
-	mov	ax,word ptr BackgroundColor[ebx*4]	; get color value word
+	mov	ax,BackgroundColor[ebx*2] ; get color value word
 	add	cx,2
 	mov	gs:[di],ax
 	endm
@@ -472,120 +465,6 @@ DoReal4 macro
 
 ;*****************************************************************************
 
-;*
-;* macro to process objects, leave clock of next object in AL for further testing
-;*
-
-DoObjectsAL macro
-local ObjectLoop, Skip, Branch, Done
-
-ObjectLoop:
-	mov	al,TIAClock[bp]
-	cmp	al,dl		
-	ja	Done			; if next change clock <= next pf write
-Branch:
-	mov	bl,TIAReg[bp]		;   goto register change handler
-	and	ebx,03fh		; only 63 options
-	call	[TIARegVector + ebx*2]
-        
-Skip:	add	bp,4			; go on to the next change
-	mov	al,TIAClock[bp]
-	cmp	al,TIAInvalid 		; if moved onto an invalid
-	je	Skip			; skip it.
-
-	cmp	al,dl			; < another change to handle?
-	jbe	Branch			;   yes
-Done:
-	endm
-
-;*
-;* set 4 display bits to value in bl, increment display pointer
-;*
-
-Set4BitsFast macro
-	mov	di,cx			; display pointer
-	add	cx,8
-	mov	gs:[di],eax
-	mov	gs:4[di],eax
-	endm
-
-
-FastPlayfieldBit macro op1
-local PFSkip, SlowLane, SetPFBit, SetBkBit, FastSetPFBit
-
-	mov	di,[PFClockToBitTable]		; < preload table pointer
-	sub	al,dl				; # of color clocks to next object
-	movzx	bx,dl				; < preload offset
-	cmp	al,4				; at least 4 ?
-	mov	eax,[si]			; < pick up next 4 TIA bits
-	jb	SlowLane			;   no
-	test	eax,eax				; anything set in next 4 TIA bits ?
-	jne	SlowLane			;   yes
-
-	mov	ebx,[di + bx]			; playfield bit for this color clock
-	add	si,4				; bump TIA pointer
-	add	dl,4				; bump color clock
-
-	test	ebx,dword ptr [TIA+TIAPf0]	; setting a playfield bit ?
-	mov	eax,[BackgroundColor]		; < preload background color
-	jnz	FastSetPFBit			;   yes
-	Set4BitsFast				;   no, do 4 background bits
-	jmp	op1				; FastExit
-
-FastSetPFBit:
-	mov	eax,[PlayfieldColor]
-	Set4BitsFast
-	jmp	op1
-	
-SlowLane:
-	mov	ebx,[di + bx]
-	or	eax,TGPlay*01000000h+TGPlay*010000h+TGPlay*0100h+TGPlay
-	test	ebx,dword ptr [TIA+TIAPf0]
-	jz	PFSkip
-SetPFBit:
-	mov	[si],eax
-PFSkip:
-	endm
-
-
-
-;*
-;* do 4 real bits
-;*
-
-DoRealFast4 macro
-local FastExit
-
-	TryCPU
-
-	DoObjectsAL
-	FastPlayfieldBit FastExit
-
-	CollisionConvert
-	inc	dl			; increment color clock
-	inc	si			; increment pf write / collision pointer
-
-	DoObjects
-	CollisionConvert
-	inc	dl			; increment color clock
-	inc	si			; increment pf write / collision pointer
-
-	DoObjects
-	CollisionConvert
-	inc	dl			; increment color clock
-	inc	si			; increment pf write / collision pointer
-
-	DoObjects
-	CollisionConvert
-	inc	dl			; increment color clock
-	inc	si			; increment pf write / collision pointer
-
-FastExit:
-	endm
-
-
-;*****************************************************************************
-
 
 ; *     
 ; *  TIALineTo -- generate a raster line        
@@ -645,22 +524,18 @@ TIAGenerate:
 	movzx	bx,al
 	mov	al,TIA[bx]
 	mov	ah,al
-	shl	eax,16
-	mov	al,TIA[bx]
-	mov	ah,al
-	mov	[PlayfieldColor],eax	; set up color for FastPlayfieldBit
+	mov	[PlayfieldColor],ax	; set up color for FastPlayfieldBit
 
 TIABlankLoop:
 	mov	al,ColumnBlank
 	cmp	dl,al			; doing column blanking ?
 	jae	TIALoop			;   no
-	DoBlank4			;   no, do regular
+	DoBlank4
 	DoBlank4
 
 TIALoop:
-	
-	DoRealFast4			;   no, do regular
-	DoRealFast4
+	DoReal4
+	DoReal4
 
 	cmp	dl,dh
 	jne	TIALoop
@@ -680,10 +555,7 @@ TIARightBegin:
 	movzx	bx,al
 	mov	al,TIA[bx]
 	mov	ah,al
-	shl	eax,16
-	mov	al,TIA[bx]
-	mov	ah,al
-	mov	[PlayfieldColor],eax	; set up color for FastPlayfieldBit
+	mov	[PlayfieldColor],ax	; set up color for FastPlayfieldBit
 
 
 ; this code doesn't belong in the TIA handler because real TIA can't respond to change
@@ -700,6 +572,9 @@ TIARB1:
 
 TIAExit:				; we've finished the line scan...
 	mov	[DisplayPointer],cx
+;	cmp	[RClock],CyclesPerScanLine
+;	jae	TIARet
+;	DoInstruction
 
 TIARet:
 	ret
@@ -731,10 +606,6 @@ TIAFinishNoGenerateLoop:
 	cmp	dl,160
 	jne	TIAFinishNoGenerateLoop
 
-;	mov	al,[CyclesPerLine]
-;	call	DoInstructions
-;	SetCPUClock
-
 TIAProcessBuffer:
 	mov	bp,offset TIABuffer	; initialise the buffer
 TIABLLoop:
@@ -746,5 +617,10 @@ TIABLLoop:
 	call	TIARegVector2[bx]
 	add	bp,4
 	jmp	TIABLLoop
+
+;	cmp	[RClock],CyclesPerScanLine
+;	jae	TIABLExit
+;	DoInstruction
+
 TIABLExit:
 	ret

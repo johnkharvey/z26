@@ -15,32 +15,12 @@ SetupSpecial:
 	cmp	ax,0676ch
 	je	SSReverse		; commando (weird missile)
 
-	jmp	SSVSYNC
+	jmp	SSWRAP
 
 SSReverse:
 	mov	[ReverseSync],1
-	jmp	SSVSYNC
-
-
-;*
-;* process requests to do vsync pending test in instruction loop
-;*
-
-SSVSYNC:
-	cmp	ax,0b06fh
-	je	DoVsync			; blakjack
-	cmp	ax,022abh
-	je	DoVsync			; cosmcrep
-	cmp	ax,00a00h
-	je	DoVsync			; knightwn
-	cmp	ax,0c5dch
-	je	DoVsync			; taz
-
 	jmp	SSWRAP
 
-DoVsync:
-	mov	[DoVsyncPending],1
-	jmp	SSWRAP
 
 ;*
 ;* process requests for wrapping negative player positions to zero
@@ -83,12 +63,16 @@ SSLINE:
 	je	Line36			; astroidc
 	cmp	ax,08ae0h
 	je	Line36			; astroids
+	cmp	ax,0bf6fh
+	je	Line52			; bobby
+	cmp	ax,03ae7h
+	je	Line36			; brickick
 	cmp	ax,0f578h
 	je	Line35			; buckrog
 	cmp	ax,06000h
 	je	Line31			; burndesr
 	cmp	ax,07d16h
-	je	Line29			; carnival
+	je	Line31			; carnival
 	cmp	ax,08e07h
 	je	Line34			; catmouse
 	cmp	ax,037b7h
@@ -96,7 +80,7 @@ SSLINE:
 	cmp	ax,01a5eh
 	je	Line37			; challang
 	cmp	ax,045cbh
-	je	Line37			; chinasyn
+	je	Line36			; chinasyn
 	cmp	ax,083e3h
 	je	Line28			; chuckwgn
 	cmp	ax,00828h
@@ -111,12 +95,16 @@ SSLINE:
 	je	Line42			; combat
 	cmp	ax,0e90bh
 	je	Line32			; condor
+	cmp	ax,03cfah
+	je	Line48			; congbong
+	cmp	ax,022abh
+	je	Line46			; cosmcrep
 	cmp	ax,09f21h
 	je	Line36			; crosfrce
 	cmp	ax,02d81h
 	je	Line58			; dancplat
 	cmp	ax,081cfh
-	je	Line41			; darkcvrn
+	je	Line43			; darkcvrn
 	cmp	ax,0ce26h
 	je	Line48			; dethtrap
 	cmp	ax,0c814h
@@ -148,11 +136,13 @@ SSLINE:
 	cmp	ax,01129h
 	je	Line48			; funwnumb
 	cmp	ax,0fdbfh
-	je	Line44			; harbresc
+	je	Line45			; harbresc
 	cmp	ax,058a6h
 	je	Line38			; holehunt
 	cmp	ax,08828h
 	je	Line34			; infiltrt
+	cmp	ax,0b00ah
+	je	Line40			; iwantmom
 	cmp	ax,0a9c2h
 	je	Line18			; jawbreak
 	cmp	ax,04000h
@@ -164,7 +154,7 @@ SSLINE:
 	cmp	ax,0ff2ch
 	je	Line28			; lasrvoly
 	cmp	ax,03769h
-	je	Line38			; malagai
+	je	Line39			; malagai
 	cmp	ax,06097h
 	je	Line44			; marinwar
 	cmp	ax,00264h
@@ -254,15 +244,13 @@ SSLINE:
 	cmp	ax,044dch
 	je	Line37			; xenophob
 	cmp	ax,096a1h
-	je	Line31			; xevious
+	je	Line36			; xevious
 	cmp	ax,062d5h
 	je	Line34			; zoofun
 	cmp	ax,0f5b3h
 	je	Line34			; starempr
 	cmp	ax,05317h
 	je	Line36			; reactor
-	cmp	ax,03cfah
-	je	Line50			; congbong
 	cmp	ax,08e4dh
 	je	Line36			; gijoe
 	cmp	ax,04d67h
@@ -567,6 +555,8 @@ SSCB:	cmp	ax,0359ch
 	je	SSCB8			; decathln
 	cmp	ax,0f815h
 	je	SSCB8			; robotank
+	cmp	ax,0b491h
+	je	SSCB8			; skyjinks
 ;	cmp	ax,094a9h
 ;	je	SSCB8			; he_man (** it switches! **)
 
@@ -587,45 +577,41 @@ SetupScoreMode:
 	cmp	ax,0ffb5h
 	je	NoScore			; alphbeam
 
-	jmp	SetupCPUOffset
+	jmp	SetP1Hard
 
 NoScore:
 	mov	[NoScoreMode],1
-	jmp	SetupCPUOffset
-
-SetupCPUOffset:
-	cmp	ax,0e5beh
-	je	CPU69			; tetris26 (it's supposed to jitter!)
-
-	jmp	SetupVBlankFrame
-
-CPU69:	mov	[CPUOffset],69
-	jmp	SetupVBlankFrame
-
-
-SetupVBlankFrame:
-	cmp	ax,0bb9ch
-	je	SetVBlankFrame		; bowling
-	cmp	ax,0779fh
-	je	SetVBlankFrame		; bowlg_tw
-
-	jmp	SetP1Hard
-
-
-SetVBlankFrame:
-	mov	[VBlankFrame],1
 	jmp	SetP1Hard
 
 
 SetP1Hard:
 	cmp	ax,094a9h
 	je	SP1HARD
-	jmp	SetupDone
+	jmp	SetupWrapWsync
 
 SP1HARD:
-	mov	al,[IOPortB]		; p1 hard
-	or	al,128
-	mov	[IOPortB],al
+	mov	dl,[IOPortB]		; p1 hard
+	or	dl,128
+	mov	[IOPortB],dl
+	jmp	SetupWrapWsync
+
+SetupWrapWsync:
+	cmp	ax,09f21h
+	je	DoWrapWsync		; crosfrce
+	cmp	ax,0e0e9h
+	je	DoWrapWsync		; astroidc
+	cmp	ax,08ae0h
+	je	DoWrapWsync		; astroids
+	cmp	ax,03cfah
+	je	DoWrapWsync		; congbong
+	cmp	ax,0bf0eh
+	je	DoWrapWsync		; starvygr (doesn't fix)
+	cmp	ax,096a1h
+	je	DoWrapWsync		; xevious (doesn't fix)
+	jmp	SetupDone
+
+DoWrapWsync:
+	mov	[WrapWsync],1
 	jmp	SetupDone
 
 	

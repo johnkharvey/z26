@@ -51,6 +51,8 @@ Set8kMode:
 	je	SPB			; popeye
 	cmp	ax,0ce17h
 	je	SPB			; swarcade
+	cmp	ax,0c455h
+	je	SPB			; swtagpro
 	cmp	ax,05653h
 	je	SPB			; qbrtqube
 	cmp	ax,0e31ah

@@ -1,13 +1,4 @@
 
-; *****************************************************************************
-;				Riot Timer
-; *****************************************************************************
-
-ALIGN 2
-
-Timer		dw	0		; the RIOT Timer
-TickCnt		dw	0		; Number of ticks till timer clicks
-TRate		dw	0		; Number of cycles per timer count
 
 ; *****************************************************************************
 ;			      Other stuff
@@ -20,11 +11,6 @@ VBlank		db	0		; VBlank flag
 
 FEnd=$
 
-ALIGN 2
-
-TimerVec	dw	 Timer0		;timer routine vector -- Timer1 for starmaster
-					;				and solaris
-
 TopLine		dw	0		; was 36     top line of display
 BottomLine	dw	0		; was 36+200 bottom line of display
 
@@ -34,7 +20,7 @@ CFirst		dw	0		; <-- gets changed by SetupSpecial
 CLast		dw	256		; was 256 last scan line (from CMDLine)
 
 MaxLines	dw	200		;max # of lines to scan
-					;gets changed if doing shrunk screen
+					;gets changed by graphics.asm
 
 DisplayPointer	dw	0		;pointer into display RAM
 DisplayTranslate dw offset TIADisplayToColour ;display to color translation table
@@ -49,13 +35,10 @@ StopTicks	dd	0		; ticks at finish
 ; *** keep next 4 variables in order !!!!
 ; they are arranged to match the order of the entries in TIAColourTable
 
-BackgroundColor	dd	0
-PlayfieldColor	dd	0
-Player1Color	dd	0
-Player0Color	dd	0
-
-
-MicroTick	db	0		; holds a small tick from hardware counter
+BackgroundColor	dw	0
+PlayfieldColor	dw	0
+Player1Color	dw	0
+Player0Color	dw	0
 
 NoRetrace	db	0		; don't wait for retrace (if 0ffh)
 					; moved to vsync.asm
@@ -63,16 +46,16 @@ NoRetrace	db	0		; don't wait for retrace (if 0ffh)
 ColumnBlank	db	0		; blank this many columns
 GamePaused	db	0		; game paused
 NoScoreMode	db	0		; set if we don't want PF to take on player colors
-CyclesPerLine	db	CyclesPerScanLine-2 ; # of cycles to execute instructions for each line
 CPUOffset	db	66		; 64 default offset for CPU clock
 CPUClock	db	0
-VBlankFrame	db	0		; VBlank causes a new frame
 ReverseSync	db	0		; sync on reverse transition
 WrapZero	db	0		; wrap negative player pos to zero
 					; atlantis and oceancty
 
-DoVsyncPending	db	0		; break instruction loop if vsync pending
 VsyncPending	db	0		; VSYNC pending
+
+WrapWsync	db	0		; wrap Wsync to next line
+					; crosfrce
 
 ALIGN	2
 
@@ -83,8 +66,6 @@ Ret0F		db	0Fh
 Ret80		db	80h
 RetFF		db	0FFh
 
-TimerCount	dw	8,64,1024	; count values for the RIOT
-
 RetWd		db	0		; byte returned from collision read
 
 WByte		db	0		; byte to write
@@ -92,7 +73,7 @@ WByte		db	0		; byte to write
 
 
 
-IOPortB		db	00Bh		; IO Port B (switches)
+IOPortB		db	03fh		; 0Bh IO Port B (switches)
 IOPortA		db	0FFh		; IO Port A (joystick)
 
 DumpPorts	db	0,0,0,0		; Input ports (inp0..3)
@@ -155,16 +136,6 @@ ModuleBP	dw	0
 ModuleSP	dw	0
 
 
-;process these commands immediately
-
-ALIGN 2
-
-WrTiaImmediateVector	dw	WrTiaVSync	; 0
-			dw	WrTiaVBlank	; 1
-			dw	WrTiaWSync	; 2
-			dw	WSret		; 3 -- reset horizontal sync
-						;      for factory testing only !
-		        
 ; cycle offset table
 
 ;CO=-1	;default cycle offset
