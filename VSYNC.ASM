@@ -7,35 +7,17 @@ CRTSTAT=	03dah			; CRT status register
 
 .data
 
+NDIWait			dd	94		; (132,321) ticklets of NDI for a sync
+
 LastVsyncTime		dd	0		; when was last Vsync ?
 FrameTime		dd	0
 TicksPerSecond		dd	1193182		; 14318180/12
 NominalFrameTime	dd	19886		; TicksPerSecond/60
-PreGap			dd	12000		; more than half a frame...
-PostGap			dd	20600		; a frame and a little gap
+PreGap			dd	19000		; don't look for vsync before this
+PreFlip			dd	15000		; don't flip mode 8 page before this
 VsyncBrokenTime		dd	20200*16	; 16 bad frames, vsync broken
 CurrentTime		dd	0		; temp store for current time
 ReSyncFlag		db	1		; force re-sync (happens in video mode change)
-BlindCount		db	0		; # of frames since last real vsync
-
-
-; Nominal frame times for the various video modes for flying blind.
-; These values are a little high (frame rate low).
-; They were measured on my S3 Virge.
-; Better high than low though...  It will tend to move the vsync
-; position closer to the middle of the window that we're looking
-; for it in.
-
-VideoRateTable		dd	17104		; 0 -- 69.76 fps
-			dd	19960		; 1 -- 59.78 fps
-			dd	20050		; 2 -- 59.51 fps
-			dd	20050		; 3 -- 59.51 fps
-			dd	20074		; 4 -- 59.44 fps
-			dd	20165		; 5 -- 59.17 fps
-			dd	20165		; 6 -- 59.17 fps
-			dd	20165		; 7 -- 59.17 fps
-			dd	20128		; 8 -- 59.28 fps
-			dd	20165		; 9 -- 59.17 fps (soft scan line -- not implemented yet)
 
 
 .code
@@ -48,17 +30,7 @@ ReSync:
 	cmp	[_NoRetrace],0			; did user specify a -r<n> param ?
 	jnz	VSRet				;   yes, don't do this
 	pushad
-	cmp	[_VideoMode],8			; video mode in range ?
-	jbe	RSNormal			;   yes
-	mov	eax,[VideoRateTable]		;   no, use mode 0 timing
-	jmp	RSTooHigh
 
-RSNormal:
-	movzx	eax,[_VideoMode]
-	mov	eax,[VideoRateTable + eax*4]
-
-RSTooHigh:
-	mov	[NominalFrameTime],eax		; put in frame time adjusted for video mode
 	call	_GetTime
 	mov	[CurrentTime],eax		; this is for testing for broken vsync...
 ReSyncLoop:
@@ -90,46 +62,48 @@ VSync:	cmp	[_NoRetrace],0ffh		; -r no param
 					   	; (so we don't have to worry about overflow...)
 					   	; this means frame timer won't work beyond ~ 40 minutes
 	cmp	[ReSyncFlag],0			; need to resync ?
-	jz	RealVsyncLoop			;   no
+	jz	DoSync				;   no
 	call	ReSync				;   yes
 	mov	[ReSyncFlag],0
 
-RealVsyncLoop:
-	sti
-	mov	dx,CRTSTAT
+DoSync:
+	cmp	[_VideoMode],0
+	je	SetPG0
+	mov	[PreGap],19000
+	jmp	NDLoop
+
+SetPG0:	mov	[PreGap],16000
+
+NDLoop:	sti
+	mov	dx,CRTSTAT		; wait for display disable
 	cli
 	in	al,dx
-	test	al,8				; Vsync pulse on ?
-	jnz	RealSyncSeen			;   yes
-	call	_GetTime
-	mov	[CurrentTime],eax
-	sub	eax,[LastVsyncTime]
-	cmp	eax,[PostGap]			; timed out ?
-	jb	RealVsyncLoop			;   no, keep looking
-VsyncAdjustLoop:
-	mov	eax,[NominalFrameTime]		; we missed a Vsync, flying blind...
-	add	[LastVsyncTime],eax		; adjust position of last vsync as if we've seen one
-	mov	eax,[LastVsyncTime]
-	cmp	eax,[CurrentTime]		; gone beyond current time?
-	jbe	VsyncAdjustLoop			;   no, keep adjusting
-	mov	eax,[NominalFrameTime]		;   yes, back off by one frame time
-	sub	[LastVsyncTime],eax
-	inc	[BlindCount]
-	cmp	[BlindCount],10			; too many frames without a real vsync?
-	jb	PopRet				;   no
-	call	ReSync				;   yes, do a resync (should almost never happen)
+	test	al,8
+	jnz	RealSyncSeen		; fast exit for Vsync seen
+	test	al,1
+	jz	NDLoop
 
+	call	_GetTime		; 32-bit hardware time (1.19 MHz)
+	mov	ecx,eax			; start time
+	add	ecx,[NDIWait]		; (120) end time (one VGA scan line ~ 37.7)
+
+NDOff:	mov	dx,CRTSTAT		; time the off period
+	in	al,dx
+	test	al,8
+	jnz	RealSyncSeen		; fast exit for Vsync seen
+	test	al,1
+	jz	NDLoop			; display enable came on, start over
+	call	_GetTime
+	cmp	eax,ecx			; blank long enough?
+	jb	NDOff			;   no, keep waiting
+
+RealSyncSeen:
+	call	_GetTime
+	mov	[LastVsyncTime],eax	; mark time of current VSync
 PopRet:	sti
 	popad
 VSRet:	ret
 
-RealSyncSeen:
-	mov	[BlindCount],0
-	call	_GetTime
-	mov	[LastVsyncTime],eax		; mark time of current VSync
-	sti
-	popad
-	ret
 
 ;*
 ;* Timer based frame limiter

@@ -355,8 +355,8 @@ gui_DrawString(int col, int row, int color, char *text)
 					case 'i':  color = 13;			break;
 					case 'v':  color = 14;			break;
 					case 'w':  color = 15;			break;
-					case 'U':  ul = 1;			break;
-					case 'u':  ul = 0;			break;
+					case 'U':  ul = 1;				break;
+					case 'u':  ul = 0;				break;
 					case 'd':  color = gui_textColor;	break;
 					case 'n':  row += 10; col = gui_textX;	break;
 				}
@@ -591,7 +591,7 @@ gui_ShowHelp()
 	while (ch != Esc)
 	{
 		ch = 0;
-		while (ch != PgUp && ch != PgDn && ch != Esc && ch != Home)
+		while (ch != PgUp && ch != PgDn && ch != Esc && ch != Home && ch != End)
 			ch = gui_GetScanCode();
 
 		if (ch == PgUp)
@@ -617,6 +617,15 @@ gui_ShowHelp()
 			if (page != 0)
 			{
 				page = 0;
+				gui_ShowHelpPage(page);
+			}
+		}
+
+		if (ch == End)
+		{
+			if (page != 2)
+			{
+				page = 2;
 				gui_ShowHelpPage(page);
 			}
 		}
@@ -775,8 +784,6 @@ gui_ShowList()
 	int done, filesread;
 
 	int curfile = 1;
-
-	int ROMLoaded = 0;
 
 	char toomanyfiles = 0;
 
@@ -970,7 +977,7 @@ gui_ShowList()
 			psp = _psp;		/* for environment scanner  (sbdrv.asm) */
 			emulator();		/* call emulator              (tia.asm) */
 			
-			gui_GraphicsMode();
+/*			gui_GraphicsMode(); */
 			gui_SetPalette(35, 40, 45);	/* 31, 34, 41 */
 
 		}

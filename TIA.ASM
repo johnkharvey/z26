@@ -81,6 +81,10 @@ STUP_4:
 	call	Reset			; Reset the CPU
 
 	call	_SetupTimer		; put timer in mode 2
+
+	call	TIASaveVideoMode
+	call	VSync
+
 	call	TIAGraphicMode		; Switch into VGA mode
 	call	SetNewInt9		; Keyboard Handler
 	call	JoyCenter		; set joystick center position
@@ -151,7 +155,8 @@ PausedLoop:
 sd_weird:
 	call	_sound_clear		; turn sound off (Soundblaster)
 	call	SoundOff		; turn sound off (PC speaker)
-	call	TIATextMode		; back to text mode
+;	call	TIATextMode		; back to text mode
+	call	TIARestoreVideoMode
 	call	SetOldInt9		; reset the key handler
 	call	_RestoreTimer		; put timer back into mode 3
 	call	_RestoreISR		; restore SoundBlaster ISR (if was on)

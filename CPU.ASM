@@ -1030,7 +1030,8 @@ ENDIF
 ;* jam handler 
 ;*
 
-jam:	push	offset jam_msg
+jam:	call	TIATextMode
+	push	offset jam_msg
 	call	_put_str
 	dec	di			; point at jam instruction
 	read	al,di

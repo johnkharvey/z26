@@ -6,6 +6,8 @@
 
 .data
 
+OldVideoMode	db	0
+
 PaletteCount	db	0
 
 ;*
@@ -190,8 +192,23 @@ PALPaletteTable db	0,		0,		0		; 00 -- (grey)
 		db	0,		0,		0		; F0 -- (grey)
 		db	H2,		H2,		H2		; FE
 
-
 .code
+
+TIASaveVideoMode:
+	pushad
+	mov	ah,0fh
+	int	10h
+	mov	[OldVideoMode],al
+	popad
+	ret
+
+TIARestoreVideoMode:
+	pushad
+	mov	ah,0
+	mov	al,[OldVideoMode]
+	int	10h
+	popad
+	ret
 
 TIAGraphicMode:
 	pushad
