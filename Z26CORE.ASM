@@ -15,6 +15,9 @@ page 66,132
 	include defs.asm		; (32) our definitions
 	include init.asm		; (32) initialized data
 
+	include simplex5.asm		; large font
+	include tiny5.asm		; small font
+
 	include service.asm		; I/O and other services for emulation core
 	include soundq.asm		; (32) sound queue stuff
 	include lincopy.asm		; (32) video copy support

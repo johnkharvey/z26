@@ -54,12 +54,6 @@ start:
 ;*
 
 xmain:  
-	cmp	[_FrameExit],0		; exiting after <n> frames ?
-	je	xm1			;   no
-	dec	[_FrameExit]		;   yes, decrement counter
-	jz	GoDOS			;	 zero, exit now
-
-xm1:
 	call	_VSync			; now look for vblank
 	call	_ModeXCopyScreen	; copy screenbuffer to video RAM
 	call	ScanFrame

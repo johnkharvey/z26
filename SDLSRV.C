@@ -193,7 +193,15 @@ void srv_WindowScreen()
 
 int Ticks = 0;
 int Flips = 0;
+
 int FirstFlipTime = 0;
+int ThisFlipTime = 0;
+int LastFlipTime = 0;
+
+int LastFlips = 0;
+int ThisFlips = 0;
+
+int CurrentFPS = 0;
 
 void srv_Flip()
 {
@@ -202,6 +210,18 @@ void srv_Flip()
 	int Now;
 
 	if (++Flips == FrameExit/20) FirstFlipTime = SDL_GetTicks();
+
+	if (Flips % 20 == 0)
+	{
+		if ((SDL_GetTicks() - LastFlipTime) > 500)
+		{
+			ThisFlipTime = SDL_GetTicks();
+			ThisFlips = Flips;
+			CurrentFPS = (1000*(ThisFlips - LastFlips))/(ThisFlipTime - LastFlipTime);
+			LastFlipTime = ThisFlipTime;
+			LastFlips = ThisFlips;
+		}
+	}
 
 	if (NoRetrace == 0)
 	{
@@ -236,6 +256,8 @@ void srv_CopyScreen()
 	db ch;
 
         static int odd = 0;
+
+//	if(ShowLineCount) show_scanlines();
 
         odd++;                  // alternate startline for interlaced display
 
@@ -391,6 +413,13 @@ void srv_CopyScreen()
                         break;
                 }
         }
+
+	if (ShowLineCount)
+	{
+		show_scanlines();
+//		show_FPS();
+	}
+
 	SDL_UnlockSurface(srv_screen);
 //        SDL_UpdateRect(srv_screen, 0, 0, 0, 0);
 }
@@ -446,7 +475,7 @@ srv_sound_on()
 		spec.freq = 31400;
 		spec.format = AUDIO_U8;
 		spec.channels = 1;
-		spec.samples = 1536;
+		spec.samples = SQ_Max/3;	/* 1536 */
 
 		if ( SDL_OpenAudio(&spec, NULL) < 0 ) 
 		{

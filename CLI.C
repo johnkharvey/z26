@@ -262,8 +262,7 @@ unsigned char SCBIOS[188] = {
 **  ->	-q	quiet
 **  ->	-s <n>  sound options
 **	-x	print out checksum of cartridge
-**  ->	-r	don't wait for retrace (full speed), -r<n> run at <n> fps
-**	-f <n>  do <n> frames and exit
+**  ->	-r	sync with monitor (full screen), -r<n> run at <n> fps
 **  ->	-d <n>  do digital signal processing
 **  ->	-j <n>	do joystick
 **	-p <n>  do paddle game with sensitivity <n>
@@ -278,7 +277,7 @@ unsigned char SCBIOS[188] = {
 **	-o	simulate PAL colour loss *EST*
 **	-l <n>	emulate lightgun and adjust horizontally *EST*
 **	-a <n>	adjust lightgun vertically *EST*
-**	-n	show line number count *EST*
+**	-n	show line number count and FPS
 **      -i      emulate Mindlink controller, <1> right, <2> left *EST*
 **      -4      allow all 4 directions on the joystick simultaniously *EST*
 **      -e      enable faster mode X copy routines
@@ -302,15 +301,15 @@ void cli_InterpretParm(char *p)
 	{
 	case 'u':  	CFirst = parm;				break;
 	case 'q':  	quiet = 1;				break;
+	case 's':	{
+				SQ_Max = parm;
+				if (SQ_Max > 65536) SQ_Max = 65536;
+			}
+			break;
 	case '0':  	IOPortB |= 64;				break;
 	case '1':  	IOPortB |= 128;				break;
 	case 'b':  	IOPortB &= 0xc3;			break;
 	case 'x':  	DoChecksum = 1;				break;
-        case 'f':       {
-                                FrameExit = parm+1;
-                                ShowFPS = 1;
-                        }
-                        break;
 	case 'd':  	dsp = parm;				break;
 	case 'j':  	Joystick = parm;			break;
 	case 'c':  	PaletteNumber = parm;

@@ -42,7 +42,8 @@ dd crc;			/* holds accumulated CRC */
 
 db KeyTable[128];	/* event handler should tell z26 about keystrokes here */
 db ShowFPS;
-
+db SoundQ[65537];	/* sound queue */
+dd SQ_Max = 1536*3;
 
 
 /* 
@@ -60,6 +61,7 @@ void InitCVars(void)
 	LinesInFrame=262;
 	BailoutLine=320;
 	for (i=0; i<128; i++) KeyTable[i] = 0;
+	for (i=0; i<65537; i++) SoundQ[i] = 0;
 }
 
 

@@ -13,16 +13,19 @@
 
 .data
 
+;_SQ_Max		dd	3072*3
+
+
 SQ_Start label byte		; <-- start clearing here
 
 SQ_Input	dd	1 dup (?)	; point to next avail byte for storing
 SQ_Output	dd	1 dup (?)	; point to next avail byte for fetching
 SQ_Count	dd	1 dup (?)
-SQ_Top	dd	1 dup (?)
+SQ_Top		dd	1 dup (?)
 
-SQ_MAX = 4608			; 3072, 1024
+;SQ_MAX = 3072*3			; 3072, 1024
 
-SoundQ	db	(SQ_MAX + 2) dup (?)
+;_SoundQ	db	65000 dup (?)
 
 SQ_End label byte			; <-- finish clearing here
 
@@ -35,10 +38,14 @@ SQ_End label byte			; <-- finish clearing here
 Init_SoundQ:
 	clear_mem SQ_Start, SQ_End
 
-	mov	[SQ_Input],offset SoundQ	; initialize sound queue stuff
-	mov	[SQ_Output],offset SoundQ
+	mov	[SQ_Input],offset _SoundQ	; initialize sound queue stuff
+	mov	[SQ_Output],offset _SoundQ
 	mov	[SQ_Count],0
-	mov	[SQ_Top],offset SoundQ + SQ_MAX + 1
+	mov	eax, offset _SoundQ
+	inc	eax
+	add	eax,[_SQ_Max]
+	mov	[SQ_Top],eax
+;	mov	[SQ_Top],offset _SoundQ + SQ_MAX + 1
 
 	ret
 
@@ -56,9 +63,11 @@ SQ_Test:
 	cmp	[_quiet],0		; doing sound at all?
 	jnz	SQ_Just_Right		;   no, pretend queue is *just right*
 
-	cmp	[SQ_Count],SQ_MAX	; sound queue already full?
+	mov	eax,[_SQ_Max]
+	cmp	[SQ_Count],eax		; sound queue already full?
 	jae	SQ_Full			;   yes, don't queue anything
-	cmp	[SQ_Count],SQ_MAX/2	; less than 1/2 full?
+	shr	eax,1
+	cmp	[SQ_Count],eax		; less than 1/2 full?
 	jbe	SQ_Empty		;   yes
 
 SQ_Just_Right:
@@ -93,7 +102,7 @@ SQ_Store:
 	inc	[SQ_Count]
 	cmp	esi,[SQ_Top]
 	jb	SQS_done
-	mov	esi,offset SoundQ
+	mov	esi,offset _SoundQ
 SQS_done:
 	mov	[SQ_Input],esi
 
@@ -132,7 +141,7 @@ SoundFillLoop:
 	inc	esi
 	cmp	esi,[SQ_Top]
 	jb	SF_done
-	mov	esi,offset SoundQ
+	mov	esi,offset _SoundQ
 SF_done:mov	[edi],al		; put it in soundblaster buffer
 	inc	edi
 	dec	ecx			; more room in soundblaster buffer?

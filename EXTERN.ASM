@@ -12,6 +12,9 @@ EXTRN _ScreenBuffer:dword
 
 EXTRN _PCXPalette:byte
 
+EXTRN _SoundQ:byte
+EXTRN _SQ_Max:dword
+
 EXTRN _CartSize:dword
 EXTRN _Checksum:dword
 EXTRN _XChecksum:dword
@@ -21,7 +24,6 @@ EXTRN _quiet:byte
 EXTRN _IOPortA:byte
 EXTRN _IOPortB:byte
 EXTRN _DoChecksum:byte
-EXTRN _FrameExit:dword
 EXTRN _dsp:byte
 EXTRN _Joystick:byte
 EXTRN _PaletteNumber:byte

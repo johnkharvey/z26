@@ -26,6 +26,7 @@
 #include "palette.c"
 
 #include "sdlsrv.c"
+#include "text.c"
 
 char *default_arg[] = { "z26", "-r100000", "-f5000", "demonatk.bin" };
 
@@ -84,7 +85,7 @@ int main(int argc, char *argv[])
 	if (argc == 1)
 	{
 //		cli_CommandLine(4, default_arg);
-		srv_print("version 2.04");
+		srv_print("version 2.05");
 		exit(1);
 	}
 	else
@@ -94,18 +95,6 @@ int main(int argc, char *argv[])
 
    	emulator();		   /* call emulator -- (main.asm) */
 
-	if (ShowFPS)
-	{
-		sprintf(msg, "%d fps",1000*(Flips-FrameExit/20)/(SDL_GetTicks()-FirstFlipTime));
-		srv_print(msg);
-	}
-   	
-	if(ShowLineCount) 
-	{
-		sprintf(msg, "%u scanlines in last frame\n",LinesInFrame);
-		srv_print(msg);
-	}
-		
 	switch(MessageCode) {
 		case 1:
 			sprintf(msg, "Unable to find load %02x\n", SC_ControlByte);
