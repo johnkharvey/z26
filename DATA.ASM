@@ -1,40 +1,4 @@
 
-;most of our data is here
-;we try to keep it in one place, away from the code
-;it runs faster that way (something about cache coherency...)
-
-
-; *****************************************************************************
-;		       6502 Register Set (storage)
-;	during emulation these locations do not contain correct data !
-; *****************************************************************************
-
-RPC		dw	0		; program counter (stored in BP)
-RA		db	0		; accumulator (stored in AL)
-RCarry		db	0		; carry bit (stored in AH)
-RS		db	0		; stack pointer (stored in CL)
-
-; *****************************************************************************
-;		 These flags are updated during emulation
-;     Z and N are worked out from the values stored in RZTEST and RNTEST
-; *****************************************************************************
-
-ALIGN 2
-
-RClock		db	0		; clock cycles (stored in SI)
-RCycles		db	0		; cycles for this instruction.
-
-RX		db	0		; x register (stored in DL)
-		db	0		; to allow 16-bit load & store (see _index)
-RY		db	0		; y register (stored in DH)
-		db	0		; to allow 16-bit load & store (see _index)
-RZTest		db	0		; value for zero test (Z set when 0)
-RNTest		db	0		; value for sign test (N set when -ve)
-FDec		db	0		; decimal flag
-FOver		db	0		; overflow flag
-FIntDis		db	0		; interrupt disable flag
-FBreak		db	0		; Break flag
-
 ; *****************************************************************************
 ;				Riot Timer
 ; *****************************************************************************
@@ -103,16 +67,12 @@ CyclesPerLine	db	CyclesPerScanLine-2 ; # of cycles to execute instructions for e
 CPUOffset	db	66		; 64 default offset for CPU clock
 CPUClock	db	0
 VBlankFrame	db	0		; VBlank causes a new frame
-LastCycle	db	0		; for DoInstructions
 ReverseSync	db	0		; sync on reverse transition
 WrapZero	db	0		; wrap negative player pos to zero
 					; atlantis and oceancty
 VsyncPending	db	0		; VSYNC pending
 
 ALIGN	2
-
-SubVector	dw	DoSbc		; vectors for add and subtract
-AddVector	dw	DoAdc
 
 CtrlFn		dw	 Controls	; Control vector (paddles/sticks)
 

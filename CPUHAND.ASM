@@ -223,7 +223,8 @@ WrTiaImmediate:
 ALIGN_ENTRY
 
 WrTiaWSync:
-	push	bx
+;	push	bx			; *** why does this break push.bin ??? ***
+
 	call	[TimerVec]		; do timing for current instruction
 	mov	bl,CyclesPerScanLine	; number of cycles left in the line
 	sub	bl,byte ptr [RClock]	; number of clocks left to do.
@@ -242,7 +243,8 @@ WSyncExit:
 	mov	[RCycles],bl		; do the last few cycles in the
 					; [Timervec] call following the return
 	mov	[RClock],CyclesPerScanLine
-WSret:	pop	bx
+WSret:
+;	pop	bx
 	ret				; we're at the end of the line
 					; fools the scan exec loop into finishing
 

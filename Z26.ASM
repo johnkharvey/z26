@@ -144,7 +144,7 @@ PAGE 66,132
 
 ; and choose any of these
 
-memcheats =		1		; cheat	on 16-bit reads
+;memcheats =		1		; cheat	on 16-bit reads
 ;trace =		1		; generate tracing code
 ;dotiming =		1		; generate timing blips
 
@@ -187,7 +187,7 @@ entry:	jmp	start			; jump around our data
 	include trace.asm		; trace buffer stuff
 	include banks.asm		; bank switch code
 	include cpu.asm			; 6502 opcodes, macros and support routines
-	include math.asm		; Paul Robson's original math routines
+	include pmath.asm		; Perazzoli's decimal arithmetic routines
 	include cpuhand.asm		; cpu memory & register handlers
 	include tia.asm			; <-- the main machine -- * start here *
 	include tiahand.asm		; TIA register handlers

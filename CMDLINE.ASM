@@ -4,6 +4,7 @@
 ;
 ;	-u <n>	upper scan line
 ;	-l <n>	lower scan line
+;       -b      black and white
 ;	-c	show credits
 ;	-q	quiet
 ;       -v <n>  select video mode
@@ -11,8 +12,10 @@
 ;	-x	print out checksum of cartridge
 ;	-r	don't wait for retrace (full speed), -r1 use old vsync code
 ;	-f <n>  do <n> frames and exit
-;       -d      do digital signal processing
-;	-j	do joystick
+;       -d <n>  do digital signal processing
+;	-j <n>	do joystick
+;       -0      player 0 hard
+;       -1      player 1 hard
 ;
 ; *****************************************************************************
 

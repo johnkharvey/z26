@@ -8,6 +8,133 @@
 ;                       with absolutey_rmw, absolutex_rmw
 ;			SAX, RLA, RRA, ISB, SLO
 
+; 05-20-98 -- set break flag when doing BRK
+;             force break when doing PHP
+; 05-22-98    move some variables to cpu.asm file
+;             don't set overflow when doing CMP, CPX, CPY
+
+.CEND
+.DATASEGMENT
+
+; *****************************************************************************
+;		       6502 Register Set (storage)
+;	during emulation these locations do not contain correct data !
+; *****************************************************************************
+
+reg_pc		dw	0		; program counter (stored in BP)
+
+
+; note: the following two locations must be in this order and next to each other
+
+reg_a		db	0		; accumulator (stored in AL)
+flag_carry	db	0		; carry bit (stored in AH)
+
+reg_x		db	0		; x register
+		db	0		;   extra byte to allow 16-bit load & store (see _index)
+reg_y		db	0		; y register
+		db	0		;   extra byte to allow 16-bit load & store (see _index)
+
+reg_sp		db	0		; stack pointer
+
+; the accumulator is stored in the following vars for later testing
+
+RZTest		db	0		; value for zero test (Z set when 0)
+RNTest		db	0		; value for sign test (N set when negative)
+
+; these vars hold the values of flags other than Z and N
+
+flag_decimal	db	0		; decimal flag
+flag_overflow	db	0		; overflow flag
+flag_interrupt	db	0		; interrupt disable flag
+flag_break	db	0		; Break flag
+
+FEnd=$					; end of memory to clear on a reset
+
+ALIGN 2
+
+RClock		db	0		; clock cycles (stored in SI)
+RCycles		db	0		; cycles for this instruction.
+
+SubVector	dw	DoSbc		; vectors for add and subtract
+AddVector	dw	DoAdc
+
+LastCycle	db	0		; for DoInstructions
+
+
+
+
+ALIGN 2
+
+; Vectors and Opcodes for the 6507 interpreter
+
+vectors dw op00,op01, jam,op03,op04,op05,op06,op07
+	dw op08,op09,op0a,op0b,op0c,op0d,op0e,op0f
+	dw op10,op11, jam,op13,op14,op15,op16,op17
+	dw op18,op19,op1a,op1b,op1c,op1d,op1e,op1f
+
+	dw op20,op21, jam,op23,op24,op25,op26,op27
+	dw op28,op29,op2a,op0b,op2c,op2d,op2e,op2f	; op2b is same as op0b
+	dw op30,op31, jam,op33,op34,op35,op36,op37
+	dw op38,op39,op3a,op3b,op3c,op3d,op3e,op3f
+
+	dw op40,op41, jam,op43,op44,op45,op46,op47
+	dw op48,op49,op4a,op4b,op4c,op4d,op4e,op4f
+	dw op50,op51, jam,op53,op54,op55,op56,op57
+	dw op58,op59,op5a,op5b,op5c,op5d,op5e,op5f
+
+	dw op60,op61, jam,op63,op64,op65,op66,op67
+	dw op68,op69,op6a,op6b,op6c,op6d,op6e,op6f
+	dw op70,op71, jam,op73,op74,op75,op76,op77
+	dw op78,op79,op7a,op7b,op7c,op7d,op7e,op7f
+
+	dw op80,op81,op82,op83,op84,op85,op86,op87
+	dw op88,op89,op8a,op8b,op8c,op8d,op8e,op8f
+	dw op90,op91, jam,op93,op94,op95,op96,op97
+	dw op98,op99,op9a,op9b,op9c,op9d,op9e,op9f
+
+	dw opa0,opa1,opa2,opa3,opa4,opa5,opa6,opa7
+	dw opa8,opa9,opaa,opab,opac,opad,opae,opaf
+	dw opb0,opb1, jam,opb3,opb4,opb5,opb6,opb7
+	dw opb8,opb9,opba,opbb,opbc,opbd,opbe,opbf
+
+	dw opc0,opc1,opc2,opc3,opc4,opc5,opc6,opc7
+	dw opc8,opc9,opca,opcb,opcc,opcd,opce,opcf
+	dw opd0,opd1, jam,opd3,opd4,opd5,opd6,opd7
+	dw opd8,opd9,opda,opdb,opdc,opdd,opde,opdf
+
+	dw ope0,ope1,ope2,ope3,ope4,ope5,ope6,ope7
+	dw ope8,ope9,opea,ope9,opec,oped,opee,opef	; opeb is same as ope9
+	dw opf0,opf1, jam,opf3,opf4,opf5,opf6,opf7
+	dw opf8,opf9,opfa,opfb,opfc,opfd,opfe,opff
+
+; *****************************************************************************
+;			    Cycles per instruction
+; *****************************************************************************
+;	      0	 1  2  3  4  5	6  7  8	 9  a  b  c  d	e  f
+Cycles	db    7, 6, 2, 8, 3, 3, 5, 5, 3, 2, 2, 2, 4, 4, 6, 6  ; 0
+	db    2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7  ; 1
+	db    6, 6, 2, 8, 3, 3, 5, 5, 4, 2, 2, 2, 4, 4, 6, 6  ; 2
+	db    2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7  ; 3
+	db    6, 6, 2, 8, 3, 3, 7, 5, 3, 2, 2, 2, 3, 4, 6, 6  ; 4
+	db    2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7  ; 5
+	db    6, 6, 2, 8, 3, 3, 5, 5, 4, 2, 2, 2, 5, 4, 6, 6  ; 6
+	db    2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7  ; 7
+	db    2, 6, 2, 6, 3, 3, 3, 3, 2, 2, 2, 2, 4, 4, 4, 4  ; 8
+	db    2, 6, 2, 6, 4, 4, 4, 4, 2, 5, 2, 5, 5, 5, 5, 5  ; 9
+	db    2, 6, 2, 6, 3, 3, 3, 3, 2, 2, 2, 2, 4, 4, 4, 4  ; a
+	db    2, 5, 2, 5, 4, 4, 4, 4, 2, 4, 2, 4, 4, 4, 4, 4  ; b
+	db    2, 6, 2, 8, 3, 3, 5, 5, 2, 2, 2, 2, 4, 4, 6, 6  ; c
+	db    2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7  ; d
+	db    2, 6, 2, 8, 3, 3, 5, 5, 2, 2, 2, 2, 4, 4, 6, 6  ; e
+	db    2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7  ; f
+
+
+jam_msg	db	'Halt ','$'
+uuo_msg	db	'Bad opcode ','$'
+
+
+.DEND
+.CODESEGMENT
 
 ;*
 ;* memory accessing macros -- get data via op2 (usually bx)
@@ -119,12 +246,12 @@ _index macro    op1
 
 
 indexx  macro                           ; x index
-        _index  RX
+        _index  reg_x
         endm
         
 
 indexy  macro                           ; y index
-        _index  RY
+        _index  reg_y
         endm
 
 
@@ -194,13 +321,13 @@ x_absolutey_rmw macro
 
 zeropagex macro                         ; zeropage,x EAC
         zeropage
-        add     bl,[RX]
+        add     bl,[reg_x]
         endm
 
 
 zeropagey macro                         ; zeropage,y EAC
         zeropage
-        add     bl,[RY]
+        add     bl,[reg_y]
         endm
 
 
@@ -283,7 +410,7 @@ DoLSR macro
 
 DoSAX macro
 	mov	dl,al
-	and	dl,[RX]
+	and	dl,[reg_x]
 	endm
 
 DoRLA macro
@@ -310,7 +437,15 @@ DoSLO macro
 	shl	dl,1
 	setc	ah
 	or	al,dl
-	mov	dl,al
+;	mov	dl,al
+	usetest	al
+	endm
+
+DoSRE macro
+	mov	ah,1
+	and	ah,dl
+	shr	dl,1
+	xor	al,dl
 	usetest	al
 	endm
 
@@ -318,15 +453,15 @@ DoSLO macro
 ; load CPU registers
 
 LoadRegs macro
-	mov	ax,word ptr [RA]	; mov al,[RA]; mov ah,[RCarry]
-	mov	bp,[RPC]
+	mov	ax,word ptr [reg_a]	; mov al,[reg_a]; mov ah,[flag_carry]
+	mov	bp,[reg_pc]
 	endm
 
 ; save CPU registers
 
 SaveRegs macro
-	mov	word ptr [RA],ax	; mov [RA],al; mov [RCarry],ah
-	mov	[RPC],bp
+	mov	word ptr [reg_a],ax	; mov [reg_a],al; mov [flag_carry],ah
+	mov	[reg_pc],bp
 	endm
 
 ;*
@@ -408,6 +543,37 @@ DoInstruction macro
 
 	endm
 
+IFDEF z64
+
+do_instruction:
+	push	dx
+	push	bp
+	push	si
+	LoadRegs			; load the CPU registers
+
+	fetch_opcode	ebx		; (fetchzx) get the opcode
+	mov	dl,Cycles[bx]		; get cycles takes to do it
+	mov	[RCycles],dl		; save the number of cycles
+	add	[RClock],dl		; add to the clock
+	call	[vectors + ebx*2]	; --> do the instruction
+
+	mov	dl,[RClock]
+	mov	dh,[RClock]
+	add	dl,dl
+	sub	dh,[CPUOffset]
+	add	dl,dh
+	mov	[CPUClock],dl		; CPUClock = 3 * RClock - CPUOffset
+
+	call	[TimerVec]		; clock the RIOT timer
+
+	SaveRegs			; save the CPU registers
+	pop	si
+	pop	bp
+	pop	dx
+	ret
+
+ENDIF
+
 ;*
 ;* come here when duff opcode 
 ;*
@@ -431,8 +597,12 @@ showinst:
 	call	ConOut
 	mov	ax,bp			; pick up the address
 	call	ConWord			; display it
+
+IFNDEF z64
 WaitEsc:test	[KeyTable+KeyEsc],128	; wait for ESC to be pressed
 	jz	WaitEsc
+ENDIF
+
 	jmp	GoDOS
 
 
@@ -443,13 +613,13 @@ WaitEsc:test	[KeyTable+KeyEsc],128	; wait for ESC to be pressed
 ALIGN_ENTRY
 
 Reset:	push	bx
-	mov	bx,FEnd	- RA-1
-ResLoop:mov	byte ptr RA[bx],0
+	mov	bx,FEnd	- reg_a - 1
+ResLoop:mov	byte ptr reg_a[bx],0
 	dec	bx
 	jge	ResLoop
 	pop	bx
 	LoadRegs
-	mov	[RS],0FFh		; SP initialises to 255
+	mov	[reg_sp],0FFh		; SP initialises to 255
 	mov	bp,0FFFCh		; get reset address
 	read	bl,bp			; from 0fffc,0fffd
 	inc	bp
@@ -466,7 +636,7 @@ ALIGN_ENTRY
 
 SetMathVectors:
 	push	ax
-	cmp	[FDec],0
+	cmp	[flag_decimal],0
 	jz	SMVBinary
 
 	mov	ax,offset ADCBCD
@@ -493,22 +663,33 @@ ALIGN_ENTRY
 GetPSW:	push	ax
 	mov	dl,[RNTest]		; dl = last result
 	and	dl,128			; use bit 7 of that as the N bit
-	mov	al,[FOver]		; bit 6	is the overflow	flag
+
+	mov	al,[flag_overflow]	; bit 6	is the overflow	flag
+	and	al,1
 	shl	al,6
 	or	dl,al
+
 	or	dl,020H			; bit 5	is always set
-	mov	al,[FBreak]		; bit 4	is the break flag
+
+	mov	al,[flag_break]		; bit 4	is the break flag
+	and	al,1
 	shl	al,4
 	or	dl,al
-	mov	al,[FDec]		; bit 3	is the decimal flag
+
+	mov	al,[flag_decimal]	; bit 3	is the decimal flag
+	and	al,1
 	shl	al,3
 	or	dl,al
-	mov	al,[FIntDis]		; bit 2	is interrupt disable
+
+	mov	al,[flag_interrupt]	; bit 2	is interrupt disable
+	and	al,1
 	shl	al,2
 	or	dl,al
+
 	cmp	[RZTest],0		; bit 1 is zero flag.
 	jnz	PSWZero
 	or	dl,002H
+
 PSWZero:or	dl,ah			; bit 0	is Carry
 	pop ax
 	ret
@@ -523,34 +704,11 @@ DoCmp macro
 	mov	dh,al
 
 	sub	dh,dl
-	seto	[FOver]
 	usetest	dh
 	cmc
 	setc	ah
 
 	endm
-
-yDoCmp macro
-	mov	bl,al
-
-	sub	bl,dl
-	seto	[FOver]
-	usetest	bl
-	cmc
-	setc	ah
-
-	endm
-
-xDoCmp	macro
-	push	ax
-	mov	ah,1
-	call	mDoSbc
-	mov	dl,ah
-	pop	ax
-	mov	ah,dl
-
-	endm
-
 
 ; *****************************************************************************
 ;			Compare	DH vs DL
@@ -560,25 +718,11 @@ ALIGN_ENTRY
 
 CompDH macro
 	sub	dh,dl
-	seto	[FOver]
 	usetest	dh
-	cmc
-	setc	ah
+	setnc	ah
 	
 	endm
 	
-xCompDH macro
-
-	push	ax
-	mov	al,dh
-	DoCmp
-	mov	dl,ah
-	pop	ax
-	mov	ah,dl
-
-	endm
-
-
 ; *****************************************************************************
 ;	 SBC code. AL is accumulator,AH	is carry bit,BX	points to data
 ; *****************************************************************************
@@ -589,15 +733,14 @@ DoSbc:
 	shr	ah,1
 	cmc			; set carry
 	sbb	al,dl
-	seto	[FOver]
+	seto	[flag_overflow]
 	usetest	al
-	cmc
-	setc	ah
+	setnc	ah
 	ret
 
 
 ; *****************************************************************************
-;	 ADC code. AL is accumulator,AH	is carry bit,BX	points to data
+;	 ADC code. AL is accumulator,AH	is carry bit, DL has data
 ; *****************************************************************************
 
 ALIGN_ENTRY
@@ -605,26 +748,21 @@ ALIGN_ENTRY
 DoAdc:
 	shr	ah,1
 	adc	al,dl
-	seto	[FOver]
+	seto	[flag_overflow]
 	usetest	al
 	setc	ah
 	ret
 
 ;*
-;* ADC Decimal for quiche eaters. 
-;* AL is accumulator,AH is carry bit,BX points to data
-;* this routine is not currently in use (see math.asm)
+;* ADC Decimal  
+;* AL is accumulator,AH is carry bit, dl has data
 ;*
 
 ALIGN_ENTRY
 
 ADCBCD:
-	shr	ah,1
-	adc	al,dl
-	daa
-	setc	ah
-	usetest	al
-	ret
+	jmp	_ADCdecimal	; use routine in pmath.asm
+
         
 ;*
 ;* SBC Decimal for quiche eaters.
@@ -635,11 +773,13 @@ ADCBCD:
 ALIGN_ENTRY
 
 SBCBCD:
+	jmp	_SBCdecimal
+
 	shr	ah,1		;set up	carry bit
 	cmc			;6502 needs complement
 	sbb	al,dl
 	usetest	al
-	seto	[FOver]
+	seto	[flag_overflow]
 	das
 	cmc
 	setc	ah
@@ -655,14 +795,16 @@ SBCBCD:
 
 ALIGN_ENTRY
 
-op00:	mov	dx,bp		; return address in dx
-	mov	bl,[RS]		; bx is	stack address
+op00:	
+	mov	[flag_break],1	;+
+	mov	dx,bp		; return address in dx
+	mov	bl,[reg_sp]	; bx is	stack address
 	mov	bh,1
 	write	dh,bx		; push return address
 	dec	bl
 	write	dl,bx
-	dec	[RS]
-	dec	[RS]
+	dec	[reg_sp]
+	dec	[reg_sp]
 	call	op08		; push PSW
 	mov	bx,0FFFEh	; fetch	the vector
 	read	dl,bx
@@ -740,10 +882,13 @@ op07:	zeropage
 ALIGN_ENTRY
 
 op08:	call	GetPSW		; get PSW in DL
-	mov	bl,[RS]		; bx points to stack
+
+	or	dl,010h		;+ force break flag
+
+	mov	bl,[reg_sp]	; bx points to stack
 	mov	bh,1
 	write	dl,bx		; save it on the stack
-	dec	[RS]		; decrement Stack pointer
+	dec	[reg_sp]	; decrement Stack pointer
 	ret
 
 
@@ -765,6 +910,18 @@ op0a:	mov	dl,al
 	DoASL
 	mov	al,dl
 	ret
+
+
+; ANC data (undoc)
+
+ALIGN_ENTRY
+
+op0b:	fetch	dl
+	and	al,dl
+	usetest	al
+	test	al,080h
+	setnz	ah
+	ret	
 
 
 ; NOP adr16 (undoc)
@@ -969,13 +1126,21 @@ op20:	absolute		; call address in bx now
 	mov	ax,bp		; ax is	the return address
 	mov	bp,bx		; transfer control
 	dec	ax		; push return-1
-	mov	bl,[RS]		; bl is	the stack index
+	mov	bl,[reg_sp]	; bl is	the stack index
 	mov	bh,1
 	write	ah,bx		; push the return address
 	dec	bl
 	write	al,bx
-	sub	[RS],2		; decrement the	stack pointer
+	sub	[reg_sp],2	; decrement the	stack pointer
 	pop	ax
+
+IFDEF z64
+
+	cmp	bp,0ff00h
+	jae	KernalHandler
+
+ENDIF
+
 	ret
 
 
@@ -1008,7 +1173,7 @@ ALIGN_ENTRY
 op24:	zeropage		; bx = zero page.
 BitTest:read	dl,bx		; read the byte
 	test	dl,040h		; bit 6 is the overflow flag
-	setnz	[FOver]
+	setnz	[flag_overflow]
 	usentest dl		; the memory bit 7 is the n flag
 	and	dl,al		; this is the and result
 	useztest dl		; use it to test for zero
@@ -1052,8 +1217,8 @@ op27:	zeropage
 
 ALIGN_ENTRY
 
-op28:	inc	[RS]		; increment the	stack pointer
-	mov	bl,[RS]		; and read the top byte
+op28:	inc	[reg_sp]	; increment the	stack pointer
+	mov	bl,[reg_sp]	; and read the top byte
 	mov	bh,1		; into dh
 	read	dh,bx
 	mov	[RNTest],dh	; it will do for use as	the N Flag
@@ -1062,13 +1227,13 @@ op28:	inc	[RS]		; increment the	stack pointer
 	test	dh,02h		; bit 1 is the zero flag
 	setz	[RZTest]
 	test	dh,04h		; bit 2 is the intdis flag
-	setnz	[FIntDis]
+	setnz	[flag_interrupt]
 	test	dh,08h		; bit 3 is the decimal flag
-	setnz	[FDec]
+	setnz	[flag_decimal]
 	test	dh,010h		; bit 4 is the break flag
-	setnz	[FBreak]
+	setnz	[flag_break]
 	test	dh,040h		; bit 6 is overflow
-	setnz	[FOver]
+	setnz	[flag_overflow]
 	call	SetMathVectors
 	ret
 
@@ -1287,9 +1452,9 @@ op3f:	absolutex_rmw
 ALIGN_ENTRY
 
 op40:	call	op28		; pull psw
-	inc	[RS]		; same as return but don't inc PCTR
-	mov	bl,[RS]		; bx points to PCL to pop
-	inc	[RS]		; sp gone up 2 now,its ok
+	inc	[reg_sp]	; same as return but don't inc PCTR
+	mov	bl,[reg_sp]	; bx points to PCL to pop
+	inc	[reg_sp]	; sp gone up 2 now,its ok
 	mov	bh,1
 	read	dl,bx		; read return address in bx
 	inc	bl
@@ -1306,6 +1471,17 @@ op41:	indirectx
 	read	dl,bx
 	xor	al,dl
 	usetest	al
+	ret
+
+
+; SRE (adr,X) (undoc)
+
+ALIGN_ENTRY
+
+op43:	indirectx
+	read	dl,bx
+	DoSRE
+	write	dl,bx
 	ret
 
 
@@ -1339,14 +1515,25 @@ op46:	zeropage
 	ret
 
 
+; SRE adr (undoc)
+
+ALIGN_ENTRY
+
+op47:	zeropage
+	zread	dl,bx
+	DoSRE
+	zwrite	dl,bx
+	ret
+
+
 ; PHA -- push accumulator
 
 ALIGN_ENTRY
 
-op48:	mov	bl,[RS]		; bx ^ stack
+op48:	mov	bl,[reg_sp]	; bx ^ stack
 	mov	bh,1
 	write	al,bx
-	dec	[RS]		; decrement stack pointer
+	dec	[reg_sp]	; decrement stack pointer
 	ret
 
 
@@ -1370,6 +1557,17 @@ op4a:	mov	dl,al
 	ret
 
 
+; ASR data (undoc)
+
+op4b:	fetch	dl
+	and	al,dl
+	test	al,1
+	setnz	ah
+	shr	al,1
+	usetest	al
+	ret
+
+
 ; JMP adr16
 
 ALIGN_ENTRY
@@ -1381,6 +1579,14 @@ ELSE
 	absolute		; fetch	the address
 	mov	bp,bx		; jump to it
 ENDIF
+
+IFDEF z64
+
+	cmp	bp,0ff00h
+	jae	KernalHandler
+
+ENDIF
+
 	ret
 
 
@@ -1406,12 +1612,23 @@ op4e:	absolute
 	ret
 
 
+; SRE adr16 (undoc)
+
+ALIGN_ENTRY
+
+op4f:	absolute
+	read	dl,bx
+	DoSRE
+	write	dl,bx
+	ret
+
+
 ; BVC disp -- branch if	overflow clear
 
 ALIGN_ENTRY
 
 op50:	
-	cmp	[FOver],0
+	cmp	[flag_overflow],0
 	jz	DoBranch
 	inc	bp
 	ret
@@ -1425,6 +1642,17 @@ op51:	indirecty
 	read	dl,bx
 	xor	al,dl
 	usetest	al
+	ret
+
+
+; SRE (adr),Y (undoc)
+
+ALIGN_ENTRY
+
+op53:	indirecty
+	read	dl,bx
+	DoSRE
+	write	dl,bx
 	ret
 
 
@@ -1458,11 +1686,22 @@ op56:	zeropagex
 	ret
 
 
+; SRE adr,X (undoc)
+
+ALIGN_ENTRY
+
+op57:	zeropagex
+	zread	dl,bx
+	DoSRE
+	zwrite	dl,bx
+	ret
+
+
 ; CLI -- clear interrupt disable
 
 ALIGN_ENTRY
 
-op58:	mov	[FIntDis],0
+op58:	mov	[flag_interrupt],0
 	ret
 
 
@@ -1482,6 +1721,17 @@ op59:	absolutey
 ALIGN_ENTRY
 
 op5a:	ret
+
+
+; SRE adr16,Y (undoc)
+
+ALIGN_ENTRY
+
+op5b:	absolutey
+	read	dl,bx
+	DoSRE
+	write	dl,bx
+	ret
 
 
 ; NOP adr16,X (undoc)
@@ -1514,14 +1764,25 @@ op5e:	absolutex_rmw		; * Perazzoli *
 	ret
 
 
+; SRE adr16,X (undoc)
+
+ALIGN_ENTRY
+
+op5f:	absolutex
+	read	dl,bx
+	DoSRE
+	write	dl,bx
+	ret
+
+
 ; RTS -- return	from subroutine
 
 ALIGN_ENTRY
 
-op60:	mov	bl,[RS]
+op60:	mov	bl,[reg_sp]
 	mov	bh,1
 	inc	bl
-	add	[RS],2
+	add	[reg_sp],2
 	read16	bp,bx		; read return address (and return)
 	inc	bp
 	ret
@@ -1592,8 +1853,8 @@ op67:	zeropage
 
 ALIGN_ENTRY
 
-op68:	inc	[RS]		; increment sp
-	mov	bl,[RS]		; build	the read address
+op68:	inc	[reg_sp]	; increment sp
+	mov	bl,[reg_sp]	; build	the read address
 	mov	bh,1
 	read	al,bx
 	usetest	al
@@ -1619,6 +1880,12 @@ op6a:	mov	dl,al
 	ret
 
 
+; ARR data (undoc)
+
+op6b:	fetch	dl
+	jmp	_ARR
+
+
 ; JMP (adr16)
 
 ALIGN_ENTRY
@@ -1632,6 +1899,14 @@ ELSE
 	read	dh,bx
 	mov	bp,dx		; and jump to it
 ENDIF
+
+IFDEF z64
+
+	cmp	bp,0ff00h
+	jae	KernalHandler
+
+ENDIF
+
 	ret
 
 
@@ -1672,7 +1947,7 @@ op6f:	absolute
 ALIGN_ENTRY
 
 op70:
-	cmp	[FOver],0
+	cmp	[flag_overflow],0
 	jnz	DoBranch
 	inc	bp
 	ret
@@ -1743,7 +2018,7 @@ op77:	zeropagex
 
 ALIGN_ENTRY
 
-op78:	mov	[FIntDis],1
+op78:	mov	[flag_interrupt],1
 	ret
 
 
@@ -1853,7 +2128,7 @@ op83:	indirectx
 ALIGN_ENTRY
 
 op84:	zeropage
-	mov	dl,[RY]
+	mov	dl,[reg_y]
 	zwrite	dl,bx
 	ret
 
@@ -1872,7 +2147,7 @@ op85:	zeropage
 ALIGN_ENTRY
 
 op86:	zeropage
-	mov	dl,[RX]
+	mov	dl,[reg_x]
 	zwrite	dl,bx
 	ret
 
@@ -1891,9 +2166,9 @@ op87:	zeropage
 
 ALIGN_ENTRY
 
-op88:	mov	bl,[RY]
+op88:	mov	bl,[reg_y]
 	dec	bl
-	mov	[RY],bl
+	mov	[reg_y],bl
 	usetest	bl
 	ret
 
@@ -1908,7 +2183,18 @@ op89:	inc	bp
 
 ALIGN_ENTRY
 
-op8a:	mov	al,[RX]
+op8a:	mov	al,[reg_x]
+	usetest	al
+	ret
+
+; ANE data (undoc)
+
+ALIGN_ENTRY
+
+op8b:	fetch	dl
+	or	al,0eeh
+	and	al,[reg_x]
+	and	al,dl
 	usetest	al
 	ret
 
@@ -1918,7 +2204,7 @@ op8a:	mov	al,[RX]
 ALIGN_ENTRY
 
 op8c:	absolute
-	mov	dl,[RY]
+	mov	dl,[reg_y]
 	write	dl,bx
 	ret
 
@@ -1937,7 +2223,7 @@ op8d:	absolute
 ALIGN_ENTRY
 
 op8e:	absolute
-	mov	dl,[RX]
+	mov	dl,[reg_x]
 	write	dl,bx
 	ret
 
@@ -1972,12 +2258,25 @@ op91:	indirecty
 	ret
 
 
+; SHA (adr),Y
+
+ALIGN_ENTRY
+
+op93:	indirecty
+	mov	dh,bh
+	inc	dh
+	and	dh,[reg_x]
+	and	dh,al
+	write	dh,bx
+	ret
+
+
 ; STY adr,X
 
 ALIGN_ENTRY
 
 op94:	zeropagex
-	mov	dl,[RY]
+	mov	dl,[reg_y]
 	zwrite	dl,bx
 	ret
 
@@ -1996,7 +2295,7 @@ op95:	zeropagex
 ALIGN_ENTRY
 
 op96:	zeropagey
-	mov	dl,[RX]
+	mov	dl,[reg_x]
 	zwrite	dl,bx
 	ret
 
@@ -2015,7 +2314,7 @@ op97:	zeropagey
 
 ALIGN_ENTRY
 
-op98:	mov	al,[RY]
+op98:	mov	al,[reg_y]
 	usetest	al
 	ret
 
@@ -2033,8 +2332,32 @@ op99:	absolutey
 
 ALIGN_ENTRY
 
-op9a:	mov	dl,[RX]
-	mov	[RS],dl
+op9a:	mov	dl,[reg_x]
+	mov	[reg_sp],dl
+	ret
+
+
+; SHS adr16,Y (undoc)
+
+op9b:	absolutey
+	mov	dh,bh
+	inc	dh
+	and	dh,[reg_x]
+	and	dh,al
+	write	dh,bx
+	mov	dh,al
+	and	dh,[reg_x]
+	mov	[reg_sp],dh
+	ret
+
+
+; SHY adr16,X (undoc)
+
+op9c:	absolutex
+	mov	dh,bh
+	inc	dh
+	and	dh,[reg_y]
+	write	dh,bx
 	ret
 
 
@@ -2047,12 +2370,33 @@ op9d:	absolutex
 	ret
 
 
+; SHX adr16,Y (undoc)
+
+op9e:	absolutey
+	mov	dh,bh
+	inc	dh
+	and	dh,[reg_x]
+	write	dh,bx
+	ret
+
+
+; SHA adr16,Y (undoc)
+
+op9f:	absolutey
+	mov	dh,bh
+	inc	dh
+	and	dh,[reg_x]
+	and	dh,al
+	write	dh,bx
+	ret
+
+
 ; LDY data
 
 ALIGN_ENTRY
 
 opa0:	fetch	bl
-	mov	[RY],bl
+	mov	[reg_y],bl
 	usetest	bl
 	ret
 
@@ -2072,8 +2416,19 @@ opa1:	indirectx
 ALIGN_ENTRY
 
 opa2:	fetch	bl
-	mov	[RX],bl
+	mov	[reg_x],bl
 	usetest	bl
+	ret
+
+
+; LAX (adr,X) (undoc)
+
+ALIGN_ENTRY
+
+opa3:	indirectx
+	read	al,bx
+	mov	[reg_x],al
+	usetest	al
 	ret
 
 
@@ -2084,7 +2439,7 @@ ALIGN_ENTRY
 opa4:	zeropage
 	zread	dl,bx
 	usetest	dl
-	mov	[RY],dl
+	mov	[reg_y],dl
 	ret
 
 
@@ -2105,7 +2460,18 @@ ALIGN_ENTRY
 opa6:	zeropage
 	zread	dl,bx
 	usetest	dl
-	mov	[RX],dl
+	mov	[reg_x],dl
+	ret
+
+
+; LAX adr (undoc)
+
+ALIGN_ENTRY
+
+opa7:	zeropage
+	zread	al,bx
+	mov	[reg_x],al
+	usetest	al
 	ret
 
 
@@ -2113,7 +2479,7 @@ opa6:	zeropage
 
 ALIGN_ENTRY
 
-opa8:	mov	[RY],al
+opa8:	mov	[reg_y],al
 	usetest	al
 	ret
 
@@ -2131,7 +2497,19 @@ opa9:	fetch	al
 
 ALIGN_ENTRY
 
-opaa:	mov	[RX],al
+opaa:	mov	[reg_x],al
+	usetest	al
+	ret
+
+
+; LXA data (undoc)
+
+ALIGN_ENTRY
+
+opab:	fetch	dl
+	or	al,0eeh
+	and	al,dl
+	mov	[reg_x],al
 	usetest	al
 	ret
 
@@ -2143,7 +2521,7 @@ ALIGN_ENTRY
 opac:	absolute
 	read	dl,bx
 	usetest	dl
-	mov	[RY],dl
+	mov	[reg_y],dl
 	ret
 
 
@@ -2164,7 +2542,18 @@ ALIGN_ENTRY
 opae:	absolute
 	read	dl,bx
 	usetest	dl
-	mov	[RX],dl
+	mov	[reg_x],dl
+	ret
+
+
+; LAX adr16 (undoc)
+
+ALIGN_ENTRY
+
+opaf:	absolute
+	read	al,bx
+	mov	[reg_x],al
+	usetest	al
 	ret
 
 
@@ -2189,6 +2578,17 @@ opb1:	indirecty
 	ret
 
 
+; LAX (adr),Y (undoc)
+
+ALIGN_ENTRY
+
+opb3:	indirecty
+	read	al,bx
+	mov	[reg_x],al
+	usetest	al
+	ret
+
+
 ; LDY adr,X
 
 ALIGN_ENTRY
@@ -2196,7 +2596,7 @@ ALIGN_ENTRY
 opb4:	zeropagex
 	zread	dl,bx
 	usetest	dl
-	mov	[RY],dl
+	mov	[reg_y],dl
 	ret
 
 
@@ -2217,7 +2617,18 @@ ALIGN_ENTRY
 opb6:	zeropagey
 	zread	dl,bx
 	usetest	dl
-	mov	[RX],dl
+	mov	[reg_x],dl
+	ret
+
+
+; LAX adr,Y (undoc)
+
+ALIGN_ENTRY
+
+opb7:	zeropagey
+	zread	al,bx
+	usetest	al
+	mov	[reg_x],al
 	ret
 
 
@@ -2225,7 +2636,7 @@ opb6:	zeropagey
 
 ALIGN_ENTRY
 
-opb8:	mov	[FOver],0
+opb8:	mov	[flag_overflow],0
 	ret
 
 
@@ -2243,9 +2654,22 @@ opb9:	absolutey
 
 ALIGN_ENTRY
 
-opba:	mov	dl,[RS]
-	mov	[RX],dl
+opba:	mov	dl,[reg_sp]
+	mov	[reg_x],dl
 	usetest	dl
+	ret
+
+
+; LAS adr16,Y (undoc)
+
+ALIGN_ENTRY
+
+opbb:	absolutey
+	read	al,bx
+	and	al,[reg_sp]
+	mov	[reg_x],al
+	mov	[reg_sp],al
+	usetest	al
 	ret
 
 
@@ -2256,7 +2680,7 @@ ALIGN_ENTRY
 opbc:	absolutex
 	read	dl,bx
 	usetest	dl
-	mov	[RY],dl
+	mov	[reg_y],dl
 	ret
 
 
@@ -2277,7 +2701,18 @@ ALIGN_ENTRY
 opbe:	absolutey
 	read	dl,bx
 	usetest	dl
-	mov	[RX],dl
+	mov	[reg_x],dl
+	ret
+
+
+; LAX adr16,Y (undoc)
+
+ALIGN_ENTRY
+
+opbf:	absolutey
+	read	al,bx
+	usetest	al
+	mov	[reg_x],al
 	ret
 
 
@@ -2286,7 +2721,7 @@ opbe:	absolutey
 ALIGN_ENTRY
 
 opc0:	fetch	dl
-	mov	dh,[RY]
+	mov	dh,[reg_y]
 	CompDH
 	ret
 
@@ -2309,13 +2744,25 @@ opc2:	inc	bp
 	ret
 
 
+; DCP (adr,X) (undoc)
+
+ALIGN_ENTRY
+
+opc3:	indirectx
+	read	dl,bx
+	dec	dl
+	DoCmp
+	write	dl,bx
+	ret
+
+
 ; CPY adr
 
 ALIGN_ENTRY
 
 opc4:	zeropage
 	zread	dl,bx
-	mov	dh,[RY]
+	mov	dh,[reg_y]
 	CompDH
 	ret
 
@@ -2342,13 +2789,25 @@ opc6:	zeropage
 	ret
 
 
+; DCP adr (undoc)
+
+ALIGN_ENTRY
+
+opc7:	zeropage
+	zread	dl,bx
+	dec	dl
+	DoCmp
+	zwrite dl,bx
+	ret
+
+
 ; INY -- increment Y
 
 ALIGN_ENTRY
 
-opc8:	mov	bl,[RY]
+opc8:	mov	bl,[reg_y]
 	inc	bl
-	mov	[RY],bl
+	mov	[reg_y],bl
 	usetest	bl
 	ret
 
@@ -2366,10 +2825,23 @@ opc9:	fetch	dl
 
 ALIGN_ENTRY
 
-opca:	mov	bl,[RX]
+opca:	mov	bl,[reg_x]
 	dec	bl
-	mov	[RX],bl
+	mov	[reg_x],bl
 	usetest	bl
+	ret
+
+; SBX data (undoc)
+
+ALIGN_ENTRY
+
+opcb:	fetch	dl
+	mov	dh,al
+	and	dh,[reg_x]
+	sub	dh,dl
+	usetest	dh
+	setnc	ah
+	mov	[reg_x],dh
 	ret
 
 
@@ -2379,7 +2851,7 @@ ALIGN_ENTRY
 
 opcc:	absolute
 	read	dl,bx
-	mov	dh,[RY]
+	mov	dh,[reg_y]
 	CompDH
 	ret
 
@@ -2406,6 +2878,18 @@ opce:	absolute
 	ret
 
 
+; DCP adr16 (undoc)
+
+ALIGN_ENTRY
+
+opcf:	absolute
+	read	dl,bx
+	dec	dl
+	write	dl,bx
+	DoCmp
+	ret
+
+
 ; BNE disp -- branch if	non-zero
 
 ALIGN_ENTRY
@@ -2424,6 +2908,16 @@ ALIGN_ENTRY
 opd1:	indirecty
 	read	dl,bx
 	DoCmp
+	ret
+
+
+; DCP (adr),Y (undoc)
+
+opd3:	indirecty
+	read	dl,bx
+	dec	dl
+	DoCmp
+	write	dl,bx
 	ret
 
 
@@ -2457,11 +2951,23 @@ opd6:	zeropagex
 	ret
 
 
+; DCP adr,X (undoc)
+
+ALIGN_ENTRY
+
+opd7:	zeropagex
+	zread	dl,bx
+	dec	dl
+	DoCmp
+	zwrite dl,bx
+	ret
+
+
 ; CLD -- clear decimal mode
 
 ALIGN_ENTRY
 
-opd8:	mov	[FDec],0
+opd8:	mov	[flag_decimal],0
 	call	SetMathVectors	; adjust for decimal/binary mode
 	ret
 
@@ -2481,6 +2987,18 @@ opd9:	absolutey
 ALIGN_ENTRY
 
 opda:	ret
+
+
+; DCP adr16,Y (undoc)
+
+ALIGN_ENTRY
+
+opdb:	absolutey
+	read	dl,bx
+	dec	dl
+	DoCmp
+	write	dl,bx
+	ret
 
 
 ; NOP adr16,X
@@ -2511,12 +3029,24 @@ opde:	absolutex_rmw		; * Perazzoli *
 	ret
 
 
+; DCP adr16,X (undoc)
+
+ALIGN_ENTRY
+
+opdf:	absolutex_rmw		; * Perazzoli *
+	read	dl,bx
+	dec	dl
+	DoCmp
+	write	dl,bx
+	ret
+
+
 ; CPX data
 
 ALIGN_ENTRY
 
 ope0:	fetch	dl
-	mov	dh,[RX]
+	mov	dh,[reg_x]
 	CompDH
 	ret
 
@@ -2556,7 +3086,7 @@ ALIGN_ENTRY
 
 ope4:	zeropage
 	zread	dl,bx
-	mov	dh,[RX]
+	mov	dh,[reg_x]
 	CompDH
 	ret
 
@@ -2598,9 +3128,9 @@ ope7:	zeropage
 
 ALIGN_ENTRY
 
-ope8:	mov	bl,[RX]
+ope8:	mov	bl,[reg_x]
 	inc	bl
-	mov	[RX],bl
+	mov	[reg_x],bl
 	usetest	bl
 	ret
 
@@ -2627,7 +3157,7 @@ ALIGN_ENTRY
 
 opec:	absolute
 	read	dl,bx
-	mov	dh,[RX]
+	mov	dh,[reg_x]
 	CompDH
 	ret
 
@@ -2742,7 +3272,7 @@ opf7:	zeropagex
 
 ALIGN_ENTRY
 
-opf8:	mov	[FDec],1
+opf8:	mov	[flag_decimal],1
 	call	SetMathVectors	; adjust for decimal/binary mode
 	ret
 
@@ -2840,76 +3370,3 @@ DoBranch:
 dbjn:	ret
 
 
-.CEND
-.DATASEGMENT
-
-; Vectors and Opcodes for the 6507 interpreter
-
-vectors dw op00,op01, jam,op03,op04,op05,op06,op07
-	dw op08,op09,op0a,fail,op0c,op0d,op0e,op0f
-	dw op10,op11, jam,op13,op14,op15,op16,op17
-	dw op18,op19,op1a,op1b,op1c,op1d,op1e,op1f
-
-	dw op20,op21, jam,op23,op24,op25,op26,op27
-	dw op28,op29,op2a,fail,op2c,op2d,op2e,op2f
-	dw op30,op31, jam,op33,op34,op35,op36,op37
-	dw op38,op39,op3a,op3b,op3c,op3d,op3e,op3f
-
-	dw op40,op41, jam,fail,op44,op45,op46,fail
-	dw op48,op49,op4a,fail,op4c,op4d,op4e,fail
-	dw op50,op51, jam,fail,op54,op55,op56,fail
-	dw op58,op59,op5a,fail,op5c,op5d,op5e,fail
-
-	dw op60,op61, jam,op63,op64,op65,op66,op67
-	dw op68,op69,op6a,fail,op6c,op6d,op6e,op6f
-	dw op70,op71, jam,op73,op74,op75,op76,op77
-	dw op78,op79,op7a,op7b,op7c,op7d,op7e,op7f
-
-	dw op80,op81,op82,op83,op84,op85,op86,op87
-	dw op88,op89,op8a,fail,op8c,op8d,op8e,op8f
-	dw op90,op91, jam,fail,op94,op95,op96,op97
-	dw op98,op99,op9a,fail,fail,op9d,fail,fail
-
-	dw opa0,opa1,opa2,fail,opa4,opa5,opa6,fail
-	dw opa8,opa9,opaa,fail,opac,opad,opae,fail
-	dw opb0,opb1, jam,fail,opb4,opb5,opb6,fail
-	dw opb8,opb9,opba,fail,opbc,opbd,opbe,fail
-
-	dw opc0,opc1,opc2,fail,opc4,opc5,opc6,fail
-	dw opc8,opc9,opca,fail,opcc,opcd,opce,fail
-	dw opd0,opd1, jam,fail,opd4,opd5,opd6,fail
-	dw opd8,opd9,opda,fail,opdc,opdd,opde,fail
-
-	dw ope0,ope1,ope2,ope3,ope4,ope5,ope6,ope7
-	dw ope8,ope9,opea,fail,opec,oped,opee,opef
-	dw opf0,opf1, jam,opf3,opf4,opf5,opf6,opf7
-	dw opf8,opf9,opfa,opfb,opfc,opfd,opfe,opff
-
-; *****************************************************************************
-;			    Cycles per instruction
-; *****************************************************************************
-;	      0	 1  2  3  4  5	6  7  8	 9  a  b  c  d	e  f
-Cycles	db    7, 6, 2, 8, 3, 3, 5, 5, 3, 2, 2, 2, 4, 4, 6, 6  ; 0
-	db    2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7  ; 1
-	db    6, 6, 2, 8, 3, 3, 5, 5, 4, 2, 2, 2, 4, 4, 6, 6  ; 2
-	db    2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7  ; 3
-	db    6, 6, 2, 8, 3, 3, 7, 5, 3, 2, 2, 2, 3, 4, 6, 6  ; 4
-	db    2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7  ; 5
-	db    6, 6, 2, 8, 3, 3, 5, 5, 4, 2, 2, 2, 5, 4, 6, 6  ; 6
-	db    2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7  ; 7
-	db    2, 6, 2, 6, 3, 3, 3, 3, 2, 2, 2, 2, 4, 4, 4, 4  ; 8
-	db    2, 6, 2, 6, 4, 4, 4, 4, 2, 5, 2, 5, 5, 5, 5, 5  ; 9
-	db    2, 6, 2, 6, 3, 3, 3, 3, 2, 2, 2, 2, 4, 4, 4, 4  ; a
-	db    2, 5, 2, 5, 4, 4, 4, 4, 2, 4, 2, 4, 4, 4, 4, 4  ; b
-	db    2, 6, 2, 8, 3, 3, 5, 5, 2, 2, 2, 2, 4, 4, 6, 6  ; c
-	db    2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7  ; d
-	db    2, 6, 2, 8, 3, 3, 5, 5, 2, 2, 2, 2, 4, 4, 6, 6  ; e
-	db    2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7  ; f
-
-
-jam_msg	db	'Halt ','$'
-uuo_msg	db	'Bad opcode ','$'
-
-
-.DEND
-.CODESEGMENT
