@@ -75,8 +75,23 @@ MaxLines	dw	200		;max # of lines to scan
 DisplayPointer	dw	0		;pointer into display RAM
 DisplayTranslate dw offset TIADisplayToColour ;display to color translation table
 
-DoChecksum	db	0		; do a checksum of the cartridge (if 1)
-Checksum	dw	0		; checksum goes here
+ALIGN 4
+
+FrameExit	dd	0		; do this many frames and exit
+OriginalFrameExit dd	0		; save it here for FPS calculation
+StartTicks	dd	0		; ticks at start
+StopTicks	dd	0		; ticks at finish
+
+; *** keep next 4 variables in order !!!!
+; they are arranged to match the order of the entries in TIAColourTable
+
+BackgroundColor	dd	0
+PlayfieldColor	dd	0
+Player1Color	dd	0
+Player0Color	dd	0
+
+
+MicroTick	db	0		; holds a small tick from hardware counter
 NoRetrace	db	0		; don't wait for retrace (if 1)
 ColumnBlank	db	0		; blank this many columns
 GamePaused	db	0		; game paused
@@ -87,6 +102,7 @@ LastCycle	db	0		; for DoInstructions
 ReverseSync	db	0		; sync on reverse transition
 WrapZero	db	0		; wrap negative player pos to zero
 					; atlantis and oceancty
+ALIGN	2
 
 ReadBank	dw	RBank4		; Bank switching function (Read)
 WriteBank	dw	WBank4		; were RBank4 and WBank4
@@ -97,8 +113,6 @@ SubVector	dw	DoSbc		; vectors for add and subtract
 AddVector	dw	DoAdc
 
 CtrlFn		dw	 Controls	; Control vector (paddles/sticks)
-
-psp		dw	0		; gets pointer to PSP (if .EXE file)
 
 Ret00		db	0
 Ret0F		db	0Fh
@@ -158,6 +172,44 @@ SDMPX	db	2			; 0 = ch1,1 = ch2,2 = both,-1 = quiet
 MinVol	db	8			; minimum volume for PC Speaker
 
 
+; *** stuff that gets shared with "C" program ***
+
+global _psp
+_psp		dw	0		; gets set by calling C program
+psp		dw	0		; gets pointer to PSP (if .EXE file or module)
+
+global _CartRom
+IFNDEF module
+_CartRom	dw	offset CartRom	; gets overwritten by "C" malloc
+ENDIF
+IFDEF module
+_CartRom	dw	0
+ENDIF
+
+global _DoCopyright
+_DoCopyright	dw	0		; set by cmdline if "C" program should output
+					; copyright message
+
+global	_quiet
+_quiet		dw	0		; set if we want no sound
+
+global	_DoChecksum
+_DoChecksum	dw	0		; set if we should print out checksum
+
+global	_Checksum
+_Checksum	dw	0		; gets cart checksum
+
+global	_verbose
+_verbose	dw	0		; verbose
+
+global	_credits
+_credits	dw	0		; show credits
+
+ModuleReturn	dw	0
+ModuleBP	dw	0
+ModuleSP	dw	0
+
+
 ;process these commands immediately
 
 ALIGN 2
@@ -174,7 +226,7 @@ WrTiaImmediateVector	dw	WrTiaVSync	; 0
 CO=-1	; -1 for buck rogers
 C1=-2	; -1 for yars -2 for tron
 C2=0	; 0 for vidcube
-C3=-1	; -1
+C3=0	; -1
 
 
 CycleOffset	db	68+CO	;00	VSYNC

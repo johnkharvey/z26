@@ -2,6 +2,8 @@
 ;				Reset the CPU
 ; *****************************************************************************
 
+ALIGN_ENTRY
+
 Reset:	push	bx
 	mov	bx,FEnd	- RA-1
 ResLoop:mov	byte ptr RA[bx],0
@@ -20,6 +22,8 @@ ResLoop:mov	byte ptr RA[bx],0
 ; *****************************************************************************
 ;		Set vectors according to Decimal Flag
 ; *****************************************************************************
+
+ALIGN_ENTRY
 
 SetMathVectors:
 	push	ax
@@ -45,6 +49,8 @@ SMVExit:
 ; *****************************************************************************
 ;      Build the PSW out of the	various	flags and the last register into DL
 ; *****************************************************************************
+
+ALIGN_ENTRY
 
 GetPSW:	push	ax
 	mov	dl,[RNTest]		; dl = last result
@@ -74,6 +80,8 @@ PSWZero:or	dl,ah			; bit 0	is Carry
 ;	   CMP code. Uses the Subtract code. AL	= acc,BX points	to data
 ; *****************************************************************************
 
+ALIGN_ENTRY
+
 DoCmp:	read	dl,bx
 	mov	bl,al		;save AC
 
@@ -95,6 +103,8 @@ CmpNO:	mov	[FOver],bh
 ;	 SBC code. AL is accumulator,AH	is carry bit,BX	points to data
 ; *****************************************************************************
 
+ALIGN_ENTRY
+
 DoSbc:	read	dl,bx
 	xor	bh,bh
 	sahf			;set up	carry bit
@@ -113,6 +123,8 @@ SbcNO:	mov	[FOver],bh
 ;	 ADC code. AL is accumulator,AH	is carry bit,BX	points to data
 ; *****************************************************************************
 
+ALIGN_ENTRY
+
 DoAdc:	read	dl,bx
 	xor	bh,bh		;preset	overflow
 	sahf			;set up	carry
@@ -128,6 +140,8 @@ AdcNO:	mov	[FOver],bh
 ; *****************************************************************************
 ;    ADC Decimal code. AL is accumulator,AH is carry bit,BX points to data
 ; *****************************************************************************
+
+ALIGN_ENTRY
 
 ADCBCD:	read	dl,bx
 	xor	bh,bh
@@ -146,6 +160,8 @@ ADCBCD:	read	dl,bx
 ; *****************************************************************************
 ;    SBC Decimal code. AL is accumulator,AH is carry bit,BX points to data
 ; *****************************************************************************
+
+ALIGN_ENTRY
 
 SBCBCD:	read	dl,bx
 	xor	bh,bh
@@ -166,6 +182,8 @@ SBCBCD:	read	dl,bx
 
 ; BRK -- programmed interrupt
 
+ALIGN_ENTRY
+
 op00:	mov	dx,bp		; return address in dx
 	mov	bl,cl		; bx is	stack address
 	mov	bh,1
@@ -185,6 +203,8 @@ op00:	mov	dx,bp		; return address in dx
 
 ; ORA (adr,X)
 
+ALIGN_ENTRY
+
 op01:	indirectx
 	read	dl,bx
 	or	al,dl
@@ -193,6 +213,8 @@ op01:	indirectx
 
 ; ORA adr
 
+ALIGN_ENTRY
+
 op05:	zeropage
 	zread	dl,bx
 	or	al,dl
@@ -200,6 +222,8 @@ op05:	zeropage
 
 
 ; ASL adr
+
+ALIGN_ENTRY
 
 op06:	zeropage
 	zread	dl,bx
@@ -210,8 +234,12 @@ op06:	zeropage
 
 ; PHP -- push processor	status word
 
+ALIGN_ENTRY
+
 op08:	call	xop08
 	jmp	next
+
+ALIGN_ENTRY
 
 xop08:	call	GetPSW		; get PSW in DL
 	mov	bl,cl		; bx points to stack
@@ -222,12 +250,16 @@ xop08:	call	GetPSW		; get PSW in DL
 
 ; ORA data
 
+ALIGN_ENTRY
+
 op09:	fetch	dl
 	or	al,dl
 	jmp	ualnext
 
 
 ; ASL A
+
+ALIGN_ENTRY
 
 op0a:	mov	dl,al
 	DoASL
@@ -237,6 +269,8 @@ op0a:	mov	dl,al
 
 ; ORA adr16
 
+ALIGN_ENTRY
+
 op0d:	absolute
 	read	dl,bx
 	or	al,dl
@@ -244,6 +278,8 @@ op0d:	absolute
 
 
 ; ASL adr16
+
+ALIGN_ENTRY
 
 op0e:	absolute
 	read	dl,bx
@@ -254,6 +290,8 @@ op0ejn:	jmp	next
 
 ; BPL disp -- branch if	plus
 
+ALIGN_ENTRY
+
 op10:	relative		; get branch to	dx,sign	extend
 	mov	ch,[RNTest]
 	test	ch,128
@@ -262,6 +300,8 @@ op10:	relative		; get branch to	dx,sign	extend
 
 
 ; ORA (adr),Y
+
+ALIGN_ENTRY
 
 op11:	indirecty
 	pagechange
@@ -272,6 +312,8 @@ op11:	indirecty
 
 ; ORA adr,X
 
+ALIGN_ENTRY
+
 op15:	zeropagex
 	zread	dl,bx
 	or	al,dl
@@ -279,6 +321,8 @@ op15:	zeropagex
 
 
 ; ASL adr,X
+
+ALIGN_ENTRY
 
 op16:	zeropagex
 	zread	dl,bx
@@ -289,11 +333,15 @@ op16:	zeropagex
 
 ; CLC -- clear carry flag
 
+ALIGN_ENTRY
+
 op18:	xor	ah,ah
 	jmp	next
 
 
 ; ORA adr16,Y
+
+ALIGN_ENTRY
 
 op19:	absolutey
 	pagechange
@@ -304,6 +352,8 @@ op19:	absolutey
 
 ; ORA adr16,X
 
+ALIGN_ENTRY
+
 op1d:	absolutex
 	pagechange
 	read	dl,bx
@@ -313,6 +363,8 @@ op1d:	absolutex
 
 ; ASL adr16,X
 
+ALIGN_ENTRY
+
 op1e:	absolutex
 	read	dl,bx
 	DoASL
@@ -321,6 +373,8 @@ op1e:	absolutex
 
 
 ; JSR adr16 -- call subroutine
+
+ALIGN_ENTRY
 
 op20:	absolute		; call address in bx now
 	push	ax
@@ -344,6 +398,8 @@ op20:	absolute		; call address in bx now
 
 ; AND (adr,X)
 
+ALIGN_ENTRY
+
 op21:	indirectx
 	read	dl,bx
 	and	al,dl
@@ -351,6 +407,8 @@ op21:	indirectx
 
 
 ; BIT adr
+
+ALIGN_ENTRY
 
 op24:	zeropage		; bx = zero page.
 BitTest:read	dl,bx		; read the byte
@@ -366,6 +424,8 @@ BitTest:read	dl,bx		; read the byte
 
 ; AND adr
 
+ALIGN_ENTRY
+
 op25:	zeropage
 	zread	dl,bx
 	and	al,dl
@@ -373,6 +433,8 @@ op25:	zeropage
 
 
 ; ROL adr
+
+ALIGN_ENTRY
 
 op26:	zeropage
 	zread	dl,bx
@@ -383,8 +445,12 @@ op26:	zeropage
 
 ; PLP -- pull PSW
 
+ALIGN_ENTRY
+
 op28:	call	xop28
 	jmp	next
+
+ALIGN_ENTRY
 
 xop28:	inc	cl		; increment the	stack pointer
 	mov	bl,cl		; and read the top byte
@@ -419,12 +485,16 @@ xop28:	inc	cl		; increment the	stack pointer
 
 ; AND data
 
+ALIGN_ENTRY
+
 op29:	fetch	dl
 	and	al,dl
 	jmp	ualnext
 
 
 ; ROL A
+
+ALIGN_ENTRY
 
 op2a:	mov	dl,al
 	DoROL
@@ -434,11 +504,15 @@ op2a:	mov	dl,al
 
 ; BIT adr16
 
+ALIGN_ENTRY
+
 op2c:	absolute
 	jmp	BitTest
 
 
 ; AND adr16
+
+ALIGN_ENTRY
 
 op2d:	absolute
 	read	dl,bx
@@ -447,6 +521,8 @@ op2d:	absolute
 
 
 ; ROL adr16
+
+ALIGN_ENTRY
 
 op2e:	absolute
 	read	dl,bx
@@ -457,6 +533,8 @@ op2ejn:	jmp	next
 
 ; BMI disp -- branch if	minus
 
+ALIGN_ENTRY
+
 op30:	relative
 	mov	ch,[RNTest]
 	test	ch,128
@@ -465,6 +543,8 @@ op30:	relative
 
 
 ; AND (adr),Y
+
+ALIGN_ENTRY
 
 op31:	indirecty
 	pagechange
@@ -475,6 +555,8 @@ op31:	indirecty
 
 ; AND adr,X
 
+ALIGN_ENTRY
+
 op35:	zeropagex
 	zread	dl,bx
 	and	al,dl
@@ -482,6 +564,8 @@ op35:	zeropagex
 
 
 ; ROL adr,X
+
+ALIGN_ENTRY
 
 op36:	zeropagex
 	zread	dl,bx
@@ -492,11 +576,15 @@ op36:	zeropagex
 
 ; SEC -- set carry
 
+ALIGN_ENTRY
+
 op38:	mov	ah,1
 	jmp	next
 
 
 ; AND adr16,Y
+
+ALIGN_ENTRY
 
 op39:	absolutey
 	pagechange
@@ -507,6 +595,8 @@ op39:	absolutey
 
 ; AND adr16,X
 
+ALIGN_ENTRY
+
 op3d:	absolutex
 	pagechange
 	read	dl,bx
@@ -516,6 +606,8 @@ op3d:	absolutex
 
 ; ROL adr16,X
 
+ALIGN_ENTRY
+
 op3e:	absolutex		;* was absolutey !
 	read	dl,bx
 	DoROL
@@ -524,6 +616,8 @@ op3e:	absolutex		;* was absolutey !
 
 
 ; RTI -- return	from interrupt
+
+ALIGN_ENTRY
 
 op40:	call	xop28		; pull psw
 	inc	cl		; same as return but don't inc PCTR
@@ -539,6 +633,8 @@ op40:	call	xop28		; pull psw
 
 ; EOR (adr,X)
 
+ALIGN_ENTRY
+
 op41:	indirectx
 	read	dl,bx
 	xor	al,dl
@@ -547,6 +643,8 @@ op41:	indirectx
 
 ; EOR adr
 
+ALIGN_ENTRY
+
 op45:	zeropage
 	zread	dl,bx
 	xor	al,dl
@@ -554,6 +652,8 @@ op45:	zeropage
 
 
 ; LSR adr
+
+ALIGN_ENTRY
 
 op46:	zeropage
 	zread	dl,bx
@@ -564,6 +664,8 @@ op46:	zeropage
 
 ; PHA -- push accumulator
 
+ALIGN_ENTRY
+
 op48:	mov	bl,cl		; bx ^ stack
 	mov	bh,1
 	write	al,bx
@@ -573,12 +675,16 @@ op48:	mov	bl,cl		; bx ^ stack
 
 ; EOR data
 
+ALIGN_ENTRY
+
 op49:	fetch	dl
 	xor	al,dl
 	jmp	ualnext
 
 
 ; LSR A
+
+ALIGN_ENTRY
 
 op4a:	mov	dl,al
 	DoLSR
@@ -588,12 +694,16 @@ op4a:	mov	dl,al
 
 ; JMP adr16
 
+ALIGN_ENTRY
+
 op4c:	absolute		; fetch	the address
 	mov	bp,bx		; jump to it
 	jmp	next
 
 
 ; EOR adr16
+
+ALIGN_ENTRY
 
 op4d:	absolute
 	read	dl,bx
@@ -602,6 +712,8 @@ op4d:	absolute
 
 
 ; LSR adr16
+
+ALIGN_ENTRY
 
 op4e:	absolute
 	read	dl,bx
@@ -612,6 +724,8 @@ op4ejn:	jmp	next
 
 ; BVC disp -- branch if	overflow clear
 
+ALIGN_ENTRY
+
 op50:	relative
 	mov	ch,[FOver]
 	cmp	ch,0
@@ -620,6 +734,8 @@ op50:	relative
 
 
 ; EOR (adr),Y
+
+ALIGN_ENTRY
 
 op51:	indirecty
 	pagechange
@@ -630,6 +746,8 @@ op51:	indirecty
 
 ; EOR adr,X
 
+ALIGN_ENTRY
+
 op55:	zeropagex
 	zread	dl,bx
 	xor	al,dl
@@ -637,6 +755,8 @@ op55:	zeropagex
 
 
 ; LSR adr,X
+
+ALIGN_ENTRY
 
 op56:	zeropagex
 	zread	dl,bx
@@ -647,11 +767,15 @@ op56:	zeropagex
 
 ; CLI -- clear interrupt disable
 
+ALIGN_ENTRY
+
 op58:	mov	[FIntDis],0
 	jmp	next
 
 
 ; EOR adr16,Y
+
+ALIGN_ENTRY
 
 op59:	absolutey
 	pagechange
@@ -662,6 +786,8 @@ op59:	absolutey
 
 ; EOR adr16,X
 
+ALIGN_ENTRY
+
 op5d:	absolutex
 	pagechange
 	read	dl,bx
@@ -671,6 +797,8 @@ op5d:	absolutex
 
 ; LSR adr16,X
 
+ALIGN_ENTRY
+
 op5e:	absolutex
 	zread	dl,bx
 	DoLSR
@@ -679,6 +807,8 @@ op5e:	absolutex
 
 
 ; RTS -- return	from subroutine
+
+ALIGN_ENTRY
 
 op60:	inc	cl
 	mov	bl,cl		; bx points to PCL to pop
@@ -694,6 +824,8 @@ op60:	inc	cl
 
 ; ADC (adr,X)
 
+ALIGN_ENTRY
+
 op61:	indirectx
 	call	[AddVector]
 	jmp	next
@@ -701,12 +833,16 @@ op61:	indirectx
 
 ; ADC adr
 
+ALIGN_ENTRY
+
 op65:	zeropage
 	call	[AddVector]
 	jmp	next
 
 
 ; ROR adr
+
+ALIGN_ENTRY
 
 op66:	zeropage
 	zread	dl,bx
@@ -717,6 +853,8 @@ op66:	zeropage
 
 ; PLA -- pop accumulator
 
+ALIGN_ENTRY
+
 op68:	inc	cl		; increment sp
 	mov	bl,cl		; build	the read address
 	mov	bh,1
@@ -726,6 +864,8 @@ op68:	inc	cl		; increment sp
 
 ; ADC data
 
+ALIGN_ENTRY
+
 op69:	mov	bx,bp
 	inc	bp
 	call	[AddVector]
@@ -734,6 +874,8 @@ op69:	mov	bx,bp
 
 ; ROR A
 
+ALIGN_ENTRY
+
 op6a:	mov	dl,al
 	DoROR
 	mov	al,dl
@@ -741,6 +883,8 @@ op6a:	mov	dl,al
 
 
 ; JMP (adr16)
+
+ALIGN_ENTRY
 
 op6c:	absolute		; read the address of the the jump
 	read	dl,bx
@@ -752,12 +896,16 @@ op6c:	absolute		; read the address of the the jump
 
 ; ADC adr16
 
+ALIGN_ENTRY
+
 op6d:	absolute
 	call	[AddVector]
 	jmp	next
 
 
 ; ROR adr16
+
+ALIGN_ENTRY
 
 op6e:	absolute
 	read	dl,bx
@@ -768,6 +916,8 @@ op6e:	absolute
 
 ; BVS disp -- branch if	overflow set
 
+ALIGN_ENTRY
+
 op70:	relative
 	mov	ch,[FOver]
 	cmp	ch,0
@@ -777,6 +927,8 @@ op70:	relative
 
 ; ADC (adr),Y
 
+ALIGN_ENTRY
+
 op71:	indirecty
 	pagechange
 	call	[AddVector]
@@ -785,12 +937,16 @@ op71jn:	jmp	next
 
 ; ADC adr,X
 
+ALIGN_ENTRY
+
 op75:	zeropagex
 	call	[AddVector]
 	jmp	next
 
 
 ; ROR adr,X
+
+ALIGN_ENTRY
 
 op76:	zeropagex
 	zread	dl,bx
@@ -801,11 +957,15 @@ op76:	zeropagex
 
 ; SEI -- disable interrupts
 
+ALIGN_ENTRY
+
 op78:	mov	[FIntDis],1
 	jmp	next
 
 
 ; ADC adr16,Y
+
+ALIGN_ENTRY
 
 op79:	absolutey
 	pagechange
@@ -815,6 +975,8 @@ op79:	absolutey
 
 ; ADC adr16,X
 
+ALIGN_ENTRY
+
 op7d:	absolutex
 	pagechange
 	call	[AddVector]
@@ -822,6 +984,8 @@ op7d:	absolutex
 
 
 ; ROR adr16,X
+
+ALIGN_ENTRY
 
 op7e:	absolutex
 	read	dl,bx
@@ -832,12 +996,16 @@ op7e:	absolutex
 
 ; STA adr,X
 
+ALIGN_ENTRY
+
 op81:	indirectx
 	write	al,bx
 	jmp	next
 
 
 ; STY adr
+
+ALIGN_ENTRY
 
 op84:	zeropage
 	mov	dl,[RY]
@@ -847,12 +1015,16 @@ op84:	zeropage
 
 ; STA adr
 
+ALIGN_ENTRY
+
 op85:	zeropage
 	zwrite	al,bx
 	jmp	next
 
 
 ; STX adr
+
+ALIGN_ENTRY
 
 op86:	zeropage
 	mov	dl,[RX]
@@ -861,6 +1033,8 @@ op86:	zeropage
 
 
 ; DEY -- decrement Y
+
+ALIGN_ENTRY
 
 op88:	mov	bl,[RY]
 	dec	bl
@@ -871,11 +1045,15 @@ op88:	mov	bl,[RY]
 
 ; TXA -- transfer X to accumulator
 
+ALIGN_ENTRY
+
 op8a:	mov	al,[RX]
 	jmp	ualnext
 
 
 ; STY adr16
+
+ALIGN_ENTRY
 
 op8c:	absolute
 	mov	dl,[RY]
@@ -885,12 +1063,16 @@ op8c:	absolute
 
 ; STA adr16
 
+ALIGN_ENTRY
+
 op8d:	absolute
 	write	al,bx
 	jmp	next
 
 
 ; STX adr16
+
+ALIGN_ENTRY
 
 op8e:	absolute
 	mov	dl,[RX]
@@ -900,6 +1082,8 @@ op8e:	absolute
 
 ; BCC disp -- branch if	carry clear
 
+ALIGN_ENTRY
+
 op90:	relative
 	cmp	ah,0
 	jnz	op91jn
@@ -908,12 +1092,16 @@ op90:	relative
 
 ; STA (adr),Y
 
+ALIGN_ENTRY
+
 op91:	indirecty
 	write	al,bx
 op91jn:	jmp	next
 
 
 ; STY adr,X
+
+ALIGN_ENTRY
 
 op94:	zeropagex
 	mov	dl,[RY]
@@ -923,12 +1111,16 @@ op94:	zeropagex
 
 ; STA adr,X
 
+ALIGN_ENTRY
+
 op95:	zeropagex
 	zwrite	al,bx
 	jmp	next
 
 
 ; STX adr,Y
+
+ALIGN_ENTRY
 
 op96:	zeropagey
 	mov	dl,[RX]
@@ -938,11 +1130,15 @@ op96:	zeropagey
 
 ; TYA -- transfer Y to accumulator
 
+ALIGN_ENTRY
+
 op98:	mov	al,[RY]
 	jmp	ualnext
 
 
 ; STA adr16,Y
+
+ALIGN_ENTRY
 
 op99:	absolutey
 	write	al,bx
@@ -951,11 +1147,15 @@ op99:	absolutey
 
 ; TXS -- transfer X to S
 
+ALIGN_ENTRY
+
 op9a:	mov	cl,[RX]
 	jmp	next
 
 
 ; STA adr16,X
+
+ALIGN_ENTRY
 
 op9d:	absolutex
 	write	al,bx
@@ -963,6 +1163,8 @@ op9d:	absolutex
 
 
 ; LDY data
+
+ALIGN_ENTRY
 
 opa0:	fetch	bl
 	mov	[RY],bl
@@ -972,12 +1174,16 @@ opa0:	fetch	bl
 
 ; LDA (adr,X)
 
+ALIGN_ENTRY
+
 opa1:	indirectx
 	read	al,bx
 	jmp	ualnext
 
 
 ; LDX data
+
+ALIGN_ENTRY
 
 opa2:	fetch	bl
 	mov	[RX],bl
@@ -986,6 +1192,8 @@ opa2:	fetch	bl
 
 
 ; LDY adr
+
+ALIGN_ENTRY
 
 opa4:	zeropage
 	zread	dl,bx
@@ -996,12 +1204,16 @@ opa4:	zeropage
 
 ; LDA adr
 
+ALIGN_ENTRY
+
 opa5:	zeropage
 	zread	al,bx
 	jmp	ualnext
 
 
 ; LDX adr
+
+ALIGN_ENTRY
 
 opa6:	zeropage
 	zread	dl,bx
@@ -1012,11 +1224,15 @@ opa6:	zeropage
 
 ; TAY -- transfer accumulator to Y
 
+ALIGN_ENTRY
+
 opa8:	mov	[RY],al
 	jmp	ualnext
 
 
 ; LDA data
+
+ALIGN_ENTRY
 
 opa9:	fetch	al
 	jmp	ualnext
@@ -1024,11 +1240,15 @@ opa9:	fetch	al
 
 ; TAX -- transfer accumulator to X
 
+ALIGN_ENTRY
+
 opaa:	mov	[RX],al
 	jmp	ualnext
 
 
 ; LDY adr16
+
+ALIGN_ENTRY
 
 opac:	absolute
 	read	dl,bx
@@ -1039,12 +1259,16 @@ opac:	absolute
 
 ; LDA adr16
 
+ALIGN_ENTRY
+
 opad:	absolute
 	read	al,bx
 	jmp	ualnext
 
 
 ; LDX adr16
+
+ALIGN_ENTRY
 
 opae:	absolute
 	read	dl,bx
@@ -1055,6 +1279,8 @@ opaejn:	jmp	next
 
 ; BCS disp -- branch if	carry set
 
+ALIGN_ENTRY
+
 opb0:	relative
 	cmp	ah,0
 	jz	opaejn
@@ -1063,6 +1289,8 @@ opb0:	relative
 
 ; LDA (adr),Y
 
+ALIGN_ENTRY
+
 opb1:	indirecty
 	pagechange
 	read	al,bx
@@ -1070,6 +1298,8 @@ opb1:	indirecty
 
 
 ; LDY adr,X
+
+ALIGN_ENTRY
 
 opb4:	zeropagex
 	zread	dl,bx
@@ -1080,12 +1310,16 @@ opb4:	zeropagex
 
 ; LDA adr,X
 
+ALIGN_ENTRY
+
 opb5:	zeropagex
 	zread	al,bx
 	jmp	ualnext
 
 
 ; LDX adr,Y
+
+ALIGN_ENTRY
 
 opb6:	zeropagey
 	zread	dl,bx
@@ -1096,11 +1330,15 @@ opb6:	zeropagey
 
 ; CLV -- clear overflow
 
+ALIGN_ENTRY
+
 opb8:	mov	[FOver],0
 	jmp	next
 
 
 ; LDA adr16,Y
+
+ALIGN_ENTRY
 
 opb9:	absolutey
 	pagechange
@@ -1110,12 +1348,16 @@ opb9:	absolutey
 
 ; TSX -- transfer S to X
 
+ALIGN_ENTRY
+
 opba:	mov	[RX],cl
 	usetest	cl
 	jmp	next
 
 
 ; LDY adr16,X
+
+ALIGN_ENTRY
 
 opbc:	absolutex
 	pagechange
@@ -1127,6 +1369,8 @@ opbc:	absolutex
 
 ; LDA adr16,X
 
+ALIGN_ENTRY
+
 opbd:	absolutex
 	pagechange
 	read	al,bx
@@ -1134,6 +1378,8 @@ opbd:	absolutex
 
 
 ; LDX adr16,Y
+
+ALIGN_ENTRY
 
 opbe:	absolutey
 	pagechange
@@ -1145,6 +1391,8 @@ opbe:	absolutey
 
 ; CPY data
 
+ALIGN_ENTRY
+
 opc0:	mov	bx,bp		; bp points to the value now
 	inc	bp
 	mov	dl,[RY]		; dl is	Y Register
@@ -1153,12 +1401,16 @@ opc0:	mov	bx,bp		; bp points to the value now
 
 ; CMP (adr,X)
 
+ALIGN_ENTRY
+
 opc1:	indirectx
 	call	DoCmp
 	jmp	next
 
 
 ; CPY adr
+
+ALIGN_ENTRY
 
 opc4:	zeropage
 	mov	dl,[RY]		; dl is	Y Register
@@ -1167,12 +1419,16 @@ opc4:	zeropage
 
 ; CMP adr
 
+ALIGN_ENTRY
+
 opc5:	zeropage
 	call	DoCmp
 	jmp	next
 
 
 ; DEC adr
+
+ALIGN_ENTRY
 
 opc6:	zeropage
 	zread	dl,bx
@@ -1184,6 +1440,8 @@ opc6:	zeropage
 
 ; INY -- increment Y
 
+ALIGN_ENTRY
+
 opc8:	mov	bl,[RY]
 	inc	bl
 	mov	[RY],bl
@@ -1193,6 +1451,8 @@ opc8:	mov	bl,[RY]
 
 ; CMP data
 
+ALIGN_ENTRY
+
 opc9:	mov	bx,bp
 	inc	bp
 	call	DoCmp
@@ -1200,6 +1460,8 @@ opc9:	mov	bx,bp
 
 
 ; DEX -- decrement X
+
+ALIGN_ENTRY
 
 opca:	mov	bl,[RX]
 	dec	bl
@@ -1210,6 +1472,8 @@ opca:	mov	bl,[RX]
 
 ; CPY adr16
 
+ALIGN_ENTRY
+
 opcc:	absolute
 	mov	dl,[RY]
 	jmp	CompDL
@@ -1217,12 +1481,16 @@ opcc:	absolute
 
 ; CMP adr16
 
+ALIGN_ENTRY
+
 opcd:	absolute
 	call	DoCmp
 	jmp	next
 
 
 ; DEC adr16
+
+ALIGN_ENTRY
 
 opce:	absolute
 	read	dl,bx
@@ -1234,6 +1502,8 @@ opce:	absolute
 
 ; BNE disp -- branch if	non-zero
 
+ALIGN_ENTRY
+
 opd0:	relative
 	mov	bl,[RZTest]
 	cmp	bl,0
@@ -1243,6 +1513,8 @@ opd0:	relative
 
 ; CMP (adr),Y
 
+ALIGN_ENTRY
+
 opd1:	indirecty
 	pagechange
 	call	DoCmp
@@ -1251,12 +1523,16 @@ opd1jn:	jmp	next
 
 ; CMP adr,X
 
+ALIGN_ENTRY
+
 opd5:	zeropagex
 	call	DoCmp
 	jmp	next
 
 
 ; DEC adr,X
+
+ALIGN_ENTRY
 
 opd6:	zeropagex
 	zread	dl,bx
@@ -1268,12 +1544,16 @@ opd6:	zeropagex
 
 ; CLD -- clear decimal mode
 
+ALIGN_ENTRY
+
 opd8:	mov	[FDec],0
 	call	SetMathVectors	; adjust for decimal/binary mode
 	jmp	next
 
 
 ; CMP adr16,Y
+
+ALIGN_ENTRY
 
 opd9:	absolutey
 	pagechange
@@ -1283,6 +1563,8 @@ opd9:	absolutey
 
 ; CMP adr16,X
 
+ALIGN_ENTRY
+
 opdd:	absolutex
 	pagechange
 	call	DoCmp
@@ -1290,6 +1572,8 @@ opdd:	absolutex
 
 
 ; DEC adr16,X
+
+ALIGN_ENTRY
 
 opde:	absolutex
 	read	dl,bx
@@ -1301,6 +1585,8 @@ opde:	absolutex
 
 ; CPX data
 
+ALIGN_ENTRY
+
 ope0:	mov	bx,bp		; bp points to the value now
 	inc	bp
 	mov	dl,[RX]		; dl is	X Register
@@ -1309,12 +1595,16 @@ ope0:	mov	bx,bp		; bp points to the value now
 
 ; SBC adr,X
 
+ALIGN_ENTRY
+
 ope1:	indirectx
 	call	[SubVector]
 	jmp	next
 
 
 ; CPX adr
+
+ALIGN_ENTRY
 
 ope4:	zeropage
 	mov	dl,[RX]		; dl is	X Register
@@ -1323,12 +1613,16 @@ ope4:	zeropage
 
 ; SBC adr
 
+ALIGN_ENTRY
+
 ope5:	zeropage
 	call	[SubVector]
 	jmp	next
 
 
 ; INC adr
+
+ALIGN_ENTRY
 
 ope6:	zeropage
 	zread	dl,bx
@@ -1340,6 +1634,8 @@ ope6:	zeropage
 
 ; INX -- increment X
 
+ALIGN_ENTRY
+
 ope8:	mov	bl,[RX]
 	inc	bl
 	mov	[RX],bl
@@ -1349,6 +1645,8 @@ ope8:	mov	bl,[RX]
 
 ; SBC data
 
+ALIGN_ENTRY
+
 ope9:	mov	bx,bp
 	inc	bp
 	call	[SubVector]
@@ -1357,10 +1655,14 @@ ope9:	mov	bx,bp
 
 ; NOP
 
+ALIGN_ENTRY
+
 opea:	jmp	next
 
 
 ; CPX adr16
+
+ALIGN_ENTRY
 
 opec:	absolute
 	mov	dl,[RX]		; dl is	X Register
@@ -1369,12 +1671,16 @@ opec:	absolute
 
 ; SBC adr16
 
+ALIGN_ENTRY
+
 oped:	absolute
 	call	[SubVector]
 	jmp	next
 
 
 ; INC adr16
+
+ALIGN_ENTRY
 
 opee:	absolute
 	read	dl,bx
@@ -1386,6 +1692,8 @@ opee:	absolute
 
 ; BEQ disp -- branch if	zero
 
+ALIGN_ENTRY
+
 opf0:	relative
 	mov	bl,[RZTest]
 	cmp	bl,0
@@ -1395,6 +1703,8 @@ opf0:	relative
 
 ; SBC (adr),Y
 
+ALIGN_ENTRY
+
 opf1:	indirecty
 	pagechange
 	call	[SubVector]
@@ -1403,12 +1713,16 @@ opf1jn:	jmp	next
 
 ; SBC adr,X
 
+ALIGN_ENTRY
+
 opf5:	zeropagex
 	call	[SubVector]
 	jmp	next
 
 
 ; INC adr,X
+
+ALIGN_ENTRY
 
 opf6:	zeropagex
 	zread	dl,bx
@@ -1420,12 +1734,16 @@ opf6:	zeropagex
 
 ; SED -- set decimal mode
 
+ALIGN_ENTRY
+
 opf8:	mov	[FDec],1
 	call	SetMathVectors	; adjust for decimal/binary mode
 	jmp	next
 
 
 ; SBC adr16,Y
+
+ALIGN_ENTRY
 
 opf9:	absolutey
 	pagechange
@@ -1435,6 +1753,8 @@ opf9:	absolutey
 
 ; SBC adr16,X
 
+ALIGN_ENTRY
+
 opfd:	absolutex
 	pagechange
 	call	[SubVector]
@@ -1442,6 +1762,8 @@ opfd:	absolutex
 
 
 ; INC adr16,X
+
+ALIGN_ENTRY
 
 opfe:	absolutex
 	zread	dl,bx
@@ -1459,6 +1781,8 @@ opfe:	absolutex
 ;
 ; *****************************************************************************
 
+ALIGN_ENTRY
+
 DoBranch:
 	mov	bx,bp			; bh is	the current page
 	add	dx,bp			; work out the return address
@@ -1472,14 +1796,14 @@ DoBranch:
 	inc	[RClock]
 dbjn:	jmp	next
 
-RelExit:ret
-
 
 ; *****************************************************************************
 ;
 ;			Compare	DL vs [BP]
 ;
 ; *****************************************************************************
+
+ALIGN_ENTRY
 
 CompDL:	mov	dh,al			; save acc
 	push	dx

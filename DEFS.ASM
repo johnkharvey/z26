@@ -50,8 +50,8 @@ TIAResmp1 = 		29h
 ;	3 - <reserved>
 
 TIAClock = 		0		; these must be these values ...
-TIAReg	 = 		2		; ... and in this order
-TIAVal	 = 		3		; (I don't know why)
+TIAReg	 = 		1		; ... and in this order
+TIAVal	 =		2
 
 TIAEnd	= 		255		; end of tia buffer marker
 TIAInvalid = 		254		; invalid entry
@@ -69,7 +69,7 @@ TGMissile0 = 		32		; Bit for M0
 
 ; displacements into TIAColourTable
 
-TCTPF =			1		;playfield
 TCTBK =			0		;backround
-TCTP0 =			3		;player 0
+TCTPF =			1		;playfield
 TCTP1 =			2		;player 1
+TCTP0 =			3		;player 0

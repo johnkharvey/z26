@@ -12,6 +12,8 @@
 ;
 ; *****************************************************************************
 
+ALIGN_ENTRY
+
 TIAInsertObjects:
 	mov	bx,TIAResp0		; bx - offset into TIA
 TIAIOLoop:
@@ -30,6 +32,8 @@ TIAIOLoop:
 ;
 ; *****************************************************************************
 
+ALIGN_ENTRY
+
 TIASortBuffer:
 	push	ax
 	push	bx
@@ -41,6 +45,8 @@ TIASortBuffer:
 	mov	al,TIAClock+4[bp]
 	cmp	al,TIAEnd
 	je	TIASortExit
+
+	mov	word ptr [TIAWritePointer],offset TIABuffer	; invalidate write pointer
 TIASortMain:
 	mov	cl,0			; bl is set if any swaps this pass
 	mov	bx,bp			; bx points into the table
@@ -72,6 +78,62 @@ TIASortExit:
 	pop	ax
 	ret
 
+;*
+;* macro to find insertion point and make space for new object in TIA buffer
+;*
+
+FindInsertionPoint macro
+local FindInsert, CarryForward, InsertDone
+
+	push	bx
+	push	cx
+
+FindInsert:
+	mov	ebx,[bp]
+	add	bp,4
+	cmp	bl,TIAInvalid		; skip invalid entrys
+	je	FindInsert
+	cmp	al,bl			; try next if clock < insert clock
+	jae	FindInsert		; was jae
+
+	sub	bp,4
+	push	bp			; save insertion point
+
+CarryForward:
+	add	bp,4
+	mov	ecx,[bp]		; next to carry forward
+	mov	[bp],ebx		; save what was carried forward
+	cmp	bl,TIAEnd		; was the end marker carried forward
+	je	InsertDone
+	mov	ebx,ecx			; update the carry forward registers
+	jmp	CarryForward
+
+InsertDone:
+	pop	bp			; restore insertion point
+	pop	cx
+	pop	bx
+
+	endm
+
+;*
+;* find insertion point and make space for new record (used by WriteTIA)
+;* new insertion clock is in al
+;*
+
+ALIGN_ENTRY
+
+FindInsert:
+	push	bp
+	mov	bp,[TIAWritePointer]	; we assume insertions from WriteTIA happen in order
+;	mov	bp,offset TIABuffer
+
+	FindInsertionPoint
+
+	mov	[TIAWritePointer],bp	; mark location of new insertion
+	pop	bp
+	ret
+
+
 
 ; *****************************************************************************
 ;
@@ -80,44 +142,17 @@ TIASortExit:
 ;
 ; *****************************************************************************
 
+ALIGN_ENTRY
+
 TIAInsert:
-	push	bx
-	push	cx
 	push	bp
-	push	ax			; this must be last...
-        
-TIAFindInsert:
-	mov	bl,TIAClock[bp]		; bl is clock here
-	add	bp,4
-	cmp	al,bl			; try next if clock < insert clock
-	jae	TIAFindInsert
 
-	sub	bp,4
-	push	bp			; save where the results go
+	FindInsertionPoint
 
-	mov	ebx,[bp]		; 1st to carry forward
-TIACarryForward:
-	add	bp,4
-	mov	ecx,[bp]		; next to carry forward
-	mov	[bp],ebx		; save what was carried forward
-	mov	bl,TIAClock[bp]
-	cmp	bl,TIAEnd		; was the end marker carried forward
-	je	TIAInsert2
-	mov	ebx,ecx			; update the carry forward registers
-	jmp	TIACarryForward
-
-TIAInsert2:
-	pop	bp
-	pop	ax			; restore the data and address
-	mov	TIAClock[bp],al
-	mov	TIAReg[bp],ah
-	xor	bl,bl
-	mov	TIAVal[bp],bl		; zero out the value field
+	mov	[bp],ax			; clock = al, reg = ah
+	mov	byte ptr TIAVal[bp],0	; zero out the value field
 
 	pop	bp
-	pop	cx
-	pop	bx
-        
 	ret
 
 
@@ -128,19 +163,21 @@ TIAInsert2:
 ;
 ; *****************************************************************************
 
+ALIGN_ENTRY
+
 TIAInvalidate:
 	push	bp
-TIAI1:	mov	ah,TIAClock[bp]		; check if finished
-	cmp	ah,TIAEnd
-	je	TIAI2
+TIAILoop:	
+	cmp	byte ptr TIAClock[bp],TIAEnd	; check if finished
+	je	TIAIDone
 	cmp	al,TIAReg[bp]		; if found, mark it
 	je	TIAIMark
 	add	bp,4			; do next until end
-	jmp	TIAI1
+	jmp	TIAILoop
+
 TIAIMark:				; mark it invalid.
 	mov	byte ptr TIAClock[bp],TIAInvalid
-TIAI2:
+TIAIDone:
 	pop	bp
 	ret
-
 

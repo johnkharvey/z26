@@ -9,9 +9,9 @@
 
 IFDEF comfile
 .CODESEGMENT macro
-_TEXT SEGMENT USE16 DWORD PUBLIC 'CODE'
+_TEXT SEGMENT USE16 PARA PUBLIC 'CODE'
         ASSUME cs:_TEXT, ds:_TEXT, es:_TEXT
-ALIGN 2 
+ALIGN 16
         endm
         
 .CEND   macro
@@ -19,9 +19,9 @@ _TEXT ENDS
         endm
 
 .DATASEGMENT macro
-_TEXT SEGMENT USE16 DWORD PUBLIC 'CODE'
+_TEXT SEGMENT USE16 PARA PUBLIC 'CODE'
         ASSUME cs:_TEXT, ds:_TEXT, es:_TEXT     ;tiny model -- (cs == ds)
-ALIGN 2 
+ALIGN 16
         endm
 
 .DEND   macro
@@ -35,9 +35,9 @@ ENDIF
 
 IFNDEF comfile
 .CODESEGMENT macro
-_TEXT SEGMENT USE16 DWORD PUBLIC 'CODE'
+_TEXT SEGMENT USE16 PARA PUBLIC 'CODE'
         ASSUME cs:_TEXT, ds:_DATA, es:_DATA
-ALIGN 2 
+ALIGN 16
         endm
         
 .CEND   macro
@@ -45,9 +45,9 @@ _TEXT ENDS
         endm
 
 .DATASEGMENT macro
-_DATA SEGMENT USE16 DWORD PUBLIC 'DATA'
+_DATA SEGMENT USE16 PARA PUBLIC 'DATA'
         ASSUME cs:_TEXT, ds:_DATA, es:_DATA     ;small model
-ALIGN 2 
+ALIGN 16
         endm
 
 .DEND   macro
@@ -56,6 +56,15 @@ _DATA ENDS
 ENDIF
 
 
+;*
+;* macro to align entry points of code
+;*
+
+ALIGN_ENTRY macro
+
+ALIGN 4
+
+	endm
 
 ;macros for using an external electronic timer (HP 5326B) connected to a parallel port
 
@@ -228,6 +237,14 @@ readsx  macro   op1,op2                 ; read memory at #2 to #1
 
         endm
 
+readzx  macro   op1,op2                 ; read memory at #2 to #1
+                                        ; sign extended
+        mov     si,op2
+        call    [ReadBank]              ; call the bank read function
+        movzx   op1,byte ptr [si]
+
+        endm
+
 read16  macro op1,op2
         mov     si,op2
         call    [ReadBank]
@@ -279,6 +296,10 @@ fetchsx macro   op1
         inc     bp
         endm
 
+fetchzx macro   op1
+        readzx  op1,bp
+        inc     bp
+        endm
 
 fetch16 macro   op1
         read16  op1,bp
@@ -422,3 +443,5 @@ SaveRegs macro
 	mov	[RS],cl
 	mov	[RPC],bp
 	endm
+
+

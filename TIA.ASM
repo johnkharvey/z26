@@ -2,9 +2,33 @@
 ;			   MAIN CODE STARTS HERE
 ; *****************************************************************************
 
+ALIGN_ENTRY
+
+EXTRN _StartSound:near;
+
+
 start:
 
-IFNDEF comfile
+
+IFDEF module
+
+global _emulator
+
+_emulator:
+
+	push	ds			; because "C" program can blow es ...
+	pop	es			; ... before we get here (getvect)
+
+	mov	ax,_psp
+	mov	psp,ax			; set up PSP for commandline
+	pop	ModuleReturn		; save return adr
+	mov	ModuleBP,bp		; save bp
+	mov	ax,sp
+	mov	ModuleSP,ax		; save sp (no return adr on stack)
+ENDIF   
+
+
+IFDEF exefile
 	mov	ax,_DATA
 	mov	ds,ax			;set up data segment
 	mov	bx,es
@@ -17,26 +41,81 @@ IFNDEF comfile
 
 	mov	sp,offset mystack	;  and stack pointer
 	sti
-ENDIF   
-        
-	mov	[CartRom+0FFCh],0	; set the default reset address
-	mov	[CartRom+0FFDh],0f0h	; to F000
+ENDIF
+	mov	bx,[_CartRom]
+	mov	byte ptr[bx+0FFCh],0	; set the default reset address
+	mov	byte ptr[bx+0FFDh],0f0h	; to F000
 
-	call	CommandLine		; Process the command line
+	call	CommandLine		; Process the command line (*** again! ***)
+					; I don't know why we need to call this from here
+					; as well as from the "C" program ...
+
 	call	Reset			; Reset the CPU
 	SaveRegs			; save the CPU status
 	call	TIAGraphicMode		; Switch into VGA mode
 	call	SetNewInt9		; Keyboard Handler
+
+	push	es
+	mov	ax,040h
+	mov	es,ax
+	mov	bx,06ch			; point at time of day
+	mov	eax,es:[bx]		; get start ticks
+	mov	[StartTicks],eax
+
+RTLoop:
+	mov	eax,es:[bx]
+	cmp	eax,[StartTicks]
+	je	RTLoop			; wait for timer to roll over
+	mov	[StartTicks],eax
+	pop	es
+
+	xor	al,al
+
+	cli
+	out	043h,al			; tell timer we wanna read it
+	in	al,040h			; read lo-order byte (discard)
+	in	al,040h			; read hi-order byte
+	sti
+
+	neg	al			; it's a down counter
+	mov	[MicroTick],al
+
+	mov	cl,al
+	mov	eax,[StartTicks]
+	shl	eax,8
+	mov	al,cl			; install hi-order micro-tick into tick count
+	mov	[StartTicks],eax
+
+	mov	eax,[FrameExit]
+	mov	[OriginalFrameExit],eax	; remember how many frames we did for FPS calculation
+
+	call	_StartSound		; we need to wait till the last minute for this
+					; to minimize startup noises
 
 
 ;*
 ;* the main outer loop
 ;*
 
+ALIGN_ENTRY
+
+EXTRN _Sb_init:BYTE
+EXTRN _Fillbuffer:near
+EXTRN _PauseDMA:near
+EXTRN _ContinueDMA:near
+
 xmain:  
 ;	BLIP_HP_HALF
 ;	TIMER_OFF
 
+	cmp	[FrameExit],0		; exiting after <n> frames ?
+	je	xm1			;   no
+	dec	[FrameExit]		;   yes, decrement counter
+	cmp	[FrameExit],0		; did it go to zero ?
+	je	GoTIME			;   yes, exit now
+
+
+xm1:
 	test	[NoRetrace],1		; waiting for retrace?
 	jnz	VRDone			;  no
 	
@@ -45,6 +124,9 @@ WaitForVR:
 	in	al,dx
 	test	al,8
 	jnz	VRDone
+
+	call	_Fillbuffer		;fill sound buffer if necessary
+
 	jmp	WaitForVR
 
 VRDone:
@@ -52,13 +134,84 @@ VRDone:
 
 	call	ScanFrame	
 Paused:	call	[CtrlFn]		; check which keys pressed
-	test	[GamePaused],1		; wait while game paused
-	jnz	Paused
-	jmp	xmain
+	test	[GamePaused],1		; game paused ?
+	jz	xmain			;   no, next frame
+	call	PauseDMA		;   yes, pause sound
+PausedLoop:
+	call	[CtrlFn]		; check which keys pressed
+	test	[GamePaused],1		; game paused ?
+	jnz	PausedLoop		;   yes
+	call	ContinueDMA		;   no, continue sound
+	jmp	xmain			; to next frame
+
+PauseDMA:
+	cmp	[_Sb_init],0		; SoundBlaster initialized ?
+	jz	PDRET			;   no, just return
+	call	_PauseDMA		;   yes, pause DMA
+PDRET:	ret
+
+ContinueDMA:
+	cmp	[_Sb_init],0		; SoundBlaster initialized ?
+	jz	CDRET			;   no, just return
+	call	_ContinueDMA		;   yes, continue DMA
+CDRET:	ret
 
 ;*
 ;* end of program (escape pressed or bad opcode)
 ;*
+
+GoTIME:
+	cli	
+
+	xor	al,al
+	out	043h,al			; tell timer we wanna read it
+	in	al,040h			; read lo-order byte (discard)
+	in	al,040h			; read hi-order byte
+	neg	al			; it's a down counter
+	mov	cl,al
+
+	push	es
+	mov	ax,040h
+	mov	es,ax
+	mov	bx,06ch			; point at time of day
+	mov	eax,es:[bx]		; get stop ticks
+	pop	es
+	mov	[StopTicks],eax
+
+	mov	eax,[StopTicks]
+	shl	eax,8
+	mov	al,cl			; install hi-order micro-tick into tick count
+	mov	[StopTicks],eax
+	mov	eax,[StopTicks]
+	sub	eax,[StartTicks]	; get the difference
+	mov	[StopTicks],eax
+
+	sti
+
+	call	SoundOff
+	call	TIATextMode
+	call	SetOldInt9
+
+	mov	eax,[StopTicks]
+	call	DPT			; print it out (decimal)
+
+	mov	dx,offset ticklets
+	mov	ah,9
+	int	MSDOS			; output a message
+
+	mov	eax,[OriginalFrameExit]
+	imul	eax,4661		; ticklets per second ((14318180/12)/256)
+	mov	ebx,[StopTicks]
+	xor	edx,edx
+	div	ebx
+	call	DPT
+	mov	dx,offset fps
+	mov	ah,9
+	int	MSDOS
+
+	jmp	Empty
+
+	
 
 GoDOS:
 	call	SoundOff		; turn sound off
@@ -73,6 +226,13 @@ Empty:	mov	ah,0Bh			; key waiting....
 	call	ConIn			; read it
 	jmp	Empty
 Quit:	
+IFDEF module
+	mov	bp,ModuleBP
+	mov	ax,ModuleSP
+	mov	sp,ax
+	push	ModuleReturn
+	ret
+ENDIF
 	mov	ah,04Ch			; and return to MSDOS
 	int	MSDOS
 
@@ -80,31 +240,48 @@ Quit:
 ;* do some instructions until RClock >= al
 ;*
 
+ALIGN_ENTRY
+
 DoInstructions:
 	mov	[LastCycle],al		; last cycle to do
+	push	cx
+	push	dx
+	push	bp
+	push	si
 	LoadRegs			; load the CPU registers
-
-InstructionLoop:
-	fetch	bl			; get the opcode
-	xor	bh,bh
-	mov	dl,Cycles[bx]		; get cycles takes to do it
-	mov	[RCycles],dl		; save the number of cycles
-	add	[RClock],dl		; add to the clock
-	shl	bx,1
-	jmp	[vectors + bx]		; --> do the instruction
+	jmp	InstructionLoop
 
 ualnext:usetest al			; <-- instruction done
 next:	call	[TimerVec]		; <-- instruction done, clock the RIOT timer
-	mov	bh,[LastCycle]		; was CyclesPerScanLine-2
+
+InstructionLoop:
+	mov	bh,[LastCycle]
 	cmp	[RClock],bh
-	jl	InstructionLoop
+	jge	InstructionsDone
+
+	fetchzx	ebx			; get the opcode
+	mov	dl,Cycles[bx]		; get cycles takes to do it
+	mov	[RCycles],dl		; save the number of cycles
+	add	[RClock],dl		; add to the clock
+	jmp	[vectors + ebx*2]	; --> do the instruction
+
+InstructionsDone:
 	SaveRegs			; save the CPU registers
+	pop	si
+	pop	bp
+	pop	dx
+	pop	cx
 	ret
 
 
 ;*
 ;* Do One Frame
 ;*
+
+EXTRN _Fillbuffer:near
+EXTRN _Sb_init:BYTE
+
+ALIGN_ENTRY
 
 ScanFrame:
 	mov	ax,0a000h
@@ -119,6 +296,9 @@ ScanFrameLoop:
 
 	call	TIALineTo		; generate a raster line
 
+	call	_Fillbuffer		;fill sound buffer if necessary
+
+ScanNextLine:
 	inc	[ScanLine]		; Increment the scanline counter
 	sub	[RClock],CyclesPerScanLine ; adjust clock for next line
 
@@ -144,6 +324,8 @@ NDret:
 ;*
 ;* come here when duff opcode 
 ;*
+
+ALIGN_ENTRY
 
 fail:	dec	bp			; backup the instruction pointer
 	read	al,bp			; read the byte
@@ -202,7 +384,7 @@ WaitEsc:test	[KeyTable+KeyEsc],128	; wait for ESC to be pressed
 CollisionTest macro
 local Done
 
-	movzx	ebx,byte ptr [si]
+	movzx	ebx,byte ptr[si]
 	cmp	bl,3
 	jb	Done
 	mov	ax,TIAColTab[ebx*2]
@@ -218,22 +400,19 @@ Done:
 CollisionConvert macro
 local BackgroundPFOnly
 
-	movzx	ebx,byte ptr [si]	; pick up a byte from TIADisplay
+	movzx	ebx,byte ptr[si]	; pick up a byte from TIADisplay
 	cmp	bl,2			; looking at background or playfield only?
 	jb	BackgroundPFOnly	;   yes
-	mov	di,[TIADisplayToColor]	; < preload table pointer
 	mov	ax,TIAColTab[ebx*2]	; do collision test
+	mov	di,[TIADisplayToColor]	; < preload table pointer
 	or	[TIACollide],ax
-	mov	bl,[di+bx]		; get high priority color
+	mov	bl,[bx + di]		; get high priority color
 
 BackgroundPFOnly:
-	mov	di,cx			; < preload display pointer
-	mov	bl,TIAColourTable[bx]	; pointer to color register
-	add	cx,2			; < increment display pointer
-	mov	al,TIA[bx]		; color value
-	mov	ah,al			; two bytes at a time
+	mov	di,cx
+	mov	ax,word ptr BackgroundColor[ebx*4]	; get color value word
+	add	cx,2
 	mov	gs:[di],ax
-
 	endm
 
 
@@ -245,9 +424,8 @@ PlayfieldBit macro
 local PFSkip
 	
 	mov	di,[PFClockToBitTable]
+	movzx	bx,dl
 	mov	eax,dword ptr [TIA+TIAPf0]
-;	movzx	bx,dl
-	mov	bx,dx
 	test	eax,[di + bx]			; setting a playfield bit ?
 	jz	PFSkip
 	or	dword ptr [si],TGPlay*01000000h+TGPlay*010000h+TGPlay*0100h+TGPlay
@@ -325,20 +503,6 @@ DoBlank4 macro
 	endm	
 
 ;*
-;* macro to do a real bit (complete)
-;*
-
-DoReal	macro
-
-	DoObjects
-	PlayfieldBit
-	CollisionConvert
-	inc	dl			; increment color clock
-	inc	si			; increment pf write / collision pointer
-
-	endm
-
-;*
 ;* do 4 real bits
 ;*
 
@@ -396,22 +560,15 @@ Skip:	add	bp,4			; go on to the next change
 Done:
 	endm
 
-
 ;*
 ;* set 4 display bits to value in bl, increment display pointer
 ;*
 
-Set4Bits macro
-
+Set4BitsFast macro
 	mov	di,cx			; display pointer
-	mov	bh,bl
-	mov	ax,bx
-	shl	eax,16
-	mov	ax,bx
-	mov	gs:[di],eax
 	add	cx,8
+	mov	gs:[di],eax
 	mov	gs:4[di],eax
-
 	endm
 
 
@@ -420,41 +577,38 @@ local PFSkip, SlowLane, SetPFBit, SetBkBit, FastSetPFBit
 
 	mov	di,[PFClockToBitTable]		; < preload table pointer
 	sub	al,dl				; # of color clocks to next object
+	movzx	bx,dl				; < preload offset
 	cmp	al,4				; at least 4 ?
+	mov	eax,[si]			; < pick up next 4 TIA bits
 	jb	SlowLane			;   no
-	cmp	dword ptr [si],0		; anything set in next 4 TIA bits ?
+	test	eax,eax				; anything set in next 4 TIA bits ?
 	jne	SlowLane			;   yes
 
-	mov	eax,dword ptr [TIA+TIAPf0]
-;	movzx	bx,dl
-	mov	bx,dx
-	add	dl,4
-	test	eax,[di + bx]			; setting a playfield bit ?
-	jnz	FastSetPFBit			;   yes
+	mov	ebx,[di + bx]			; playfield bit for this color clock
+	add	si,4				; bump TIA pointer
+	add	dl,4				; bump color clock
 
-	mov	bl,TIA[TIAColubk]		;   no, do 4 background bits
-	add	si,4
-	Set4Bits
+	test	ebx,dword ptr [TIA+TIAPf0]	; setting a playfield bit ?
+	mov	eax,[BackgroundColor]		; < preload background color
+	jnz	FastSetPFBit			;   yes
+	Set4BitsFast				;   no, do 4 background bits
 	jmp	op1				; FastExit
 
 FastSetPFBit:
-	mov	bl,TIAColourTable[TCTPF]	; pointer to color register
-	add	si,4
-	mov	bl,TIA[bx]			; color value
-	Set4Bits
+	mov	eax,[PlayfieldColor]
+	Set4BitsFast
 	jmp	op1
 	
-
 SlowLane:
-	mov	eax,dword ptr [TIA+TIAPf0]
-;	movzx	bx,dl
-	mov	bx,dx
-	test	eax,[di + bx]			; setting a playfield bit ?
+	mov	ebx,[di + bx]
+	or	eax,TGPlay*01000000h+TGPlay*010000h+TGPlay*0100h+TGPlay
+	test	ebx,dword ptr [TIA+TIAPf0]
 	jz	PFSkip
 SetPFBit:
-	or	dword ptr [si],TGPlay*01000000h+TGPlay*010000h+TGPlay*0100h+TGPlay
+	mov	[si],eax
 PFSkip:
 	endm
+
 
 ;*
 ;* do 4 real bits
@@ -505,27 +659,47 @@ TIALineTo:
 	cmp	bx,[BottomLine]		;was 250
 	jae	TIANoGenerate
 
-TIAGenerate:
-	mov	al,[CyclesPerLine]	; was [CyclesPerLine]
-	call	DoInstructions		; do instructions for left half of screen
+ALIGN_ENTRY
 
+TIAGenerate:
 	mov	si,offset TIADisplay	; playfield write pointer
 	mov	bp,offset TIABuffer	; initialise the buffer
+	mov	[TIAWritePointer],bp	
+	mov	byte ptr TIAClock[bp],TIAEnd
 
 	mov	di,si
 	xor	eax,eax
 	mov	cx,40
 	rep	stosd			; clear the TIA display buffer
 
+
+;	mov	al,50
+;	call	DoInstructions		; do instructions for left half of screen
+
+;*** these are not commutative, breaks solaris
+
+	mov	al,[CyclesPerLine]	; was [CyclesPerLine]
+	call	DoInstructions		; do instructions for rest of screen
+
 	call	TIAInsertObjects	; insert objects from the last line
 
-;	xor	dl,dl			; start position
-	xor	dx,dx			; dh = 0 too for FastPlayfieldBit
+;***
+
+	xor	dl,dl			; start position
 	mov	cx,[DisplayPointer]
+	mov	dh,80			; first loop exit at column 80
 
 	mov	di,[TIAPFColorByClock]	; update playfield color
 	mov	al,[di]			; clock position 0
 	mov	[TIAColourTable+TCTPF],al
+
+	movzx	bx,al
+	mov	al,TIA[bx]
+	mov	ah,al
+	shl	eax,16
+	mov	al,TIA[bx]
+	mov	ah,al
+	mov	[PlayfieldColor],eax	; set up color for FastPlayfieldBit
 
 TIABlankLoop:
 	mov	al,ColumnBlank
@@ -534,21 +708,34 @@ TIABlankLoop:
 	DoBlank4			;   yes, do 8 columns
 	DoBlank4
 
+ALIGN_ENTRY	; may not want to do this...
+
 TIALoop:
 	DoRealFast4
 	DoRealFast4
+	cmp	dl,dh
+	jne	TIALoop
+
 	cmp	dl,80			; reached middle of playfield?
 	je	TIARightBegin		;   yes
-TIATestDone:
-	cmp	dl,160
-	jae	TIAExit
-	jmp	TIALoop
+	jmp	TIAExit			; not column 80, must be 160 and we're done
 
 TIARightBegin:
+	mov	dh,160			; next loop exit at column 160
+
 	mov	di,[TIAPFColorByClock]	; update playfield color
 	movzx	bx,dl
 	mov	al,[di+bx]
 	mov	[TIAColourTable+TCTPF],al
+
+	movzx	bx,al
+	mov	al,TIA[bx]
+	mov	ah,al
+	shl	eax,16
+	mov	al,TIA[bx]
+	mov	ah,al
+	mov	[PlayfieldColor],eax	; set up color for FastPlayfieldBit
+
 
 ; this code doesn't belong in the TIA handler because real TIA can't respond to change
 ; in real time  (messes up astrblst if it's there)
@@ -560,9 +747,6 @@ TIARightBegin:
 
 TIARB1:
 	mov	[PFClockToBitTable],ax
-
-	cmp	dl,160
-	jae	TIAExit
 	jmp	TIALoop
 
 TIAExit:				; we've finished the line scan...
@@ -573,6 +757,8 @@ TIAExit:				; we've finished the line scan...
 ;*
 ;* do a blank line (outside of display area)
 ;*
+
+ALIGN_ENTRY
 
 TIANoGenerate:
 	mov	al,[CyclesPerLine]
@@ -590,4 +776,13 @@ TIABLLoop:
 	jmp	TIABLLoop
 TIABLExit:
 	ret
+
+.CEND
+.DATASEGMENT
+
+ticklets	db	' ticks, ','$'
+fps		db	' fps',13,10,'$'
+
+.DEND
+.CODESEGMENT
 

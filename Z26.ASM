@@ -34,11 +34,18 @@ PAGE 66,132
 ; 12-15-97  --  (0.86) more work on vertical synchronization
 ; 12-17-97  --  (0.86) more speed
 ; 12-23-97  --  (0.87) faster playfield and background draws
+;
+; see z.c for continuation of change list
+;
 
 
 ; assembly time definitions
 
 ;comfile =		1		; build a COM file
+;exefile =		1		; build an EXE file
+
+; if both of the above are undefined, build a module linkable from C
+
 memcheats =		1		; cheat	on 16-bit reads
 ;dotiming =		1		; generate timing blips
 
@@ -47,7 +54,7 @@ memcheats =		1		; cheat	on 16-bit reads
 	include	macros.asm		; our macros
 
 	
-IFNDEF comfile				; .EXE files get a stack segment
+IFDEF exefile				; .EXE files get a stack segment
 Stack SEGMENT PARA STACK 'STACK'
 	DB 512 DUP (?)
 Stack ENDS
@@ -71,15 +78,16 @@ entry:	jmp	start			; jump around our data
 .CODESEGMENT
 	
 	include cmdline.asm		; command line interpreter
+	include special.asm		; process special cartridges
 	include console.asm		; console output (for debugging)
 	include keyboard.asm		; convert keyboard into Atari joystick
 	include sound.asm		; PC speaker support
 	include graphics.asm		; VGA graphics initialization
-	include cpu.asm			; 6502 opcodes and support routines
-	include cpuhand.asm		; cpu memory & register handlers
 	include tia.asm			; <-- the main machine -- * start here *
 	include tiahand.asm		; TIA register handlers
 	include tiabuf.asm		; TIA buffer management stuff
+	include cpu.asm			; 6502 opcodes and support routines
+	include cpuhand.asm		; cpu memory & register handlers
 	include Pcxwrite.asm		; PCX file dumper
 
 .CEND
