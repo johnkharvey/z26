@@ -48,10 +48,15 @@ Controls:
 	jz	Ctrl1			; F1 pressed (Reset) - drop bit 0 (1)
 	and	ah,0FEh
 Ctrl1:	test	[KeyTable+KeyF2],128
-	jz	Ctrl2			; F2 pressed (Select) - drop bit 1 (2)
+	jz	Ctrl1a			; F2 pressed (Select) - drop bit 1 (2)
 	and	ah,0FDh
-Ctrl2:  
-	test	[KeyTable+KeyF9],128
+Ctrl1a:	test	[KeyTable+KeyF5],128	; F5 pressed (p0 easy) - drop bit 6 (64)
+	jz	Ctrl1b
+	and	ah,0BFh
+Ctrl1b:	test	[KeyTable+KeyF6],128	; F6 pressed (p0 hard) - set bit 6 (64)
+	jz	Ctrl2
+	or	ah,64
+Ctrl2:	test	[KeyTable+KeyF9],128
 	jz	Ctrl2a			; F9 pressed (Black and white) drop bit 3 (8)
 	and	ah,0F7h
 Ctrl2a:	test	[KeyTable+KeyF10],128

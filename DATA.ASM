@@ -205,6 +205,9 @@ _verbose	dw	0		; verbose
 global	_credits
 _credits	dw	0		; show credits
 
+global	_dsp
+_dsp		dw	0		; do digital signal processing
+
 ModuleReturn	dw	0
 ModuleBP	dw	0
 ModuleSP	dw	0

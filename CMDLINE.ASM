@@ -10,6 +10,7 @@
 ;	-x	print out checksum of cartridge
 ;	-r	don't wait for retrace (full speed)
 ;	-f <n>  Do <n> frames and exit
+;       -d      Do digital signal processing
 ;
 ; *****************************************************************************
 
@@ -186,6 +187,8 @@ EndInt:					; Command in CL,Value in AL
 	je	CMTimer1
 	cmp	cl,'f'
 	je	CMFrameExit
+	cmp	cl,'d'
+	je	CMDsp
 Back:	jmp	CLSkip			; back to the beginning
 
 CMUpper:xor	ah,ah			; set upper scan line
@@ -237,6 +240,10 @@ CMTimer1:
 
 CMFrameExit:				; do <n> frames and exit
 	mov	[FrameExit],eax
+	jmp	CLSkip
+
+CMDsp:
+	mov	[_dsp],ax
 	jmp	CLSkip
 
 ; we didn't see a filename string

@@ -1,10 +1,19 @@
 /*
 ** sb.c -- Sound Blaster driver code for z26
 **
-** based on dmav.c by Tom Bouril, Creative Technologies Ltd.  (October 1994)
+** based on dmav.c by Tom Bouril, (c) 1993-1996 Creative Technologies Ltd.  (October 1994)
 **
-** Jan 7, 1998 -- Added shortened interrupt handler for 8-bit DMA only.
-**                This was partly needed because old SoundBlasters don't have a mixer register.
+** Jan  7, 1998 -- Added shortened interrupt handler for 8-bit DMA only.
+** (0.88)
+**                 This was partly needed because old SoundBlasters don't have 
+**                 a mixer register.  And partly to make it faster.
+**
+** Jan 11, 1998 -- Changed samples per second programming method for 8-bit sound
+** (0.89)          on 16-bit cards to use old-fashioned time constant so we can use a 
+**                 frequency of 31400 and get the same pitch as on an old 8-bit card.
+**
+**                 Setting frequency to 31500 would also have worked but 31400 is
+**                 the "magic" number.
 */
 
 
@@ -322,15 +331,19 @@ void ProgramDSP(unsigned short int Count, SOUNDSTYLE *SoundStyle,
       case SB16:
 
 	/* Program sample rate HI and LO byte. */
-
+/*
 	DSPWrite(gBlaster.BaseIOPort, 0x0041);
 	DSPWrite(gBlaster.BaseIOPort, (SoundStyle->SampPerSec & 0xFF00) >> 8);
 	DSPWrite(gBlaster.BaseIOPort, (SoundStyle->SampPerSec & 0xFF));
-
+*/
 	/*--- DETERMINE 8-bit OR 16-bit, MONO OR STEREO ----------------*/
 
 	if (SoundStyle->BitsPerSample == 8)
 	{
+	  /* do 8-bit sound the old-fashioned way (JS) */
+          DSPWrite(gBlaster.BaseIOPort, 0x0040);  /* Program Time Constant */
+          DSPWrite(gBlaster.BaseIOPort, SoundStyle->TimeConstant);
+
 	  Command = 0x00C0;  /* 8-bit transfer (default: single-cycle, D/A) */
 
 	  if (SoundStyle->Channels == 1)
@@ -340,6 +353,13 @@ void ProgramDSP(unsigned short int Count, SOUNDSTYLE *SoundStyle,
 	}
 	else  /* 16-BIT AUDIO */
 	{
+          /* do 16-bit sound the modern way (JS)*/
+
+	  /* Program sample rate HI and LO byte. */
+          DSPWrite(gBlaster.BaseIOPort, 0x0041);
+	  DSPWrite(gBlaster.BaseIOPort, (SoundStyle->SampPerSec & 0xFF00) >> 8);
+	  DSPWrite(gBlaster.BaseIOPort, (SoundStyle->SampPerSec & 0xFF));
+
 	  Command = 0x00B0;  /* 16-bit transfer (default: single-cycle, D/A) */
 	  Count  /= 2;       /* Set Count to transfer 16-bit words. */
 

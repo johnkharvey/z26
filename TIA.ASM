@@ -5,6 +5,7 @@
 ALIGN_ENTRY
 
 EXTRN _StartSound:near;
+EXTRN _StopSound:near;
 
 
 start:
@@ -188,7 +189,8 @@ GoTIME:
 
 	sti
 
-	call	SoundOff
+	call	SoundOff		; turn sound off (PC speaker)
+	call	_StopSound		; turn sound off (Soundblaster)
 	call	TIATextMode
 	call	SetOldInt9
 
@@ -214,7 +216,8 @@ GoTIME:
 	
 
 GoDOS:
-	call	SoundOff		; turn sound off
+	call	SoundOff		; turn sound off (PC speaker)
+	call	_StopSound		; turn sound off (Soundblaster)
 	call	TIATextMode		; back to text mode
 	call	SetOldInt9		; reset the key handler
 

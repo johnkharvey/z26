@@ -1,10 +1,12 @@
 /*
 ** modified by John Saeger
 **
-** Jan 6, 1998 -- Added ShiftRegister9 routine for more accurate 9-bit noise.
-**                Accurate noise -- think about it!
+** Jan  6, 1998 -- Added ShiftRegister9 routine for more accurate 9-bit noise.
+**                 Accurate noise -- think about it!
 ** 
-** Jan 7, 1998 -- Moved modified Fillbuffer here for convenience.
+** Jan  7, 1998 -- Moved modified Fillbuffer here for convenience.
+**
+** Jan 16, 1998 -- Added digital signal processing.
 */
 
 
@@ -112,7 +114,8 @@ void Update_tia_sound (unsigned int addr, unsigned char val);
 void Tia_process_2 (register unsigned char *buffer,
                     register unsigned int n);
 void Tia_process (register unsigned char *buffer,
-                  register unsigned int n);
+                  register unsigned int n,
+		  char dsp);
 
 /* LOCAL GLOBAL VARIABLE DEFINITIONS */
 
@@ -215,6 +218,7 @@ int ShiftRegister9()
 char Sb_init = 0;
 static unsigned short DMABufToLoad = 0;
 extern unsigned int gHalfBufSize;
+extern unsigned int dsp;
 
 void Fillbuffer (void)
 {
@@ -226,9 +230,9 @@ void Fillbuffer (void)
       {
          /* fill the buffer with data */
          if (DMABufToLoad == 0)
-            Tia_process(DMABuf, gHalfBufSize);
+            Tia_process(DMABuf, gHalfBufSize, dsp);
          else
-            Tia_process(DMABuf + gHalfBufSize, gHalfBufSize);
+            Tia_process(DMABuf + gHalfBufSize, gHalfBufSize, dsp);
 
          /* buffer is ready to xmit */
          DMABufToLoad ^= 1;
@@ -515,19 +519,28 @@ void Tia_process_2 (register unsigned char *buffer, register uint16 n)
 /* Author:  Ron Fries                                                        */
 /* Date:    September 10, 1996                                               */
 /*                                                                           */
+/* Modified: Jan 16, 1998, John Saeger, added digital signal processing      */
+/*                                                                           */
 /* Inputs:  *buffer - pointer to the buffer where the audio output will      */
 /*                    be placed                                              */
 /*          n - size of the playback buffer                                  */
+/*          dsp - form of dsp to use (0=none,                                */
+/*                                    1=moving average,                      */
+/*                                    2=scaled moving average                */
 /*                                                                           */
 /* Outputs: the buffer will be filled with n bytes of audio - no return val  */
 /*                                                                           */
 /*****************************************************************************/
 
-void Tia_process (register unsigned char *buffer, register uint16 n)
+void Tia_process (register unsigned char *buffer, register uint16 n, char dsp)
 {
     register uint8 audc0,audv0,audc1,audv1;
     register uint8 div_n_cnt0,div_n_cnt1;
     register uint8 p5_0, p5_1,outvol_0,outvol_1;
+    
+    static unsigned int prev_sample = 0;
+    static unsigned char next_sample = 0;
+
 
     audc0 = AUDC[0];
     audv0 = AUDV[0];
@@ -683,7 +696,25 @@ void Tia_process (register unsigned char *buffer, register uint16 n)
           Samp_n_cnt += Samp_n_max;
 
           /* calculate the latest output value and place in buffer */
-          *(buffer++) = outvol_0 + outvol_1;
+
+          if (dsp)
+          {
+            /* take the edge off the square wave (JS) */
+
+            next_sample = outvol_0 + outvol_1;
+
+            /* scaled moving average (dsp = 2) */
+            prev_sample = (prev_sample + next_sample) >> 1;
+            *(buffer++) = (unsigned char) prev_sample;
+
+            /* simple moving average (dsp = 1) */
+            if (dsp == 1) prev_sample = next_sample;
+          }
+          else
+          {
+            /* no signal processing (dsp = 0) */
+            *(buffer++) = outvol_0 + outvol_1; 
+          }
 
           /* and indicate one less byte to process */
           n--;

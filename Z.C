@@ -10,6 +10,8 @@
 ** (0.88)               Precision frame timer (-f<n> option)
 ** (0.88) Jan 10, 1998  Ron Fries sound code added with Sound Blaster support
 ** (0.88)               -q switch (quiet)
+** (0.89) Jan 11,1998   fix time constant calculation for 8-bit cards
+** (0.89)               fix pitch on 16-bit cards
 */
 
 #include <stdio.h>		/* puts */
@@ -19,8 +21,10 @@
 #include "sb.c"			/* Sound Blaster driver code */
 #include "tiasound.c"		/* Ron Fries sound code */
 
-unsigned int playback_freq = 31400;
-unsigned int sample_freq = 31400;
+#define SAMPLE_FREQ 31400
+
+unsigned int playback_freq = SAMPLE_FREQ;	/* was 31400 */
+unsigned int sample_freq =   SAMPLE_FREQ;	/* was 31400 */
 
 unsigned int gHalfBufSize;	/* half of the DMA buffer size */
 
@@ -74,6 +78,14 @@ StartSound()
   }
 }
 
+StopSound()
+{
+  if (Sb_init)
+  {
+    ResetDSP(gBlaster.BaseIOPort);		/* turn off DMA */
+  }
+}
+
 main() 
 {
   CartRom = malloc(16384);	/* memory for cartridge rom */
@@ -88,17 +100,14 @@ main()
 
   if (DoCopyright)
   {
-    puts("\nz26 -- An Atari 2600 emulator (0.88)");
+    puts("\n\nz26 -- An Atari 2600 emulator (0.89)");
     puts("Copyright (C) 1997-1998 by John Saeger\n");
 
     puts("Home Page:  http://www.whimsey.com/z26.html\n");
 
-    puts("    F1 -- reset        F2 -- select");
-    puts("    F9 -- B/W         F10 -- color");
-    puts("     p -- pause     ENTER -- resume");
-    puts(" SPACE -- fire        ESC -- quit game\n");
-
-    puts("     = -- PCX screen capture\n");
+    puts("    F1 -- reset        F2 -- select    F5 -- P0 easy      F6 -- P0 hard");
+    puts("    F9 -- B/W         F10 -- color      p -- pause     ENTER -- resume");
+    puts(" SPACE -- fire        ESC -- quit game  = -- PCX screen capture\n");
 
     puts("The Atari joystick is emulated with the arrow keys.\n");
 
@@ -109,7 +118,8 @@ main()
     puts(" -q    -- quiet (no sound)");
     puts(" -v    -- verbose (show diagnostic messages)");
     puts(" -f<n> -- run emulator for <n> frames and display timing results");
-    puts(" -c    -- show contributors (please do!)");
+    puts(" -d<n> -- use digital signal processing on sound (1=low, 2=high)");
+    puts(" -c    -- show credits (please do!)\n\n");
     return;
   }
 
@@ -161,16 +171,14 @@ main()
 
   if (gBlaster.DSPVersion == 0x200)  /* DSP version = 2.00 */
   {
-    playback_freq = 15700;
-  }
-  else
-  {
-    playback_freq = 31400;
+    playback_freq = SAMPLE_FREQ / 2;	/* was 15700 */
   }
 
   Tia_sound_init (sample_freq, playback_freq);
 
   gDMABufSize = 128;		/* 64 bytes per interrupt */
+				/* experimental "a"=256/2 "b"=512/2 */
+
   gHalfBufSize = gDMABufSize / 2;
 
   DMABufPhysAddr = AllocateDMABuffer(&DMABuf, &gDMABufSize);
@@ -181,15 +189,6 @@ main()
     return;
   }
 
-  if (verbose)
-  {
-    printf("\nSound Blaster detected.\n\n");
-    ShowBlaster();
-    printf("        Buffer Size: %d\n",gDMABufSize);
-    printf(" Playback Frequency: %d\n",playback_freq);
-    PressKeyToContinue();
-  }
-
   memset(DMABuf, gDMABufSize, 0);	/* clear out sound buffer */
 					/* to minimize startup noises */
 
@@ -197,6 +196,18 @@ main()
   gSoundStyle.Channels = 1;		/* mono */
   gSoundStyle.SoundFormat = 0;		/* 8-bit uncompressed */
   gSoundStyle.SampPerSec = playback_freq;
+  gSoundStyle.TimeConstant = (unsigned short int) ((256L - 1000000L)
+				   / ((long) gSoundStyle.Channels * gSoundStyle.SampPerSec) & 0x00FF);
+
+  if (verbose)
+  {
+    printf("\nSound Blaster detected.\n\n");
+    ShowBlaster();
+    printf("        Buffer Size: %d\n",gDMABufSize);
+    printf(" Playback Frequency: %d\n",playback_freq);
+    printf("      Time Constant: %d\n",gSoundStyle.TimeConstant);
+    PressKeyToContinue();
+  }
 
   ResetDSP(gBlaster.BaseIOPort);	/* knock-knock */
 
