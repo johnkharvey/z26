@@ -80,6 +80,8 @@ Checksum	dw	0		; checksum goes here
 
 NoRetrace	dw	0		; don't wait for retrace (if 1)
 
+ColumnBlank	dw	0		; blank this many columns
+
 GamePaused	dw	0		; game paused
 
 ReadBank	dw	RBank4		; Bank switching function (Read)

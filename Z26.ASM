@@ -22,6 +22,9 @@ PAGE 66,132
 ; 11-22-97  --  (0.82) new palette (Atlantis now has bluish water)
 ; 11-22-97  --  (0.82) incorporated Ronnie Greene's PCX screen capture code
 ; 11-22-97  --  (0.82) make Enduro copyright notice show up
+; 11-26-97  --  (0.83) add column blanking
+; 11-26-97  --  (0.83) tune top lines and column blanking for many games
+; 11-28-97  --  (0.83) more palette tweaking
 
 
 ; assembly time definitions

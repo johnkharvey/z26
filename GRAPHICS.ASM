@@ -111,55 +111,54 @@ PaletteCount	dw	0
 
 PCXPalette db 128*3 dup (0)	; 384 -- generated palette goes here
 
-; * Default palette, based on Paul Robson's *
+DefaultPaletteTable db 0,   0,    0	; 0 0 0 0 -- 0 (grey)
+		db    63,  63,   63	; 0 0 0 0 -- 7
 
-DefaultPaletteTable db 0,0,0 	; was 7,7,7
-	      db 63,63,63	; 		(grey)
+		db   15,   12,    5	; 0 0 0 1 -- 0 (gold)
+		db   63,   63,   50	; 0 0 0 1 -- 7
 
-	      db 16,12,1	; was 23,8,1
-	      db 63,63,45	; was 63,63,38 	(gold)
+		db   25,   10,    5	; 0 0 1 0 -- 0 (orange)
+		db   55,   55,   30	; 0 0 1 0 -- 7
 
-	      db 25,10,5	; was 28,7,4 
-	      db 63,57,35	; was 63,57,40	(orange)
+		db   30,    5,    0	; 0 0 1 1 -- 0 (bright orange)
+		db   63,   55,   30	; 0 0 1 1 -- 7
 
-	      db 31,6,3		;
-	      db 63,49,51	; 		(brite orange)
+		db   25,    5,    5	; 0 1 0 0 -- 0 (pink)
+		db   63,   46,   47	; 0 1 0 0 -- 7 
 
-	      db 30,5,5		; was 14,4,27
-	      db 63,50,50	; was 63,41,63	(pink)
+		db   22,    8,   20	; 0 1 0 1 -- 0 (purple)
+		db   63,   40,   63	; 0 1 0 1 -- 7 
 
-	      db 16,2,33	;
-	      db 63,42,63	; 		(purple)
+		db   20,    8,   24	; 0 1 1 0 -- 0 (purple-blue)
+		db   52,   40,   63	; 0 1 1 0 -- 7
 
-	      db 16,2,43	;
-	      db 55,42,63	;		(purple-blue)
+		db   11,    8,   33	; 0 1 1 1 -- 0 (blue <slightly purplish>)
+		db   55,   48,   63	; 0 1 1 1 -- 7 (was 55,40,63 for atlantis)
 
-	      db 5,10,35	; was 1 9 41
-	      db 48,50,63	; 		(blue)
+		db    8,    8,   35	; 1 0 0 0 -- 0 (blue)
+		db   45,   45,   63	; 1 0 0 0 -- 7
 
-	      db 5,10,35	; was 8,6,40
-	      db 36,48,63	; 		(blue)
+		db    6,    6,   25	; 1 0 0 1 -- 0 (light blue)
+		db   50,   50,   63	; 1 0 0 1 -- 7
 
-	      db 10,10,30	; was 7,14,29 
-	      db 50,50,63	; 		(light blue)
+		db    0,    8,   20	; 1 0 1 0 -- 0 (turquoise)
+		db   40,   55,   63	; 1 0 1 0 -- 7
 
-	      db 5,12,20	; was 14,20,0
-	      db 43,58,63	; was 42,63,45	(turquoise)
+		db    0,   12,    8	; 1 0 1 1 -- 0 (green-blue)
+		db   40,   63,   55	; 1 0 1 1 -- 7
 
-	      db 5,12,8		; was 3,21,2
-	      db 40,63,58	; was 44,63,38	(green-blue)
+		db    4,   12,    4	; 1 1 0 0 -- 0 (green)
+		db   50,   63,   50	; 1 1 0 0 -- 7 (was 40,60,60 for atlantis)
 
-	      db 8,12,8		; was 1,20,3
-	      db 40,63,40	; was 55,63,32	(green)
+		db   10,   15,    0	; 1 1 0 1 -- 0 (yellow-green)
+		db   50,   63,   35	; 1 1 0 1 -- 7
 
-	      db 10,15,5	; was 1,15,5
-	      db 50,63,35	; was 60,63,20	(yellow-green)
+		db   15,   25,    0	; 1 1 1 0 -- 0 (orange-green)
+		db   55,   63,   30	; 1 1 1 0 -- 7
 
-	      db 9,14,0		; was 9,14,0
-	      db 62,63,31	; 		(orange-green)
+		db   20,   10,    0	; 1 1 1 1 -- 0 (light-orange)
+		db   63,   50,   30	; 1 1 1 1 -- 7
 
-	      db 22,7,1		; 
-	      db 63,50,32	;		(light orange)
 
 .DEND
 .CODESEGMENT

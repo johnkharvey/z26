@@ -459,12 +459,12 @@ TSRet:
 ;
 ;				  Draw Player
 ;
-;	On entry	BP Points to the missile record (clock/addr/data/0)
+;	On entry	BP Points to the player record (clock/addr/data/0)
 ;
 ; *****************************************************************************
 
 
-TRPlyr: 
+TRPlyr:
 	push	cx			; ok , we've found a player draw....
 	mov	bl,TIAReg[bp]		; bx = 0 if p0, bx = 1 if p1
 	and	bx,1

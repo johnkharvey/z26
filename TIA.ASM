@@ -117,6 +117,8 @@ next:	call	[TimerVec]		; <-- instruction done, clock the RIOT timer
 
 	call	RSave			; save the CPU registers
 
+	mov	di,DisplayPointer	; remember the display pointer
+
 	pusha
 	call	TIALineTo		; generate a raster line
 	popa
@@ -286,6 +288,20 @@ L1:
 	ConvertOut 3
 	endm
 
+ConvertBlank4 macro
+	mov	di,[DisplayPointer]
+	xor	ax,ax
+	mov	gs:[di],ax
+	add	di,2
+	mov	gs:[di],ax
+	add	di,2
+	mov	gs:[di],ax
+	add	di,2
+	mov	gs:[di],ax
+	add	di,2
+	mov	[DisplayPointer],di
+	endm
+
 ;*
 ;* macro to output a playfield bit
 ;*
@@ -378,9 +394,20 @@ TIALoop:
 	add	cx,4			; increment playfield clock
 	
 	DoObjects
+	
+	mov	ax,ColumnBlank
+	cmp	dl,al
+	ja	RealConvert
+	ConvertBlank4
+	jmp	DoCollisionTest		; cosmic commuter needs collision test
+
+RealConvert:
 	Convert4
+
+DoCollisionTest:
 	Collision4
 
+ConvertDone:
 	add	si,4			; increment pf write / collision pointer
 	cmp	dl,160			; reached end of line?
 	jae	TIAExit			;   yes, exit
