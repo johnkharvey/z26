@@ -285,6 +285,7 @@ unsigned char SCBIOS[188] = {
 **      -v <n>  video mode
 **      -z      don't compare new frame buffer with old FB before copying
 **      -!      simulate interlaced display in some video modes
+**      -B      save high-bpp screen shots as BMP file *EST*
 */
 
 FILE *zlog;
@@ -310,6 +311,7 @@ void cli_InterpretParm(char *p)
 	case '0':  	IOPortB |= 64;				break;
 	case '1':  	IOPortB |= 128;				break;
 	case 'b':  	IOPortB &= 0xc3;			break;
+        case 'B':       UseBMP = 1;                             break;
 	case 'x':  	DoChecksum = 1;				break;
 	case 'd':  	dsp = parm;				break;
 	case 'j':  	Joystick = parm;			break;
@@ -530,7 +532,7 @@ void cli_CommandLine(int argc, char *argv[])
 		sprintf(msg, "%06lx checksum -- %08lx crc\n%ld bytes", Checksum, crc,(long int) CartSize);
 		srv_print(msg);
 
-//		exit(1);	/* delete comment before shipping ;-) */
+		exit(1);	/* delete comment before shipping ;-) */
 
 		xfp = fopen("z26.crc", "a");
 		if (xfp == NULL)

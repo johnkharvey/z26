@@ -32,7 +32,7 @@ unsigned char NTSC_RGB_table[] =
  75,  145,  70,		/* (c0) <75,145,65>   light green */
  91,  141,  45,		/* (d0) <91,141,45>   yellow green */
  112, 130,  40,		/* (e0) <112,130,40>  orange green */
- 130, 120,  40		/* (f0) <130,120,44>  light orange */
+ 130, 122,  45		/* (f0) <130,122,45>  light orange */
 };
 
 unsigned char set_luma(int luma, int val)
@@ -59,27 +59,26 @@ void NTSC_Palette()
 */
 
 /* note: RGB values are for the $x6 color */
-
-#define PL 60
+/* PAL colors from Oliver Achten screen capture */
 
 unsigned char PAL_RGB_table[] = 
 {
- 120, 120, 120,		/* (00) grey */
- 120, 120, 120,		/* (10) grey */
- 162, 164,  50,         /* (20) gold */
- 140, 172,  PL,		/* (30) yellow green */
- 180, 132,  PL,		/* (40) orange brown */
-  PL, 180,  PL,		/* (50) light green */
- 190,  90,  76,         /* (60) pink */
-  PL, 190, 110,         /* (70) blue green */
- 196,  70, 148,         /* (80) purple */
-  PL, 164, 164,		/* (90) turquoise */
- 148,  PL, 180,		/* (a0) lilac */
-  PL, 116, 180,		/* (b0) light blue */
- 108,  PL, 188,         /* (c0) purple blue */
-  PL,  PL, 192,		/* (d0) blue */
- 120, 120, 120,		/* (e0) grey */
- 120, 120, 120		/* (f0) grey */
+ 116, 116, 116,		/* (00) <116,116,116> grey */
+ 116, 116, 116,		/* (10) <116,116,116> grey */
+ 143, 118, 23,          /* (20) <143,118,23>  gold */
+ 87,  148, 21,		/* (30) <87,148,21>   yellow green */
+ 166, 101, 58,		/* (40) <166,101,58>  orange brown */
+ 67,  151, 57,		/* (50) <67,151,57>   light green */
+ 176, 87,  107,         /* (60) <176,87,107>  pink */
+ 56,  147, 106,         /* (70) <56,147,106>  blue green */
+ 169, 82,  155,         /* (80) <169,82,155>  purple */
+ 61,  136, 154,		/* (90) <61,136,154>  turquoise */
+ 155, 81,  196,		/* (a0) <155,81,196>  lilac */
+ 78,  119, 195,		/* (b0) <78,119,195>  light blue */
+ 129, 90,  217,         /* (c0) <129,90,217>  purple blue */
+ 102, 103, 218,		/* (d0) <102,103,218> blue */
+ 116, 116, 116,		/* (e0) <116,116,116> grey */
+ 116, 116, 116		/* (f0) <116,116,116> grey */
 };
 
 

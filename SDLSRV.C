@@ -20,6 +20,8 @@
 
 #define NUM_COLORS 256
 
+SDL_Joystick *joy0, *joy1;
+
 SDL_Surface *srv_screen;
 Uint8 *srv_buffer;
 dd srv_pitch;
@@ -203,6 +205,14 @@ void srv_CreateScreen(void)
 	}
 
 	SDL_WM_SetIcon(SDL_LoadBMP("z26win.bmp"), NULL);
+
+        if (Joystick)   //joystick support not disabled with -j0
+        {
+                SDL_InitSubSystem(SDL_INIT_JOYSTICK);
+                if (SDL_NumJoysticks() > 1) joy1 = SDL_JoystickOpen(1);
+                if (SDL_NumJoysticks() > 0) joy0 = SDL_JoystickOpen(0);
+                SDL_JoystickEventState(SDL_ENABLE);
+        }
 
 	if (srv_bpp == 0)
 	{
@@ -738,7 +748,66 @@ srv_Events()
 				srv_done = 1;
 				break;
 
-			default:
+                        case SDL_JOYBUTTONDOWN:
+                                if (event.jbutton.which == 0) KeyTable[0x1d]=0x80;
+                                else if (event.jbutton.which == 1)
+                                        KeyTable[0x31]=0x80;    // N - fire player 1
+                                break;
+
+                        case SDL_JOYBUTTONUP:
+                                if (event.jbutton.which == 0) KeyTable[0x1d]=0;
+                                else if (event.jbutton.which == 1)
+                                        KeyTable[0x31]=0;       // N - fire player 1
+                                break;
+
+                        case SDL_JOYAXISMOTION:
+                                if (event.jaxis.which == 0)
+                                {
+                                        if (event.jaxis.axis == 0)
+                                        {
+                                                KeyTable[0x4b]=0;       // left
+                                                KeyTable[0x4d]=0;       // right
+                                                if (event.jaxis.value > 16384)
+                                                        KeyTable[0x4d]=0x80;
+
+                                                else if (event.jaxis.value < -16384)
+                                                        KeyTable[0x4b]=0x80;
+                                        }
+                                        else if (event.jaxis.axis == 1)
+                                        {
+                                                KeyTable[0x48]=0;       // up
+                                                KeyTable[0x50]=0;       // down
+                                                if (event.jaxis.value > 16384)
+                                                        KeyTable[0x50]=0x80;
+                                                else if (event.jaxis.value < -16384)
+                                                        KeyTable[0x48]=0x80;
+                                        }
+                                }
+                                else if (event.jaxis.which == 1)
+                                {
+                                        if (event.jaxis.axis == 0)
+                                        {
+                                                KeyTable[0x1f]=0;       // S left
+                                                KeyTable[0x21]=0;       // F right
+                                                if (event.jaxis.value > 16384)
+                                                        KeyTable[0x21]=0x80;
+
+                                                else if (event.jaxis.value < -16384)
+                                                        KeyTable[0x1f]=0x80;
+                                        }
+                                        else if (event.jaxis.axis == 1)
+                                        {
+                                                KeyTable[0x12]=0;       // E up
+                                                KeyTable[0x20]=0;       // D down
+                                                if (event.jaxis.value > 16384)
+                                                        KeyTable[0x20]=0x80;
+                                                else if (event.jaxis.value < -16384)
+                                                        KeyTable[0x12]=0x80;
+                                        }
+                                }
+                                break;
+
+                        default:
 				break;
 		}
 	}

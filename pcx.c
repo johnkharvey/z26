@@ -35,6 +35,14 @@ db PCXHeader[128] = { 0x0a,5,1,8,0,0,0,0,63,1,0xff,0,0,0,0,0,
         db ch;
         dw lines;
 
+     if(UseBMP) // save screen shot from VGA buffer instead of render buffer
+     {
+        if(PCXFileCounter == 10000) PCXFileCounter = 0;
+        sprintf(&PCXFileName[4],"%04i.bmp",PCXFileCounter);
+        SDL_SaveBMP(srv_screen, PCXFileName);
+        PCXFileCounter++;
+    }else
+    {
 //        lines=PCXMaxLines[VideoMode];
         lines=MaxLines;
         PCXHeader[10]=(lines - 1) & 0xff;
@@ -93,4 +101,6 @@ db PCXHeader[128] = { 0x0a,5,1,8,0,0,0,0,63,1,0xff,0,0,0,0,0,
         PCXFileCounter++;
         if(PCXFileCounter == 10000) PCXFileCounter = 0;
         sprintf(&PCXFileName[4],"%04i.pcx",PCXFileCounter);
+    }
 }
+

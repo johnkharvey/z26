@@ -124,6 +124,7 @@ db KidVidTape;		/* tape number to be played *EST* */
 db DisableCompareCopy;  /* dont compare new frame with old frame before copying *EST* */
 db DoInterlace;         /* simulate interlaced display *EST* */
 db MouseRude;		/* warp the mouse when running in a window */
+db UseBMP;              /* save screen shot from VGA buffer to BMP (no PCX from render buffer *EST* */
 
 /*
 ** reinitialize the above variables
@@ -168,4 +169,5 @@ void def_LoadDefaults(void)
         DisableCompareCopy = 0;
         DoInterlace = 0;
 	MouseRude = 1;
+        UseBMP = 0;
 }
