@@ -324,8 +324,9 @@ dd	BS_7[] = {
 	-1
 };
 
+/*
 dd	BS_8[] = {
-	0xbe1047cf,	/* Fatal Run (PAL).bin */
+        0xbe1047cf,      Fatal Run (PAL).bin 
 	-1
 };
-
+*/

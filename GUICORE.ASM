@@ -6,7 +6,7 @@
 ;* text output based on code from The Graphics Programming Black Book by Michael Abrash
 ;*
 
-; z26 is Copyright 1997-1999 by John Saeger and is a derived work with many
+; z26 is Copyright 1997-2001 by John Saeger and is a derived work with many
 ; contributors.  z26 is released subject to the terms and conditions of the 
 ; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ; Please see COPYING.TXT for details.
@@ -1094,10 +1094,23 @@ public _help_1
 _help_1 label byte
 
 db      '`y`UCompuMate Keyboard`u`d`n`n'
-db      '`d Use PC keyboard collumns `o1 `d- `o0   `d(`oCtrl`d -- FUNC   `oLShift`d -- SHIFT)`n`n'
+db      '`d Use PC keyboard collumns `o1 `d- `o0`n'
+db      '   `oCtrl`d -- FUNC`n'
+db      ' `oLShift`d -- SHIFT`n`n'
 
 db      '`y`UMindlink Controller`u`d`n`n'
-db      '`d Use the mouse to move horizontally and press the `obutton`d to start the game`n`n'
+db      '`d Use the mouse to move horizontally.`n'
+db      ' `obutton`d -- start the game`n'
+db      '    `oTab`d -- switch between player 1 and player 2`n`n'
+
+db      '`y`UMouse Handling in Paddle Emulation`u`d`n`n'
+db      '    `oTab`d -- switch between horiz. normal, vert. normal, horiz. reversed and vert. reversed`n'
+
+db	0
+
+
+public _help_2
+_help_2 label byte
 
 db	'`y`UPausing a Game`u`n`n'
 db      '`oBackS`d -- pause`n'
@@ -1122,9 +1135,6 @@ db      ' `oHome`d -- return to default screen position or top of file.`n`n'
 db      '`y`UScreen Capture`u`d`n`n'
 db      '    `o=`d -- PCX screen capture`n`n'
 
-db      '`y`UMouse Handling in Paddle Emulation`u`d`n`n'
-db      '  `oTab`d -- switch between horiz. normal, vert. normal, horiz. reversed and vert. reversed`n`n'
-
 db      '`y`UTrace Mode`u`d`n`n'
 db      '  `oF11`d -- resume tracing`n'
 db      '  `oF12`d -- interrupt tracing`n`n'
@@ -1132,8 +1142,8 @@ db      '  `oF12`d -- interrupt tracing`n`n'
 db	0
 
 
-public _help_2
-_help_2 label byte
+public _help_3
+_help_3 label byte
 
 db	'`y`UCommand Line Switches`u`d`n`n'
 
@@ -1169,8 +1179,8 @@ db      '  `o-q`d  -- quiet`n'
 db	0
 
 
-public _help_3
-_help_3 label byte
+public _help_4
+_help_4 label byte
 db      '`y`UCommand Line Switches (continued)`u`d`n`n'
 
 db	'  `o-r`d  -- run full speed  (vsync off)`n'
@@ -1189,8 +1199,8 @@ db      '  `o-y`yN`d -- emulate keyboard controller  (`y1`d = left   `y2`d = rig
 db	0
 
 
-public _help_4
-_help_4 label byte
+public _help_5
+_help_5 label byte
 
 db	'`y`UCredits`u`d`n`n'
 db	'      `oPaul Robson`d -- Wrote original A26.`n'
@@ -1221,7 +1231,7 @@ db      '`o  Henning Mueller`d -- Helped with CompuMate.`n`n'
 db      '`nThanks to one and all!!`n`n`n`n`n`n'
 
 db	'`y`UCopyright/License`u`d`n`n'
-db      'z26 is Copyright 1997-2000 by John Saeger and is a derived work with many`n'
+db      'z26 is Copyright 1997-2001 by John Saeger and is a derived work with many`n'
 db	'contributors.  z26 is released subject to the terms and conditions of the`n'
 db	'GNU General Public License Version 2 (GPL).  `oz26 comes with no warranty.`d`n'
 db	'Please see the included COPYING.TXT for details.  Source code for the`n'

@@ -33,6 +33,8 @@ MLG_ShotLine		dw	0	;   checked in cpuhand.asm
 
 MindlinkPos             dw      02800h  ; position value in Mindlink controller
                                         ; gets transferred bitwise (16 bits)
+MindlinkPos1            dw      02800h  ; position for player 1
+MindlinkPos2            dw      01000h  ; position for player 2
 MindlinkShift           dw      1       ; which bit to transfer next
 MindlinkAND             db      03fh    ; clear Mindlink-connected bit
 MindlinkOR              db      080h    ; set data bit
@@ -356,19 +358,32 @@ MouseAsMindlink:
 	mov	ax,0bH			; # of mickeys since last call
 	int	33H
 
-        mov     bx,[MindlinkPos]
+        mov     bx,[MindlinkPos1]
+        test    [_MPdirection],1
+        jz      MM1
+        mov     bx,[MindlinkPos2]
+        add     bx,01800h
+MM1:
         and     bx,03fffh
         shl     cx,3
         add     bx,cx
 
-        cmp     bx,00800h
+        cmp     bx,02800h
         ja      MM1a
-        mov     bx,00800h
+        mov     bx,02800h
 MM1a:
-        cmp     bx,03f00h
+        cmp     bx,03900h
         jb      MM1b
-        mov     bx,03f00h
+        mov     bx,03800h
 MM1b:
+        test    [_MPdirection],1
+        jz      MM2
+        sub     bx,01800h
+        mov     [MindlinkPos2],bx
+        jmp     MM3
+MM2:
+        mov     [MindlinkPos1],bx
+MM3:
         mov     [MindlinkPos],bx
         mov     [MindlinkShift],1
         call    NextMindlinkBit

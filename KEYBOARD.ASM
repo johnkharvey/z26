@@ -6,7 +6,7 @@
 ;
 ; *****************************************************************************
 
-; z26 is Copyright 1997-2000 by John Saeger and is a derived work with many
+; z26 is Copyright 1997-2001 by John Saeger and is a derived work with many
 ; contributors.	 z26 is released subject to the terms and conditions of the 
 ; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ; Please see COPYING.TXT for details.
@@ -458,17 +458,17 @@ CtrlTraceDone:
 
         cmp     [_BSType],10            ; Compumate keyboard?
         je      CtrlRet                 ; ... skip other controllers *EST*
-	
-        test    [_Mindlink],3           ; Mindlink connected?
-        jz      CtrlExit
-        call    MouseAsMindlink         ; ... update position *EST*
-        ret
 
-CtrlExit:
 	test	[GamePaused],1		; game paused ?
 	jnz	CtrlPaddles		;   yes, don't check joystick (sound off)	
 	call	Joystick		; peaceful coesistance between
 					; keyboard and joystick
+	
+        test    [_Mindlink],3           ; Mindlink connected?
+        jz      NoMindlink
+        call    MouseAsMindlink         ; ... update position *EST*
+        ret
+NoMindlink:
 	cmp	[_Lightgun],0
 	je	NoLightgun
 	call	MouseAsLightgun

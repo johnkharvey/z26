@@ -60,6 +60,8 @@ void RecognizeCart(void)
 
 	if (crc == 0x4f40a18e) CFirst = 30;	/* air_raid */
 	if (crc == 0x6f62a864) CFirst = 30;	/* grescape */
+	if (crc == 0x7b4eb49c) CFirst = 44;	/* pickpile */
+	if (crc == 0xbf9da2b1) CFirst = 37;	/* Robin Hood (PAL) */
 
 /*        if (crc == 0xa01ebff4) CFirst = 54; */    /* CompuMate */
 

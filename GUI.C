@@ -3,7 +3,7 @@
 */
 
 /*
-** z26 is Copyright 1997-2000 by John Saeger and is a derived work with many
+** z26 is Copyright 1997-2001 by John Saeger and is a derived work with many
 ** contributors.  z26 is released subject to the terms and conditions of the 
 ** GNU General Public License Version 2 (GPL).	z26 comes with no warranty.
 ** Please see COPYING.TXT for details.
@@ -466,7 +466,7 @@ void gui_ShowMainPanel(void)
 {
 	gui_Panel(0,0,639,479, 3,4,2);
 	gui_DrawString(8, 470, 1, "\x0f");
-	gui_DrawString(16, 470, 1, "1997-2000 by John Saeger                                                     http://www.whimsey.com/z26");
+	gui_DrawString(16, 470, 1, "1997-2001 by John Saeger                                                     http://www.whimsey.com/z26");
 }
 
 
@@ -650,6 +650,7 @@ void gui_ShowHelpPage(int screen)
 	extern char far help_2[];
 	extern char far help_3[];	/* *EST* */
         extern char far help_4[];
+        extern char far help_5[];
 	gui_FilledRectangle(6,25,609,467, 1);
 
 	gui_textX = 18;
@@ -675,9 +676,12 @@ void gui_ShowHelpPage(int screen)
         case 4:
                 gui_puts(help_4);
 		break;			/* *EST* */
+        case 5:
+                gui_puts(help_5);
+		break;			/* *EST* */
 	}
 
-        gui_ShowScrollBar(screen, 5); /* changed to 5 help screens *EST* */
+        gui_ShowScrollBar(screen, 6); /* changed to 6 help screens *EST* */
 }
 
 
@@ -819,7 +823,7 @@ gui_GetScanCode(void)
 /* show help screens */
 
 #define pgmin 0
-#define pgmax 4
+#define pgmax 5
 
 void gui_ShowHelp(void)
 {

@@ -3,7 +3,7 @@
 */
 
 /*
-** z26 is Copyright 1997-2000 by John Saeger and is a derived work with many
+** z26 is Copyright 1997-2001 by John Saeger and is a derived work with many
 ** contributors.  z26 is released subject to the terms and conditions of the 
 ** GNU General Public License Version 2 (GPL).	z26 comes with no warranty.
 ** Please see COPYING.TXT for details.
@@ -11,10 +11,10 @@
 
 
 
-#define version "z26 (1.41)"
+#define version "z26 (1.42)"
 
 /*
-#define version "Pre 1.41-C"
+#define version "Pre 1.42-B"
 */
 
 /*
@@ -56,11 +56,7 @@ void main(int argc, char *argv[])
 			printf("Filename %s\n", FileName);
 			printf("%06lx checksum -- %08lx crc\n", Checksum, crc);
 			printf("%u scanlines in last frame\n",LinesInFrame);
-			printf("VBlank Off %u\n", VBlankOff);
-			printf("VBlank On %u\n", VBlankOn);
-			printf("BailoutLine %u\n", BailoutLine);
 			printf("CFirst %u\n", CFirst);
-			printf("MaxLines %u\n", MaxLines);
 	   		DelayTime = 250000;
 	   		LongDelay();
 		}

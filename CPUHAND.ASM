@@ -2,7 +2,7 @@
 ;* cpu memory and register handlers -- used by the CPU emulator
 ;*
 
-; z26 is Copyright 1997-2000 by John Saeger and is a derived work with many
+; z26 is Copyright 1997-2001 by John Saeger and is a derived work with many
 ; contributors.	 z26 is released subject to the terms and conditions of the 
 ; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ; Please see COPYING.TXT for details.
@@ -144,7 +144,7 @@ RILnoLightgun:
 	push	ax
 	mov	al,[si]
 	
-	or	al,07fh
+;        or      al,07fh                ; removed to fix Pigs in Space *EST*
 
 	or	[RetWd],al
 	pop	ax
@@ -180,7 +180,7 @@ RetDirect:
 	push	ax				;   keypad etc) *EST*
 	mov	al,[si]
 	
-	or	al,07fh
+;        or      al,07fh                ; removed to fix Pigs in Space *EST*
 
 	or	[RetWd],al
 	pop	ax
