@@ -32,16 +32,13 @@ CRTParms label word
 	dw	03e07h	; overflow (bit 8 of vertical counts)
 	dw	04109h	; cell height (2 to double scan)
 	dw	0ea10h	; v sync start
-	dw	0ac11h	; v sync end and protect cr0-cr7
+	dw	0ac11h	; (ac) v sync end and protect cr0-cr7
 	dw	0df12h	; vertical displayed
-	dw	00014h	; turn off dword mode
 	dw	0e715h	; vblank start
 	dw	00616h	; vblank end
-	dw	0e317h	; turn on byte mode
 CRT_PARM_LENGTH = (($-CRTParms)/2)
 
 MX5Parms label word
-
 	dw	06c00h	; horizontal total
 	dw	04f01h	; horizontal display enable end
 	dw	05002h	; horizontal blanking start
@@ -53,12 +50,10 @@ MX5Parms label word
 	dw	03e07h	; overflow (bit 8 of vertical counts)
 	dw	04109h	; cell height (2 to double scan)
 	dw	0ea10h	; v sync start
-	dw	0ac11h	; v sync end and protect cr0-cr7
+	dw	0ac11h	; (ac) v sync end and protect cr0-cr7
 	dw	0df12h	; vertical displayed
-	dw	00014h	; turn off dword mode
 	dw	0e715h	; vblank start
 	dw	00616h	; vblank end
-	dw	0e317h	; turn on byte mode
 MX5_PARM_LENGTH = (($-MX5Parms)/2)
 
 .DEND
@@ -90,21 +85,24 @@ ModeXInit:
 
 ; here comes the real stuff...
 
-	mov	eax,50000
-	call	_Delay			; a 1/20th of a second delay...
-	call	VSync
-	mov	eax,8000
-	call	_Delay			; about a half of a frame past VSync
-					; so we don't straddle a vsync during init
-					; (don't ask why)
-
 	cli
 
 	mov	dx,SC_INDEX
 	mov	ax,0604h
 	out	dx,ax			; disable chain4 mode
+
+	mov	dx,CRTC_INDEX
+	mov	ax,0e317h
+	out	dx,ax			; disable word mode
+
+	mov	ax,000014h
+	out	dx,ax			; disable doubleword mode
+
+	mov	[MXDelayedClear],1	; have TIA clear mem later
+					; (don't know why clearing now doesn't work)
+
 	mov	ax,0100h
-	out	dx,ax			; syncronous reset while setting misc output
+	out	dx,ax			; synchronous reset while setting misc output
 					; for safety, even though clock unchanged
 
 	cmp	[_VideoMode],4		; doing tweaked ModeX ?
@@ -148,8 +146,6 @@ SetCRTParmsLoop:
 
 	sti
 
-	call	MXClearMem
-
 	cmp	[_VideoMode],6		; doing mode 6 or 7 (scanline) ?
 	jb	MXPRet			;   no
 
@@ -160,18 +156,6 @@ SetCRTParmsLoop:
 	in	al,dx
 	and	al, not 1fh
 	out	dx,al			; turn off doublescan mode
-
-	cmp	[_VideoMode],7		; mode 7 (tiny)
-	jne	MXPRet			;   no
-
-	cmp	[CFirst],0		; frogpond or pharhcrs ?
-	jz	JustDoMaxLines		;   yes
-
-	mov	[CFirst],1		; this is ultimate reality mode
-	mov	[OldCFirst],1
-
-JustDoMaxLines:
-	mov	[MaxLines],480
 
 MXPRet:	pop	es
 	popa
@@ -192,12 +176,12 @@ MXClearMem:
 	mov	ax,0f02h
 	out	dx,ax			; enable writes to all four planes
 
-	mov	ax,SCREEN_SEG		; now clear ALL memory ...
-	mov	es,ax			; ... 8 pixels at a time
+	mov	ax,SCREEN_SEG		; now clear memory ...
+	mov	es,ax			; ... 4 pixels at a time
 	sub	di,di			; point es:di to display memory
 	sub	ax,ax			; clear to zero-value pixels
-	mov	cx,08000h		; # of words in display memory
-	rep	stosw			; clear all of memory
+	mov	cx,80*480 + 1		; # of dwords to clear 
+	rep	stosb
 
 	pop	es
 	popad
@@ -237,12 +221,14 @@ ModeXNewLine:
 MXMove4 macro op1
 
 	mov	al,[si+op1]
-	mov	ah,[si+op1+4]
-	mov	bl,[si+op1+8]
-	mov	es:[di],ax
-	mov	bh,[si+op1+12]
+	mov	bl,[si+op1+4]
+	mov	es:[di],al
+	mov	es:[di+1],bl
+	mov	al,[si+op1+8]
+	mov	bl,[si+op1+12]
+	mov	es:[di+2],al
+	mov	es:[di+3],bl
 	add	si,16
-	mov	es:[di+2],bx
 	add	di,4
 
 	endm
@@ -256,9 +242,11 @@ ModeXCopyLine:
 	mov	ax,0a000h
 	mov	es,ax			; dest segment is VGA area
 
-	cmp	[_VideoMode],6		; doing video mode 4, 5 or 6
-	ja	MX6CopyLine		;   no
 
+	cmp	[_VideoMode],6		; doing video mode 4, 5 or 6
+	ja	MX7CopyLine		;   no
+
+DoRegularCopy:
 	mov	cx,20
 	mov	si,[ModeXBufferPointer]
 	mov	di,[ModeXDisplayPointer]
@@ -298,20 +286,22 @@ MXCRet:	pop	es
 ;* mode 7 line copy
 ;*
 
-MX6Move4 macro op1
+MX7Move4 macro op1
 
 	mov	al,[si+op1]
-	mov	ah,[si+op1+8]
-	mov	bl,[si+op1+16]
-	mov	es:[di],ax
-	mov	bh,[si+op1+24]
+	mov	bl,[si+op1+8]
+	mov	es:[di],al
+	mov	es:[di+1],bl
+	mov	al,[si+op1+16]
+	mov	bl,[si+op1+24]
+	mov	es:[di+2],al
+	mov	es:[di+3],bl
 	add	si,32
-	mov	es:[di+2],bx
 	add	di,4
 
 	endm
 
-MX6CopyLine:
+MX7CopyLine:
 
 	add	[ModeXDisplayPointer],20
 
@@ -323,10 +313,10 @@ MX6CopyLine:
 	mov	ax,0102h
 	out	dx,ax			; enable plane 0 for these pixels
 
-MX6Loop0:
-	MX6Move4 0
+MX7Loop0:
+	MX7Move4 0
 	dec	cx
-	jnz	MX6Loop0
+	jnz	MX7Loop0
 
 	mov	cx,10
 	mov	si,[ModeXBufferPointer]
@@ -336,10 +326,10 @@ MX6Loop0:
 	mov	ax,0202h
 	out	dx,ax			; enable plane 1 for these pixels
 
-MX6Loop1:
-	MX6Move4 2
+MX7Loop1:
+	MX7Move4 2
 	dec	cx
-	jnz	MX6Loop1
+	jnz	MX7Loop1
 
 	mov	cx,10
 	mov	si,[ModeXBufferPointer]
@@ -349,10 +339,10 @@ MX6Loop1:
 	mov	ax,0402h
 	out	dx,ax			; enable plane 2 for these pixels
 
-MX6Loop2:
-	MX6Move4 4
+MX7Loop2:
+	MX7Move4 4
 	dec	cx
-	jnz	MX6Loop2
+	jnz	MX7Loop2
 
 	mov	cx,10
 	mov	si,[ModeXBufferPointer]
@@ -362,10 +352,10 @@ MX6Loop2:
 	mov	ax,0802h
 	out	dx,ax			; enable plane 3 for these pixels
 
-MX6Loop3:
-	MX6Move4 6
+MX7Loop3:
+	MX7Move4 6
 	dec	cx
-	jnz	MX6Loop3
+	jnz	MX7Loop3
 
 	add	[ModeXDisplayPointer],60
 

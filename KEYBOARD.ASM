@@ -217,11 +217,8 @@ CtrlPCX3:
 
         ;kludge - make it think the key has already been released
         ; hope it doesn't make it write out PCX files constantly
+
         mov [KeyTable+KeyEquals],0
-
-
-;	jmp	CtlVidDone		;*** turn this on before shipping
-
 
 CtrlVid:
 	test	[KeyTable+Key0],128	; video mode 0 ?
@@ -274,10 +271,17 @@ CtrlVid6:
 
 CtrlVid7:
 	test	[KeyTable+Key7],128	; video mode 7 ?
-	jz	CtrlVidDone
+	jz	CtrlVid8
 	mov	[_VideoMode],7
 	call	TIAGraphicMode
 	mov	[KeyTable+Key7],0
+
+CtrlVid8:
+;	test	[KeyTable+Key8],128	; video mode 8 ?
+;	jz	CtrlVidDone
+;	mov	[_VideoMode],8
+;	call	TIAGraphicMode
+;	mov	[KeyTable+Key8],0
 
 CtrlVidDone:
 CtrlExit:

@@ -93,12 +93,11 @@ xm1:
 	call	VSync
 	call	ScanFrame
 
-	cmp	[ModeX],0		; *** kludge *** -- after ModeX mode change, must clear
-	jz	ClearDone		;                   mem again after first frame scan
-	cmp	[MXDelayedClear],0
-	jz	ClearDone		
-	mov	[MXDelayedClear],0
-	call	MXClearMem
+	cmp	[MXDelayedClear],0	; was there a mode change into modex ?
+	jz	ClearDone		;   no
+	mov	[MXDelayedClear],0	;   yes
+	call	MXClearMem		; clear mem 
+					; (don't know why we need to do it this way)
 
 ClearDone:
 
@@ -195,7 +194,7 @@ ScanFrameLoop:
 
 	call	TIALineTo		; generate a raster line
 
-	test	[ScanLine],01fh		; time to read the time ?
+	test	[ScanLine],0fh		; time to read the time ?
 	jnz	ScanNextLine		;   no
 	call	_GetTime		;   yes, needed to prevent timer overflow
 

@@ -7,27 +7,10 @@
 TIAGraphicMode:
 	pushad
 
-;	mov	ah,1			; turn off the cursor
-;	mov	ch,020h
-;	int	010h
-
-;	mov	ax,012h			; start in mode 12h
-;	int	010h			; let BIOS clear memory
-
 	mov	ax,013h			; switch to 320x200 VGA mode
 	int	010h
 
-	cmp	[ModeX],0		; were we in ModeX ?
-	jz	DontSetDelayedClear	;   no, don't set delayed clear
-
-	mov	[MXDelayedClear],1	;   yes, have TIA clear mem again later
-					;        *** kludge, don't know why ***
-					;        switch from mode 7 to 4, 5 or 6
-					;        leaves garbage at bottom of screen
-					;        sometimes if we don't do this
-
-DontSetDelayedClear:
-	mov	[ModeX],0		; just in case...
+	mov	[ModeX],0		; assume we're not in modex
 
 ;*
 ;* adjust CFirst based on video mode
@@ -105,9 +88,24 @@ SML1:	cmp	[_VideoMode],3
 
 SML2:	cmp	[_VideoMode],7		; anything above 7 ?
 	ja	Set200			;   yes, 200 lines
+	je	SetMode7		;   no, if Mode7 handle special
 	mov	[MaxLines],MAX_TallGame	;   no, X modes get 240 lines
 	jmp	GeneratePalette
 	
+	cmp	[_VideoMode],7		; mode 7 (tiny)
+	jne	MXPRet			;   no
+
+SetMode7:
+	cmp	[CFirst],0		; frogpond or pharhcrs ?
+	jz	JustDoMaxLines		;   yes
+
+	mov	[CFirst],1		; this is ultimate reality mode
+	mov	[OldCFirst],1
+
+JustDoMaxLines:
+	mov	[MaxLines],480
+	jmp	GeneratePalette
+
 	
 
 ;*
@@ -322,7 +320,6 @@ Tr60d:	cmp	[_VideoMode],3
 Tr60e:					; * mode 3 *
 	VidOut	CRTC,   012h, 097h	; <8f> vertical display enable end
 	VidOut	CRTC,   015h, 098h	; <90> vertical blanking start
-;	mov	[MaxLines],204		; set up max scan lines
 
 Tr60f:	VidOut	CRTC,   001h, 04fh	; horizontal display enable end
 	VidOut	CRTC,   002h, 050h	; horizontal blanking start
