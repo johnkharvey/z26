@@ -18,7 +18,9 @@ extern char Joystick;
 extern char PaletteNumber;
 extern long int PaddleGame;
 extern char KeyBase;
-extern long int TraceCount;
+extern char TraceCount;
+extern char TraceEnabled;
+extern char OldTraceCount;
 extern char Use50Hz;
 
 char def_VideoMode;

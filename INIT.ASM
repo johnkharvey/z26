@@ -122,6 +122,12 @@ _CartSize	dw	0		; gets cart size (cmdline.asm)
 PUBLIC _TraceCount
 _TraceCount	db	0		; gets trace count
 
+PUBLIC _TraceEnabled
+_TraceEnabled	db	0		; if trace is enabled
+
+PUBLIC _OldTraceCount
+_OldTraceCount	db	0		; for saving trace count if we turn off tracing
+
 PUBLIC _Use50Hz
 _Use50Hz	db	0		; O.K. to use 50Hz video modes
 

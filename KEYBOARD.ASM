@@ -47,6 +47,8 @@ KeyF7	=		041h		; F7  (P1 easy)
 KeyF8	=		042h		; F8  (P1 hard)
 KeyF9	=		043h		; F9  (unassigned)
 KeyF10	=		044h		; F10 (unassigned)
+KeyF11	=		057h		; F11 (trace on)
+KeyF12	=		058h		; F12 (trace off)
 
 Key0 =			00bh
 Key1 =			002h
@@ -303,9 +305,30 @@ CtrlVid9:
 	call	TIAGraphicMode
 	mov	[KeyTable+Key8],0
 
+CtrlVidDone:
+	test	[KeyTable+KeyF11],128	; turn on trace?
+	jz	CtrlTraceOff		;   no
+	cmp	[_TraceEnabled],0	; trace enabled?
+	jz	CtrlTraceDone		;   no
+	mov	al,[_OldTraceCount]
+	mov	[_TraceCount],al
+
+	jmp	CtrlTraceDone
+
+CtrlTraceOff:
+	test	[KeyTable+KeyF12],128	; turn off trace?
+	jz	CtrlTraceDone		;   no
+	cmp	[_TraceEnabled],0	; trace enabled?
+	jz	CtrlTraceDone		;   no
+	mov	[_TraceCount],0
+
+	jmp	CtrlTraceDone
+
+
+CtrlTraceDone:
+
 	
 
-CtrlVidDone:
 CtrlExit:
 	test	[GamePaused],1		; game paused ?
 	jnz	CtrlPaddles		;   yes, don't check joystick (sound off)	

@@ -7,6 +7,7 @@
 ; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ; Please see COPYING.TXT for details.
 
+
 .data
 
 ModuleReturnAdr	dd	?		; word if small model, dword if medium
@@ -84,6 +85,7 @@ NotStarpath:
 STUP_4:
 	call	_SetupTimer		; put timer in mode 2
 
+	call	TIASaveVideoMode
 	call	VSync
 
 	call	TIAGraphicMode		; Switch into VGA mode
@@ -159,17 +161,10 @@ PausedLoop:
 ;* shutdown the weird stuff
 ;*
 
-xsd_weird:
-	call	_sound_clear		; turn sound off (Soundblaster)
-	call	SoundOff		; turn sound off (PC speaker)
-	call	SetOldInt9		; reset the key handler
-	call	_RestoreTimer		; put timer back into mode 3
-	call	_RestoreISR		; restore SoundBlaster ISR (if was on)
-	ret
-
 sd_weird:
 	call	_sound_clear		; turn sound off (Soundblaster)
 	call	SoundOff		; turn sound off (PC speaker)
+	call	TIARestoreVideoMode
 	call	SetOldInt9		; reset the key handler
 	call	_RestoreTimer		; put timer back into mode 3
 	call	_RestoreISR		; restore SoundBlaster ISR (if was on)

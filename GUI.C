@@ -79,11 +79,31 @@ gui_SetPalette(int red, int green, int blue)
 }
 
 
+/* restore old video mode */
+
+gui_RestoreVideoMode()
+{
+	union REGS inregs, outregs;
+	
+	/* restore original video mode */
+	
+	inregs.h.ah = 0;
+	inregs.h.al = gui_original_video_mode;
+	int86(0x10, &inregs, &outregs);
+}
+
+
 /* set gui graphics mode */
 
 gui_GraphicsMode()
 {
 	union REGS inregs, outregs;
+
+	/* save the current display mode */
+
+	inregs.h.ah = 0x0f;
+	int86(0x10, &inregs, &outregs);
+	gui_original_video_mode = outregs.h.al;
 
 	/* set the display into graphics mode */
 	
@@ -98,13 +118,10 @@ gui_GraphicsMode()
 
 	if (outregs.h.al != 0x12)
 	{
-		VGATextMode();
+		gui_RestoreVideoMode();
 		printf("You need a VGA to run z26.");
 		exit(1);
 	}
-
-	gui_SetPalette(35, 40, 45);	/* 31, 34, 41 */
-
 }
 
 
@@ -429,7 +446,7 @@ gui_ShowMainPanel()
 {
 	gui_Panel(0,0,639,479, 3,4,2);
 	gui_DrawString(8, 470, 1, "\x0f");
-	gui_DrawString(16, 470, 1, "1997-1999 by John Saeger                                                     http://www.whimsey.com/z26");
+	gui_DrawString(16, 470, 1, "1997-2000 by John Saeger                                                     http://www.whimsey.com/z26");
 }
 
 /* show main inset */
@@ -508,7 +525,6 @@ gui_ShowHelpPage(int screen)
 	extern char far help_0[];
 	extern char far help_1[];
 	extern char far help_2[];
-	extern char far help_3[];
 
 	gui_FilledRectangle(6,25,609,467, 1);
 
@@ -529,13 +545,9 @@ gui_ShowHelpPage(int screen)
 	case 2: 
 		gui_puts(help_2); 
 		break;
-
-	case 3: 
-		gui_puts(help_3); 
-		break;
 	}
 
-	gui_ShowScrollBar(screen+1, 4);
+	gui_ShowScrollBar(screen+1, 3);
 }
 
 
@@ -567,7 +579,7 @@ gui_GetScanCode()
 /* show help screens */
 
 #define pgmin 0
-#define pgmax 3
+#define pgmax 2
 
 gui_ShowHelp()
 {
@@ -971,8 +983,8 @@ gui_ShowList()
 			psp = _psp;		/* for environment scanner  (sbdrv.asm) */
 			emulator();		/* call emulator              (tia.asm) */
 			
-			gui_GraphicsMode();
-	
+			gui_SetPalette(35, 40, 45);	/* 31, 34, 41 */
+
 		}
 	}
 }

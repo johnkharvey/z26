@@ -179,12 +179,15 @@ cli_InterpretParm(char *p)
 	case 'p':  	PaddleGame = (parm & 0xf) << 1;		break;
 	case 'k':  	KeyBase = parm & 3;			break;
 	case 't':  	if (parm) TraceCount = parm; else TraceCount = 0xff;
+			TraceEnabled = 1;
 			log = fopen("z26.log", "w");
 			if (log == NULL)
 			{
 				printf("Couldn't build log file.");
 				TraceCount = 0;
+				TraceEnabled = 0;
 			}
+			OldTraceCount = TraceCount;
 			break;
 
 	case 'r':  	if (parm == 0)

@@ -113,6 +113,9 @@ ReadInputLatches:			; read the input latch
 	add	si,offset InputLatch
 	push	ax
 	mov	al,[si]
+	
+	or	al,07fh
+
 	or	[RetWd],al
 	pop	ax
 	mov	si,offset RetWd

@@ -67,6 +67,8 @@ SetupBanks:
 	mov	[Starpath],0
 
 	mov	ax,[_CartSize]
+	cmp	ax,01000h
+	je	Set4KMode		; 4K cart
 	cmp	ax,02000h
 	je	Set8kMode		; 8K cart
 	cmp	ax,03000h
@@ -86,6 +88,19 @@ SetupBanks:
 	cmp	ax,8448*4
 	je	SetStarpath4
 	ret
+
+Set4KMode:
+	mov	eax,[_Checksum]
+	cmp	eax,08f5eeh
+	je	SCV			; vidlife
+	ret
+
+SCV:
+	mov	[ReadBank], offset RBankCV
+	mov	[WriteBank], offset WBankCV
+	ret
+
+	
 
 Set8kMode:
 	mov	eax,[_Checksum]
@@ -206,6 +221,8 @@ Set16kMode:
 	je	SSC			; klax
 	cmp	ax,04887h
 	je	SSC			; klaxntsc
+	cmp	eax,16217bh
+	je	SSC			; savemary
 
 	cmp	ax,094a9h
 	je	SMN			; he_man
@@ -289,6 +306,44 @@ RBank4: test_hw_read
 WBank4:	test_hw_write
 	ret
 
+
+;*
+;* Commavid RAM cart (vidlife)
+;*
+
+CVR_TestRam macro
+local NotRam
+
+	cmp	si,17ffh
+	ja	NotRam
+	add	si,offset _Ram - 1000h
+	ret
+
+NotRam:
+	endm
+
+CVW_TestRam macro
+local NotRam
+
+	cmp	si,17ffh
+	ja	NotRam
+	add	si,offset _Ram - 1000h - 400h
+	WriteRam
+	ret
+
+NotRam:
+	endm
+
+
+RBankCV: test_hw_read
+	CVR_TestRam
+	add	si,offset _CartRom - 1000h
+	ret
+        
+
+WBankCV:test_hw_write
+	CVW_TestRam
+	ret
 
 ;*
 ;* standard 8K cart (F8)

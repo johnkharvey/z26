@@ -7,6 +7,7 @@
 ; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ; Please see COPYING.TXT for details.
 
+
 .data
 
 OldVideoMode	db	0
@@ -149,6 +150,22 @@ PALPaletteTable db	0,		0,		0		; 00 -- (grey)
 		db	H*95/100,	H*95/100,	H*95/100	; FE
 
 .code
+
+TIASaveVideoMode:
+	pushad
+	mov	ah,0fh
+	int	10h
+	mov	[OldVideoMode],al
+	popad
+	ret
+
+TIARestoreVideoMode:
+	pushad
+	mov	ah,0
+	mov	al,[OldVideoMode]
+	int	10h
+	popad
+	ret
 
 ;*
 ;* turn on graphics mode
@@ -387,15 +404,6 @@ TIATextMode:
 	cmp	[InTextMode],0
 	jz	TIATextDoIt
 	ret
-
-public _VGATextMode
-
-_VGATextMode proc far
-
-	call	TIATextDoIt
-	ret
-
-_VGATextMode endp
 
 TIATextDoIt:
 	mov	[InTextMode],1
