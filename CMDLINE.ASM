@@ -223,7 +223,7 @@ CMFrameExit:				; do <n> frames and exit
 	jmp	CLSkip
 
 CMDsp:
-	mov	[_dsp],al
+	mov	[_dsp],ax
 	jmp	CLSkip
 
 CMVideoMode:

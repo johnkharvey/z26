@@ -4,11 +4,8 @@
 ** Jan  6, 1998 -- Added ShiftRegister9 routine for more accurate 9-bit noise.
 **                 Accurate noise -- think about it!
 ** 
-** Jan  7, 1998 -- Moved modified Fillbuffer here for convenience.
-**
 ** Jan 16, 1998 -- Added digital signal processing.
 **
-** Mar 26, 1998 -- Changed DMABufToLoad to a static unsigned char
 */
 
 
@@ -47,10 +44,11 @@
 /*                                                                           */
 /*****************************************************************************/
 
+/*
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-
+*/
 
 /* define some data types to keep it platform independent */
 #ifdef WIN32
@@ -202,43 +200,6 @@ int ShiftRegister9()
    return(bit9);		/* return the register output */
 }
 
-/******************************************************************************/
-/*                                                                            */
-/* Module:   Fillbuffer                                                       */
-/* Purpose:  Checks to see if the next buffer in the queue is empty and       */
-/*           fills the buffer.                                                */
-/*                                                                            */
-/* Author:   Ron Fries                                                        */
-/* Date:     September 10, 1996                                               */
-/*                                                                            */
-/******************************************************************************/
-
-/*
-** modified by John Saeger (Jan 8, 1998) to use sb.c Sound Blaster routines
-*/
-
-static unsigned char DMABufToLoad = 0;
-extern unsigned char dsp;
-
-void Fillbuffer (void)
-{
-   /* if the SB initialized properly */
-   if (Sb_init)
-   {
-      /* if buffer is not inuse */
-      if (DMABufToLoad != gDMABufNowPlaying)
-      {
-         /* fill the buffer with data */
-         if (DMABufToLoad == 0)
-            Tia_process(DMABuf, gHalfBufSize, dsp);
-         else
-            Tia_process(DMABuf + gHalfBufSize, gHalfBufSize, dsp);
-
-         /* buffer is ready to xmit */
-         DMABufToLoad ^= 1;
-      }
-   }
-}
 
 /*****************************************************************************/
 /* Module:  Tia_sound_init()                                                 */
@@ -607,4 +568,5 @@ void Tia_process (register unsigned char *buffer, register uint16 n, char dsp)
     Div_n_cnt[0] = div_n_cnt0;
     Div_n_cnt[1] = div_n_cnt1;
 }
+
 

@@ -183,7 +183,7 @@ _Checksum	dw	0		; gets cart checksum
 
 
 global	_dsp
-_dsp		db	0		; do digital signal processing
+_dsp		dw	0		; do digital signal processing
 
 global	_VideoMode
 _VideoMode	db	3		; video mode (default mode 3 60Hz)

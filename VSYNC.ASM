@@ -48,8 +48,6 @@ vsync_timeout:
 
 
 
-EXTRN _Fillbuffer:near
-
 segVDDA		equ	040h		;bios video display data area segment
 addr6845	equ	063h		;CRTC i/o address
 

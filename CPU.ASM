@@ -18,16 +18,13 @@ read    macro   op1,op2                 ; read memory at #2 to #1
         mov     si,op2
         call    [ReadBank]              ; call the bank read function
         mov     op1,byte ptr [si]
-
         endm
-        
-
+      
 readsx  macro   op1,op2                 ; read memory at #2 to #1
                                         ; sign extended
         mov     si,op2
         call    [ReadBank]              ; call the bank read function
         movsx   op1,byte ptr [si]
-
         endm
 
 readzx  macro   op1,op2                 ; read memory at #2 to #1
@@ -35,7 +32,6 @@ readzx  macro   op1,op2                 ; read memory at #2 to #1
         mov     si,op2
         call    [ReadBank]              ; call the bank read function
         movzx   op1,byte ptr [si]
-
         endm
 
 read16  macro op1,op2
@@ -44,18 +40,6 @@ read16  macro op1,op2
         mov     op1,word ptr [si]
         endm
 
-
-write   macro   op1,op2                 ; write #1 to memory at #2
-        mov     si,op2                  ; set address
-        mov     [WByte],op1             ; set data
-        call    [WriteBank]
-        endm
-
-zrewrite macro op1			; page zero rewrite byte in #1
-	mov	byte ptr [si],op1
-	endm
-
-
 zread   macro   op1,op2                 ; zero page read
         mov     si,op2
         call    ReadHardwarePage0
@@ -63,21 +47,23 @@ zread   macro   op1,op2                 ; zero page read
         endm
         
 
+
+write   macro   op1,op2                 ; write #1 to memory at #2
+        mov     si,op2                  ; set address
+        mov     [WByte],op1             ; set data
+        call    [WriteBank]
+        endm
+
 zwrite  macro   op1,op2                 ; zeropage write
         mov     si,op2                  ; set address
         mov     [WByte],op1             ; set data
         call    WriteHardwarePage0      ; and write
         endm
 
-jzwrite	macro	op1,op2			; optimized zeropage write
-					; must be last operation in opcode routine
-	mov	si,op2
-	mov	[WByte],op1
-	cmp	si,080h			; TIA write ?
-	jl	WriteTIA		;   yes, JUMP to it
-	mov	[RiotRam-128 + si],op1	;   no, store the byte
+zrewrite macro op1			; page zero rewrite byte in #1
+	mov	byte ptr [si],op1
 	endm
-	
+
 
 
 fetch   macro   op1
@@ -85,13 +71,17 @@ fetch   macro   op1
         inc     bp
         endm
 
-
 fetchsx macro   op1
         readsx  op1,bp
         inc     bp
         endm
 
 fetchzx macro   op1
+        readzx  op1,bp
+        inc     bp
+        endm
+
+fetch_opcode macro   op1		; special fetchzx for trace logging
         readzx  op1,bp
         inc     bp
         endm
@@ -353,7 +343,7 @@ DoInstructions:
 	LoadRegs			; load the CPU registers
 
 InstructionLoop:
-	fetchzx	ebx			; get the opcode
+	fetch_opcode	ebx		; (fetchzx) get the opcode
 	mov	dl,Cycles[bx]		; get cycles takes to do it
 	mov	[RCycles],dl		; save the number of cycles
 	add	[RClock],dl		; add to the clock
@@ -396,7 +386,7 @@ DoInstruction macro
 	push	si
 	LoadRegs			; load the CPU registers
 
-	fetchzx	ebx			; get the opcode
+	fetch_opcode	ebx		; (fetchzx) get the opcode
 	mov	dl,Cycles[bx]		; get cycles takes to do it
 	mov	[RCycles],dl		; save the number of cycles
 	add	[RClock],dl		; add to the clock
@@ -425,19 +415,17 @@ DoInstruction macro
 ALIGN_ENTRY
 
 jam:
-	mov	dx,offset jam_msg
-	mov	ah,9
-	pusha
-	int	MSDOS			; output a message
-	popa
+	push	offset jam_msg
+	call	_put_str
+	pop	cx
+
 	jmp	showinst
 
 fail:
-	mov	dx,offset uuo_msg
-	mov	ah,9
-	pusha
-	int	MSDOS
-	popa	
+	push	offset uuo_msg
+	call	_put_str
+	pop	cx
+
 showinst:
 	dec	bp			; backup the instruction pointer
 	read	al,bp			; read the byte
@@ -535,6 +523,17 @@ PSWZero:or	dl,ah			; bit 0	is Carry
 ALIGN_ENTRY
 
 DoCmp macro
+	mov	dh,al
+
+	sub	dh,dl
+	seto	[FOver]
+	usetest	dh
+	cmc
+	setc	ah
+
+	endm
+
+yDoCmp macro
 	mov	bl,al
 
 	sub	bl,dl
@@ -724,7 +723,7 @@ ALIGN_ENTRY
 op06:	zeropage
 	zread	dl,bx
 	DoASL
-	jzwrite dl,bx
+	zwrite dl,bx
 	ret
 
 
@@ -735,7 +734,7 @@ ALIGN_ENTRY
 op07:	zeropage
 	zread	dl,bx
 	DoSLO
-	jzwrite	dl,bx
+	zwrite	dl,bx
 	ret
 
 
@@ -871,7 +870,7 @@ ALIGN_ENTRY
 op16:	zeropagex
 	zread	dl,bx
 	DoASL
-	jzwrite dl,bx
+	zwrite dl,bx
 	ret
 
 
@@ -882,7 +881,7 @@ ALIGN_ENTRY
 op17:	zeropagex
 	zread	dl,bx
 	DoSLO
-	jzwrite	dl,bx
+	zwrite	dl,bx
 	ret
 
 
@@ -970,21 +969,16 @@ ALIGN_ENTRY
 
 op20:	absolute		; call address in bx now
 	push	ax
-	push	bx
-	push	dx
 	mov	ax,bp		; ax is	the return address
+	mov	bp,bx		; transfer control
 	dec	ax		; push return-1
 	mov	bl,[RS]		; bl is	the stack index
 	mov	bh,1
 	write	ah,bx		; push the return address
 	dec	bl
 	write	al,bx
-	dec	[RS]		; decrement the	stack pointer
-	dec	[RS]
-	pop	dx
-	pop	bx
+	sub	[RS],2		; decrement the	stack pointer
 	pop	ax
-	mov	bp,bx		; transfer control
 	ret
 
 
@@ -1042,7 +1036,7 @@ ALIGN_ENTRY
 op26:	zeropage
 	zread	dl,bx
 	DoROL
-	jzwrite dl,bx
+	zwrite dl,bx
 	ret
 
 
@@ -1053,7 +1047,7 @@ ALIGN_ENTRY
 op27:	zeropage
 	zread	dl,bx
 	DoRLA
-	jzwrite	dl,bx
+	zwrite	dl,bx
 	ret
 
 
@@ -1200,7 +1194,7 @@ ALIGN_ENTRY
 op36:	zeropagex
 	zread	dl,bx
 	DoROL
-	jzwrite dl,bx
+	zwrite dl,bx
 	ret
 
 
@@ -1211,7 +1205,7 @@ ALIGN_ENTRY
 op37:	zeropagex
 	zread	dl,bx
 	DoRLA
-	jzwrite	dl,bx
+	zwrite	dl,bx
 	ret
 
 
@@ -1344,7 +1338,7 @@ ALIGN_ENTRY
 op46:	zeropage
 	zread	dl,bx
 	DoLSR
-	jzwrite dl,bx
+	zwrite dl,bx
 	ret
 
 
@@ -1383,8 +1377,13 @@ op4a:	mov	dl,al
 
 ALIGN_ENTRY
 
-op4c:	absolute		; fetch	the address
+op4c:
+IFDEF memcheats
+	read16	bp,bp
+ELSE
+	absolute		; fetch	the address
 	mov	bp,bx		; jump to it
+ENDIF
 	ret
 
 
@@ -1458,7 +1457,7 @@ ALIGN_ENTRY
 op56:	zeropagex
 	zread	dl,bx
 	DoLSR
-	jzwrite dl,bx
+	zwrite dl,bx
 	ret
 
 
@@ -1577,7 +1576,7 @@ ALIGN_ENTRY
 op66:	zeropage
 	zread	dl,bx
 	DoROR
-	jzwrite dl,bx
+	zwrite dl,bx
 	ret
 
 
@@ -1588,7 +1587,7 @@ ALIGN_ENTRY
 op67:	zeropage
 	zread	dl,bx
 	DoRRA
-	jzwrite	dl,bx
+	zwrite	dl,bx
 	ret
 
 
@@ -1608,9 +1607,7 @@ op68:	inc	[RS]		; increment sp
 
 ALIGN_ENTRY
 
-op69:	mov	bx,bp
-	inc	bp
-	read	dl,bx
+op69:	fetch	dl
 	call	[AddVector]
 	ret
 
@@ -1730,7 +1727,7 @@ ALIGN_ENTRY
 op76:	zeropagex
 	zread	dl,bx
 	DoROR
-	jzwrite dl,bx
+	zwrite dl,bx
 	ret
 
 
@@ -1741,7 +1738,7 @@ ALIGN_ENTRY
 op77:	zeropagex
 	zread	dl,bx
 	DoRRA
-	jzwrite	dl,bx
+	zwrite	dl,bx
 	ret
 
 
@@ -1860,7 +1857,7 @@ ALIGN_ENTRY
 
 op84:	zeropage
 	mov	dl,[RY]
-	jzwrite	dl,bx
+	zwrite	dl,bx
 	ret
 
 
@@ -1869,7 +1866,7 @@ op84:	zeropage
 ALIGN_ENTRY
 
 op85:	zeropage
-	jzwrite	al,bx
+	zwrite	al,bx
 	ret
 
 
@@ -1879,7 +1876,7 @@ ALIGN_ENTRY
 
 op86:	zeropage
 	mov	dl,[RX]
-	jzwrite	dl,bx
+	zwrite	dl,bx
 	ret
 
 
@@ -1889,7 +1886,7 @@ ALIGN_ENTRY
 
 op87:	zeropage
 	DoSAX
-	jzwrite	dl,bx
+	zwrite	dl,bx
 	ret
 
 
@@ -1984,7 +1981,7 @@ ALIGN_ENTRY
 
 op94:	zeropagex
 	mov	dl,[RY]
-	jzwrite	dl,bx
+	zwrite	dl,bx
 	ret
 
 
@@ -1993,7 +1990,7 @@ op94:	zeropagex
 ALIGN_ENTRY
 
 op95:	zeropagex
-	jzwrite	al,bx
+	zwrite	al,bx
 	ret
 
 
@@ -2003,7 +2000,7 @@ ALIGN_ENTRY
 
 op96:	zeropagey
 	mov	dl,[RX]
-	jzwrite	dl,bx
+	zwrite	dl,bx
 	ret
 
 
@@ -2013,7 +2010,7 @@ ALIGN_ENTRY
 
 op97:	zeropagey
 	DoSAX
-	jzwrite	dl,bx
+	zwrite	dl,bx
 	ret
 
 
@@ -2291,9 +2288,7 @@ opbe:	absolutey
 
 ALIGN_ENTRY
 
-opc0:	mov	bx,bp		; bp points to the value now
-	inc	bp
-	read	dl,bx
+opc0:	fetch	dl
 	mov	dh,[RY]
 	CompDH
 	ret
@@ -2346,7 +2341,7 @@ opc6:	zeropage
 	zread	dl,bx
 	dec	dl
 	usetest	dl
-	jzwrite dl,bx
+	zwrite dl,bx
 	ret
 
 
@@ -2365,9 +2360,7 @@ opc8:	mov	bl,[RY]
 
 ALIGN_ENTRY
 
-opc9:	mov	bx,bp
-	inc	bp
-	read	dl,bx
+opc9:	fetch	dl
 	DoCmp
 	ret
 
@@ -2463,7 +2456,7 @@ opd6:	zeropagex
 	zread	dl,bx
 	dec	dl
 	usetest	dl
-	jzwrite dl,bx
+	zwrite dl,bx
 	ret
 
 
@@ -2525,9 +2518,7 @@ opde:	absolutex_rmw		; * Perazzoli *
 
 ALIGN_ENTRY
 
-ope0:	mov	bx,bp		; bp points to the value now
-	inc	bp
-	read	dl,bx
+ope0:	fetch	dl
 	mov	dh,[RX]
 	CompDH
 	ret
@@ -2602,7 +2593,7 @@ ALIGN_ENTRY
 ope7:	zeropage
 	zread	dl,bx
 	DoISB
-	jzwrite	dl,bx
+	zwrite	dl,bx
 	ret
 
 
@@ -2621,9 +2612,7 @@ ope8:	mov	bl,[RX]
 
 ALIGN_ENTRY
 
-ope9:	mov	bx,bp
-	inc	bp
-	read	dl,bx
+ope9:	fetch	dl
 	call	[SubVector]
 	ret
 
@@ -2737,7 +2726,7 @@ opf6:	zeropagex
 	zread	dl,bx
 	inc	dl
 	usetest	dl
-	jzwrite dl,bx
+	zwrite dl,bx
 	ret
 
 
@@ -2748,7 +2737,7 @@ ALIGN_ENTRY
 opf7:	zeropagex
 	zread	dl,bx
 	DoISB
-	jzwrite	dl,bx
+	zwrite	dl,bx
 	ret
 
 

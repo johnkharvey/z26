@@ -41,12 +41,16 @@ PAGE 66,132
 
 ; assembly time definitions
 
+; choose one of these:
+
 ;comfile =		1		; build a COM file
 ;exefile =		1		; build an EXE file
+;module =		1		; build a C linkable module
 
-; if both of the above are undefined, build a module linkable from C
+; and choose any of these
 
 memcheats =		1		; cheat	on 16-bit reads
+;trace =		1		; generate tracing code
 ;dotiming =		1		; generate timing blips
 
 
@@ -80,6 +84,7 @@ EXTRN _Ram:word
 
 .CODESEGMENT
 	
+	include trace.asm		; trace buffer stuff
 	include banks.asm		; bank switch code
 	include cpu.asm			; 6502 opcodes, macros and support routines
 	include math.asm		; Paul Robson's original math routines

@@ -16,8 +16,23 @@ SetupBanks:
 	ret
 
 Set8kMode:
+	mov	ax,[_Checksum]
+	cmp	ax,0e446h
+	je	SPB			; dethstar
+	cmp	ax,0f9f8h
+	je	SPB			; gyruss
+	cmp	ax,09a6dh
+	je	SPB			; sprcobra
+
 	mov	[ReadBank], offset RBank8
 	mov	[WriteBank], offset WBank8
+	ret
+
+
+; set up Parker Brother's bank switch scheme
+
+SPB:	mov	[ReadBank], offset RBank8pb
+	mov	[WriteBank], offset WBank8pb
 	ret
 
 Set12KMode:
@@ -352,9 +367,173 @@ WBank16scTestRam:
 	pop	ax
 	ret
 
+;*
+;* Parker Brother's 8K cart
+;*
+
+ALIGN_ENTRY
+
+RBank8pb:
+	and	si,01fffh
+	cmp	si,1000h		; if not ROM, read hardware
+	jb	ReadHardware
+	cmp	si,1Fe0h		; if not in switch area...
+	jb	RBank8pbNoChange	; theres no change
+	cmp	si,1FF8h
+	ja	RBank8pbNoChange
+
+	push	eax
+	movzx	eax,si
+	sub	ax,1Fe0h		; slice setting routine to call
+	call	[PBSliceSet + eax*2]
+	pop	eax
+
+RBank8pbNoChange:
+	push	eax
+	movzx	eax,si
+	shr	eax,10			; slice # we're in
+	add	si,[PBSlice0 + eax*2]	; point to proper ROM slice
+
+	add	si,offset _CartRom - 1000h
+	pop	eax
+	ret
+
+
+ALIGN_ENTRY
+
+WBank8pb:
+	and	si,01fffh
+	cmp	si,1000h		; if not ROM,no effect
+	jb	WriteHardware
+	cmp	si,1Fe0h		; if not in switch area...
+	jb	WBank8pbNoChange	; theres no change
+	cmp	si,1FF8h
+	ja	WBank8pbNoChange
+
+	push	eax
+	movzx	eax,si
+	sub	ax,1Fe0h		; slice setting routine to call
+	call	[PBSliceSet + eax*2]
+	pop	eax
+
+WBank8pbNoChange:
+	push	eax
+	movzx	eax,si
+	shr	eax,10			; slice # we're in
+	add	si,[PBSlice0 + eax*2]	; point to proper ROM slice
+
+	pop	eax
+	ret
+
+
+; Parker Brother's slice setting routines
+
+PB0_0:	mov	[PBSlice0],0
+	ret
+
+PB0_1:	mov	[PBSlice0],0400h
+	ret
+
+PB0_2:	mov	[PBSlice0],0800h
+	ret
+
+PB0_3:	mov	[PBSlice0],0c00h
+	ret
+
+PB0_4:	mov	[PBSlice0],1000h
+	ret
+
+PB0_5:	mov	[PBSlice0],1400h
+	ret
+
+PB0_6:	mov	[PBSlice0],1800h
+	ret
+
+PB0_7:	mov	[PBSlice0],1c00h
+	ret
+
+PB1_0:	mov	[PBSlice1],0
+	ret
+
+PB1_1:	mov	[PBSlice1],0400h
+	ret
+
+PB1_2:	mov	[PBSlice1],0800h
+	ret
+
+PB1_3:	mov	[PBSlice1],0c00h
+	ret
+
+PB1_4:	mov	[PBSlice1],1000h
+	ret
+
+PB1_5:	mov	[PBSlice1],1400h
+	ret
+
+PB1_6:	mov	[PBSlice1],1800h
+	ret
+
+PB1_7:	mov	[PBSlice1],1c00h
+	ret
+
+PB2_0:	mov	[PBSlice2],0
+	ret
+
+PB2_1:	mov	[PBSlice2],0400h
+	ret
+
+PB2_2:	mov	[PBSlice2],0800h
+	ret
+
+PB2_3:	mov	[PBSlice2],0c00h
+	ret
+
+PB2_4:	mov	[PBSlice2],1000h
+	ret
+
+PB2_5:	mov	[PBSlice2],1400h
+	ret
+
+PB2_6:	mov	[PBSlice2],1800h
+	ret
+
+PB2_7:	mov	[PBSlice2],1c00h
+	ret
+
 
 .CEND
 .DATASEGMENT
+
+
+;Parker Brother's slice setting branch table
+
+
+PBSliceSet	dw	PB0_0
+		dw	PB0_1
+		dw	PB0_2
+		dw	PB0_3
+		dw	PB0_4
+		dw	PB0_5
+		dw	PB0_6
+		dw	PB0_7
+
+		dw	PB1_0
+		dw	PB1_1
+		dw	PB1_2
+		dw	PB1_3
+		dw	PB1_4
+		dw	PB1_5
+		dw	PB1_6
+		dw	PB1_7
+
+		dw	PB2_0
+		dw	PB2_1
+		dw	PB2_2
+		dw	PB2_3
+		dw	PB2_4
+		dw	PB2_5
+		dw	PB2_6
+		dw	PB2_7
 
 ; Memory read/write vectors
 
@@ -364,6 +543,15 @@ ReadBank	dw	RBank4		; default to 4K cart
 WriteBank	dw	WBank4
         
 RomBank		dw	0		; Rom bank pointer for F8 & F16
+
+
+; Parker Brother's ROM Slices
+
+PBSlice0	dw	0
+PBSlice1	dw	0
+PBSlice2	dw	0
+PBSlice3	dw	1c00h		; this one doesn't change
+					; points to 1K bank #7
 
 .DEND
 .CODESEGMENT

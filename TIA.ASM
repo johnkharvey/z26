@@ -4,8 +4,6 @@
 
 ALIGN_ENTRY
 
-EXTRN _StartSound:near;
-
 
 start:
 
@@ -99,9 +97,6 @@ RTLoop:
 	mov	eax,[FrameExit]
 	mov	[OriginalFrameExit],eax	; remember how many frames we did for FPS calculation
 
-	call	_StartSound		; we need to wait till the last minute for this
-					; to minimize startup noises
-
 
 ;*
 ;* the main outer loop
@@ -110,10 +105,6 @@ RTLoop:
 ALIGN_ENTRY
 
 EXTRN _Sb_init:BYTE
-EXTRN _Fillbuffer:near
-
-;EXTRN _PauseDMA:near
-;EXTRN _ContinueDMA:near
 
 xmain:  
 	cmp	[FrameExit],0		; exiting after <n> frames ?
@@ -214,13 +205,11 @@ GoDOS:
 	call	TIATextMode		; back to text mode
 	call	SetOldInt9		; reset the key handler
 
-					; empty the keyboard buffer
-Empty:	mov	ah,0Bh			; key waiting....
-	int	MSDOS
-	cmp	al,0FFh			; if not,exit
-	jne	Quit
-	call	ConIn			; read it
+Empty:	call	_kb_hit			; empty the keyboard buffer
+	jz	Quit			;   buffer empty
+	call	_get_char		; read char
 	jmp	Empty
+
 Quit:	
 IFDEF module
 	mov	bp,ModuleBP
@@ -236,7 +225,6 @@ ENDIF
 ;* Do One Frame
 ;*
 
-EXTRN _Fillbuffer:near
 EXTRN _Sb_init:BYTE
 
 ALIGN_ENTRY

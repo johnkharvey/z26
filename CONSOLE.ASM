@@ -3,11 +3,11 @@ global	_put_hex
 global	_put_str
 global	_crlf
 
+global	_kb_hit
+global	_get_char
 
-;Here's the original integer output routine from TECO for a PDP-10 by RC CLEMENTS
-
-;The original PDP-10 version is dated 1970.  
-;But I suspect the algorithm is much older.
+;Here's the integer output routine from TECO for a PDP-10 by RC CLEMENTS
+;This version is dated 1970.
 
 
 ;ROUTINE TO OUTPUT DECIMAL (OCTAL IF S.OCTL IS ON) INTEGER
@@ -61,32 +61,26 @@ ConWord:push	ax
 	call	ConHex
 	ret
 
-;*
-;* output hex long in eax
-;*
-
-ConLong:push	eax
-	shr	eax,16
-	call	ConWord
-	pop	eax
-	Call	ConWord
-	ret
-        
 ; *****************************************************************************
-;			     Output Hex	Byte in	AL
+;			    Output Hex Byte in AL
 ; *****************************************************************************
 
 ConHex:	push	ax		; save ax
 	push	ax		; save for low byte
 	shr	ax,4		; high byte
-	call	ConHex2
+	call	HexNybble
 	pop	ax		; low byte
-	call	ConHex2
+	call	HexNybble
 	pop	ax
 	ret
 
-ConHex2:push	ax
-	and	ax,15		; print	NIBL in	hex
+; *****************************************************************************
+;                    Output nybble in bottom of AL in hex
+; *****************************************************************************
+
+HexNybble:
+	push	ax
+	and	ax,15
 	cmp	ax,10
 	jl	NotHexC
 	add	ax,7
@@ -95,24 +89,6 @@ NotHexC:add	ax,'0'
 	pop	ax
 	ret
         
-; *****************************************************************************
-;			Input of Character into	AL
-; *****************************************************************************
-
-ConIn:	pushad
-	mov	ah,8		; Read char from console (MS-DOS)
-	int	MSDOS		; its now in AL
-	cmp	al,0		; extended ?
-	jnz	CINotX
-	mov	ah,8		; read next & set bit 7
-	int	MSDOS
-	or	al,080h		; set bit 7
-	push	ax
-CINotX:	popad
-	pop	ax
-	xor	ah,ah
-	ret
-	
 ; *****************************************************************************
 ;			  Output character in AL
 ; *****************************************************************************
@@ -167,8 +143,10 @@ _put_str:
 
 psloop:	mov	al,[bx]
 	inc	bx
-	test	al,al
-	jz	psret
+	test	al,al		; null terminator ?
+	jz	psret		;   yes, done
+	cmp	al,'$'		; old style terminator?
+	jz	psret		;   yes, done
 	cmp	al,10		; an 'LF' ?
 	jne	psnolf		;   no
 	mov	al,13		;   yes, output 'CR' first
@@ -178,6 +156,7 @@ psnolf:	call	ConOut
 	jmp	psloop
 
 psret:	ret
+
 
 ;*
 ;* output <CR><LF>
@@ -189,3 +168,30 @@ _crlf:
 	mov	al,10
 	call	ConOut
 	ret
+
+
+;*
+;* int kb_hit()
+;*
+
+_kb_hit:
+	mov	ah,1
+	int	16h		; check keyboard buffer
+	jz	NoChar		;   nothing there
+	mov	ax,1		; char available
+	ret
+
+NoChar:	mov	ax,0
+	ret
+
+
+;*
+;* int get_char()
+;*
+
+_get_char:
+	mov	ah,0
+	int	16h		; get char from buffer
+	xor	ah,ah
+	ret
+

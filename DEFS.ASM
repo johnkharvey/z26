@@ -1,5 +1,6 @@
 ;other definitions -- outside any segment
 
+
 MSDOS =			021H		; MSDOS	caller
 
 CyclesPerScanLine = 	76		; TIA timing constant

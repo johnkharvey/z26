@@ -1,6 +1,5 @@
 /*
-** Messages -- we save ~ 1500 bytes by not using printf
-**	       see console.asm for implementations
+** Messages
 */
 
 
@@ -10,7 +9,7 @@
 
 ShowCopyright()
 {
-  put_str("\n\nz26 -- An Atari 2600 emulator (0.97)\n");
+  put_str("\n\nz26 -- An Atari 2600 emulator (0.98)\n");
   put_str("Copyright (C) 1997-1998 by John Saeger\n\n");
 
   put_str("Home Page:  http://www.whimsey.com/z26\n\n");
@@ -79,7 +78,7 @@ PressKeyToContinue()
   int ch;
 
   put_str("\nPress a key to continue, <esc> to exit...\n");
-  ch = getch();
+  ch = get_char();
   if (ch == 27) exit(0);	/* escape pressed */
 }
 
@@ -92,15 +91,26 @@ ShowBlaster()
 {
   int ver;
 
-  put_str("           I/O port: "); put_hex(sbBaseIOPort); crlf();
+  put_str("           I/O port: "); put_hex(sbBaseIOPort);  crlf();
   put_str("          DMA 8-bit: "); put_dec(sbDMAChan8Bit); crlf();
-  put_str("                IRQ: "); put_dec(sbIRQNumber); crlf();
+  put_str("                IRQ: "); put_dec(sbIRQNumber);   crlf();
   put_str("        DSP Version: "); put_dec((sbDSPVersion >> 8) & 0x00FF);
 				    put_str(".");
 				    ver = sbDSPVersion & 0xFF;
 				    if (ver < 10) put_str("0");
 				    put_dec(ver);
 				    crlf();
+}
+
+
+/*
+** show Sound Blaster environment string bad
+*/
+
+ShowBlasterEnvBad()
+{
+  put_str("Problem with Sound Blaster environment string.\n");
+  PressKeyToContinue();
 }
 
 
@@ -135,9 +145,9 @@ ShowBlasterDetected()
 {
   put_str("\nSound Blaster detected.\n\n");
   ShowBlaster();
-  put_str("        Buffer Size: "); put_dec(gDMABufSize); crlf();
-  put_str(" Playback Frequency: "); put_dec(playback_freq); crlf();
-  put_str("      Time Constant: "); put_dec(ssTimeConstant); crlf();
+  put_str("        Buffer Size: "); put_dec(gDMABufSize);    crlf();
+  put_str(" Playback Frequency: "); put_dec(playback_freq);  crlf();
+  put_str("      Time Constant: "); put_dec(sbTimeConstant); crlf();
   PressKeyToContinue();
 }
 

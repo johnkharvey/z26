@@ -77,18 +77,29 @@
 **
 */
 
-#include <stdio.h>		/* puts */
-#include <stdlib.h>		/* getenv */
 #include <dos.h>		/* _psp */
 
 char Sb_init = 0;		/* mark Sound Blaster currently not in use */
+
+
+short int	sbBaseIOPort;
+unsigned char	sbDMAChan8Bit;
+short int	sbDSPVersion;
+unsigned char	sbIRQNumber;
+unsigned char	sbDMAPage;
+short int	sbDMAOffset;
+unsigned char	sbTimeConstant;
+
+
+unsigned char	DMABufToLoad = 0;
+unsigned char   gDMABufNowPlaying;
+unsigned char   *DMABuf;
 
 #define SAMPLE_FREQ 31400
 #define gDMABufSize 256		/* 128 bytes per interrupt */
 #define gHalfBufSize gDMABufSize / 2
 
-unsigned int playback_freq = SAMPLE_FREQ;	/* was 31400 */
-unsigned int sample_freq =   SAMPLE_FREQ;	/* was 31400 */
+unsigned int playback_freq;
 
 extern short int psp;		/* (data.asm) */
 extern short int Checksum;
@@ -100,16 +111,19 @@ extern char	quiet;
 extern char	credits;
 extern char	JobDone;
 
-unsigned char CartRom[16384];	/* read the card in here */
+unsigned char CartRom[16384];	/* read the cart in here */
+unsigned char BaseDMABuf[(gDMABufSize+1) * 2]; /* Sound Blaster DMA buffer */
 unsigned char Ram[2048];	/* extra RAM */
+unsigned char TraceBuffer[8182]; /* trace buffer */
 
-#include "sb.c"			/* Sound Blaster driver code */
+
 #include "tiasound.c"		/* Ron Fries' sound code */
 #include "messages.c"		/* messages */
 
+
 main() 
 {
-  memset(Ram,0,2048);		/* clear out ram */
+  memset(Ram,0,2048);		/* clear out extra ram */
 
   psp = _psp;			/* for command line processor (cmdline.asm) */
   CommandLine();		/* call command line processor */
@@ -132,54 +146,17 @@ main()
     goto done;
   }
 
-  if (quiet) goto no_sound;
-
-  if (GetBlastEnv() == FAIL)
+  if (!quiet)
   {
-    if (verbose) ShowBlasterNotFound();
-    goto no_sound;
+    if (SetupSoundBlaster()) goto done; /* user pressed escape while waiting */
   }
-
-  if (sbDSPVersion < 0x0200)  /* DSP version < 2.xx */
-  {
-    if (verbose) ShowBlasterTooOld();
-    goto no_sound;
-  }
-
-  if (sbDSPVersion == 0x200)  		/* DSP version = 2.00 */
-  {
-    playback_freq = SAMPLE_FREQ / 2;	/* was 15700 */
-  }
-
-  Tia_sound_init (sample_freq, playback_freq);
-
-  DMABufPhysAddr = AllocateDMABuffer();
-  SilenceBuffer();			/* fill sound buffer with silence */
-
-  ssChannels = 1;		/* mono */
-  ssSampPerSec = playback_freq;
-  ssTimeConstant = (unsigned short int) ((256L - 1000000L)
-				   / ((long) ssChannels * ssSampPerSec) & 0x00FF);
-
-  if (verbose) ShowBlasterDetected();
-
-  DMABufToLoad = 1;		/* next half buffer to load is top half */
-  gDMABufNowPlaying = 0;	/* altered by ISR when buffer done playing */
-  gHighSpeed = FALSE;		/* init to NOT hi-speed DMA */
-
-  SetISR();			/* set up the interrupt handler */
-
-  ProgramDMA(DMABufPhysAddr, gDMABufSize);
-
-  Sb_init = 1;			/* mark Sound Blaster initialized */
-
-no_sound:
 
   emulator();			/* call emulator (tia.asm) */
 
 done:
   if (Sb_init)
   {
-    RestoreISR();		/* turn off DMA & restore old ISR */
+    RestoreISR();		/* turn off Sound Blaster DMA 
+                                   and restore old ISR */
   }
 }
