@@ -1,13 +1,6 @@
 ;*
-;* vertical synchronization code
+;* vertical synchronization code for z26
 ;*
-
-; Mar 18, 1998  (0.96)  added timeout code
-; Apr 24, 1998  (1.00x) added sync that does VSync with a timeout (currently default mode)
-;                       removed timeout from NDI code (mode 2)
-;
-; Apr 29, 1998          extreme simplification, do timing with hardware clock
-; Jul 14, 1998	(1.08)	variable game speed
 
 
 CRTSTAT=	03dah			; CRT status register
@@ -36,7 +29,7 @@ NDLoop:	sti
 
 	call	_GetTime		; 32-bit hardware time (1.19 MHz)
 	mov	ecx,eax			; start time
-	add	ecx,120			; end time
+	add	ecx,321			; (120) end time (one VGA scan line ~ 37.7)
 
 NDOff:	mov	dx,CRTSTAT		; time the off period
 	in	al,dx
@@ -60,7 +53,7 @@ VSRet:	ret				;   yes, we're done
 .DATASEGMENT
 
 FrameTime	dd	0
-TicksPerSecond	dd	1193182			; 14318180/12
+TicksPerSecond	dd	1193182		; 14318180/12
 
 .DEND
 .CODESEGMENT

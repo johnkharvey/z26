@@ -55,7 +55,6 @@ entry:	jmp	start			; jump around our data
 	include cpuhand.asm		; cpu memory & register handlers
 	include tia.asm			; <-- the main machine -- * start here *
 	include tiahand.asm		; TIA register handlers
-	include missile.asm		; missile code
 	include tiabuf.asm		; TIA buffer management stuff
 	include tiasnd.asm		; asm version of Ron Fries' TIASound
 	include time.asm		; z26 timing functions
@@ -64,7 +63,6 @@ entry:	jmp	start			; jump around our data
 	include keyboard.asm		; convert keyboard into Atari joystick
 	include joy.asm			; joystick routines
 	include sound.asm		; PC speaker support
-	include dosmem.asm		; DOS far memory allocator
 	include Pcxwrite.asm		; Ronnie Greene's PCX file dumper
 	include console.asm		; console output (for debugging)
 	include msg.asm			; messages

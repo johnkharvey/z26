@@ -12,6 +12,8 @@ SetupSpecial:
 	je	SSReverse		; doubdunk (cures bad graphics)
 	cmp	ax,02bc1h
 	je	SSReverse		; mspacman (shows first line)
+	cmp	ax,0676ch
+	je	SSReverse		; commando (weird missile)
 
 	jmp	SSVSYNC
 
