@@ -26,7 +26,9 @@ _BaseDMABuf	db	BUF_SIZE*2+2 dup (?)	; Sound Blaster DMA buffer
 
 _TraceBuffer	db	8192 dup (?)	; trace buffer
 
-Bit9		db	511 dup (?)	
+Bit9		db	511 dup (?)	; for sound generation
+
+ModeXBuffer	db	320+64 dup (?)	; for ModeX line rendering (a little extra here)
 
 EndMemory	label	byte		; <- mark end of memory to be cleared
 

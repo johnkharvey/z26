@@ -47,6 +47,7 @@ entry:	jmp	start			; jump around our data
 	include cmdline.asm		; command line interpreter
 	include special.asm		; process special cartridges
 	include graphics.asm		; VGA graphics initialization
+	include	modex.asm		; modex support
 	include vsync.asm		; vertical synchronization
 
 	include trace.asm		; trace buffer stuff

@@ -2,37 +2,43 @@
 ;			      Other stuff
 ; *****************************************************************************
 
-ScanLine	dw	0		; current scan line
 Frame		dd	0		; Frame Counter
 PrevFrame	dd	0		; Previous value frame counter
 
-FEnd=$
+FrameExit	dd	0		; do this many frames and exit
+OriginalFrameExit dd	0		; save it here for FPS calculation
+StartTicks	dd	0		; ticks at start
+StopTicks	dd	0		; ticks at finish
 
-ALIGN 2
-
+ScanLine	dw	1		; current scan line
 TopLine		dw	0		; was 36     top line of display
 BottomLine	dw	0		; was 36+200 bottom line of display
 
 OldCFirst	dw	0		; remember original CFirst
 					; (for homing the display)
 
+DefaultCFirst	dw	0ffffh		; recommended start of game
+UserCFirst	dw	0ffffh		; remember what user specified (if anything)
+
 DEFAULT_CFirst = 39
+MEDIUM_Offset = 19			; offset a medium game this much
+					; tune so that game in mode 3 and mode 5
+					; appear at same vertical position
+					; (unless it's a known tall game)
+
+MAX_TallGame = 240			; size of a tall game
 
 CFirst		dw	0ffffh		; <-- gets changed by SetupSpecial
 					; (zero has VBlank trigger a new frame)
-					 
-MaxLines	dw	200		; max # of lines to scan
+
+InitialMaxLines	dw	204		; for remembering which games are medium and tall					 
+MaxLines	dw	204		; max # of lines to scan
 					; (gets changed by graphics.asm)
 
 DisplayPointer	dw	0		;pointer into display RAM
 DisplayTranslate dw offset TIADisplayToColour ;display to color translation table
 
 ALIGN 4
-
-FrameExit	dd	0		; do this many frames and exit
-OriginalFrameExit dd	0		; save it here for FPS calculation
-StartTicks	dd	0		; ticks at start
-StopTicks	dd	0		; ticks at finish
 
 ; *** keep next 4 variables in order !!!!
 ; they are arranged to match the order of the entries in TIAColourTable
@@ -41,9 +47,6 @@ BackgroundColor	dd	0
 PlayfieldColor	dd	0
 Player1Color	dd	0
 Player0Color	dd	0
-
-
-MicroTick	db	0		; holds a small tick from hardware counter
 
 NoRetrace	db	0		; don't wait for retrace (if 0ffh)
 					; moved to vsync.asm
@@ -65,38 +68,16 @@ WByte		db	0		; byte to write
 
 ALIGN 2
 
-OldInt9		dw	0,0		; old vector for int9
-
 TIABuffer	db 256 dup (TIAEnd)	; TIA information buffer
 					; 128 just isn't big enough for some
-					; trashed games.  I've seen SVector get
-					; stepped on (see below)
-					; then we're outta control
-
+					; trashed games.
 
 VDP0Gr		db	0		; Buffer for Player 0 Vert Del Graphic
 VDP1Gr		db	0		; Buffer for Player 1 Vert Del Graphic
 VDBlEn		db	0		; Buffer for Ball Vertical Delay Enable
 
-TIAScanLine	dw	0		; Scanline
 TIAWritePointer dw	0		; Write to TIA Buffer pointer
-TIAFrameSkip	dw     -1		; zero if frame skipped
 TIACollide	dw	0		; Collision flag word.
-
-SVector dw	PCSound			; Vector for sound updates
-
-AudC0	db	-1			; Sound registers
-AudC1	db	-1
-AudF0	db	-1
-AudF1	db	-1
-AudV0	db	-1
-AudV1	db	-1
-
-AudMask db	15,15,31,31,15,15	; bitmask for the registers
-
-SDMPX	db	2			; 0 = ch1,1 = ch2,2 = both,-1 = quiet
-MinVol	db	8			; minimum volume for PC Speaker
-
 
 ; *** stuff that gets shared with "C" program ***
 
@@ -105,7 +86,7 @@ psp		dw	0		; gets pointer to PSP
 					; (if .EXE file or module)
 _Checksum	dd	0		; gets cart checksum
 _dsp		dw	0		; do digital signal processing
-_VideoMode	db	3		; video mode (default mode 3 60Hz)
+_VideoMode	db	0ffh		; default video mode
 _Joystick	db	1		; do joystick
 _DoChecksum	db	0		; set if we should print out checksum
 _verbose	db	0		; verbose

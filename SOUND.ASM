@@ -5,6 +5,62 @@
 ;
 ; *****************************************************************************
 
+.CEND
+.DATASEGMENT
+
+Frequency dw 39 ; 30000.00 Hz
+ dw 79 ; 15000.00 Hz
+ dw 119 ; 10000.00 Hz
+ dw 159 ; 7500.00 Hz
+ dw 198 ; 6000.00 Hz
+ dw 238 ; 5000.00 Hz
+ dw 278 ; 4285.71 Hz
+ dw 318 ; 3750.00 Hz
+ dw 357 ; 3333.33 Hz
+ dw 397 ; 3000.00 Hz
+ dw 437 ; 2727.27 Hz
+ dw 477 ; 2500.00 Hz
+ dw 517 ; 2307.69 Hz
+ dw 556 ; 2142.86 Hz
+ dw 596 ; 2000.00 Hz
+ dw 636 ; 1875.00 Hz
+ dw 676 ; 1764.71 Hz
+ dw 715 ; 1666.67 Hz
+ dw 755 ; 1578.95 Hz
+ dw 795 ; 1500.00 Hz
+ dw 835 ; 1428.57 Hz
+ dw 875 ; 1363.64 Hz
+ dw 914 ; 1304.35 Hz
+ dw 954 ; 1250.00 Hz
+ dw 994 ; 1200.00 Hz
+ dw 1034 ; 1153.85 Hz
+ dw 1073 ; 1111.11 Hz
+ dw 1113 ; 1071.43 Hz
+ dw 1153 ; 1034.48 Hz
+ dw 1193 ; 1000.00 Hz
+ dw 1233 ; 967.74 Hz
+ dw 1272 ; 937.50 Hz
+;
+
+SVector dw	PCSound			; Vector for sound updates
+
+AudC0	db	-1			; Sound registers
+AudC1	db	-1
+AudF0	db	-1
+AudF1	db	-1
+AudV0	db	-1
+AudV1	db	-1
+
+AudMask db	15,15,31,31,15,15	; bitmask for the registers
+
+SDMPX	db	2			; 0 = ch1,1 = ch2,2 = both,-1 = quiet
+MinVol	db	8			; minimum volume for PC Speaker
+
+
+.DEND
+.CODESEGMENT
+
+
 ; *****************************************************************************
 ;
 ;	On entry,BL is the sound register,BH is	the data written there
@@ -124,45 +180,4 @@ SoundOff:
 	inc	bl
 	jmp	[SVector]
 
-.CEND
-.DATASEGMENT
-
-ALIGN 2
-
-Frequency dw 39 ; 30000.00 Hz
- dw 79 ; 15000.00 Hz
- dw 119 ; 10000.00 Hz
- dw 159 ; 7500.00 Hz
- dw 198 ; 6000.00 Hz
- dw 238 ; 5000.00 Hz
- dw 278 ; 4285.71 Hz
- dw 318 ; 3750.00 Hz
- dw 357 ; 3333.33 Hz
- dw 397 ; 3000.00 Hz
- dw 437 ; 2727.27 Hz
- dw 477 ; 2500.00 Hz
- dw 517 ; 2307.69 Hz
- dw 556 ; 2142.86 Hz
- dw 596 ; 2000.00 Hz
- dw 636 ; 1875.00 Hz
- dw 676 ; 1764.71 Hz
- dw 715 ; 1666.67 Hz
- dw 755 ; 1578.95 Hz
- dw 795 ; 1500.00 Hz
- dw 835 ; 1428.57 Hz
- dw 875 ; 1363.64 Hz
- dw 914 ; 1304.35 Hz
- dw 954 ; 1250.00 Hz
- dw 994 ; 1200.00 Hz
- dw 1034 ; 1153.85 Hz
- dw 1073 ; 1111.11 Hz
- dw 1113 ; 1071.43 Hz
- dw 1153 ; 1034.48 Hz
- dw 1193 ; 1000.00 Hz
- dw 1233 ; 967.74 Hz
- dw 1272 ; 937.50 Hz
-;
-
-.DEND
-.CODESEGMENT
 	

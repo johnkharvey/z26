@@ -5,6 +5,110 @@
 ; *****************************************************************************
 
 TIAGraphicMode:
+	pushad
+
+;	mov	ah,1			; turn off the cursor
+;	mov	ch,020h
+;	int	010h
+
+;	mov	ax,012h			; start in mode 12h
+;	int	010h			; let BIOS clear memory
+
+	mov	ax,013h			; switch to 320x200 VGA mode
+	int	010h
+
+	cmp	[ModeX],0		; were we in ModeX ?
+	jz	DontSetDelayedClear	;   no, don't set delayed clear
+
+	mov	[MXDelayedClear],1	;   yes, have TIA clear mem again later
+					;        *** kludge, don't know why ***
+					;        switch from mode 7 to 4, 5 or 6
+					;        leaves garbage at bottom of screen
+					;        sometimes if we don't do this
+
+DontSetDelayedClear:
+	mov	[ModeX],0		; just in case...
+
+;*
+;* adjust CFirst based on video mode
+;*
+
+	mov	dx,[UserCFirst]
+	mov	[CFirst],dx
+	cmp	[UserCFirst],0ffffh		; did user specify a line number ?
+	jne	SSLINE_Done			;   yes, don't override
+	mov	dx,[DefaultCFirst]
+	mov	[CFirst],dx
+
+	cmp	[InitialMaxLines],MAX_TallGame	; is this a known tall game ?
+	je	SSLINE_Normal			;   yes
+
+	cmp	[InitialMaxLines],220		; is this a known medium game ?
+	je	SSLINE_Medium
+
+	cmp	[_VideoMode],0ffh		; has video mode been set ?
+	je	SSLINE_Normal			;   no, short in short -- "normal"
+	cmp	[_VideoMode],3			; short game in tall video mode ?
+	jbe	SSLINE_Normal			;   no, short in short -- "normal"
+
+TryMove:
+	cmp	[CFirst],0ffffh			;   yes, line set ?
+	jne	MoveUp				;          yes, move up 
+	mov	[CFirst],DEFAULT_CFirst-MEDIUM_Offset ;          no, use a smaller default
+	jmp	SSLINE_Done
+
+SSLINE_Normal:
+	cmp	[CFirst],0ffffh			; start line set up ?
+	jne	SSLINE_Done			;   yes, done
+Set_Normal:
+	mov	[CFirst],DEFAULT_CFirst		;   no, use default
+	jmp	SSLINE_Done
+
+SSLINE_Medium:
+	cmp	[_VideoMode],0ffh		; video mode set ?
+	je	TryMove				;    no
+	cmp	[_VideoMode],3			;    yes, short one ?
+	ja	TryMove				;            no
+	jmp	SSLINE_Normal			;            yes, "normal"
+
+MoveUp:	cmp	[CFirst],MEDIUM_Offset+1	; short game already too high ?
+	jb	SSLINE_Done			;    yes, unlikely -- leave it alone
+	sub	[CFirst],MEDIUM_Offset
+	jmp	SSLINE_Done
+
+SSLINE_Done:
+	mov	dx,[CFirst]
+	mov	[OldCFirst],dx			; remember starting line for homing the display
+
+
+	cmp	[_VideoMode],0ffh	; did user specify a video mode?
+	jne	SetMaxLines		;   yes, don't use defaults
+	cmp	[MaxLines],204		; is MaxLines above what mode 3 can handle?
+	ja	SetMX5			;   yes, use mode 5
+	mov	[_VideoMode],3		;   no,  use mode 3
+	jmp	GeneratePalette
+
+SetMX5:	mov	[_VideoMode],5
+	jmp	GeneratePalette
+
+SetMaxLines:
+	cmp	[_VideoMode],2		; user specified a video mode
+	ja	SML1
+Set200:
+	mov	[MaxLines],200		; modes 0, 1 and 2 gets 200 lines
+	jmp	GeneratePalette
+
+SML1:	cmp	[_VideoMode],3
+	ja	SML2
+	mov	[MaxLines],204		; mode 3 gets 204 lines
+	jmp	GeneratePalette
+
+SML2:	cmp	[_VideoMode],7		; anything above 7 ?
+	ja	Set200			;   yes, 200 lines
+	mov	[MaxLines],MAX_TallGame	;   no, X modes get 240 lines
+	jmp	GeneratePalette
+	
+	
 
 ;*
 ;* generate palette
@@ -18,16 +122,18 @@ TIAGraphicMode:
 
 GeneratePalette:
 	mov	si,offset DefaultPaletteTable
-	cmp	[PaletteNumber],0
-	je	GPUseDefault
-	cmp	[PaletteNumber],1
-	je	GPUsePAL
-	cmp	[CFirst],54
-	jb	GPUseDefault
+	cmp	[PaletteNumber],0	; user specify palette 0 ?
+	je	GPUseNTSC		;   yes, use NTSC
+	cmp	[PaletteNumber],1	; user specify palette 1 ?
+	je	GPUsePAL		;   yes, use PAL
+	cmp	[DefaultCFirst],0ffffh	; is there a default starting line ?
+	je	GPUseNTSC		;   no, use NTSC
+	cmp	[DefaultCFirst],50	; starting line < 50 ?
+	jb	GPUseNTSC		;   no, use NTSC
 
 GPUsePAL:
 	mov	si,offset PALPaletteTable
-GPUseDefault:
+GPUseNTSC:
 	mov	di,offset PCXPalette
 	mov	[PaletteCount],0	; do 16 colors
 PaletteLoop:				; <-- for each color
@@ -64,26 +170,28 @@ RGBLoop:
 	
 ; continue with hardware stuff
 
-	mov	ah,1			; turn off the cursor
-	mov	ch,020h
-	int	010h
-	mov	ah,0			; switch to 320x200 VGA	mode
-	mov	al,013h
-	int	010h
-
 	call	TIAPalette		; set up the palette
 
+	mov	ax,0a000h
+	mov	gs,ax			; point GS to VGA area
+
 	cmp	[_VideoMode],0		; doing offbeat video modes ?
-	jz	GRRet			;   no
-
-GRV1:	cmp	[_VideoMode],3		; doing Trixter 60Hz (mode 1, 2 or 3) ?
-	ja	GRRet			;   no
-	call	Trixter60Hz		;   yes
-	mov	[_VideoMode],0		; pretend we're mode 13
-	jmp	GRRet
-
-GRRet:	mov	[_VideoMode],0		; any other mode, pretend mode 0	
+	jnz	OffBeat			;   yes
+	popad
 	ret
+
+OffBeat:
+	cmp	[_VideoMode],3		; doing Trixter 60Hz (mode 1, 2 or 3) ?
+	jbe	DoTrixter60Hz		;   yes
+	call	ModeXInit		;   no, do modex
+	popad
+	ret
+
+DoTrixter60Hz:
+	call	Trixter60Hz
+	popad
+	ret
+
 
 ;*
 ;* blank the remainder of the display each frame
@@ -92,6 +200,16 @@ GRRet:	mov	[_VideoMode],0		; any other mode, pretend mode 0
 ALIGN_ENTRY
 
 TIABlank:
+	cmp	[ModeX],0		; in ModeX ?
+	jnz	TBRet			;   yes, don't do this
+					;
+					;        Since this routine is only called
+					;        when vblank triggers a new frame
+					;        and since that only happens for
+					;        two games now, and hopefully none
+					;        someday, I'm not updating this
+					;        routine for modex for now.
+
 	push	ax
 	push	bx
 	push	di
@@ -113,7 +231,7 @@ TIABRet:
 	pop	di
 	pop	bx
 	pop	ax
-	ret
+TBRet:	ret
 
 
 ;*
@@ -153,6 +271,8 @@ CRTGFX	equ	03ceh			; graphics
 ;*
 
 Trixter60Hz:
+
+	cli
 
 	mov	dx,CRTSEQ
 	mov	ax,0100h		; synchronous reset
@@ -202,7 +322,7 @@ Tr60d:	cmp	[_VideoMode],3
 Tr60e:					; * mode 3 *
 	VidOut	CRTC,   012h, 097h	; <8f> vertical display enable end
 	VidOut	CRTC,   015h, 098h	; <90> vertical blanking start
-	mov	[MaxLines],204		; set up max scan lines
+;	mov	[MaxLines],204		; set up max scan lines
 
 Tr60f:	VidOut	CRTC,   001h, 04fh	; horizontal display enable end
 	VidOut	CRTC,   002h, 050h	; horizontal blanking start
@@ -212,7 +332,7 @@ Tr60f:	VidOut	CRTC,   001h, 04fh	; horizontal display enable end
 	VidOut	CRTC,   008h, 000h	; preset row scan
 	VidOut	CRTC,   009h, 041h	; maximum scan line
 	VidOut	CRTC,   010h, 0c2h	; (ba) vertical retrace start
-	VidOut	CRTC,   011h, 094h	; (8c) vertical retrace end
+	VidOut	CRTC,   011h, 084h	; (8c) vertical retrace end
 	VidOut	CRTC,   013h, 028h	; offset (logical line width)
 	VidOut	CRTC,   014h, 040h	; underline location
 	VidOut	CRTC,   016h, 008h	; vertical blanking end
@@ -224,6 +344,8 @@ Tr60f:	VidOut	CRTC,   001h, 04fh	; horizontal display enable end
 
 	VidOut	CRTGFX, 005h, 040h	; graphics mode
 	VidOut	CRTGFX, 006h, 005h	; miscellaneous
+
+	sti
 
 	ret
 

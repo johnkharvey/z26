@@ -9,6 +9,8 @@
 .CEND
 .DATASEGMENT
 
+OldInt9		dw	0,0	; old vector for int9
+
 CtrlSkipFlag	db	0	; skip this control key test
 
 .DEND
@@ -41,6 +43,17 @@ KeyF7	=		041h		; F7  (P1 easy)
 KeyF8	=		042h		; F8  (P1 hard)
 KeyF9	=		043h		; F9  (unassigned)
 KeyF10	=		044h		; F10 (unassigned)
+
+Key0 =			00bh
+Key1 =			002h
+Key2 =			003h
+Key3 =			004h
+Key4 =			005h
+Key5 =			006h
+Key6 =			007h
+Key7 =			008h
+Key8 =			009h
+Key9 =			00ah
 
 KeyLeft	=		04Bh		; Left arrow
 KeyRight =		04Dh		; Right	arrow
@@ -199,13 +212,74 @@ CtrlPCX1:
 	mov	[CFirst],dx
 CtrlPCX3:
 	test	[KeyTable+KeyEquals],128
-        jz      CtrlExit
+        jz      CtrlVid
         call    PCXWriteFile            ; = pressed - PCX screen dump
 
         ;kludge - make it think the key has already been released
         ; hope it doesn't make it write out PCX files constantly
         mov [KeyTable+KeyEquals],0
 
+
+;	jmp	CtlVidDone		;*** turn this on before shipping
+
+
+CtrlVid:
+	test	[KeyTable+Key0],128	; video mode 0 ?
+	jz	CtrlVid1
+	mov	[_VideoMode],0
+	call	TIAGraphicMode
+	mov	[KeyTable+Key0],0
+
+CtrlVid1:
+	test	[KeyTable+Key1],128	; video mode 1 ?
+	jz	CtrlVid2
+	mov	[_VideoMode],1
+	call	TIAGraphicMode
+	mov	[KeyTable+Key1],0
+
+CtrlVid2:
+	test	[KeyTable+Key2],128	; video mode 2 ?
+	jz	CtrlVid3
+	mov	[_VideoMode],2
+	call	TIAGraphicMode
+	mov	[KeyTable+Key2],0
+
+CtrlVid3:
+	test	[KeyTable+Key3],128	; video mode 3 ?
+	jz	CtrlVid4
+	mov	[_VideoMode],3
+	call	TIAGraphicMode
+	mov	[KeyTable+Key3],0
+
+CtrlVid4:
+	test	[KeyTable+Key4],128	; video mode 4 ?
+	jz	CtrlVid5
+	mov	[_VideoMode],4
+	call	TIAGraphicMode
+	mov	[KeyTable+Key4],0
+
+CtrlVid5:
+	test	[KeyTable+Key5],128	; video mode 5 ?
+	jz	CtrlVid6
+	mov	[_VideoMode],5
+	call	TIAGraphicMode
+	mov	[KeyTable+Key5],0
+
+CtrlVid6:
+	test	[KeyTable+Key6],128	; video mode 6 ?
+	jz	CtrlVid7
+	mov	[_VideoMode],6
+	call	TIAGraphicMode
+	mov	[KeyTable+Key6],0
+
+CtrlVid7:
+	test	[KeyTable+Key7],128	; video mode 7 ?
+	jz	CtrlVidDone
+	mov	[_VideoMode],7
+	call	TIAGraphicMode
+	mov	[KeyTable+Key7],0
+
+CtrlVidDone:
 CtrlExit:
 	test	[GamePaused],1		; game paused ?
 	jnz	CtrlPaddles		;   yes, don't check joystick (sound off)	
@@ -258,7 +332,7 @@ CtrlPad9:
 
 CtrlRet:
 	ret
-	
+
 
 ; *****************************************************************************
 ;

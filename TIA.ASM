@@ -48,9 +48,6 @@ ENDIF
 
 	call	CommandLine		; Process the command line
 
-	mov	dx,[CFirst]
-	mov	[OldCFirst],dx		; remember starting line
-
 	cmp	[_quiet],0
 	jnz	STUP_4
 	call	_SetupSoundBlaster
@@ -95,6 +92,15 @@ xmain:
 xm1:
 	call	VSync
 	call	ScanFrame
+
+	cmp	[ModeX],0		; *** kludge *** -- after ModeX mode change, must clear
+	jz	ClearDone		;                   mem again after first frame scan
+	cmp	[MXDelayedClear],0
+	jz	ClearDone		
+	mov	[MXDelayedClear],0
+	call	MXClearMem
+
+ClearDone:
 
 Paused:	call	[CtrlFn]		; check which keys pressed
 	test	[GamePaused],1		; game paused ?
@@ -180,12 +186,9 @@ RQ1:
 ALIGN_ENTRY
 
 ScanFrame:
-	mov	ax,0a000h
-	mov	gs,ax			; point GS to VGA area
         mov	[DisplayPointer],0	; reset display pointer
+	call	ModeXNewFrame
 ScanFrameLoop:
-	mov	bx,[ScanLine]		; reset the TIA for a new line
-	mov	[TIAScanLine],bx
 	mov	bx,offset TIABuffer
 	mov	[TIAWritePointer],bx
 	mov	dword ptr [bx],-1	;* a dword pointer *
@@ -209,10 +212,10 @@ ScanNextLine:
 
 ScanBailOut:
 	mov	ax,[ScanLine]		; do emergency bail-out test
-	cmp	ax,1000			; have we done way too many scan lines yet?
+	cmp	ax,500			; have we done way too many scan lines yet?
 	jl	NDret			;   not yet
 	inc	[Frame]			;   yes, to the next frame (allow escape to work)
-	mov	[ScanLine],0
+	mov	[ScanLine],1
 
 NDret:  
 	mov	eax,[Frame]
@@ -621,6 +624,7 @@ TIALineTo:
 ALIGN_ENTRY
 
 TIAGenerate:
+	call	ModeXNewLine
 
 	mov	si,offset TIADisplay	; playfield write pointer
 	mov	bp,offset TIABuffer	; initialise the buffer
@@ -709,8 +713,8 @@ TIARB1:
 
 TIAExit:				; we've finished the line scan...
 	mov	[DisplayPointer],cx
+	call	ModeXCopyLine
 
-TIARet:
 	ret
 
 ;*
