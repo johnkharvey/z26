@@ -10,12 +10,13 @@ EXTRN _sbDSPVersion:word
 EXTRN _sbIRQNumber:byte
 
 EXTRN _DMABuf:word
-EXTRN _gDMABufSize:word
 EXTRN _gDMABufNowPlaying:byte
 EXTRN _Sb_init:byte
+EXTRN _gHighSpeed:byte
 
 global _DmaISR
 global _SetISR
+global _sound_clear
 global _RestoreISR
 global _ResetDSP
 global _DSPRead
@@ -27,7 +28,8 @@ EOI1		equ	0A0h
 PIC0		equ	021h
 PIC1		equ	0A1h
 
-RESET_FAIL	equ	0	; these should match FAIL and SUCCESS in sb.c
+_gDMABufSize	equ	256	; must match definition in z.c
+RESET_FAIL	equ	0	; must match FAIL and SUCCESS in sb.c
 RESET_SUCCESS	equ	1
 
 
@@ -105,9 +107,9 @@ low_ints:
 	mov	[irq_mask],al		;Save it
 	mov	[dsp_irq],bl		;Save it
 
-;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+;-----------------------------------------------------------------------------
 ;Next setup our IRQ interrupt handler, this is called when SB ends playing	
-;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+;-----------------------------------------------------------------------------
 
 	push	es			;Save ES
 	mov	ah,35h			;Get INT
@@ -158,30 +160,61 @@ _SetISR endp
 
 
 ;*
-;* RestoreISR() -- restore old interrupt handler (and shutdown Sound Blaster)
+;* turn off the Sound Blaster
+;*
+
+_sound_clear proc near
+
+	mov	al,[_Sb_init]
+	test	al,al
+	jz	was_no_sound
+
+	mov	al,[_gHighSpeed]
+	test	al,al			; hi-speed DMA ?
+	jz	Old_Clear		;   no
+	call	_ResetDSP		;   yes, turn it off
+	mov	ah,0D3h			;Speaker off
+	call	send_dsp
+	jmp	Finish_Clear
+
+Old_Clear:
+	mov	ah,0D3h			;Speaker off
+	call	send_dsp
+	mov	ah,0D0h			;Halt DMA
+	call	send_dsp
+	mov	ah,0DAh			;Exit AUTO-INIT
+	call	send_dsp
+	mov	ah,0D0h			;Halt DMA
+	call	send_dsp
+
+Finish_Clear:
+	call	_ResetDSP		; restore DSP to default state
+	call	_ResetDSP		; again for good luck
+	ret
+
+_sound_clear endp
+
+
+;*
+;* RestoreISR() -- restore old interrupt handler
 ;*
 
 _RestoreISR proc near
 
-;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-;Routine:  sound_clear
-;Job:      Kills the soundblaster and it's interrupt
-;Args:     None
-;Returns:  Nothing
-;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
-sound_clear:
-	cli				;INT's OFF
 	mov	al,[_Sb_init]
 	test	al,al
-	jnz	was_no_sound
+	jz	was_no_sound
 
+	call	_sound_clear		; turn off the Sound Blaster (again)
+					; in case TIA missed it
+
+; Hopefully by now, any pending interrupts have occured and have been ack'd.
+
+	cli				;INT's OFF
 	mov	al,[old_PIC0]		;Get original PIC0 mask
 	out	PIC0,al			;Restore it
 	mov	al,[old_PIC1]		;Get original PIC1 mask
 	out	PIC1,al			;Restore it
-
-	call	_ResetDSP		; turn off DMA, high speed or otherwise
-	call	_ResetDSP		; restore DSP to default state (if was high speed)
 
 	mov	ah,25h			;Set INT x
 	mov	al,[dsp_irq]		;IRQ number
@@ -189,9 +222,9 @@ sound_clear:
 	lds	dx,[old_int_x]		;Get old handler in DS:DX
 	int	21h			;Set it
 	pop	ds			; restore DS
+	sti
 
 was_no_sound:
-	sti				;INT's ON
 	ret				;Done
 
 _RestoreISR endp
@@ -300,7 +333,7 @@ _DSPWrite endp
 
 _SilenceBuffer proc near
 
-	mov	cx,[_gDMABufSize]	; buffer size
+	mov	cx,_gDMABufSize		; buffer size
 	mov	al,080h			; Silence
 	mov	di,[_DMABuf]
 	rep	stosb			; Fill buffer

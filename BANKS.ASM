@@ -1,5 +1,83 @@
+; banks.asm -- z26 bank switch stuff
+
+
 ;*
-;* Read bank switcher (SI contains the address accessed)
+;* set up bank switch scheme
+;*
+
+SetupBanks:
+	mov	ax,[CartSize]
+	cmp	ax,02000h
+	je	Set8kMode		; 8K cart
+	cmp	ax,03000h
+	je	Set12KMode		; 12K cart
+	cmp	ax,04000h
+	je	Set16kMode		; 16K cart
+	ret
+
+Set8kMode:
+	mov	[ReadBank], offset RBank8
+	mov	[WriteBank], offset WBank8
+	ret
+
+Set12KMode:
+	mov	[ReadBank], offset RBank12
+	mov	[WriteBank], offset WBank12
+	ret
+
+Set16kMode:
+	mov	ax,[_Checksum]
+	cmp	ax,02416h
+	je	SSC			; digdug
+	cmp	ax,0a44ch
+	je	SSC			; cryscast
+	cmp	ax,0bc36h
+	je	SSC			; milliped
+	cmp	ax,0677dh
+	je	SSC8			; stargate
+	cmp	ax,04dbdh
+	je	SSC8			; defendr2
+	cmp	ax,0bd1dh
+	je	SSC			; jrpacman
+	cmp	ax,084ach
+	je	SSC			; dsrtfalc
+	cmp	ax,01088h
+	je	SSC			; darkcham
+	cmp	ax,0c525h
+	je	SSC			; sprfootb
+	cmp	ax,08037h
+	je	SSC			; sprnmast
+	cmp	ax,07c00h
+	je	SSC			; ofthewal
+	cmp	ax,06db1h
+	je	SSC			; secretq
+	cmp	ax,09ffah
+	je	SSC			; radarlok
+	cmp	ax,04f39h
+	je	SSC			; klax
+	cmp	ax,04887h
+	je	SSC			; klaxntsc
+
+	mov	[ReadBank], offset RBank16
+	mov	[WriteBank], offset WBank16
+	ret
+
+
+; setup 16K super-chip vectors
+
+SSC:	mov	[ReadBank], offset RBank16sc
+	mov	[WriteBank], offset WBank16sc
+	ret
+
+; setup 8K super-chip vectors (defendr2, stargate)
+
+SSC8:	mov	[ReadBank], offset RBank8sc
+	mov	[WriteBank], offset WBank8sc
+	ret
+ 
+
+;*
+;* standard 4K cart
 ;*
 
 ALIGN_ENTRY
@@ -7,32 +85,161 @@ ALIGN_ENTRY
 RBank4: and	si,01fffh
 	cmp	si,1000h		; if not ROM, read hardware
 	jb	ReadHardware
-
-	add	si,[_RomPtr]		; offset CartRom - 1000h
-					; set in z.c
+	add	si,offset _CartRom - 1000h
 	ret
         
 
 ALIGN_ENTRY
 
-RBank8: and	si,01fffh
+WBank4: and	si,01fffh
+	cmp	si,1000h
+	jb	WriteHardware
+	ret
+
+
+;*
+;* standard 8K cart (F8)
+;*
+
+ALIGN_ENTRY
+
+RBank8:	and	si,01fffh
 	cmp	si,1000h		; if not ROM, read hardware
 	jb	ReadHardware
 	cmp	si,1FF8h		; if not in switch area...
-	jb	RBank8NoChange		; theres no change
-	cmp	si,1FFAh
-	ja	RBank8NoChange
-	mov	[RomBank],0		; selected bank 0
-	cmp	si,1FF8h
-	je	RBank8NoChange
-	mov	[RomBank],1000h		; selected bank 1
-RBank8NoChange:
+	je	F8_RBank0
+	cmp	si,1FF9h
+	je	F8_RBank1
 	add	si,[RomBank]
-
-	add	si,[_RomPtr]		; offset CartRom - 1000h
-					; set in z.c
+	add	si,offset _CartRom - 1000h
 	ret
 
+F8_RBank0:
+	mov	[RomBank],0
+	add	si,[RomBank]
+	add	si,offset _CartRom - 1000h
+	ret
+
+F8_RBank1:
+	mov	[RomBank],1000h
+	add	si,[RomBank]
+	add	si,offset _CartRom - 1000h
+	ret
+
+FA_RBank2:
+	mov	[RomBank],2000h
+	add	si,[RomBank]
+	add	si,offset _CartRom - 1000h
+	ret
+
+
+ALIGN_ENTRY
+
+WBank8:	and	si,01fffh
+	cmp	si,1000h		; if not ROM, read hardware
+	jb	WriteHardware
+	cmp	si,1FF8h		; if not in switch area...
+	je	F8_WBank0
+	cmp	si,1FF9h
+	je	F8_WBank1
+	add	si,[RomBank]
+	ret
+
+F8_WBank0:
+	mov	[RomBank],0
+	add	si,[RomBank]
+	ret
+
+F8_WBank1:
+	mov	[RomBank],1000h
+	add	si,[RomBank]
+	ret
+
+FA_WBank2:
+	mov	[RomBank],2000h
+	add	si,[RomBank]
+	ret
+
+
+;*
+;* standard 8K cart with Super-Chip (F8+sc)
+;*
+
+ALIGN_ENTRY
+
+RBank8sc:
+	and	si,01fffh
+	cmp	si,1000h		; if not ROM, read hardware
+	jb	ReadHardware
+	cmp	si,1FF8h		; if not in switch area...
+	je	F8_RBank0
+	cmp	si,1FF9h
+	je	F8_RBank1
+	jmp	RBank16scTestRam
+
+
+ALIGN_ENTRY
+
+WBank8sc:
+	and	si,01fffh
+	cmp	si,1000h		; if not ROM, read hardware
+	jb	WriteHardware
+	cmp	si,1FF8h		; if not in switch area...
+	je	F8_WBank0
+	cmp	si,1FF9h
+	je	F8_WBank1
+	jmp	WBank16scTestRam
+
+
+;*
+;* 12K Ram Plus cart (FA)
+;*
+
+ALIGN_ENTRY
+
+RBank12:
+	and	si,01fffh
+	cmp	si,1000h		; if not ROM, read hardware
+	jb	ReadHardware
+	cmp	si,1FF8h		; if not in switch area...
+	je	F8_RBank0
+	cmp	si,1FF9h
+	je	F8_RBank1
+	cmp	si,1FFAh
+	je	FA_RBank2
+
+	cmp	si,11ffh
+	ja	RBank16scNoChange
+	add	si,offset _Ram - 1000h - 100h
+	ret
+
+
+ALIGN_ENTRY
+
+WBank12:
+	and	si,01fffh
+	cmp	si,1000h		; if not ROM, read hardware
+	jb	WriteHardware
+	cmp	si,1FF8h		; if not in switch area...
+	je	F8_WBank0
+	cmp	si,1FF9h
+	je	F8_WBank1
+	cmp	si,1FFAh
+	je	FA_WBank2
+
+	cmp	si,11ffh
+	ja	WBank16scNoChange
+	add	si,offset _Ram - 1000h
+	push	ax
+	mov	al,[WByte]
+	mov	[si],al
+	pop	ax
+	ret
+
+
+;*
+;* standard 16K cart (F16)
+;*
 
 ALIGN_ENTRY
 
@@ -41,7 +248,7 @@ RBank16: and	si,01fffh
 	jb	ReadHardware
 	cmp	si,1FF6h		; if not in switch area...
 	jb	RBank16NoChange		; theres no change
-	cmp	si,1FFAh
+	cmp	si,1FF9h
 	ja	RBank16NoChange
 
 	push	ax			; 16k ROM switch
@@ -53,37 +260,9 @@ RBank16: and	si,01fffh
 
 RBank16NoChange:
 	add	si,[RomBank]
-
-	add	si,[_RomPtr]		; offset CartRom - 1000h
-					; set in z.c
+	add	si,offset _CartRom - 1000h
 	ret
 
-
-ALIGN_ENTRY
-
-WBank4: and	si,01fffh
-	cmp	si,1000h
-	jb	WriteHardware
-	ret
-        
-
-ALIGN_ENTRY
-
-WBank8: and	si,01fffh
-	cmp	si,1000h		; if not ROM,no effect
-	jb	WriteHardware
-	cmp	si,1FF8h		; if not in switch area...
-	jb	Bank8NoChange		; theres no change
-	cmp	si,1FFAh
-	ja	Bank8NoChange
-	mov	[RomBank],0		; selected bank 0
-	cmp	si,1FF8h
-	je	Bank8NoChange
-	mov	[RomBank],1000h		; selected bank 1
-Bank8NoChange:
-	add	si,[RomBank]
-WBRet:	ret
-					        
 
 ALIGN_ENTRY
 
@@ -92,7 +271,7 @@ WBank16:and	si,01fffh
 	jb	WriteHardware
 	cmp	si,1FF6h		; if not in switch area...
 	jb	Bank16NoChange		; theres no change
-	cmp	si,1FFAh
+	cmp	si,1FF9h
 	ja	Bank16NoChange
 
 	push	ax			; 16k ROM switch
@@ -105,3 +284,86 @@ WBank16:and	si,01fffh
 Bank16NoChange:
 	add	si,[RomBank]
 	ret
+
+
+;*
+;* standard 16K cart with Super-Chip (F16+sc)
+;*
+
+ALIGN_ENTRY
+
+RBank16sc:
+	and	si,01fffh
+	cmp	si,1000h		; if not ROM, read hardware
+	jb	ReadHardware
+	cmp	si,1FF6h		; if not in switch area...
+	jb	RBank16scTestRam	; theres no change
+	cmp	si,1FF9h
+	ja	RBank16scNoChange
+
+	push	ax			; 16k ROM switch
+	mov	ax,si
+	sub	ax,1FF6h		; its 0,1,2,3
+	shl	ax,12			; its 0,4k,8k,12k
+	mov	[RomBank],ax
+	pop	ax
+
+RBank16scNoChange:
+	add	si,[RomBank]
+	add	si,offset _CartRom - 1000h
+	ret
+
+RBank16scTestRam:
+	cmp	si,10ffh
+	ja	RBank16scNoChange
+	add	si,offset _Ram - 1000h - 80h
+	ret
+
+
+ALIGN_ENTRY
+
+WBank16sc:
+	and	si,01fffh
+	cmp	si,1000h		; if not ROM,no effect
+	jb	WriteHardware
+	cmp	si,1FF6h		; if not in switch area...
+	jb	WBank16scTestRam	; theres no change
+	cmp	si,1FF9h
+	ja	WBank16scNoChange
+
+	push	ax			; 16k ROM switch
+	mov	ax,si
+	sub	ax,1FF6h		; its 0,1,2,3
+	shl	ax,12			; its 0,4k,8k,12k
+	mov	[RomBank],ax
+	pop	ax
+
+WBank16scNoChange:
+	add	si,[RomBank]
+	ret
+
+WBank16scTestRam:
+	cmp	si,10ffh
+	ja	WBank16scNoChange
+	add	si,offset _Ram - 1000h
+	push	ax
+	mov	al,[WByte]
+	mov	[si],al
+	pop	ax
+	ret
+
+
+.CEND
+.DATASEGMENT
+
+; Memory read/write vectors
+
+CartSize	dw	0		; gets cart size (cmdline.asm)
+
+ReadBank	dw	RBank4		; default to 4K cart
+WriteBank	dw	WBank4
+        
+RomBank		dw	0		; Rom bank pointer for F8 & F16
+
+.DEND
+.CODESEGMENT

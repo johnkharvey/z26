@@ -108,11 +108,6 @@ VsyncPending	db	0		; VSYNC pending
 
 ALIGN	2
 
-ReadBank	dw	RBank4		; Bank switching function (Read)
-WriteBank	dw	WBank4		; were RBank4 and WBank4
-        
-RomBank		dw	0
-
 SubVector	dw	DoSbc		; vectors for add and subtract
 AddVector	dw	DoAdc
 
@@ -147,18 +142,19 @@ OldInt9		dw	0,0		; old vector for int9
 KeyTable	db	128 dup (0)	; Key pressed table
 
 TIABuffer	db 256 dup (TIAEnd)	; TIA information buffer
-					; 128 just isn't big enough for some trashed games
-					; I've seen SVector get stepped on (see below)
+					; 128 just isn't big enough for some
+					; trashed games.  I've seen SVector get
+					; stepped on (see below)
 					; then we're outta control
 
 
-VDP0Gr		db   0			; Buffer for Player 0 Vert Del Graphic
-VDP1Gr		db   0			; Buffer for Player 1 Vert Del Graphic
-VDBlEn		db   0			; Buffer for Ball Vertical Delay Enable
+VDP0Gr		db	0		; Buffer for Player 0 Vert Del Graphic
+VDP1Gr		db	0		; Buffer for Player 1 Vert Del Graphic
+VDBlEn		db	0		; Buffer for Ball Vertical Delay Enable
 
 TIAScanLine	dw	0		; Scanline
 TIAWritePointer dw	0		; Write to TIA Buffer pointer
-TIAFrameSkip	dw	-1		; zero if frame skipped
+TIAFrameSkip	dw     -1		; zero if frame skipped
 TIACollide	dw	0		; Collision flag word.
 
 SVector dw	PCSound			; Vector for sound updates
@@ -180,46 +176,38 @@ MinVol	db	8			; minimum volume for PC Speaker
 
 global _psp
 _psp		dw	0		; gets set by calling C program
-psp		dw	0		; gets pointer to PSP (if .EXE file or module)
-
-global _CartRom
-IFNDEF module
-_CartRom	dw	offset CartRom	; gets overwritten by "C" malloc
-ENDIF
-IFDEF module
-_CartRom	dw	0
-ENDIF
-
-global _RomPtr
-_RomPtr		dw	0		; gets overwritten by "C" program
-
+psp		dw	0		; gets pointer to PSP 
+					; (if .EXE file or module)
 global	_Checksum
 _Checksum	dw	0		; gets cart checksum
 
-global _DoCopyright
-_DoCopyright	dw	0		; set by cmdline if "C" program should output
-					; copyright message
-
-global	_quiet
-_quiet		dw	0		; set if we want no sound
-
-global	_DoChecksum
-_DoChecksum	dw	0		; set if we should print out checksum
-
-global	_verbose
-_verbose	dw	0		; verbose
-
-global	_credits
-_credits	dw	0		; show credits
 
 global	_dsp
-_dsp		dw	0		; do digital signal processing
+_dsp		db	0		; do digital signal processing
 
 global	_VideoMode
-_VideoMode	dw	3		; video mode (default mode 3 60Hz)
+_VideoMode	db	3		; video mode (default mode 3 60Hz)
 
 global	_Joystick
-_Joystick	dw	1		; do joystick
+_Joystick	db	1		; do joystick
+
+global _DoCopyright
+_DoCopyright	db	0		; set if "C" program should do 
+					; copyright message
+global	_DoChecksum
+_DoChecksum	db	0		; set if we should print out checksum
+
+global	_verbose
+_verbose	db	0		; verbose
+
+global	_quiet
+_quiet		db	0		; set if we want no sound
+
+global	_credits
+_credits	db	0		; show credits
+
+global	_JobDone
+_JobDone	db	0		; cmdline did the job
 
 ALIGN 2
 

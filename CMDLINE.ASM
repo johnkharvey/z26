@@ -38,7 +38,7 @@ CLSkip:	mov	al,es:[bp]		; skip over spaces
 	jmp	CLSkip
 CLSkip2:mov	al,es:[bp]		; see what it is
 	cmp	al,13
-	je	CLNoFile		;   no file detected
+	je	CLDoNoFile		;   no file detected
 	cmp	al,'-'
 	je	Control
 
@@ -61,74 +61,43 @@ CLASCZ:	mov	al,es:[bx]
 	push	ax			; save handle for close
 
 	mov	bx,ax			; read the file
-
-	mov	dx,[_CartRom]
-
-;	mov	dx,offset CartRom
-
+	mov	dx,offset _CartRom
 	mov	cx,16384		; try to read in 16k !!!
 	mov	ah,03Fh
 	int	MSDOS
+	mov	[CartSize],ax
 	pop	bx			; Close	the file
-	push	ax			; ax = bytes read.
 	mov	ah,03Eh
 	int	MSDOS
 	jc	LoadFail
 
-	pop	ax
-	push	ax
-	cmp	ax,02000h		; 8k cartridge ???
-	je	Set8kMode
-	cmp	ax,04000h
-	je	Set16kMode
-
 	cmp	ax,0800h		; read in a 2k file ???
-	jne	CCret			;   no, we've finished.
+	jne	DoXsum			;   no, we've finished.
 
 	mov	bx,07FEh		; copy lower 2k	into upper 2k
-	mov	si,[_CartRom]
+	mov	si,offset _CartRom
 CartCopy:
 	mov	ax,word	ptr [bx+si]
 	mov	word ptr 0800h[bx+si],ax
 	sub	bx,2
 	jge	CartCopy
-CCret:	jmp	Conret
 
-CLNoFile:
-	jmp	CLDoNoFile
-
-Set8kMode:
-	mov	[ReadBank], offset RBank8
-	mov	[WriteBank], offset WBank8
-	jmp	Conret
-Set16kMode:
-	mov	[ReadBank], offset RBank16
-	mov	[WriteBank], offset WBank16
-	jmp	Conret
-        
-Conret:	pop	cx			; cart size
-	pop	es
+       
+DoXsum:	mov	cx,[CartSize]
 
 	xor	ax,ax			; before we go
 	xor	bx,bx			; checksum the cartridge
 	
-	mov	si,[_CartRom]
+	mov	si,offset _CartRom
 XLoop:	mov	bl,[si]
 	inc	si
 	add	ax,bx
 	loop	XLoop
 	mov	[_Checksum],ax		; save the checksum for cart recognition
 
-	cmp	[_DoChecksum],0
-	jz	DoSetupSpecial
-	popa
-	ret
-
-;	call	ConWord
-;	jmp	Quit			; *** still doesn't return ***
-
-DoSetupSpecial:
+	pop	es
 	call	SetupSpecial
+	call	SetupBanks
 	popa
 	ret
 
@@ -254,14 +223,14 @@ CMFrameExit:				; do <n> frames and exit
 	jmp	CLSkip
 
 CMDsp:
-	mov	[_dsp],ax
+	mov	[_dsp],al
 	jmp	CLSkip
 
 CMVideoMode:
-	mov	[_VideoMode],ax
+	mov	[_VideoMode],al
 	jmp	CLSkip
 
-CMJoy:	mov	[_Joystick],ax		; do joystick
+CMJoy:	mov	[_Joystick],al		; do joystick
 	jmp	CLSkip
 
 ; we didn't see a filename string

@@ -218,8 +218,7 @@ int ShiftRegister9()
 */
 
 static unsigned char DMABufToLoad = 0;
-extern unsigned int gHalfBufSize;
-extern unsigned int dsp;
+extern unsigned char dsp;
 
 void Fillbuffer (void)
 {

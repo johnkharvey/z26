@@ -20,51 +20,19 @@
 */
 
 
-#ifndef NULL
-#define NULL 0
-#endif
-
 #define AUTO_INIT                  1
-#define BITS_PER_SAMPLE_8     0x0400
-#define BITS_PER_SAMPLE_16    0x0800
-#define COMMAND_PAUSE           0x01
-#define COMMAND_PLAY            0x02
-#define COMMAND_QUIT            0x04
 #define DMA8_FF_REG           0x000C
 #define DMA8_MASK_REG         0x000A
 #define DMA8_MODE_REG         0x000B
-#define DMA16_FF_REG          0x00D8
-#define DMA16_MASK_REG        0x00D4
-#define DMA16_MODE_REG        0x00D6
-#define DSP_DATA_AVAIL        0x000E
 #define DSP_GET_VERSION       0x00E1
-#define DSP_READ_PORT         0x000A
-#define DSP_READY             0x00AA
-#define DSP_RESET_PORT        0x0006
-#define DSP_WRITE_PORT        0x000C
-#define END_OF_INTERRUPT      0x0020
 #define FAIL                       0
 #define FALSE                      0
-#define FILE_NOT_DONE_PLAYING 0x8000
-#define INVALID_BLOCK_TYPE    0x4000
-#define INVALID_FILE_FORMAT        1
-#define PIC0_COMMAND_REG        0x20
-#define PIC1_COMMAND_REG        0xA0
-#define PIC0_MASK_REG           0x21
-#define PIC1_MASK_REG           0xA1
-#define REMEMBER_VOLUME            1
-#define RESTORE_VOLUME             2
 #define SB2_LO                     1
 #define SB2_HI                     2
 #define SBPRO                      3
 #define SB16                       4
-#define SINGLE_CYCLE               2
 #define SUCCESS                    1
 #define TRUE                  !FALSE
-#define UNUSED                     0
-
-#define VOC_FILE                   2
-#define WAVE_FILE                  3
 
 
 /*
@@ -73,7 +41,6 @@
 
 short int sbBaseIOPort;
 short int sbDMAChan8Bit;
-short int sbDMAChan16Bit;
 short int sbDSPVersion;
 unsigned char sbIRQNumber;
 
@@ -82,40 +49,20 @@ unsigned char sbIRQNumber;
 ** Properties of sound being played
 */
 
-typedef struct _SOUNDSTYLE
-{
-  unsigned char      BitsPerSample, /* 8 or 16 */
-		     Channels;      /* MONO = 1, STEREO = 2 */
-  unsigned short int SoundFormat,   /* Determines BitsPerSample in old .VOC */
-		     TimeConstant;  /* Old .VOC version of SampPerSec */
-  signed long int    SampPerSec;
-} SOUNDSTYLE;
-
-
-typedef unsigned long int DWORD;
+unsigned char           ssChannels;
+unsigned short int      ssTimeConstant;
+signed long int         ssSampPerSec;
 
 
 /*
 ** global variables
 */
 
-SOUNDSTYLE gSoundStyle;
+unsigned char   gDMABufNowPlaying,
+                gHighSpeed;
 
-unsigned short int gDMABufSize,
-		   gHighSpeed,
-		   gIRQMaskSave0,
-		   gIRQMaskSave1;
-
-unsigned char	gDMABufNowPlaying;
-
-signed long int gBytesLeftToPlay;
-
-unsigned char     *DMABuf, *MallocDMABuf;
-long int DMABufPhysAddr;
-
-void interrupt (*gOldISRFuncPtr)(void);
-
-
+unsigned char   *DMABuf;
+long int        DMABufPhysAddr;
 
 
 /*
@@ -128,19 +75,11 @@ char GetBlastEnv(void),
 short int DSPRead(void);
 
 unsigned long int AllocateDMABuffer(),
-		  OnSamePage(unsigned char *, unsigned short int);
+                  OnSamePage(unsigned char *, unsigned short int);
 
-extern void interrupt DmaISR(void); 
-void ContinueDMA(unsigned char),
-     DSPWrite(short int),
-     KillVolume(void),
-     PauseDMA(unsigned char),
-     ProgramDMA(unsigned long int, SOUNDSTYLE *, unsigned short int),
-     ProgramDSP(unsigned short int, SOUNDSTYLE *, unsigned char),
-     RestoreOldISR(void),
-     RestoreOrRememberVolume(char),
-     SetDmaISR(void),
-     SetMixer(void);
+void DSPWrite(short int),
+     ProgramDMA(unsigned long int, unsigned short int),
+     ProgramDSP(unsigned short int, unsigned char);
 
 
 /*
@@ -153,87 +92,45 @@ void ContinueDMA(unsigned char),
 **               used for the audio transfer.
 */
 
-void ProgramDMA(unsigned long int DMABufPhysAddr, SOUNDSTYLE *SoundStyle,
-		unsigned short int Count)
+void ProgramDMA(unsigned long int DMABufPhysAddr, unsigned short int Count)
 {
   short int Command,
-	    DMAAddr,
-	    DMACount,
-	    DMAPage,
-	    Offset,
-	    Page,
-	    Temp;
+            DMAAddr,
+            DMACount,
+            DMAPage,
+            Offset,
+            Page,
+            Temp;
 
   Page   = (short int) (DMABufPhysAddr >> 16);
   Offset = (short int) (DMABufPhysAddr & 0xFFFF);
 
-  if (SoundStyle->BitsPerSample == 8)  /* 8-BIT FILE */
+  switch(sbDMAChan8Bit)
   {
-    switch(sbDMAChan8Bit)
-    {
-      case 0:
-	DMAAddr  = 0x0000;
-	DMACount = 0x0001;
-	DMAPage  = 0x0087;
-      break;
+    case 0:
+      DMAAddr  = 0x0000;
+      DMACount = 0x0001;
+      DMAPage  = 0x0087;
+    break;
 
-      case 1:
-	DMAAddr  = 0x0002;
-	DMACount = 0x0003;
-	DMAPage  = 0x0083;
-      break;
+    case 1:
+      DMAAddr  = 0x0002;
+      DMACount = 0x0003;
+      DMAPage  = 0x0083;
+    break;
 
-      case 3:
-	DMAAddr  = 0x0006;
-	DMACount = 0x0007;
-	DMAPage  = 0x0082;
-      break;
-    }
-
-    outp(DMA8_MASK_REG, sbDMAChan8Bit | 4);    /* Disable DMA */
-    outp(DMA8_FF_REG, 0x0000);                         /* Clear F-F */
-    outp(DMA8_MODE_REG, sbDMAChan8Bit | 0x58); /* 8-bit AI */
-    outp(DMACount, ((Count - 1) & 0xFF));              /* LO byte */
-    outp(DMACount, ((Count - 1) >> 8));                /* HI byte */
+    case 3:
+      DMAAddr  = 0x0006;
+      DMACount = 0x0007;
+      DMAPage  = 0x0082;
+    break;
   }
-  else  /* 16-BIT FILE */
-  {
-    switch(sbDMAChan16Bit)
-    {
-      case 5:
-	DMAAddr  = 0x00C4;
-	DMACount = 0x00C6;
-	DMAPage  = 0x008B;
-      break;
 
-      case 6:
-	DMAAddr  = 0x00C8;
-	DMACount = 0x00CA;
-	DMAPage  = 0x0089;
-      break;
-
-      case 7:
-	DMAAddr  = 0x00CC;
-	DMACount = 0x00CE;
-	DMAPage  = 0x008A;
-      break;
-    }
-
-    /* Offset for 16-bit DMA must be calculated different than 8-bit. */
-    /* Shift Offset 1 bit right.  Then copy LSBit of Page to MSBit of Offset. */
-
-    Temp = Page & 0x0001;  /* Get LSBit of Page and... */
-    Temp <<= 15;           /* move it to MSBit of Temp. */
-    Offset >>= 1;          /* Divide Offset by 2. */
-    Offset &= 0x7FFF;      /* Clear MSBit of Offset. */
-    Offset |= Temp;        /* Put LSBit of Page into MSBit of Offset. */
-
-    outp(DMA16_MASK_REG, (sbDMAChan16Bit - 4) | 4);    /* Disable DMA */
-    outp(DMA16_FF_REG, 0x0000) ;                               /* Clear F-F */
-    outp(DMA16_MODE_REG, (sbDMAChan16Bit - 4) | 0x58); /* 16-bit AI */
-    outp(DMACount, ((Count/2 - 1) & 0xFF));                    /* LO byte */
-    outp(DMACount, ((Count/2 - 1) >> 8));                      /* HI byte */
-  }
+  outp(DMA8_MASK_REG, sbDMAChan8Bit | 4);     /* Disable DMA */
+  outp(DMA8_FF_REG, 0x0000);                  /* Clear F-F */
+  outp(DMA8_MODE_REG, sbDMAChan8Bit | 0x58);  /* 8-bit AI */
+  outp(DMACount, ((Count - 1) & 0xFF));       /* LO byte */
+  outp(DMACount, ((Count - 1) >> 8));         /* HI byte */
 
   /* Program the starting address of the DMA buffer. */
 
@@ -241,12 +138,9 @@ void ProgramDMA(unsigned long int DMABufPhysAddr, SOUNDSTYLE *SoundStyle,
   outp(DMAAddr, Offset & 0x00FF);  /* LO byte offset address of DMA buffer. */
   outp(DMAAddr, (Offset >> 8));    /* HI byte offset address of DMA buffer. */
 
-  /* Reenable 8-bit or 16-bit DMA. */
+  /* Reenable DMA. */
 
-  if (SoundStyle->BitsPerSample == 8)
-    outp(DMA8_MASK_REG,  sbDMAChan8Bit);
-  else
-    outp(DMA16_MASK_REG, sbDMAChan16Bit - 4);
+  outp(DMA8_MASK_REG,  sbDMAChan8Bit);
 
   return;
 }
@@ -262,12 +156,11 @@ void ProgramDMA(unsigned long int DMABufPhysAddr, SOUNDSTYLE *SoundStyle,
 **              case, all SB cards are programmed identically.
 */
 
-void ProgramDSP(unsigned short int Count, SOUNDSTYLE *SoundStyle,
-		unsigned char DMAMode)
+void ProgramDSP(unsigned short int Count, unsigned char DMAMode)
 {
   unsigned char Card;
   short int     Command,
-		Mode;
+                Mode;
 
   if (gHighSpeed == TRUE)  /* Once in high-speed mode, DSP can only be reset! */
     return;
@@ -296,162 +189,110 @@ void ProgramDSP(unsigned short int Count, SOUNDSTYLE *SoundStyle,
   else if (sbDSPVersion == 0x0200)  /* DSP version = 2.00 */
     Card = SB2_LO;
 
-  /*--- FILE IS 8-BIT ADPCM PLAYBACK. IN THIS CASE, ALL SB CARDS  ------*/
-  /*--- ARE PROGRAMMED IDENTICALLY.  DETERMINE THE COMMAND.       ------*/
+  /*--- FILE IS 8-BIT OR 16-BIT UNCOMPRESSED AUDIO.  PROGRAM EACH ----*/
+  /*--- SOUND BLASTER CARD DIFFERENTLY.                           ----*/
 
-  if (SoundStyle->SoundFormat > 0 && SoundStyle->SoundFormat < 4)
+  switch(Card)
   {
-    switch(SoundStyle->SoundFormat)
-    {
-      case 1:  /* 8-bit 2:1 compression (4-bit ADPCM) */
-	Command = 0x0074;  /* default to single-cycle */
-      break;
+    case SB16:
 
-      case 2:  /* 8-bit 8:3 compression (2.6-bit ADPCM) */
-	Command = 0x0076;  /* default to single-cycle */
-      break;
+      /*--- DETERMINE 8-bit OR 16-bit, MONO OR STEREO ----------------*/
 
-      case 3:  /* 8-bit 4:1 compression (2-bit ADPCM) */
-	Command = 0x0016;  /* default to single-cycle */
-      break;
-    }
+      /* do 8-bit sound the old-fashioned way (JS) */
+      DSPWrite(0x0040);  /* Program Time Constant */
+      DSPWrite(ssTimeConstant);
 
-    if (DMAMode == AUTO_INIT)
-      Command |= 0x0009;   /* Set to auto-init mode. */
+      Command = 0x00C0;  /* 8-bit transfer (default: single-cycle, D/A) */
+
+      if (ssChannels == 1)
+        Mode = 0x0000;   /* MONO, unsigned PCM data */
+      else
+        Mode = 0x0020;   /* STEREO, unsigned PCM data */
+
+      /*--- CHANGE COMMAND TO AUTO-INIT, IF NEEDED. ------------------*/
+
+      if (DMAMode == AUTO_INIT)
+        Command |= 0x0004;     /* Auto-init */
+
+
+      /*--- PROGRAM THE DSP CHIP (BEGIN DMA TRANSFER) AND RETURN! ----*/
+
+      DSPWrite(Command);
+      DSPWrite(Mode);
+      DSPWrite((Count - 1) & 0xFF);  /* LO byte */
+      DSPWrite((Count - 1) >> 8);    /* HI byte */
+    return;    /* RETURN! */
+
+
+    case SBPRO:
+      DSPWrite(0x00A0);  /* Default to MONO. */
+
+      if (ssChannels == 2)
+      {
+        /* HI-SPEED, STEREO */
+
+        gHighSpeed = TRUE;
+
+        DSPWrite(0x00A8);  /* STEREO MODE */
+        outp(sbBaseIOPort + 4, 0x000E);  /* Select mixer reg. 0x0E. */
+        outp(sbBaseIOPort + 5, 0x0002);  /* STEREO, output filter off. */
+
+        if (DMAMode == AUTO_INIT)
+          Command = 0x0090;  /* HIGH-SPEED, AUTO-INIT MODE */
+        else
+          Command = 0x0091;  /* HIGH-SPEED, SINGLE-CYCLE MODE */
+      }
+      else if (ssSampPerSec >= 23000)
+      {
+        /* HI-SPEED, MONO */
+
+        gHighSpeed = TRUE;
+
+        if (DMAMode == AUTO_INIT)
+          Command = 0x0090;  /* HIGH-SPEED, AUTO-INIT MODE */
+        else
+          Command = 0x0091;  /* HIGH-SPEED, SINGLE-CYCLE MODE */
+      }
+      else if (DMAMode == AUTO_INIT)
+        Command = 0x001C;   /* NORMAL, AUTO-INIT */
+      else
+        Command = 0x0014;   /* NORMAL, SINGLE-CYCLE */
+    break;
+
+
+    case SB2_HI:
+      if (ssSampPerSec > 13000 || ssChannels == 2)
+      {
+        /* HI-SPEED */
+
+        gHighSpeed = TRUE;
+
+        if (DMAMode == AUTO_INIT)
+          Command = 0x0090;  /* HIGH-SPEED, AUTO-INIT MODE */
+        else
+          Command = 0x0091;  /* HIGH-SPEED, SINGLE-CYCLE MODE */
+      }
+      else if (DMAMode == AUTO_INIT)
+        Command = 0x001C;  /* NORMAL, MONO, AUTO-INIT */
+      else
+        Command = 0x0014;  /* NORMAL, MONO, SINGLE-CYCLE */
+    break;
+
+
+    case SB2_LO:  /* DSP VERSION == 2.00.  HIGH-SPEED MODE NOT AVAILABLE. */
+      if (DMAMode == AUTO_INIT)
+        Command = 0x001C;  /* NORMAL, MONO, AUTO-INIT */
+      else
+        Command = 0x0014;  /* NORMAL, MONO, SINGLE-CYCLE */
+    break;
   }
-  else
-  {
-    /*--- FILE IS 8-BIT OR 16-BIT UNCOMPRESSED AUDIO.  PROGRAM EACH ----*/
-    /*--- SOUND BLASTER CARD DIFFERENTLY.                           ----*/
-
-    switch(Card)
-    {
-      case SB16:
-
-	/* Program sample rate HI and LO byte. */
-/*
-	DSPWrite(0x0041);
-	DSPWrite((SoundStyle->SampPerSec & 0xFF00) >> 8);
-	DSPWrite((SoundStyle->SampPerSec & 0xFF));
-*/
-	/*--- DETERMINE 8-bit OR 16-bit, MONO OR STEREO ----------------*/
-
-	if (SoundStyle->BitsPerSample == 8)
-	{
-	  /* do 8-bit sound the old-fashioned way (JS) */
-          DSPWrite(0x0040);  /* Program Time Constant */
-          DSPWrite(SoundStyle->TimeConstant);
-
-	  Command = 0x00C0;  /* 8-bit transfer (default: single-cycle, D/A) */
-
-	  if (SoundStyle->Channels == 1)
-	    Mode = 0x0000;   /* MONO, unsigned PCM data */
-	  else
-	    Mode = 0x0020;   /* STEREO, unsigned PCM data */
-	}
-	else  /* 16-BIT AUDIO */
-	{
-          /* do 16-bit sound the modern way (JS)*/
-
-	  /* Program sample rate HI and LO byte. */
-          DSPWrite(0x0041);
-	  DSPWrite((SoundStyle->SampPerSec & 0xFF00) >> 8);
-	  DSPWrite((SoundStyle->SampPerSec & 0xFF));
-
-	  Command = 0x00B0;  /* 16-bit transfer (default: single-cycle, D/A) */
-	  Count  /= 2;       /* Set Count to transfer 16-bit words. */
-
-	  if (SoundStyle->Channels == 1)
-	    Mode = 0x0010;   /* MONO, signed PCM data */
-	  else
-	    Mode = 0x0030;   /* STEREO, signed PCM data */
-	}
-
-	/*--- CHANGE COMMAND TO AUTO-INIT, IF NEEDED. ------------------*/
-
-	if (DMAMode == AUTO_INIT)
-	  Command |= 0x0004;     /* Auto-init */
-
-
-	/*--- PROGRAM THE DSP CHIP (BEGIN DMA TRANSFER) AND RETURN! ----*/
-
-	DSPWrite(Command);
-	DSPWrite(Mode);
-	DSPWrite((Count - 1) & 0xFF);  /* LO byte */
-	DSPWrite((Count - 1) >> 8);    /* HI byte */
-      return;    /* RETURN! */
-
-
-      case SBPRO:
-	DSPWrite(0x00A0);  /* Default to MONO. */
-
-	if (SoundStyle->Channels == 2)
-	{
-	  /* HI-SPEED, STEREO */
-
-	  gHighSpeed = TRUE;
-
-	  DSPWrite(0x00A8);  /* STEREO MODE */
-	  outp(sbBaseIOPort + 4, 0x000E);  /* Select mixer reg. 0x0E. */
-	  outp(sbBaseIOPort + 5, 0x0002);  /* STEREO, output filter off. */
-
-	  if (DMAMode == AUTO_INIT)
-	    Command = 0x0090;  /* HIGH-SPEED, AUTO-INIT MODE */
-	  else
-	    Command = 0x0091;  /* HIGH-SPEED, SINGLE-CYCLE MODE */
-	}
-	else if (SoundStyle->SampPerSec >= 23000)
-	{
-	  /* HI-SPEED, MONO */
-
-	  gHighSpeed = TRUE;
-
-	  if (DMAMode == AUTO_INIT)
-	    Command = 0x0090;  /* HIGH-SPEED, AUTO-INIT MODE */
-	  else
-	    Command = 0x0091;  /* HIGH-SPEED, SINGLE-CYCLE MODE */
-	}
-	else if (DMAMode == AUTO_INIT)
-	  Command = 0x001C;   /* NORMAL, AUTO-INIT */
-	else
-	  Command = 0x0014;   /* NORMAL, SINGLE-CYCLE */
-      break;
-
-
-      case SB2_HI:
-	if (SoundStyle->SampPerSec > 13000 || SoundStyle->Channels == 2)
-	{
-	  /* HI-SPEED */
-
-	  gHighSpeed = TRUE;
-
-	  if (DMAMode == AUTO_INIT)
-	    Command = 0x0090;  /* HIGH-SPEED, AUTO-INIT MODE */
-	  else
-	    Command = 0x0091;  /* HIGH-SPEED, SINGLE-CYCLE MODE */
-	}
-	else if (DMAMode == AUTO_INIT)
-	  Command = 0x001C;  /* NORMAL, MONO, AUTO-INIT */
-	else
-	  Command = 0x0014;  /* NORMAL, MONO, SINGLE-CYCLE */
-      break;
-
-
-      case SB2_LO:  /* DSP VERSION == 2.00.  HIGH-SPEED MODE NOT AVAILABLE. */
-	if (DMAMode == AUTO_INIT)
-	  Command = 0x001C;  /* NORMAL, MONO, AUTO-INIT */
-	else
-	  Command = 0x0014;  /* NORMAL, MONO, SINGLE-CYCLE */
-      break;
-    }
-  }
-
-  /*--- IF FILE IS 8-BIT ADPCM (REGARDLESS OF CARD TYPE), OR CARD IS ---*/
-  /*--- AN 8-BIT AUDIO CARD (DSP VERSION < 4.xx), BEGIN DMA TRANFER. ---*/
+  
+  /*--- CARD IS AN 8-BIT AUDIO CARD (DSP VERSION < 4.xx) ---*/
+  /*--- BEGIN DMA TRANFER. ---*/
 
   DSPWrite(0x00D1);  /* Turn speaker on. */
   DSPWrite(0x0040);  /* Program Time Constant */
-  DSPWrite(SoundStyle->TimeConstant);
+  DSPWrite(ssTimeConstant);
 
   /*--- NOTE: If in high-speed mode, single-cycle DMA is programmed ----*/
   /*--- using the same initial DSP command as auto-init (0x0048).   ----*/
@@ -503,17 +344,17 @@ char GetBlastEnv(void)
   char  ch;
 
   char  Buffer[5],
-	DMAChannelNotFound = TRUE,
+        DMAChannelNotFound = TRUE,
        *EnvString,
-	IOPortNotFound     = TRUE,
-	IRQNotFound        = TRUE,
-	SaveChar;
+        IOPortNotFound     = TRUE,
+        IRQNotFound        = TRUE,
+        SaveChar;
 
   short int digit,
-	    i,
-	    Major,
-	    Minor,
-	    multiplier;
+            i,
+            Major,
+            Minor,
+            multiplier;
 
   EnvString = getenv("BLASTER");
 
@@ -526,83 +367,77 @@ char GetBlastEnv(void)
     {
       case 'A':  /* I/O base port address found */
       case 'a':
-	EnvString++;
-	for (i = 0; i < 3; i++)  /* Grab the digits */
-	{
-	  Buffer[i] = *EnvString;
-	  EnvString++;
-	}
+        EnvString++;
+        for (i = 0; i < 3; i++)  /* Grab the digits */
+        {
+          Buffer[i] = *EnvString;
+          EnvString++;
+        }
 
-	/* The string is in ASCII HEX, convert it to decimal */
+        /* The string is in ASCII HEX, convert it to decimal */
 
-	multiplier = 1;
-	sbBaseIOPort = 0;
-	for (i -= 1; i >= 0; i--)
-	{
-	  if (Buffer[i] >= '0' && Buffer[i] <= '9')
-	    digit = Buffer[i] - '0';
-	  else if (Buffer[i] >= 'A' && Buffer[i] <= 'F')
-	    digit = Buffer[i] - 'A' + 10;
-	  else if (Buffer[i] >= 'a' && Buffer[i] <= 'f')
-	    digit = Buffer[i] - 'a' + 10;
+        multiplier = 1;
+        sbBaseIOPort = 0;
+        for (i -= 1; i >= 0; i--)
+        {
+          if (Buffer[i] >= '0' && Buffer[i] <= '9')
+            digit = Buffer[i] - '0';
+          else if (Buffer[i] >= 'A' && Buffer[i] <= 'F')
+            digit = Buffer[i] - 'A' + 10;
+          else if (Buffer[i] >= 'a' && Buffer[i] <= 'f')
+            digit = Buffer[i] - 'a' + 10;
 
-	  sbBaseIOPort += digit * multiplier;
-	  multiplier *= 16;
-	}
+          sbBaseIOPort += digit * multiplier;
+          multiplier *= 16;
+        }
 
-	IOPortNotFound = FALSE;
+        IOPortNotFound = FALSE;
       break;
 
 
       case 'D': /* 8-bit DMA channel */
       case 'd':
-      case 'H': /* 16-bit DMA channel */
-      case 'h':
-	SaveChar = *EnvString;
-	EnvString++;
-	Buffer[0] = *EnvString;
-	EnvString++;
+        EnvString++;
+        Buffer[0] = *EnvString;
+        EnvString++;
 
-	if (*EnvString >= '0' && *EnvString <= '9')
-	{
-	  Buffer[1] = *EnvString; /* DMA Channel No. is 2 digits */
-	  Buffer[2] = NULL;
-	  EnvString++;
-	}
-	else
-	  Buffer[1] = NULL;       /* DMA Channel No. is 1 digit */
+        if (*EnvString >= '0' && *EnvString <= '9')
+        {
+          Buffer[1] = *EnvString; /* DMA Channel No. is 2 digits */
+          Buffer[2] = NULL;
+          EnvString++;
+        }
+        else
+          Buffer[1] = NULL;       /* DMA Channel No. is 1 digit */
 
-	if (SaveChar == 'D' || SaveChar == 'd')
-	  sbDMAChan8Bit  = atoi(Buffer);  /* 8-Bit DMA channel */
-	else
-	  sbDMAChan16Bit = atoi(Buffer);  /* 16-bit DMA channel */
+        sbDMAChan8Bit  = atoi(Buffer);  /* 8-Bit DMA channel */
 
-	DMAChannelNotFound = FALSE;
+        DMAChannelNotFound = FALSE;
       break;
 
 
       case 'I':  /* IRQ number */
       case 'i':
-	EnvString++;
-	Buffer[0] = *EnvString;
-	EnvString++;
+        EnvString++;
+        Buffer[0] = *EnvString;
+        EnvString++;
 
-	if (*EnvString >= '0' && *EnvString <= '9')
-	{
-	  Buffer[1] = *EnvString; /* IRQ No. is 2 digits */
-	  Buffer[2] = NULL;
-	  EnvString++;
-	}
-	else
-	  Buffer[1] = NULL;       /* IRQ No. is 1 digit */
+        if (*EnvString >= '0' && *EnvString <= '9')
+        {
+          Buffer[1] = *EnvString; /* IRQ No. is 2 digits */
+          Buffer[2] = NULL;
+          EnvString++;
+        }
+        else
+          Buffer[1] = NULL;       /* IRQ No. is 1 digit */
 
-	sbIRQNumber  = atoi(Buffer);
-	IRQNotFound = FALSE;
+        sbIRQNumber  = atoi(Buffer);
+        IRQNotFound = FALSE;
       break;
 
 
       default:
-	EnvString++;
+        EnvString++;
       break;
     }
 
@@ -611,10 +446,8 @@ char GetBlastEnv(void)
   if (DMAChannelNotFound || IOPortNotFound || IRQNotFound)
     return(FAIL);
 
-  /*** this function should check return value of ResetDSP -- it can fail ***/
+  ShowBlasterWaiting();
 
-  printf("\nWaiting for Sound Blaster...\n\n");
-  printf("Press <esc> to exit, any other key to continue with PC speaker sound.\n");
   while (1)
   {
     if (ResetDSP() == FAIL)
@@ -623,7 +456,7 @@ char GetBlastEnv(void)
       {
         ch = getch();
         if (ch == 27) 
-          exit(0);	/* escape pressed */
+          exit(0);      /* escape pressed */
         else 
           return(FAIL);
       }
@@ -649,17 +482,16 @@ char GetBlastEnv(void)
 /*
 ** FUNCTION: AllocateDMABuffer()
 **
-** DESCRIPTION : Allocate memory for the DMA buffer.  
-**               Get twice as much as we need.
+** DESCRIPTION : Check the DMA buffer.  
 **               If first half of buffer crosses a page boundary use second half.
 **
 **       If a buffer is NOT successfully allocated, return FAIL.
 */
 
+unsigned char MallocDMABuf[(gDMABufSize+1) * 2];
+
 unsigned long int AllocateDMABuffer()
 {
-  MallocDMABuf = (unsigned char *) malloc((gDMABufSize+1)*2);
-  if (MallocDMABuf == NULL) return(FAIL);
   DMABuf = MallocDMABuf;
   DMABufPhysAddr = OnSamePage(DMABuf, gDMABufSize); 
   if (DMABufPhysAddr == FAIL)
@@ -687,16 +519,16 @@ unsigned long int AllocateDMABuffer()
 */
 
 unsigned long int OnSamePage(unsigned char *DMABuffer,
-			     unsigned short int DMABufSize)
+                             unsigned short int DMABufSize)
 {
   unsigned long int BegBuffer,
-		    EndBuffer,
-		    PhysAddress;
+                    EndBuffer,
+                    PhysAddress;
 
   /*----- Obtain the physical address of DMABuffer -----*/
 
   BegBuffer = ((unsigned long) (FP_SEG(DMABuffer)) << 4) +
-	       (unsigned long) FP_OFF(DMABuffer);
+               (unsigned long) FP_OFF(DMABuffer);
   EndBuffer   = BegBuffer + DMABufSize - 1;
   PhysAddress = BegBuffer;
 
@@ -708,4 +540,17 @@ unsigned long int OnSamePage(unsigned char *DMABuffer,
   if (BegBuffer == EndBuffer)
     return(PhysAddress);  /* Entire buffer IS on same page! */
   return(FAIL); /* Entire buffer NOT on same page.  Thanks Intel! */
+}
+
+
+/*
+** called from inside the emulator when it's time to start the sound
+*/
+
+StartSound()
+{
+  if (Sb_init)
+  {
+    ProgramDSP(gDMABufSize / 2, AUTO_INIT);     /* turn on DMA */
+  }
 }

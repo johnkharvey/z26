@@ -16,7 +16,7 @@ ALIGN 4
 TIADisplay	db	320 dup (?)	; Display as currently setup
 
 IFNDEF module
-CartRom		db	16384 dup (?)	; space for cartridge	
+_CartRom	db	16384 dup (?)	; space for cartridge	
 ENDIF
 
 IFDEF exefile
