@@ -55,6 +55,7 @@ ENDIF
 	call	TIAGraphicMode		; Switch into VGA mode
 	call	VSyncInit		; init VSync code
 	call	SetNewInt9		; Keyboard Handler
+	call	JoyCenter		; set joystick center position
 
 	push	es
 	mov	ax,040h

@@ -66,16 +66,4 @@ ALIGN 4
 
 	endm
 
-;*
-;* a keyboard macro
-;*
-
-ifpress macro   op1,op2                 ; if key #1 pressed drop bit
-        local   M1
-        test    [KeyTable+op1],128  ; #2 of ah (128,64,32...1)
-        jz      M1
-        and     ah,255-op2               ; drop a bit
-M1:
-        endm
-
 

@@ -12,6 +12,7 @@
 ;	-r	don't wait for retrace (full speed), -r1 use old vsync code
 ;	-f <n>  do <n> frames and exit
 ;       -d      do digital signal processing
+;	-j	do joystick
 ;
 ; *****************************************************************************
 
@@ -192,6 +193,8 @@ EndInt:					; Command in CL,Value in AL
 	je	CMFrameExit
 	cmp	cl,'d'
 	je	CMDsp
+	cmp	cl,'j'
+	je	CMJoy
 Back:	jmp	CLSkip			; back to the beginning
 
 CMUpper:xor	ah,ah			; set upper scan line
@@ -256,6 +259,9 @@ CMDsp:
 
 CMVideoMode:
 	mov	[_VideoMode],ax
+	jmp	CLSkip
+
+CMJoy:	mov	[_Joystick],ax		; do joystick
 	jmp	CLSkip
 
 ; we didn't see a filename string

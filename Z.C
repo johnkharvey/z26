@@ -18,6 +18,7 @@
 ** (0.90)  Jan 23, 1998  multiple missiles -- fixed missile command!
 ** (0.90)  Jan 24, 1998  mid-line collisions -- freeway and oystron(!)
 ** (0.91)  Feb  2, 1998  60 Hz refresh video modes
+** (0.91a) Feb  4, 1998  vertical blinds -v3
 */
 
 #include <stdio.h>		/* puts */
@@ -120,7 +121,7 @@ main()
 
   if (DoCopyright)
   {
-    puts("\n\nz26 -- An Atari 2600 emulator (0.91)");
+    puts("\n\nz26 -- An Atari 2600 emulator (0.92)");
     puts("Copyright (C) 1997-1998 by John Saeger\n");
 
     puts("Home Page:  http://www.whimsey.com/z26.html\n");
@@ -139,8 +140,9 @@ main()
     puts(" -s    -- show sound diagnostic messages");
     puts(" -f<n> -- run emulator for <n> frames and display timing results");
     puts(" -d<n> -- use digital signal processing on sound (1=low, 2=high)");
-    puts(" -v<n> -- video mode (1=60Hz, 2=60Hz narrow)");
-    puts(" -c    -- show credits (please do!)\n\n");
+    puts(" -v<n> -- video mode (0=70Hz, 1=60Hz, 2=60Hz narrow)");
+    puts(" -j<n> -- joystick (0=joystick off)");
+    puts(" -c    -- show credits (please do!)\n");
     goto free_mem;
   }
 
@@ -199,7 +201,7 @@ main()
 
   Tia_sound_init (sample_freq, playback_freq);
 
-  gDMABufSize = 128;		/* 64 bytes per interrupt */
+  gDMABufSize = 256;		/* 64 bytes per interrupt */
 				/* experimental "a"=256/2 "b"=512/2 */
 
   gHalfBufSize = gDMABufSize / 2;

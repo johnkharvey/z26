@@ -64,12 +64,26 @@ RGBLoop:
 	jz	GRRet			;   no
 
 GRV1:	cmp	[_VideoMode],2		; doing Trixter 60Hz (mode 1 or 2) ?
-	ja	GRV2			;   no
+	ja	GRV1a			;   no
 	call	Trixter60Hz		;   yes
 	mov	[_VideoMode],0		; pretend we're mode 13
 	jmp	GRRet
 
-GRV2:	sub	[_VideoMode],2
+GRV1a:	cmp	[_VideoMode],3
+	ja	GRV1b
+	mov	[_VideoMode],2		; do mode 13 vertical blinds
+	call	Trixter60Hz		; and do 60Hz mode 2
+	jmp	GRRet
+
+GRV1b:	cmp	[_VideoMode],4		; video mode 4 ?
+	ja	GRV1c			;   no
+	mov	[_VideoMode],2		;   yes, do mode 2 init
+	call	Trixter60Hz
+	mov	[_VideoMode],1		; and mode 1 (buffered mode 13) video
+	jmp	GRRet
+
+GRV1c:
+GRV2:	sub	[_VideoMode],3
 	call	ModeXInit		;   yes, call Erik's Init Routine
 	jmp	GRRet
 

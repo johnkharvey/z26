@@ -214,7 +214,10 @@ global	_dsp
 _dsp		dw	0		; do digital signal processing
 
 global	_VideoMode
-_VideoMode	dw	0		; video mode
+_VideoMode	dw	2		; video mode (default mode 2 60Hz)
+
+global	_Joystick
+_Joystick	dw	1		; do joystick
 
 ALIGN 2
 

@@ -14,10 +14,19 @@ SetupSpecial:
 	je	OldVsync		; supferar
 	cmp	ax,0cc64h
 	je	OldVsync		; supferri
+	cmp	ax,0c1f4h
+	je	OldVsync		; airlock
+	cmp	ax,0e97dh
+	je	OldVsync		; alien
+	cmp	ax,0485dh
+	je	OldVsync		; circatri
+	cmp	ax,07177h
+	je	OldVsync		; circus, circus-j
 	jmp	SetupReverse
 
 OldVsync:
 	mov	[NoRetrace],1
+	mov	[_Joystick],0
 	jmp	SetupReverse
 
 
@@ -329,6 +338,8 @@ SSLINE:
 	je	Line86			; motocros
 	cmp	ax,054f5h
 	je	Line62			; parachut
+	cmp	ax,08ed6h
+	je	Line32			; surfsup1
 
 
 	jmp	SSTR			; process Timer1 requests

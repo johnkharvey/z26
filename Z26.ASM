@@ -84,6 +84,7 @@ entry:	jmp	start			; jump around our data
 	include special.asm		; process special cartridges
 	include console.asm		; console output (for debugging)
 	include keyboard.asm		; convert keyboard into Atari joystick
+	include joy.asm			; joystick routines
 	include dosmem.asm		; DOS far memory allocator
 	include sound.asm		; PC speaker support
 	include graphics.asm		; VGA graphics initialization
