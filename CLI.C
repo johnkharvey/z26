@@ -98,7 +98,6 @@ cli_InterpretParm(char *p)
 	}
 }
 
-
 cli_WriteParms(int argc, char *argv[])
 {
 	int i, ch;
@@ -202,7 +201,7 @@ cli_CommandLine(int argc, char *argv[])
 
 	if (!ROMLoaded)
 	{
-		printf("File not found...");
+		printf("File not found... %s", FileName);
 		exit(1);
 	}
 

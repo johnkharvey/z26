@@ -9,12 +9,14 @@ int	gui_textX = 24;		/* default coordinates of upper left corner of text window 
 int	gui_textY = 50;
 int	gui_textColor = 6;	/* default text color (11 == green) */
 
+char	gui_LastAscii = 0;	/* gets set by gui_GetScanCode */
+
 
 /* prototypes for ASM functions */
 
 void far gui_DrawChar(int col, int row, int color, char ch);
 void far gui_Line(int X1, int Y1, int X2, int Y2, int color);
-
+void far gui_Font(int Font);
 
 /* set palette */
 
@@ -376,10 +378,15 @@ gui_DrawString(int col, int row, int color, char *text)
 
 /* draw a string (simplified) */
 
+extern int GUIFont;
+
 gui_puts(char *text)
 {
 	gui_DrawString(gui_textX, gui_textY, gui_textColor, text);
-	gui_textY += 10;
+	if (GUIFont == 0)
+		gui_textY += 10;
+	else
+		gui_textY += 7;  /* 7 */
 }
 
 
@@ -426,15 +433,48 @@ gui_ShowPrototype()
 
 }
 
+/* show main panel */
+
+gui_ShowMainPanel()
+{
+	gui_Panel(0,0,639,479, 3,4,2);
+	gui_DrawString(8, 470, 1, "\x0f");
+	gui_DrawString(16, 470, 1, "1997-1998 by John Saeger                                                     http://www.whimsey.com/z26");
+}
+
+/* show main inset */
+
+gui_ShowMainInset()
+{
+	gui_FilledRectangle(6,25,633,467, 1);
+}
 
 /* show the help screen title */
 
 gui_ShowTitleBar(char *text)
 {
-	gui_FilledRectangle(97,10,630,30,2);
-	gui_DrawString(107,17,10,text);
+	gui_FilledRectangle(92,5,633,19,2);
+	gui_DrawString(102,9,10,text);
 }
 
+/* show help button */
+
+
+#define hl 583
+
+gui_ShowHelpButton()
+{
+	gui_FilledRectangle(hl-17,5,hl-11,19,3);
+	gui_DrawString(hl,9,10,"`oF1`y Help`d");
+}
+
+/* show z26 */
+
+gui_ShowZ26()
+{
+	gui_FilledRectangle(6,5,84,19,2);
+	gui_DrawString(16,9,10,version);
+}
 
 /* show the close box */
 
@@ -453,8 +493,10 @@ gui_ShowCloseBox()
 
 
 #define arrowcolor 4
-#define rt 42
+#define rt 27
 #define rb 466
+#define rl 618
+#define rr 631
 
 /* show the scrollbar */
 
@@ -465,8 +507,8 @@ gui_ShowScrollBar(int i, int j)
 	barsize = (rb-rt)/j;
 	bartop = rt + (i-1)*barsize;
 
-	gui_FilledRectangle(610,40,630,467,2);
-	gui_FilledRectangle(613,bartop,627,bartop+barsize,arrowcolor);
+	gui_FilledRectangle(rl-2,rt-2,rr+2,467,2);
+	gui_FilledRectangle(rl,bartop,rr,bartop+barsize,arrowcolor);
 }
 
 /* show the help screen */
@@ -477,10 +519,10 @@ gui_ShowHelpPage(int screen)
 	extern char far help_1[];
 	extern char far help_2[];
 
-	gui_FilledRectangle(10,40,600,467, 1);
+	gui_FilledRectangle(6,25,609,467, 1);
 
-	gui_textX = 24;
-	gui_textY = 50;
+	gui_textX = 18;
+	gui_textY = 34;
 
 
 	switch (screen)
@@ -502,16 +544,27 @@ gui_ShowHelpPage(int screen)
 }
 
 
-#define PgUp 0x49
-#define PgDn 0x51
-#define Home 0x47
-#define esc  0x01
+#define PgUp       0x49
+#define PgDn       0x51
+#define Home       0x47
+#define End        0x4f
+#define Esc        0x01
+#define F1         0x3b
+#define F10        0x44
+#define UpArrow    0x48
+#define DownArrow  0x50
+#define LeftArrow  0x4b
+#define RightArrow 0x4d
+#define Enter      0x1c
+#define BackSlash  0x2b
+
 
 gui_GetScanCode()
 {
 	union REGS inregs, outregs;
 	inregs.h.ah = 0;
 	int86(0x16, &inregs, &outregs);
+	gui_LastAscii = outregs.h.al;		/* save last ASCII value for ASCII chars */
 	return(outregs.h.ah);
 }
 
@@ -525,15 +578,8 @@ gui_ShowHelp()
 {
 	int ch, page;
 
-	gui_Panel(0,0,639,479, 3,4,2);
-/*
-	gui_FilledRectangle(10,40,630,467, 1);
-*/
-	gui_FilledRectangle(10,10,87,30,2);
-	gui_DrawString(20,17,10,"z26 (1.21)");
-
-	gui_DrawString(11, 470, 1, "\x0f");
-	gui_DrawString(19, 470, 1, "1997-1998 by John Saeger                                                    http://www.whimsey.com/z26");
+	gui_ShowMainPanel();
+	gui_ShowZ26();
 
 	gui_ShowTitleBar("Quick Reference");
 
@@ -542,10 +588,10 @@ gui_ShowHelp()
 	ch = 0;
 	page = 0;
 	gui_ShowHelpPage(page);
-	while (ch != esc)
+	while (ch != Esc)
 	{
 		ch = 0;
-		while (ch != PgUp && ch != PgDn && ch != esc && ch != Home)
+		while (ch != PgUp && ch != PgDn && ch != Esc && ch != Home)
 			ch = gui_GetScanCode();
 
 		if (ch == PgUp)
@@ -573,6 +619,360 @@ gui_ShowHelp()
 				page = 0;
 				gui_ShowHelpPage(page);
 			}
+		}
+	}
+}
+
+#include <dir.h>
+
+#define cols 11
+#define rows 63   /* 63 */
+#define maxfiles rows*cols
+
+gui_ShowFile(int FileNum, char *text)
+{
+	int rowpix, colpix, ch;
+
+	--FileNum;
+
+	colpix = gui_textX + (FileNum / rows) * 57;  /* 52, 57 */
+	rowpix = gui_textY + (FileNum % rows) * 7;
+
+	while ( (ch = *text++) != '.' )
+	{
+		if (!ch) break;
+		gui_Char(colpix, rowpix, gui_textColor, ch);
+		colpix += 6;
+	}
+}
+
+
+gui_HiLiteFile(int FileNum, char *text)
+{
+	int rowpix, colpix, ch;
+
+	--FileNum;
+
+	colpix = gui_textX + (FileNum / rows) * 57;  /* 52, 57 */
+	rowpix = gui_textY + (FileNum % rows) * 7;
+
+	gui_FilledRectangle(colpix-1,rowpix-1,colpix+47,rowpix+5,9);
+
+	while ( (ch = *text++) != '.' )
+	{
+		if (!ch) break;
+		gui_Char(colpix, rowpix, 1, ch);
+		colpix += 6;
+	}
+}
+
+gui_HiLiteChar(int FileNum, char *text, int charnum)
+{
+	int rowpix, colpix, ch;
+
+	--FileNum;
+
+	colpix = gui_textX + (FileNum / rows) * 57;  /* 52, 57 */
+	rowpix = gui_textY + (FileNum % rows) * 7;
+
+	colpix += (charnum-1)*6;
+
+	gui_FilledRectangle(colpix-1,rowpix-1,colpix+5,rowpix+5,10);
+	gui_Char(colpix, rowpix, 1, text[charnum-1]);
+}
+
+
+gui_LowLiteFile(int FileNum, char *text)
+{
+	int rowpix, colpix, ch;
+
+	--FileNum;
+
+	colpix = gui_textX + (FileNum / rows) * 57;  /* 52, 57 */
+	rowpix = gui_textY + (FileNum % rows) * 7;
+
+	gui_FilledRectangle(colpix-1,rowpix-1,colpix+47,rowpix+5,1);
+
+	while ( (ch = *text++) != '.' )
+	{
+		if (!ch) break;
+		gui_Char(colpix, rowpix, gui_textColor, ch);
+		colpix += 6;
+	}
+}
+
+
+/* swap file ptrs (for gui_Qsort) */
+
+gui_swap(char *v[], int i, int j)
+{
+	char *temp;
+
+	temp = v[i];
+	v[i] = v[j];
+	v[j] = temp;
+}
+
+
+/* sort files -- Quicksort -- C.A.R. Hoare (1962) -- via K&R p. 110 */
+
+gui_Qsort(char *v[], int left, int right)
+{
+	int i, last;
+
+	if (left >= right) return;
+
+	gui_swap(v, left, (left + right)/2);
+	last = left;
+	for (i=left+1; i<=right; i++)
+		if (strcmp(v[i], v[left]) < 0)
+			gui_swap(v, ++last, i);
+	gui_swap(v, left, last);
+	gui_Qsort(v, left, last-1);
+	gui_Qsort(v, last+1, right);
+}
+
+gui_ShowTotal(int tot)
+{
+	char tempstr[100];
+
+	int top = 470;
+	int left = 290;
+	int color = 1;
+
+	itoa(tot, tempstr, 10);
+	gui_Font(0);
+	gui_DrawString(left,top,color,"(");
+	gui_DrawString(left+6,top,color,tempstr);
+	left += (strlen(tempstr)+1)*6;
+	if (tot > 1)
+		gui_DrawString(left,top,color," ROMs)");
+	else
+		gui_DrawString(left,top,color," ROM)");
+	gui_Font(1);
+}
+
+gui_ShowTooMany()
+{
+	int top = 470;
+	int left = 275;
+	int color = 8;
+
+	gui_Font(0);
+	gui_DrawString(left,top,color,"(Too many ROMs)");
+	gui_Font(1);
+}
+
+gui_ShowList()
+{
+	int i, ch;
+	int ach = 0;
+
+	char FileNames[14*(maxfiles+2)];
+	char *FileNamePtrs[maxfiles+2];
+
+	struct ffblk ffblk;
+	int done, filesread;
+
+	int curfile = 1;
+
+	int ROMLoaded = 0;
+
+	char toomanyfiles = 0;
+
+	int	ScanPtr = 0;
+	int	StartPtr = 1;
+	int	EndPtr = 1;
+	int	Found = 0;
+
+	srand(time(NULL) % 37);
+
+	for (i=1; i<=maxfiles; i++)
+	{
+		FileNamePtrs[i] = &FileNames[14*i];
+	}
+
+	i = 1;
+
+	done = findfirst("*.bin", &ffblk, 0);
+	if (!done)
+	{
+		while (!done)
+		{
+			strncpy(FileNamePtrs[i++],ffblk.ff_name,14);
+			done = findnext(&ffblk);
+			if (!done)
+				if (i >= maxfiles)
+				{
+					toomanyfiles = 1;
+					break;
+				}
+		}
+	}
+
+	filesread = i - 1;
+	if (filesread > 0) gui_Qsort(FileNamePtrs, 1, filesread);
+
+	EndPtr = filesread;
+
+	ch = 0;
+	while (ch != Esc)
+	{
+		gui_ShowMainPanel();
+		gui_ShowZ26();
+		gui_ShowTitleBar("ROM List");
+		gui_ShowHelpButton();
+		gui_ShowCloseBox();
+		gui_ShowMainInset();
+	
+		gui_textX = 9;
+		gui_textY = 27;
+
+		gui_Font(1);
+
+		if (filesread > 0)
+		{
+			if (toomanyfiles)
+				gui_ShowTooMany();
+			else
+				gui_ShowTotal(filesread);
+
+			for (i=1; i<=filesread; i++)
+				gui_ShowFile(i,FileNamePtrs[i]);
+		}	
+		else
+			gui_ShowFile(1,"(NO FILES)\0");
+
+		if (filesread > 0) gui_HiLiteFile(curfile,FileNamePtrs[curfile]);
+
+		ch = 0;
+		while (ch != Esc && ch != F1 && ch != Enter)
+		{
+			ch = gui_GetScanCode();
+			if (filesread > 0) gui_LowLiteFile(curfile,FileNamePtrs[curfile]);
+			switch(ch)
+			{
+			case BackSlash:	/* for testing */
+				curfile = rand() % filesread;
+				ScanPtr = 0;
+				StartPtr = 1;
+				EndPtr = filesread;
+				Found = 0;
+				break;
+
+			case UpArrow:
+				if (curfile > 1)
+					curfile--;
+				break;
+
+			case DownArrow:
+				if (curfile < filesread)
+					curfile++;
+				break;
+
+			case RightArrow:
+				if (curfile + rows <= filesread)
+				{
+					curfile += rows;
+					break;
+				}
+				if (curfile % rows != 0) curfile = curfile % rows + 1;
+
+				break;
+
+			case LeftArrow:
+				if (curfile - rows >= 1)
+				{
+					curfile -= rows;
+					break;
+				}
+
+				if (curfile == 1)
+					break;
+
+				curfile--;
+				while (curfile <= filesread)
+				{
+					curfile += rows;
+				}
+				curfile -= rows;
+				break;
+
+			case Home:
+				curfile = 1;
+				break;
+
+			case End:
+				curfile = filesread;
+				break;
+
+			default:
+				if (!isgraph(gui_LastAscii)) break;
+				ach = toupper(gui_LastAscii);
+				Found = 0;
+				for (i=StartPtr; i<=EndPtr; i++)
+				{
+					if ( !Found && (FileNamePtrs[i][ScanPtr] == ach) )
+					{
+						curfile = i;
+						StartPtr = curfile;
+						Found = i;
+					}
+					if (  Found && (FileNamePtrs[i][ScanPtr] == ach) )
+					{
+						Found = i;
+					}
+				}
+
+				EndPtr = Found;
+				ScanPtr++;
+
+				if (!Found)
+				{
+					if (filesread > 0) gui_HiLiteFile(curfile,FileNamePtrs[curfile]);
+					ScanPtr = 0;
+					StartPtr = 1;
+					EndPtr = filesread;
+					Found = 0;
+					break;
+
+				}
+				break;
+
+			}
+
+			if (curfile > filesread) curfile = filesread;
+			if (curfile < 1)         curfile = 1;
+
+			if (!isgraph(gui_LastAscii))
+			{
+				ScanPtr = 0;
+				StartPtr = 1;
+				EndPtr = filesread;
+				Found = 0;
+			}
+			if (filesread > 0) gui_HiLiteFile(curfile,FileNamePtrs[curfile]);
+			if (Found) gui_HiLiteChar(curfile,FileNamePtrs[curfile], ScanPtr);
+		}
+
+		gui_Font(0);
+
+		if (ch == F1)
+			gui_ShowHelp();
+
+		if (ch == Enter)
+		{
+			def_LoadDefaults();
+			cli_ReadParms();
+			cli_LoadROM(FileNamePtrs[curfile]);
+/*			gui_RestoreVideoMode(); */
+
+			psp = _psp;		/* for environment scanner  (sbdrv.asm) */
+			emulator();		/* call emulator              (tia.asm) */
+			
+			gui_GraphicsMode();
+			gui_SetPalette(35, 40, 45);	/* 31, 34, 41 */
+
 		}
 	}
 }

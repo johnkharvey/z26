@@ -5,51 +5,6 @@
 ; 06-27-98 -- new design
 ; 07-17-98 -- simplify
 
-.data
-
-reg_pc		dw	0		; program counter (stored in DI)
-
-; the following two locations must be in this order and next to each other
-
-reg_a		db	0		; accumulator (stored in AL)
-flag_carry	db	0		; carry bit   (stored in AH)
-
-; the following two locations are padded with an extra byte 
-; to allow 16-bit access (see _index)
-
-reg_x		db	0		; x register
-		db	0
-reg_y		db	0		; y register
-		db	0
-
-reg_sp		db	0		; stack pointer
-
-; a value is stored in the following vars for later testing
-
-RZTest		db	0		; zero test value (Z set when 0)
-RNTest		db	0		; sign test value (N set when negative)
-
-; these vars hold the values of flags other than Z and N
-
-flag_D		db	0		; decimal flag
-flag_V		db	0		; overflow flag
-flag_I		db	0		; interrupt disable flag
-flag_B		db	0		; break flag
-
-; some temporaries for use by decimal arith and ARR
-
-_value		db	0
-_reg_a		db	0
-_flag_carry	db	0
-
-ALIGN 2
-
-RClock		db	0		; clock cycles
-RCycles		db	0		; cycles for this instruction
-
-LastCycle	db	0		; for DoInstructions
-
-jam_msg	db	'Halt ','$'
 
 .code
 

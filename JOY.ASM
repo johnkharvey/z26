@@ -2,28 +2,6 @@
 ;* z26 joystick code
 ;*
 
-.data
-
-JH1			dw	0
-JH2			dw	0
-JH3			dw	0
-JH4			dw	0
-
-JV1			dw	0
-JV2			dw	0
-JV3			dw	0
-JV4			dw	0
-
-JoyHorizontalCenter	dw	0
-JoyVerticalCenter	dw	0
-
-JoyLeft			dw	0
-JoyRight		dw	0
-JoyUp			dw	0
-JoyDown			dw	0
-
-DoJoystick		db	1
-
 .code
 
 ;*

@@ -54,6 +54,7 @@ fps		db	' fps',13,10,'$'
 .code
 
 _ShowBlaster:
+	call	TIATextMode
 	push	offset msg201		; aren't you glad I wrote this in asm ?
 	call	_put_str
 	push	[_sbBaseIOPort]
@@ -102,6 +103,7 @@ SB1:	mov	ax,[_sbDSPVersion]
 
 
 _PressKeyToContinue:
+	call	TIATextMode
 	push	offset msg301
 	call	_put_str
 	call	_get_char
@@ -115,6 +117,7 @@ PK_Exit:
 
 
 _ShowBlasterEnvBad:
+	call	TIATextMode
 	push	offset msg401
 	call	_put_str
 	call	_PressKeyToContinue
@@ -122,6 +125,7 @@ _ShowBlasterEnvBad:
 
 
 _ShowBlasterNotFound:
+	call	TIATextMode
 	push	offset msg501
 	call	_put_str
 	call	_PressKeyToContinue
@@ -129,6 +133,7 @@ _ShowBlasterNotFound:
 
 
 _ShowBlasterTooOld:
+	call	TIATextMode
 	push	offset msg601
 	call	_put_str
 	call	_ShowBlaster
@@ -137,6 +142,7 @@ _ShowBlasterTooOld:
 
 
 _ShowBlasterDetected:
+	call	TIATextMode
 	push	offset msg701
 	call	_put_str
 	call	_ShowBlaster
@@ -161,6 +167,7 @@ _ShowBlasterDetected:
 
 
 _ShowBlasterWaiting:
+	call	TIATextMode
 	push	offset msg801
 	call	_put_str
 	ret
@@ -171,6 +178,7 @@ _ShowBlasterWaiting:
 ;*
 
 FramesPerSecond:
+	call	TIATextMode
 
 	mov	eax,[OriginalFrameExit]
 	mov	ebx,119318166		;119318200 ticklets per second (14318180/12) * 100

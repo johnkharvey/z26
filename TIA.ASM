@@ -6,8 +6,8 @@ IFDEF module
 
 .data
 
-ModuleReturnAdr	dd	0		; word if small model, dword if medium
-ModuleSP	dw	0
+ModuleReturnAdr	dd	?		; word if small model, dword if medium
+ModuleSP	dw	?
 
 .code
 
@@ -21,13 +21,22 @@ _emulator PROC FAR			; near if small model, far if medium
 	mov	ax,_psp
 	mov	psp,ax			; set up PSP for commandline
 	pop	ModuleReturnAdr		; save return adr
+
+	pushad
+
 	mov	ax,sp
-	mov	ModuleSP,ax		; save sp (no return adr on stack)
+	mov	[ModuleSP],ax		; save sp (no return adr on stack)
+
 	jmp	start
 
 ModuleReturn:
-	mov	ax,ModuleSP
+	push	ds
+	pop	es
+	mov	ax,[ModuleSP]
 	mov	sp,ax
+
+	popad
+
 	push	ModuleReturnAdr
 	ret
 
@@ -48,6 +57,8 @@ IFDEF exefile
 	mov	psp,bx			;save pointer to PSP
 	mov	es,ax			;set up extra segment (ES = DS)
 ENDIF
+
+	call	InitData		; initialize data
 
 	call	SetupSpecial
 	call	SetupBanks

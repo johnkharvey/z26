@@ -2,22 +2,6 @@
 ;* cpu memory and register handlers -- used by the CPU emulator
 ;*
 
-.data
-
-VBlanking	dd	-1		; 0 if vblanking, -1 otherwise
-VBlank		db	0		; VBlank flag
-VSyncFlag	db	0		; VSync flag
-
-Ret0F		db	0Fh
-RetWd		db	0		; byte returned from collision read
-
-;*** keep these in order ***
-
-DumpPorts	db	0,0,0,0		; Input ports (inp0..3)
-
-InputLatch	db	080h		; Input latch (inp4)
-		db	080h		; Input latch (inp5)
-	   
 .code
 
 ; *****************************************************************************

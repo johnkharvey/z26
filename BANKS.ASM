@@ -2,13 +2,6 @@
 
 ; 02-17-98  got Parker Bros Working and added TigerVision
 
-.data
-
-ReadBank	dw	RBank4		; R/W vectors -- default to 4K cart
-WriteBank	dw	WBank4
-        
-RomBank		dw	0		; Rom bank pointer for F8 & F16
-
 .code
 
 ;*
@@ -435,17 +428,6 @@ WBank32sc:
 ;* Parker Brother's 8K cart
 ;*
 
-.data
-
-; Parker Brother's ROM Slices
-
-PBSlice0	dw	0
-PBSlice1	dw	1*400h
-PBSlice2	dw	2*400h
-PBSlice3	dw	7*400h		; this one doesn't change
-					; points to 1K bank #7
-
-.code
 
 PB_SetSlice macro
 local NoChange
@@ -499,15 +481,6 @@ WBank8pb:
 ;*
 ;* Tigervision 8K cart
 ;*
-
-.data
-
-; Tigervision ROM Slices
-
-TVSlice0	dw	0
-TVSlice1	dw	3*800h		; this one doesn't change
-					; points to 2K bank #3
-.code
 
 TV_SetSlice macro
 local NoChange
@@ -581,16 +554,6 @@ WBank8FE:
 ;* M-Network 16K cart
 ;*
 
-.data
-
-; M-Network ROM Slices
-
-MNSlice0	dw	0
-MNSlice1	dw	7*800h		; this one doesn't change
-					; points to 2K bank #3
-
-; M-Network RAM Slices
-
 ; small chunks mapped at 0 to 3FF
 ;
 ; 0 --  00 -  FF
@@ -600,9 +563,6 @@ MNSlice1	dw	7*800h		; this one doesn't change
 
 ; large chunk mapped at 400 to 7FF
 
-MNRamSlice	dw	0		; which 256 byte ram slice
-
-.code
 
 MNR_TestRam macro
 local Done, ReadBig

@@ -62,16 +62,16 @@ TSI_1:	call	_ShiftRegister9
 	mov	[Samp_n_max],ax
 	mov	[Samp_n_cnt],0
 
-;	xor	eax,eax			; initialize the local globals
-;	mov	word ptr  Outvol,ax
-;	mov	word ptr  Div_n_cnt,ax
-;	mov	word ptr  Div_n_max,ax
-;	mov	word ptr  AUDC,ax
-;	mov	word ptr  AUDF,ax
-;	mov	word ptr  AUDV,ax
-;	mov	word ptr  P4,ax
-;	mov	word ptr  P5,ax
-;	mov	dword ptr P9,eax
+	xor	eax,eax			; initialize the local globals
+	mov	word ptr  Outvol,ax
+	mov	word ptr  Div_n_cnt,ax
+	mov	word ptr  Div_n_max,ax
+	mov	word ptr  AUDC,ax
+	mov	word ptr  AUDF,ax
+	mov	word ptr  AUDV,ax
+	mov	word ptr  P4,ax
+	mov	word ptr  P5,ax
+	mov	dword ptr P9,eax
 
 	ret	
 _Tia_sound_init	endp

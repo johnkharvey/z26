@@ -724,9 +724,15 @@ _GetDSPVersion:
 
 _CheckBlaster:
 
-	call	_ShowBlasterWaiting	; output a message
+	mov	[BlasterLoopCount],0
 
 CheckBlasterLoop:
+	cmp	[BlasterLoopCount],1
+	jne	CheckBlasterNoMsg
+	call	_ShowBlasterWaiting	; output a message on the tenth loop
+
+CheckBlasterNoMsg:
+	inc	[BlasterLoopCount]
 	call	_ResetDSP		; knock-knock
 	test	ax,ax
 	jnz	CheckBlasterSuccess	;   Sound Blaster there!

@@ -74,3 +74,16 @@ TCTBK =			0		;backround
 TCTPF =			1		;playfield
 TCTP1 =			2		;player 1
 TCTP0 =			3		;player 0
+
+
+; some display related stuff
+
+DEFAULT_CFirst = 39
+MEDIUM_Offset = 19			; offset a medium game this much
+					; tune so that game in mode 3 and mode 5
+					; appear at same vertical position
+					; (unless it's a known tall game)
+
+MAX_TallGame = 240			; size of a tall game
+
+

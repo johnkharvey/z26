@@ -2,228 +2,20 @@
 ;			      Other stuff
 ; *****************************************************************************
 
-
-; *** keep next 4 variables in order !!!!
-; they are arranged to match the order of the entries in TIAColourTable
-
-BackgroundColor	dd	0
-PlayfieldColor	dd	0
-Player1Color	dd	0
-Player0Color	dd	0
-Frame		dd	0		; Frame Counter
-PrevFrame	dd	0		; Previous value frame counter
-
-OriginalFrameExit dd	0		; save it here for FPS calculation
-StartTicks	dd	0		; ticks at start
-StopTicks	dd	0		; ticks at finish
-
-
-;playfield counter to playfield bit table
-
-;	  PF2		|	  PF1		|	  PF0		|
-; 7  6	5  4  3	 2  1  0  7  6	5  4  3	 2  1  0  7  6	5  4  3	 2  1  0
-;23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6	5  4  3	 2  1  0
-;				  ECX					|
-
-PFClockToBitReversed	dd	1 shl 4		;0	forward
-			dd	1 shl 5		;1
-			dd	1 shl 6		;2
-			dd	1 shl 7		;3
-			dd	1 shl 15	;4
-			dd	1 shl 14	;5
-			dd	1 shl 13	;6
-			dd	1 shl 12	;7
-			dd	1 shl 11	;8
-			dd	1 shl 10	;9
-			dd	1 shl 9		;10
-			dd	1 shl 8		;11
-			dd	1 shl 16	;12
-			dd	1 shl 17	;13
-			dd	1 shl 18	;14
-			dd	1 shl 19	;15
-			dd	1 shl 20	;16
-			dd	1 shl 21	;17
-			dd	1 shl 22	;18
-			dd	1 shl 23	;19
-		        
-			dd	1 shl 23	;20	reversed
-			dd	1 shl 22	;21
-			dd	1 shl 21	;22
-			dd	1 shl 20	;23
-			dd	1 shl 19	;24
-			dd	1 shl 18	;25
-			dd	1 shl 17	;26
-			dd	1 shl 16	;27
-			dd	1 shl 8		;28
-			dd	1 shl 9		;29
-			dd	1 shl 10	;30
-			dd	1 shl 11	;31
-			dd	1 shl 12	;32
-			dd	1 shl 13	;33
-			dd	1 shl 14	;34
-			dd	1 shl 15	;35
-			dd	1 shl 7		;36
-			dd	1 shl 6		;37
-			dd	1 shl 5		;38
-			dd	1 shl 4		;39
-
-PFClockToBitForward	dd	1 shl 4		;0	forward
-			dd	1 shl 5		;1
-			dd	1 shl 6		;2
-			dd	1 shl 7		;3
-			dd	1 shl 15	;4
-			dd	1 shl 14	;5
-			dd	1 shl 13	;6
-			dd	1 shl 12	;7
-			dd	1 shl 11	;8
-			dd	1 shl 10	;9
-			dd	1 shl 9		;10
-			dd	1 shl 8		;11
-			dd	1 shl 16	;12
-			dd	1 shl 17	;13
-			dd	1 shl 18	;14
-			dd	1 shl 19	;15
-			dd	1 shl 20	;16
-			dd	1 shl 21	;17
-			dd	1 shl 22	;18
-			dd	1 shl 23	;19
-		        
-			dd	1 shl 4		;0	forward
-			dd	1 shl 5		;1
-			dd	1 shl 6		;2
-			dd	1 shl 7		;3
-			dd	1 shl 15	;4
-			dd	1 shl 14	;5
-			dd	1 shl 13	;6
-			dd	1 shl 12	;7
-			dd	1 shl 11	;8
-			dd	1 shl 10	;9
-			dd	1 shl 9		;10
-			dd	1 shl 8		;11
-			dd	1 shl 16	;12
-			dd	1 shl 17	;13
-			dd	1 shl 18	;14
-			dd	1 shl 19	;15
-			dd	1 shl 20	;16
-			dd	1 shl 21	;17
-			dd	1 shl 22	;18
-			dd	1 shl 23	;19
-
+.data
 
 PFClockToBitTable	dw	PFClockToBitReversed
 
-
-
-ScanLine	dw	1		; current scan line
-TopLine		dw	0		; was 36     top line of display
-BottomLine	dw	0		; was 36+200 bottom line of display
-
-OldCFirst	dw	0		; remember original CFirst
-					; (for homing the display)
-
-DefaultCFirst	dw	0ffffh		; recommended start of game
-UserCFirst	dw	0ffffh		; remember what user specified (if anything)
-
-DEFAULT_CFirst = 39
-MEDIUM_Offset = 19			; offset a medium game this much
-					; tune so that game in mode 3 and mode 5
-					; appear at same vertical position
-					; (unless it's a known tall game)
-
-MAX_TallGame = 240			; size of a tall game
-
-InitialMaxLines	dw	204		; for remembering which games are medium and tall					 
-MaxLines	dw	204		; max # of lines to scan
-					; (gets changed by graphics.asm)
-
-DisplayPointer	dw	0		;pointer into display RAM
-
 DisplayTranslate dw offset TIADisplayToColour ;display to color translation table
 
-
-ColumnBlank	db	0		; blank this many columns
-GamePaused	db	0		; game paused
-NoScoreMode	db	0		; set if we don't want PF to take on player colors
-CPUOffset	db	66		; 64 default offset for CPU clock
-CPUClock	db	0
-WrapZero	db	0		; wrap negative player pos to zero
-WrapWsync	db	0		; push late Wsyncs to next line
-OldMissile	db	0		; use old missile code for resmpx
 
 ALIGN	2
 
 CtrlFn		dw	 Controls	; Control vector (paddles/sticks)
 
-WByte		db	0		; byte to write
 
-ALIGN 2
 
-TIABuffer	db 256 dup (TIAEnd)	; TIA information buffer
-					; 128 just isn't big enough for some
-					; trashed games.
-
-VDP0Gr		db	0		; Buffer for Player 0 Vert Del Graphic
-VDP1Gr		db	0		; Buffer for Player 1 Vert Del Graphic
-VDBlEn		db	0		; Buffer for Ball Vertical Delay Enable
-
-TIAWritePointer dw	0		; Write to TIA Buffer pointer
-TIAReadPointer	dw	0		; Read from TIA Buffer pointer
-TIACollide	dw	0		; Collision flag word.
-
-psp		dw	0		; gets pointer to PSP 
-					; (if .EXE file or module)
-
-; *** stuff that gets shared with "C" program ***
-
-global _psp
-_psp		dw	0		; gets set by calling C program
-
-global _Checksum
-_Checksum	dd	0		; gets cart checksum
-
-global _dsp
-_dsp		db	0		; do digital signal processing
-
-global _VideoMode
-_VideoMode	db	0ffh		; default video mode
-
-global _CFirst
-_CFirst		dw	0ffffh		; <-- gets changed by SetupSpecial
-					; (zero has VBlank trigger a new frame)
-global _SoundMode
-_SoundMode	db	0ffh		; sound mode
-
-global _IOPortB
-_IOPortB	db	00Bh		; IO Port B (switches)
-IOPortA		db	0FFh		; IO Port A (joystick)
-
-global _DoChecksum
-_DoChecksum	db	0		; set if we should print out checksum
-
-global _NoRetrace
-_NoRetrace	db	0		; don't wait for retrace (if 0ffh) otherwise framerate
-
-global _FrameExit
-_FrameExit	dd	0		; do this many frames and exit
-
-global _Joystick
-_Joystick	db	1		; do joystick
-
-global _quiet
-_quiet		db	0		; set if we want no sound
-
-global _PaletteNumber
-_PaletteNumber	db	0ffh		; gets set by cmdline.asm
-
-global _PaddleGame
-_PaddleGame	dd	0		; this is a paddle game (sensitivity)
-
-global _KeyBase
-_KeyBase	db	0ffh		; which paddle to emulate
-
-global _CartSize
-_CartSize	dw	0		; gets cart size (cmdline.asm)
-
+jam_msg	db	'Halt ','$'
 
 ;process these commands immediately
 
@@ -293,7 +85,7 @@ CycleOffset	db	68+CO	;00	VSYNC
 
         
 
-
+ALIGN 2
 ;
 ; Display to collision word
 ;

@@ -23,15 +23,6 @@ LUMCoeff db	0,	80	; LUM 0
 	db	72,	80
 	db	80,	80	; LUM 7
 
-xLUMCoeff db	0,	56	; LUM 0
-	db	8,	56
-	db	16,	56
-	db	24,	56
-	db	32,	56
-	db	40,	56
-	db	48,	56
-	db	56,	56	; LUM 7
-
 ;*
 ;* definitions for unsaturated colors
 ;*
@@ -204,6 +195,7 @@ PALPaletteTable db	0,		0,		0		; 00 -- (grey)
 
 TIAGraphicMode:
 	pushad
+	mov	[InTextMode],0
 
 	mov	ax,013h			; switch to 320x200 VGA mode
 	int	010h
@@ -441,6 +433,12 @@ TBRet:	ret
 ;*
 
 TIATextMode:
+	cmp	[InTextMode],0
+	jz	TIATextDoIt
+	ret
+
+TIATextDoIt:
+	mov	[InTextMode],1
 	mov	ah,0			; switch to 80x25 colour mode
 	mov	al,3
 	int	010h

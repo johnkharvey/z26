@@ -27,6 +27,8 @@ ENDIF
 .386					; allow 32-bit instructions
 
 .data
+	include ddata.asm		; dword data
+	include init.asm		; initialized data
 	include data.asm		; data
 .data?
 	include memory.asm		; RIOT ram, cart ROM, & optional stack

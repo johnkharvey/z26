@@ -2,6 +2,11 @@
 
 StartMemory	label	byte		; <- mark start of memory to be cleared
 
+TIABuffer	db 256 dup (?)		; TIA information buffer
+					; 128 just isn't big enough for some
+					; trashed games.
+
+
 KeyTable	db	128 dup (?)	; Key pressed table
 
 RiotRam		db	128 dup (?)	; RIOT ram (must be initially zero)

@@ -6,12 +6,6 @@
 ;
 ; *****************************************************************************
 
-.data
-
-OldInt9		dw	0,0	; old vector for int9
-
-CtrlSkipFlag	db	0	; skip this control key test
-
 .code
 
 ;*

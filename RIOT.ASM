@@ -5,14 +5,6 @@
 
 .data
 
-Timer		dd	0		; the RIOT Timer
-TimerFudge	dd	0		; fudge timer by this amount (frogpond)
-TimerVec	dw	Timer1		; timer vector -- Timer0 for espial (why??)
-TimerReadVec	dw	ReadTimer1	; timer read vector
-TimerByte	db	0		; a return value
-TimerIntReg	db	080h		; Timer Interrupt Register
-RetFF		db	0FFh
-
 
 ALIGN 2
 

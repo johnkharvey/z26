@@ -37,6 +37,7 @@ SSFIND_Done:
 ;*
 
 SSFudgeMissile:
+	mov	[OldMissile],0
 	cmp	eax,07df74h		; icehocky
 	jne	SSFudgeTimer
 	mov	[OldMissile],1
@@ -49,6 +50,7 @@ SSFudgeMissile:
 ;*
 
 SSFudgeTimer:
+	mov	dword ptr [TimerFudge],0
 	cmp	ax,0b2d7h
 	jne	SSCFF
 	mov	[TimerFudge],dword ptr 22	; frogpond
@@ -61,7 +63,8 @@ SSFudgeTimer:
 ;* (but I'm too lazy...)
 ;*
 
-SSCFF:	cmp	eax,0e3cfah
+SSCFF:	mov	[MXDelayedClear],2
+	cmp	eax,0e3cfah
 	je	SSCFF_B			; congbong
 	cmp	eax,09b2d7h
 	je	SSCFF_A			; frogpond
@@ -83,8 +86,7 @@ SSCFF_B:
 
 
 SSTR:	
-;	jmp	SetT0
-
+	mov	[TimerVec], offset Timer1
 	cmp	ax,07d00h
 	je	SetT0			; berzerk
 	cmp	ax,06b3dh
@@ -106,7 +108,7 @@ SetT0:	mov	[TimerVec], offset Timer0
 ;* process requests for wrapping negative player positions to zero
 ;*
 
-SSWRAP:	
+SSWRAP:	mov	[WrapZero],0
 	cmp	ax,06289h
 	je	WZero			; crackpot
 	cmp	ax,05b2ah
@@ -136,6 +138,8 @@ WZero:	mov	[WrapZero],1
 ;*
 
 SSTALL:
+	mov	[MaxLines],204
+	mov	[InitialMaxLines],204
 	cmp	eax,078a61h		; air_raid
 	je	SetMedium
 	cmp	eax,07b0a9h		; alienret
@@ -301,6 +305,8 @@ endif
 ;*
 
 SSLINE:
+	mov	[UserCFirst],0ffffh
+	mov	[DefaultCFirst],0ffffh
 	mov	dx,[_CFirst]
 	mov	[UserCFirst],dx			; remember...
 
@@ -897,7 +903,8 @@ SSNTSC:	mov	[_PaletteNumber],0
 ; * process audio requests (silence...)
 ; *
 
-SSAU:	cmp	ax,0392dh
+SSAU:	mov	[MinVol],8
+	cmp	ax,0392dh
 	je	SSAUQ			; vidchess
 	cmp	ax,06b3dh
 	je	SSAUQ			; boxing
@@ -931,7 +938,8 @@ SSAUQ:
 ; * process column blank requests *
 ; *
 
-SSCB:	mov	si,offset ColumnBlankTable
+SSCB:	mov	[ColumnBlank],0
+	mov	si,offset ColumnBlankTable
 	call	SSFIND			; lookup checksum
 	cmp	edx,-1
 	je	SetupScoreMode		;   not found
@@ -1017,6 +1025,7 @@ ColumnBlankTable label byte
 .code
 
 SetupScoreMode:
+	mov	[NoScoreMode],0
 	cmp	ax,0359ch
 	je	NoScore			; seaquest
 	cmp	ax,0fbedh
@@ -1045,7 +1054,7 @@ SP1HARD:
 	jmp	SetupWrapWsync
 
 SetupWrapWsync:
-
+	mov	[WrapWsync],0
 	cmp	ax,09f21h
 	je	DoWrapWsync		; crosfrce
 	cmp	ax,0e0e9h

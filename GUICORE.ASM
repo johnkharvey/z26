@@ -25,17 +25,26 @@ StringRow	dw	?			; row to display at
 StringColor	dw	?			; color to display in
 StringChar	dw	?			; character to output
 
+public _GUIFont
+_GUIFont	dw	0			; select font
+
 
 .code
 
 FontPointer	dd	?			; font offset
+FontHeight	dw	8			; # of scanlines in a char
+
 
 SimplexFont label byte				; z26 GUI font
 
 	include simplex5.asm
 
+TinyFont label byte
+
+	include tiny5.asm
+
 ;*
-;* void GUI_Line(int X1, int Y1, int X2, int Y2, int color);
+;* void gui_Line(int X1, int Y1, int X2, int Y2, int color);
 ;*
 
 public _gui_Line
@@ -73,7 +82,32 @@ _gui_Line endp
 
 
 ;*
-;* void far GUI_Char( int Col, int Row, int Color, char ch);
+;* void far gui_Font(int Font);
+;*
+
+public _gui_Font
+_gui_Font	proc	far
+
+	pop	[GUIReturn]
+	pop	[_GUIFont]
+	push	[_GUIFont]
+	push	[GUIReturn]
+
+	cmp	[_GUIFont],0
+	jz	FontZero
+
+	mov	[cs:FontHeight],5
+	ret
+
+FontZero:
+	mov	[cs:FontHeight],8
+	ret
+
+_gui_Font endp
+
+
+;*
+;* void far gui_Char( int Col, int Row, int Color, char ch);
 ;*
 
 public _gui_Char
@@ -90,9 +124,18 @@ _gui_Char	proc	far
 	push	[StringCol]
 	push	[GUIReturn]
 
+	cmp	[_GUIFont],0
+	jne	SetTinyFont
+
 	mov	word ptr cs:[FontPointer],offset SimplexFont
 	mov	word ptr cs:[FontPointer+2],cs
+	jmp	DoChar
 
+SetTinyFont:
+	mov	word ptr cs:[FontPointer],offset TinyFont
+	mov	word ptr cs:[FontPointer+2],cs
+
+DoChar:
 	pusha
 	push	ds
 	push	es
@@ -833,7 +876,7 @@ y_table	dw	 0
 ;*
 
 VGA_VIDEO_SEGMENT		equ	0a000h		;VGA display memory segment
-FONT_CHARACTER_SIZE		equ	8		;# bytes in each font char
+FONT_CHARACTER_SIZE		equ	8
 SCREEN_WIDTH			equ	80		; screen width in bytes
 
 ; VGA register equates.
@@ -949,7 +992,7 @@ DrawChar	proc	near
 ; Does not check for case where character is byte-aligned and
 ; no rotation and only one write is required.
 
-	mov	cx,FONT_CHARACTER_SIZE
+	mov	cx,[cs:FontHeight] ;FONT_CHARACTER_SIZE
 	mov	dx,GC_INDEX
 	
 	push	si
@@ -967,7 +1010,7 @@ LeftCharLoop:
 	dec	cx
 	jnz	LeftCharLoop
 
-	mov	cx,FONT_CHARACTER_SIZE
+	mov	cx,[cs:FontHeight] ;FONT_CHARACTER_SIZE
 
 	pop	di
 	pop	si		; restore pointers
