@@ -17,7 +17,7 @@ dd CartSize=0;		/* gets cart size */
 dd Checksum=0;		/* gets cart checksum */
 dd XChecksum=0;		/* gets alternative checksum */
 
-db CartRom[0x1000f];
+db CartRom[0x8000f];
 
 db PCXPalette[384];	/* palette information for PCX files goes here */
 

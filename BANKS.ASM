@@ -22,14 +22,15 @@ RBankTab label dword
 	dd	RBank32sc		;  8 -- 32K superchip
 	dd	RBank8			;  9 -- 8K Atari - banks swapped
 	dd	RBankCM			; 10 -- Compumate
-	dd	RBank32tv		; 11 -- 32K Tigervision
-	dd	RBank12			; 12 -- 12K
+	dd	RBank32tv		; 11 -- 512K Tigervision
+        dd      RBank8ua                ; 12 -- 8K UA Ltd.
 	dd	RBank8			; 13 -- 8K Atari
 	dd	RBank8P2		; 14 -- Pitfall2
 	dd	RBank_SP		; 15 -- Starpath
 	dd	RBank16			; 16 -- 16K Atari
 	dd	RBank32			; 17 -- 32K Atari
 	dd	RBankMB			; 18 -- Megaboy
+        dd      RBank12                 ; 19 -- 12K
 
 WBankTab label dword
 	dd	WBank4
@@ -44,13 +45,14 @@ WBankTab label dword
 	dd	WBank8
 	dd	WBankCM
 	dd	WBank32tv
-	dd	WBank12
+        dd      WBank8ua
 	dd	WBank8
 	dd	WBank8P2
 	dd	WBank_SP
 	dd	WBank16
 	dd	WBank32
 	dd	WBankMB
+	dd	WBank12
 
 RomBank		dd	0		; Rom bank pointer for F8 & F16
 
@@ -83,10 +85,6 @@ MNRamSlice	dd	0		; which 256 byte ram slice
 ; CompuMate RAM state
 
 CMRamState	dd	10h		; RAM enabled - read/write state
-
-; Activision FE bankswitching stack access counter
-FEStackCount    db      1               ; count consecutive accesses to the stack
-FETrigger       db      0               ; do we need to trigger bankswitching
 
 .code
 
@@ -169,7 +167,7 @@ Set8kMode:
 	ret
 
 Set12KMode:
-	mov	[_BSType],12
+        mov     [_BSType],19
 	ret
 
 Set16kMode:
@@ -649,7 +647,7 @@ local NoChange
 	ja	NoChange
 
 	mov	al,[WByte]
-	and	eax,0fh
+	and	eax,0ffh		; 0fh
 	shl	eax,11			; new bank
 	mov	[TVSlice032],eax
 
@@ -682,39 +680,19 @@ WBank32tv:
 ;*
 
 FE_SetBank macro
-local NoSwitch, NoTrigger, IncStack, Trace
+local Trace
 
         cmp     debugflag,1             ; no BS if trace code reads the memory
         je      Trace
-        cmp     [FETrigger],1           ; did we detect a bankswitch?
-        jne     NoSwitch
-        push    ebx
-        mov     ebx,esi
-        and     ebx,02000h              ; get high bit of address
-        xor     ebx,02000h              ; invert it
-        shr     ebx,1
-        mov     [RomBank],ebx           ; set new bank
-        pop     ebx
-NoSwitch:
-        mov     [FETrigger],0           ; reset BS trigger
-        cmp     [FEStackCount],4        ; did we have 3 consecutive accesses to the stack?
-        jne     NoTrigger               ; ... (only JSR and RTS do this)
-        mov     [FETrigger],1           ; yes, we need to switch banks
-NoTrigger:
-        cmp     esi,0200h               ; stack accessed?
-        jb      IncStack
-        mov     [FEStackCount],0        ; ... no, reset counter to 1
-IncStack:
-        inc     [FEStackCount]          ; ... yes, increase counter
+        cmp     esi,1000h
+        jb      Trace
+        mov     eax,2000h
+        and     eax,esi                 ; isolate bank bit from address
+        xor     eax,2000h               ; invert it
+        shr     eax,1                   ; position it
+        mov     [RomBank],eax           ; this is our bank
 Trace:
         endm
-
-;        mov     eax,2000h
-;        and     eax,esi                 ; isolate bank bit from address
-;        xor     eax,2000h               ; invert it
-;        shr     eax,1                   ; position it
-;        mov     [RomBank],eax           ; this is our bank
-;        endm
 
 
 RBank8FE:
@@ -886,4 +864,40 @@ WBankMB:
 	test_hw_write
 	SetBank_MB
 	ret
+
+;*
+;* UA Ltd. 8K cart (24)
+;*
+
+SetBank_8ua macro
+local DoChange
+local NoChange
+
+        cmp     esi,220h                ; bank 0 hotspot?
+        je      DoChange                
+        cmp     esi,240h                ; bank 1 hotspot?
+        jne     NoChange
+
+DoChange:
+        push    eax
+        mov     eax,esi
+        and     eax,40h                 ; high or low bank
+        shl     eax,6                   ; bank address
+        mov     [RomBank],eax
+        pop     eax
+
+NoChange:
+	endm
+
+RBank8ua:
+        SetBank_8ua
+        test_hw_read
+	MapRomBank
+	ret
+
+
+WBank8ua:
+        SetBank_8ua
+        test_hw_write
+        ret
 

@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
 	if (argc == 1)
 	{
 //		cli_CommandLine(4, default_arg);
-                srv_print("version 2.08");
+                srv_print("version 2.09");
 		exit(1);
 	}
 	else

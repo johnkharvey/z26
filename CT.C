@@ -346,6 +346,13 @@ dd	BS_11[] = {
 	-1
 };
 	
+dd      BS_12[] = {
+        0x39c892c7,     /* Pleiades prototype */
+        0xbc5527e7,     /* Pleiades prototype (fixed) */
+        0x2c19c728,     /* Funky Fish prototype */
+        -1              /* UA Ltd. prototypes go here */
+};
+
 
 dd	Phosphorescent[] = {
   0xa7890826,  /* alien.bin */
@@ -610,7 +617,10 @@ dd	Phosphorescent[] = {
   0x84e16d50,  /* Yars' Defeat (Justin J. Scott).bin */
   0xf78c1ef6,  /* birabira.bin */
   0xbef9acef,  /* Burning Desire (Mystique).bin */
-  0x7e908404,  /* E:\D\z26\Roms\Voch\Midnight Magic (1984) (Atari) (PAL) [!].bin */
-  0x286422ce,  /* E:\D\z26\Roms\Voch\Midnight Magic (1984) (Atari).bin */
+  0x7e908404,  /* Midnight Magic (1984) (Atari) (PAL) [!].bin */
+  0x286422ce,  /* Midnight Magic (1984) (Atari).bin */
+  0xfd0d0551,  /* CatTrax (fixed).bin (UA) */
+  0x2c19c728,  /* FunkyFish.bin (UA) */
+  0xbc5527e7,  /* Pleiades (fixed).bin (UA) */
   -1
 };

@@ -211,7 +211,7 @@ unsigned char SCBIOS[188] = {
 		if (XChecksum & 0x8000000) XChecksum |= 1;
 		XChecksum = (XChecksum << 1) ^ ch;
 		++CartSize;
-                if (CartSize > 0x10000) break;
+                if (CartSize > 0x80000) break;
 	}
 
 	fclose(fp);
