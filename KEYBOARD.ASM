@@ -234,7 +234,15 @@ StickL:
 	ifpress	P1Left,64
 	ifpress	P1Down,32
 	ifpress	P1Up,16
-	mov	[InputLatch],080h
+        test    ah,0c0h                 ; right & left pressed simultaniously?
+        jnz     SLnoRL
+        or      ah,0c0h                 ; yes, fix for no signal *EST*
+SLnoRL:
+        test    ah,030h                 ; up & down pressed simultaniously?
+        jnz     SLnoDU
+        or      ah,030h                 ; yes, fix for no signal *EST*
+SLnoDU:
+        mov	[InputLatch],080h
 	mov	[DumpPorts],0h	      
 	mov	[DumpPorts+1],0h
 
@@ -260,6 +268,14 @@ StickR:
 	ifpress	P2Left,4
 	ifpress	P2Down,2
 	ifpress	P2Up,1
+        test    ah,00ch                 ; right & left pressed simultaniously?
+        jnz     SRnoRL
+        or      ah,00ch                 ; yes, fix for no signal *EST*
+SRnoRL:
+        test    ah,003h                 ; up & down pressed simultaniously?
+        jnz     SRnoDU
+        or      ah,003h                 ; yes, fix for no signal *EST*
+SRnoDU:
 	mov	[InputLatch+1],080h
 	mov	[DumpPorts+2],0h
 	mov	[DumpPorts+3],0h
