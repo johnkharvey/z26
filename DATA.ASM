@@ -1,0 +1,643 @@
+
+;most of our data is here
+;we try to keep it in one place, away from the code
+;it runs faster that way (something about cache coherency...)
+
+
+; *****************************************************************************
+;		       6502 Register Set (storage)
+;	during emulation these locations do not contain correct data !
+; *****************************************************************************
+
+RPC		dw	0		; program counter (stored in BP)
+RA		db	0		; accumulator (stored in AL)
+RCarry		db	0		; carry bit (stored in AH)
+RS		db	0		; stack pointer (stored in CL)
+
+; *****************************************************************************
+;		 These flags are updated during emulation
+;     Z and N are worked out from the values stored in RZTEST and RNTEST
+; *****************************************************************************
+
+RClock		db	0		; clock cycles (stored in SI)
+RCycles		db	0		; cycles for this instruction.
+
+ALIGN 2
+
+RX		db	0		; x register (stored in DL)
+		db	0		; to allow 16-bit load & store (see _index)
+RY		db	0		; y register (stored in DH)
+		db	0		; to allow 16-bit load & store (see _index)
+RZTest		db	0		; value for zero test (Z set when 0)
+RNTest		db	0		; value for sign test (N set when -ve)
+FDec		db	0		; decimal flag
+FOver		db	0		; overflow flag
+FIntDis		db	0		; interrupt disable flag
+FBreak		db	0		; Break flag
+
+; *****************************************************************************
+;				Riot Timer
+; *****************************************************************************
+
+ALIGN 2
+
+Timer		dw	0		; the RIOT Timer
+TickCnt		dw	0		; Number of ticks till timer clicks
+TRate		dw	0		; Number of cycles per timer count
+
+; *****************************************************************************
+;			      Other stuff
+; *****************************************************************************
+
+ScanLine	dw	0		; current scan line
+Frame		dw	0		; Frame Counter
+PrevFrame	dw	0		; Previous value frame counter
+VBlank		db	0		; VBlank flag
+
+FEnd=$
+
+ALIGN 2
+
+TimerVec	dw	 Timer0		;timer routine vector -- Timer1 for starmaster
+
+TopLine		dw	0		; was 36     top line of display
+BottomLine	dw	0		; was 36+200 bottom line of display
+
+CFirst		dw	8		; <-- gets changed by SetupSpecial
+					; 8 is max for cubicol
+					 
+CLast		dw	256		; was 256 last scan line (from CMDLine)
+
+MaxLines	dw	200		;max # of lines to scan
+					;gets changed if doing shrunk screen
+
+DisplayPointer	dw	0		;pointer into display RAM
+DisplayTranslate dw offset TIADisplayToColour ;display to color translation table
+
+DoChecksum	dw	0		; do a checksum of the cartridge
+Checksum	dw	0		; checksum goes here
+
+ReadBank	dw	RBank4		; Bank switching function (Read)
+WriteBank	dw	WBank4
+        
+RomBank		dw	0
+
+SubVector	dw	DoSbc		; vectors for add and subtract
+AddVector	dw	DoAdc
+
+CtrlFn		dw	 Controls	; Control vector (paddles/sticks)
+
+psp		dw	0		; gets pointer to PSP (if .EXE file)
+
+Ret00		db	0
+Ret0F		db	0Fh
+Ret80		db	80h
+RetFF		db	0FFh
+
+TimerCount	dw	8,64,1024	; count values for the RIOT
+
+RetWd		db	0		; byte returned from collision read
+
+WByte		db	0		; byte to write
+
+
+
+;process these commands immediately
+
+ALIGN 2
+
+WrTiaImmediateVector	dw	WrTiaVSync	; 0
+			dw	WrTiaVBlank	; 1
+			dw	WrTiaWSync	; 2
+			dw	WSret		; 3 -- reset horizontal sync
+						;      for factory testing only !
+		        
+
+IOPortB		db	03Fh		; IO Port B (switches)
+IOPortA		db	0FFh		; IO Port A (joystick)
+
+DumpPorts	db	0,0,0,0		; Input ports (inp0..3)
+
+InputLatch	db	080h		; Input latch (inp4)
+		db	080h		; Input latch (inp5)
+	   
+;CTVBlank	db	0		; current value in vblank
+
+ALIGN 2
+
+OldInt9		dw	0,0		; old vector for int9
+
+KeyTable	db	128 dup (0)	; Key pressed table
+
+TIABuffer	db 128 dup (TIAEnd)	; TIA information buffer
+
+TIA		db 64 dup (0)		; TIA Registers
+
+VDP0Gr		db   0			; Buffer for Player 0 Vert Del Graphic
+VDP1Gr		db   0			; Buffer for Player 1 Vert Del Graphic
+VDBlEn		db   0			; Buffer for Ball Vertical Delay Enable
+
+
+ALIGN 4
+
+		db 160 dup (0)		; for writes with neg clock
+TIADisplay	db 320 dup (0)		; Display as currently setup
+
+TIAScanLine	dw	0		; Scanline
+
+TIAWritePointer dw	0		; Write to TIA Buffer pointer
+
+TIAFrameSkip	dw	-1		; zero if frame skipped
+
+TIACollide	dw	0		; Collision flag word.
+
+ALIGN 4
+
+SVector dw	PCSound			; Vector for sound updates
+
+AudC0	db	-1			; Sound registers
+AudC1	db	-1
+AudF0	db	-1
+AudF1	db	-1
+AudV0	db	-1
+AudV1	db	-1
+
+AudMask db	15,15,31,31,15,15	; bitmask for the registers
+
+SDMPX	db	2			; 0 = ch1,1 = ch2,2 = both,-1 = quiet
+MinVol	db	8			; minimum volume for PC Speaker
+
+
+; cycle offset table
+
+;CO=-1	;default cycle offset
+CO=-1
+C1=-2
+C2=-2	;play with this for video cube
+
+CycleOffset	db	68+CO	;00	VSYNC
+		db	68+CO	;01	VBLANK
+		db	68+CO	;02	WSYNC
+		db	68+CO	;03	RSYNC
+		db	68+CO	;04	NUSIZ0
+		db	68+CO	;05	NUSIZ1
+		db	68+C2	;06	COLUP0
+		db	68+C2	;07	COLUP1
+		db	68+C2	;08	COLUPF
+		db	68+C2	;09	COLUBK
+		db	68+C2	;0a	CTRLPF
+		db	68+CO	;0b	REFP0
+		db	68+CO	;0c	REFP1
+		db	68+C1	;0d	PF0
+		db	68+C1	;0e	PF1
+		db	68+C1	;0f	PF2
+		db	68-5	;10	RESP0	-- tune for Pacman
+		db	68-5	;11	RESP1	-- ditto
+		db	68-4	;12	RESM0	-- ditto 4
+		db	68-4	;13	RESM1	-- ditto 4
+		db	68-4	;14	RESBL	-- ditto 4
+		db	68+CO	;15	AUDC0
+		db	68+CO	;16	AUDC1
+		db	68+CO	;17	AUDF0
+		db	68+CO	;18	AUDF1
+		db	68+CO	;19	AUDV0
+		db	68+CO	;1a	AUDV1
+		db	68+CO	;1b	GRP0
+		db	68+CO	;1c	GRP1
+		db	68+CO	;1d	ENAM0
+		db	68+CO	;1e	ENAM1
+		db	68+CO	;1f	ENABL
+		db	68+CO	;20	HMP0
+		db	68+CO	;21	HMP1
+		db	68+CO	;22	HMM0
+		db	68+CO	;23	HMM1
+		db	68+CO	;24	HMBL
+		db	68+CO	;25	VDELP0
+		db	68+CO	;26	VDEL01
+		db	68+CO	;27	VDELBL
+		db	68+CO	;28	RESMP0
+		db	68+CO	;29	RESMP1
+		db	68+CO	;2a	HMOVE
+		db	68+CO	;2b	HMCLR
+		db	68+CO	;2c	CXCLR
+
+ALIGN 2
+
+TIARegVector dw TRNoop, TRNoop, TRNoop, TRNoop		; registers 00-03
+	dw	TRCopy, TRCopy, TRCopy, TRCopy		; registers 04-07
+	dw	TRCopy, TRCopy, TRCopy, TRCopy		; registers 08-0B
+	dw	TRCopy, TRCopy, TRCopy, TRCopy		; registers 0C-0F
+	dw	TRPlyr, TRPlyr, TRMiss, TRMiss		; registers 10-13
+	dw	TRBall, TRSond, TRSond, TRSond		; registers 14-17
+	dw	TRSond, TRSond, TRSond, TRGrp0		; registers 18-1B
+	dw	TRGrp1, TRCopy, TRCopy, TRCopy		; registers 1C-1F
+	dw	TRCopy, TRCopy, TRCopy, TRCopy		; registers 20-23
+	dw	TRCopy, TRCopy, TRCopy, TRCopy		; registers 24-27
+	dw	TRCopy, TRCopy, TRHMov, TRHClr		; registers 28-2B
+	dw	TRCClr, TRNoop, TRNoop, TRNoop		; registers 2C-2F
+	dw	TRNoop, TRNoop, TRNoop, TRNoop		; registers 30-33
+	dw	TRNoop, TRNoop, TRNoop, TRNoop		; registers 34-37
+	dw	TRNoop, TRNoop, TRNoop, TRNoop		; registers 38-3B
+	dw	TRNoop, TRNoop, TRNoop, TRNoop		; registers 3C-3F
+        
+TIARegVector2 dw TRNoop, TRNoop, TRNoop, TRNoop		; registers 00-03
+	dw	TRCopy, TRCopy, TRCopy, TRCopy		; registers 04-07
+	dw	TRCopy, TRCopy, TRCopy, TRCopy		; registers 08-0B
+	dw	TRCopy, TRCopy, TRCopy, TRCopy		; registers 0C-0F
+	dw	TRSave, TRSave, TRSave, TRSave		; registers 10-13
+	dw	TRSave, TRSond, TRSond, TRSond		; registers 14-17
+	dw	TRSond, TRSond, TRSond, TRGrp0		; registers 18-1B
+	dw	TRGrp1, TRCopy, TRCopy, TRCopy		; registers 1C-1F
+	dw	TRCopy, TRCopy, TRCopy, TRCopy		; registers 20-23
+	dw	TRCopy, TRCopy, TRCopy, TRCopy		; registers 24-27
+	dw	TRCopy, TRCopy, TRHmvB, TRHClr		; registers 28-2B
+	dw	TRCxZr, TRNoop, TRNoop, TRNoop		; registers 2C-2F
+	dw	TRNoop, TRNoop, TRNoop, TRNoop		; registers 30-33
+	dw	TRNoop, TRNoop, TRNoop, TRNoop		; registers 34-37
+	dw	TRNoop, TRNoop, TRNoop, TRNoop		; registers 38-3B
+	dw	TRNoop, TRNoop, TRNoop, TRNoop		; registers 3C-3F
+        
+
+ALIGN 4
+
+;playfield counter to playfield bit table
+
+;	  PF2		|	  PF1		|	  PF0		|
+; 7  6	5  4  3	 2  1  0  7  6	5  4  3	 2  1  0  7  6	5  4  3	 2  1  0
+;23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6	5  4  3	 2  1  0
+;				  ECX					|
+
+PfClockToBitTable	dd	1 shl 4		;0	forward
+			dd	1 shl 5		;1
+			dd	1 shl 6		;2
+			dd	1 shl 7		;3
+			dd	1 shl 15	;4
+			dd	1 shl 14	;5
+			dd	1 shl 13	;6
+			dd	1 shl 12	;7
+			dd	1 shl 11	;8
+			dd	1 shl 10	;9
+			dd	1 shl 9		;10
+			dd	1 shl 8		;11
+			dd	1 shl 16	;12
+			dd	1 shl 17	;13
+			dd	1 shl 18	;14
+
+
+
+			dd	1 shl 19	;15
+			dd	1 shl 20	;16
+			dd	1 shl 21	;17
+			dd	1 shl 22	;18
+			dd	1 shl 23	;19
+		        
+			dd	1 shl 23	;20	reversed
+			dd	1 shl 22	;21
+			dd	1 shl 21	;22
+			dd	1 shl 20	;23
+			dd	1 shl 19	;24
+			dd	1 shl 18	;25
+			dd	1 shl 17	;26
+			dd	1 shl 16	;27
+			dd	1 shl 8		;28
+			dd	1 shl 9		;29
+			dd	1 shl 10	;30
+			dd	1 shl 11	;31
+			dd	1 shl 12	;32
+			dd	1 shl 13	;33
+			dd	1 shl 14	;34
+			dd	1 shl 15	;35
+			dd	1 shl 7		;36
+			dd	1 shl 6		;37
+			dd	1 shl 5		;38
+			dd	1 shl 4		;39
+
+
+TGODiffTab	dw	TGORet		; 0
+		dw	TGO2Close	; 1
+		dw	TGO2Medium	; 2
+		dw	TGO3Close	; 3
+		dw	TGO2Far		; 4
+		dw	TGO2Width	; 5
+		dw	TGO3Medium	; 6
+		dw	TGO4Width	; 7
+
+
+
+;
+; Display to collision word
+;
+;
+; Display to collision word
+;
+TIAColTab dw 0 ; 0
+   dw 0 ; 0
+   dw 0 ; 0
+   dw 8192 ; 2000
+   dw 0 ; 0
+   dw 128 ; 80
+   dw 64 ; 40
+   dw 8384 ; 20c0
+   dw 0 ; 0
+   dw 2048 ; 800
+   dw 1024 ; 400
+   dw 11264 ; 2c00
+   dw 4 ; 4
+   dw 2180 ; 884
+   dw 1092 ; 444
+   dw 11460 ; 2cc4
+   dw 0 ; 0
+   dw 32 ; 20
+   dw 16 ; 10
+   dw 8240 ; 2030
+   dw 32768 ; 8000
+   dw 32928 ; 80a0
+   dw 32848 ; 8050
+   dw 41200 ; a0f0
+   dw 8 ; 8
+   dw 2088 ; 828
+   dw 1048 ; 418
+   dw 11320 ; 2c38
+   dw 32780 ; 800c
+   dw 34988 ; 88ac
+   dw 33884 ; 845c
+   dw 44284 ; acfc
+   dw 0 ; 0
+   dw 512 ; 200
+   dw 256 ; 100
+   dw 8960 ; 2300
+   dw 2 ; 2
+   dw 642 ; 282
+   dw 322 ; 142
+   dw 9154 ; 23c2
+   dw 16384 ; 4000
+   dw 18944 ; 4a00
+   dw 17664 ; 4500
+   dw 28416 ; 6f00
+   dw 16390 ; 4006
+   dw 19078 ; 4a86
+   dw 17734 ; 4546
+   dw 28614 ; 6fc6
+   dw 1 ; 1
+   dw 545 ; 221
+   dw 273 ; 111
+   dw 9009 ; 2331
+   dw 32771 ; 8003
+   dw 33443 ; 82a3
+   dw 33107 ; 8153
+   dw 41971 ; a3f3
+   dw 16393 ; 4009
+   dw 18985 ; 4a29
+   dw 17689 ; 4519
+   dw 28473 ; 6f39
+   dw 49167 ; c00f
+   dw 51887 ; caaf
+   dw 50527 ; c55f
+   dw 61439 ; efff
+;
+TIADisplayToColour db 0,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2
+ db 3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3
+ db 3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3
+ db 3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3
+;
+TIADisplayToColour2 db 0,1,1,1,2,1,1,1,2,1,1,1,2,1,1,1
+ db 3,1,1,1,3,1,1,1,3,1,1,1,3,1,1,1
+ db 3,1,1,1,3,1,1,1,3,1,1,1,3,1,1,1
+ db 3,1,1,1,3,1,1,1,3,1,1,1,3,1,1,1
+;
+TIAColourTable	db	TIAColubk	; Background
+		db	TIAColupf	; Playfield
+		db	TIAColup1	; Player 1,Missile 1
+		db	TIAColup0	; Player 0,Missile 0
+
+ALIGN 2
+
+Frequency dw 39 ; 30000.00 Hz
+ dw 79 ; 15000.00 Hz
+ dw 119 ; 10000.00 Hz
+ dw 159 ; 7500.00 Hz
+ dw 198 ; 6000.00 Hz
+ dw 238 ; 5000.00 Hz
+ dw 278 ; 4285.71 Hz
+ dw 318 ; 3750.00 Hz
+ dw 357 ; 3333.33 Hz
+ dw 397 ; 3000.00 Hz
+ dw 437 ; 2727.27 Hz
+ dw 477 ; 2500.00 Hz
+ dw 517 ; 2307.69 Hz
+ dw 556 ; 2142.86 Hz
+ dw 596 ; 2000.00 Hz
+ dw 636 ; 1875.00 Hz
+ dw 676 ; 1764.71 Hz
+ dw 715 ; 1666.67 Hz
+ dw 755 ; 1578.95 Hz
+ dw 795 ; 1500.00 Hz
+ dw 835 ; 1428.57 Hz
+ dw 875 ; 1363.64 Hz
+ dw 914 ; 1304.35 Hz
+ dw 954 ; 1250.00 Hz
+ dw 994 ; 1200.00 Hz
+ dw 1034 ; 1153.85 Hz
+ dw 1073 ; 1111.11 Hz
+ dw 1113 ; 1071.43 Hz
+ dw 1153 ; 1034.48 Hz
+ dw 1193 ; 1000.00 Hz
+ dw 1233 ; 967.74 Hz
+ dw 1272 ; 937.50 Hz
+;
+
+; Vectors and Opcodes for the 6507 interpreter
+
+vectors dw op00,op01,fail,fail,fail,op05,op06,fail
+	dw op08,op09,op0a,fail,fail,op0d,op0e,fail
+	dw op10,op11,fail,fail,fail,op15,op16,fail
+	dw op18,op19,fail,fail,fail,op1d,op1e,fail
+
+	dw op20,op21,fail,fail,op24,op25,op26,fail
+	dw op28,op29,op2a,fail,op2c,op2d,op2e,fail
+	dw op30,op31,fail,fail,fail,op35,op36,fail
+	dw op38,op39,fail,fail,fail,op3d,op3e,fail
+
+	dw op40,op41,fail,fail,fail,op45,op46,fail
+	dw op48,op49,op4a,fail,op4c,op4d,op4e,fail
+	dw op50,op51,fail,fail,fail,op55,op56,fail
+	dw op58,op59,fail,fail,fail,op5d,op5e,fail
+
+	dw op60,op61,fail,fail,fail,op65,op66,fail
+	dw op68,op69,op6a,fail,op6c,op6d,op6e,fail
+	dw op70,op71,fail,fail,fail,op75,op76,fail
+	dw op78,op79,fail,fail,fail,op7d,op7e,fail
+
+	dw fail,op81,fail,fail,op84,op85,op86,fail
+	dw op88,fail,op8a,fail,op8c,op8d,op8e,fail
+	dw op90,op91,fail,fail,op94,op95,op96,fail
+	dw op98,op99,op9a,fail,fail,op9d,fail,fail
+
+	dw opa0,opa1,opa2,fail,opa4,opa5,opa6,fail
+	dw opa8,opa9,opaa,fail,opac,opad,opae,fail
+	dw opb0,opb1,fail,fail,opb4,opb5,opb6,fail
+	dw opb8,opb9,opba,fail,opbc,opbd,opbe,fail
+
+	dw opc0,opc1,fail,fail,opc4,opc5,opc6,fail
+	dw opc8,opc9,opca,fail,opcc,opcd,opce,fail
+	dw opd0,opd1,fail,fail,fail,opd5,opd6,fail
+	dw opd8,opd9,fail,fail,fail,opdd,opde,fail
+
+	dw ope0,ope1,fail,fail,ope4,ope5,ope6,fail
+	dw ope8,ope9,opea,fail,opec,oped,opee,fail
+	dw opf0,opf1,fail,fail,fail,opf5,opf6,fail
+	dw opf8,opf9,fail,fail,fail,opfd,opfe,fail
+
+; *****************************************************************************
+;			    Cycles per instruction
+; *****************************************************************************
+;	      0	 1  2  3  4  5	6  7  8	 9  a  b  c  d	e  f
+Cycles	db    7, 6, 2, 8, 3, 3, 5, 5, 3, 2, 2, 2, 4, 4, 6, 6  ; 0
+	db    2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7  ; 1
+	db    6, 6, 2, 8, 3, 3, 5, 5, 4, 2, 2, 2, 4, 4, 6, 6  ; 2
+	db    2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7  ; 3
+	db    6, 6, 2, 8, 3, 3, 7, 5, 3, 2, 2, 2, 3, 4, 6, 6  ; 4
+	db    2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7  ; 5
+	db    6, 6, 2, 8, 3, 3, 5, 5, 4, 2, 2, 2, 5, 4, 6, 6  ; 6
+	db    2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7  ; 7
+	db    2, 6, 2, 6, 3, 3, 3, 3, 2, 2, 2, 2, 4, 4, 4, 4  ; 8
+	db    2, 6, 2, 6, 4, 4, 4, 4, 2, 5, 2, 5, 5, 5, 5, 5  ; 9
+	db    2, 6, 2, 6, 3, 3, 3, 3, 2, 2, 2, 2, 4, 4, 4, 4  ; a
+	db    2, 5, 2, 5, 4, 4, 4, 4, 2, 4, 2, 4, 4, 4, 4, 4  ; b
+	db    2, 6, 2, 8, 3, 3, 5, 5, 2, 2, 2, 2, 4, 4, 6, 6  ; c
+	db    2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7  ; d
+	db    2, 6, 2, 8, 3, 3, 5, 5, 2, 2, 2, 2, 4, 4, 6, 6  ; e
+	db    2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7  ; f
+
+
+TIAVGATable db 7,7,7	; 1c1c1c
+      db 22,22,22	; 595959
+      db 36,36,36	; 929292
+      db 47,47,47	; bcbcbc
+      db 54,54,54	; d9d9d9
+      db 59,59,59	; ececec
+      db 62,62,62	; f8f8f8
+      db 63,63,63	; ffffff	8/8
+      db 23,8,1		; 5e2304
+      db 41,17,5	; a54716
+      db 56,30,8	; e37820
+      db 63,42,7	; ffab1d
+      db 63,51,13	; ffce34
+      db 63,57,20	; ffe651
+      db 63,62,29	; fff977
+      db 63,63,38	; ffff98	8/8
+      db 28,7,4		; 721e11
+      db 44,14,8	; b33a20
+      db 56,26,8	; e36920
+      db 63,35,9	; ff8c25
+      db 63,43,14	; ffae38
+      db 63,49,22	; ffc559
+      db 63,53,33	; ffd587
+      db 63,57,40	; ffe4a1	8/8
+      db 31,6,3		; 7e1a0d
+      db 50,8,6		; c82119
+      db 59,14,14	; ec3b38
+      db 63,24,24	; fc6161
+      db 63,31,31	; ff7f7e
+      db 63,39,39	; ff9d9e
+      db 63,46,47	; ffb9bd
+      db 63,49,51	; ffc7ce	8/8
+      db 14,4,27	; 3b136d
+      db 34,10,35	; 8b2a8c
+      db 46,14,46	; b938ba
+      db 54,17,55	; db47dd
+      db 61,23,61	; f45ff5
+      db 63,30,63	; fe7afd
+      db 63,37,63	; ff95fd
+      db 63,41,63	; ffa4ff	8/8
+      db 16,2,33	; 400984
+      db 28,9,39	; 70249d
+      db 41,16,48	; a441c3
+      db 52,21,59	; d054ed
+      db 58,27,63	; e96dff
+      db 62,34,63	; f88aff
+      db 63,40,63	; fea1ff
+      db 63,42,63	; feabff	8/8
+      db 16,2,43	; 420aad
+      db 25,10,52	; 6428d0
+      db 35,18,53	; 8d4bd4
+      db 44,22,59	; b058ec
+      db 49,26,63	; c56bff
+      db 52,32,63	; d183ff
+      db 54,39,63	; db9dff
+      db 55,42,63	; dfaaff	8/8
+      db 1,9,41		; 626a5
+      db 9,15,53	; 263dd4
+      db 19,22,59	; 4f5aee
+      db 25,29,63	; 6575ff
+      db 32,36,63	; 8091ff
+      db 37,42,63	; 97a9ff
+      db 43,47,63	; afbeff
+      db 48,50,63	; c0cbff	8/8
+      db 8,6,40		; 2218a0
+      db 18,15,49	; 483ec7
+      db 24,22,59	; 6159ec
+      db 30,29,63	; 7a74ff
+      db 36,35,63	; 918eff
+      db 41,40,63	; a5a3ff
+      db 46,46,63	; b8b8ff
+      db 48,48,63	; c0c2ff	8/8
+      db 7,14,29	; 1d3876
+      db 7,23,43	; 1c5cac
+      db 12,33,51	; 3286cf
+      db 19,42,59	; 4ea8ec
+      db 28,49,63	; 70c7ff
+      db 36,54,63	; 93dbff
+      db 43,57,63	; afe4ff
+      db 48,58,63	; c3e9ff	8/8
+      db 14,20,0	; 395202
+      db 16,30,4	; 417a12
+      db 18,39,11	; 4a9f2e
+      db 23,47,21	; 5cbd55
+      db 26,56,30	; 69e27a
+      db 31,62,35	; 7cfa8d
+      db 38,63,41	; 9affa6
+      db 43,63,45	; adffb6	8/8
+      db 3,21,2		; d540a
+      db 4,31,3		; 137d0f
+      db 6,41,5		; 19a514
+      db 7,50,6		; 1ec919
+      db 17,57,11	; 47e42d
+      db 30,61,19	; 78f74d
+      db 38,63,30	; 9aff7a
+      db 44,63,38	; b2ff9a	8/8
+      db 1,20,3		; 5530e
+      db 1,29,5		; 77714
+      db 2,38,6		; 99b1a
+      db 18,49,7	; 48c41f
+      db 35,58,9	; 8fe924
+      db 42,63,16	; a8fc41
+      db 50,63,27	; c9ff6e
+      db 55,63,32	; dcff81	8/8
+      db 1,15,5		; 73f15
+      db 11,23,7	; 2d5f1e
+      db 22,32,9	; 598324
+      db 32,40,11	; 82a12e
+      db 42,48,14	; a9c13a
+      db 49,54,17	; c4d945
+      db 57,60,19	; e4f04e
+      db 60,63,20	; f2ff53	8/8
+      db 9,14,0		; 243803
+      db 20,21,6	; 51541b
+      db 37,32,13	; 978135
+      db 48,41,15	; c2a73e
+      db 54,48,15	; dbc03d
+      db 56,54,13	; e2d836
+      db 59,60,22	; eff258
+      db 62,63,31	; fbff7d	8/8
+      db 22,7,1		; 581f05
+      db 35,14,4	; 8d3a13
+      db 45,25,9	; b56427
+      db 52,33,14	; d0853a
+      db 59,40,19	; eda04e
+      db 63,45,23	; fcb75c
+      db 63,49,28	; ffc671
+      db 63,50,32	; ffcb83	8/8
+
+CopyRight	db	'z26 -- An Atari 2600 emulator',13,10,10,'Copyright (C) 1996 by Paul Robson',13,10,'Copyright (C) 1997 by John Saeger',13,10,'$'
+      
