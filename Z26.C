@@ -8,7 +8,8 @@
 */
 
 
-#define version "z26 (1.33)"
+#define version "z26 (1.34)"
+
 
 #define rom_list "ROM List"
 

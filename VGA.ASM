@@ -161,6 +161,10 @@ TIARestoreVideoMode:
 	popad
 	ret
 
+;*
+;* turn on graphics mode
+;*
+
 TIAGraphicMode:
 	pushad
 	mov	[InTextMode],0
@@ -172,43 +176,82 @@ TIAGraphicMode:
 	mov	[ModeX],0		; assume we're not in modex
 
 ;*
-;* adjust CFirst based on video mode
+;* first choose a video mode if necessary
+;*
+
+	cmp	[_VideoMode],0ffh	; did user specify a video mode?
+	jne	TGM_RemapVideo		;   yes, don't use defaults
+	cmp	[MaxLines],204		; is MaxLines above what mode 3 can handle?
+	ja	TGM_SetMX5		;   yes, use mode 5
+	mov	[_VideoMode],3		;   no,  use mode 3
+	jmp	TGM_RemapVideo
+
+TGM_SetMX5:	
+	mov	[_VideoMode],5
+
+;*
+;* now remap video mode for PAL games if allowed
+;*
+
+TGM_RemapVideo:
+	cmp	[_Use50Hz],0		; PAL modes allowed?
+	jz	TGM_SetMaxLines		;   no
+	cmp	[_PaletteNumber],1	; PAL mode ?
+	jne	TGM_SetMaxLines		;   no
+
+	movzx	si,[_VideoMode]
+	mov	al,[Remap50Hz + si]
+	mov	[_VideoMode],al
+
+;*
+;* set up max # of lines to display based on video mode
+;*
+
+TGM_SetMaxLines:
+	movzx	si,[_VideoMode]
+	shl	si,1
+	mov	si,[MaxLineTable + si]
+	mov	[MaxLines],si
+
+;*
+;* set up CFirst (first line to display)
 ;*
 
 	mov	dx,[UserCFirst]
 	mov	[_CFirst],dx
 	cmp	[UserCFirst],0ffffh		; did user specify a line number?
-	jne	SSLINE_TestMedium		;   yes, don't override
+	jne	TGM_TestUltimate		;   yes, don't override
 	mov	dx,[DefaultCFirst]
 	mov	[_CFirst],dx
 	cmp	[DefaultCFirst],0ffffh		; does game have a recommended starting line?
-	jne	SSLINE_TestMedium		;   yes, use it
+	jne	TGM_TestUltimate		;   yes, use it
 	mov	[_CFirst],DEFAULT_CFirst	;   no, use the standard default
 
-SSLINE_TestMedium:
+;*
+;* adjust CFirst based on game size
+;*
+
+TGM_TestUltimate:
+	cmp	[MaxLines],480			; in a very tall video mode?
+	jb	TGM_TestMedium			;   no
+	cmp	[_CFirst],0			; frogpond or pharhcrs ?
+	jz	TGM_TestMedium			;   yes
+	mov	[_CFirst],1			;   no, this is ultimate reality mode
+	jmp	TGM_Done
+
+TGM_TestMedium:
 	cmp	[InitialMaxLines],MAX_TallGame	; is this a known tall game?
-	je	SSLINE_Done			;   yes, done
-	cmp	[InitialMaxLines],220		; is this a known medium game?
-	jne	SSLINE_Done			;   no, done
-	cmp	[_CFirst],MEDIUM_Offset+1	; medium game, enough room to subtract the offset?
-	jbe	SSLINE_Done			;   no, done
+	je	TGM_Done			;   yes, done
+	cmp	[MaxLines],240			; in a tall video mode?
+	jb	TGM_Done			;   no
+
+	cmp	[_CFirst],MEDIUM_Offset+1	; medium or small game, enough room to subtract the offset?
+	jbe	TGM_Done			;   no, done
 	sub	[_CFirst],MEDIUM_Offset		;   yes, move it down a bit
 
-SSLINE_Done:
+TGM_Done:
 	mov	dx,[_CFirst]
 	mov	[OldCFirst],dx			; remember starting line for homing the display
-
-
-	cmp	[_VideoMode],0ffh	; did user specify a video mode?
-	jne	GeneratePalette		;   yes, don't use defaults
-	cmp	[MaxLines],204		; is MaxLines above what mode 3 can handle?
-	ja	SetMX5			;   yes, use mode 5
-	mov	[_VideoMode],3		;   no,  use mode 3
-	jmp	GeneratePalette
-
-SetMX5:	mov	[_VideoMode],5
-	jmp	GeneratePalette
-
 
 ;*
 ;* generate palette
@@ -291,39 +334,9 @@ LUMDone:
 	mov	gs,ax			; point GS to VGA area
 
 	cmp	[_VideoMode],0		; doing offbeat video modes ?
-	jnz	OffBeat			;   yes
+	jnz	RegularOffBeat		;   yes
 	popad
 	ret
-
-OffBeat:
-	cmp	[_PaletteNumber],1	; PAL mode ?
-	jne	RegularOffBeat		;   no
-
-;*********************************
-;*** test if PAL modes allowed ***
-;*********************************
-
-	cmp	[_Use50Hz],0
-	jz	No50Hz
-
-	movzx	si,[_VideoMode]
-	mov	al,[Remap50Hz + si]
-	mov	[_VideoMode],al	
-
-No50Hz:
-	movzx	si,[_VideoMode]
-	shl	si,1
-	mov	si,[MaxLineTable + si]	; (*** in modex.asm ***)
-	mov	[MaxLines],si
-
-	cmp	[MaxLines],480
-	jb	RegularOffBeat
-	cmp	[_CFirst],0		; frogpond or pharhcrs ?
-	jz	RegularOffBeat		;   yes
-
-	mov	[_CFirst],1		; this is ultimate reality mode
-	mov	[OldCFirst],1
-
 
 RegularOffBeat:
 	cmp	[_VideoMode],3		; doing Trixter 60Hz (mode 1, 2 or 3) ?

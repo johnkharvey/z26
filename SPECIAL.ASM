@@ -147,6 +147,9 @@ SSTALL:
 ;	cmp	eax,1fb7fbh		; shoot
 ;	je	SetTall
 
+	cmp	eax,07855fh		; merlinwl
+	je	SetTall
+
 	cmp	eax,043a0bh		; 32in1-07
 	je	SetMedium
 	cmp	eax,03db3ch		; 32in1-11
@@ -383,6 +386,9 @@ SSLINE_SearchDone:
 .data
 
 LineTable label byte
+
+	dd	07855fh			; merlinwl
+	db	44
 
 	dd	03c0f5h			; 32in1-00
 	db	80
