@@ -9,7 +9,10 @@
 
 JoyCenter:
 	pushad
-	cmp	[_Joystick],0		; doing joystick
+	mov	al,[_Joystick]
+	mov	[DoJoystick],al		; copy joystick parameter
+
+	cmp	[DoJoystick],0		; doing joystick?
 	jz	NoJoy			;   no
 	call	JoyRead
 
@@ -62,7 +65,7 @@ JoyInitLoop:				; get a good reading of center
 	popad
 	ret
 
-NoJoy:	mov	[_Joystick],0		; turn off the joystick
+NoJoy:	mov	[DoJoystick],0		; turn off the joystick
 	popad
 	ret
 
@@ -76,7 +79,7 @@ NoJoy:	mov	[_Joystick],0		; turn off the joystick
 
 Joystick:
 	pushad
-	cmp	[_Joystick],0
+	cmp	[DoJoystick],0
 	jz	NoJoy
 ;	call	_Fillbuffer		; fill sound buffer
 	call	JoyRead
@@ -260,6 +263,7 @@ JoyRight		dw	0
 JoyUp			dw	0
 JoyDown			dw	0
 
+DoJoystick		db	1
 
 .DEND
 .CODESEGMENT

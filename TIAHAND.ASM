@@ -162,15 +162,9 @@ TRSond:	cmp	[_quiet],0		; doing sound at all?
 	jnz	TRQuiet			; no
 	cmp	[_Sb_init],0		; SoundBlaster initialized ?
 	jz	DoPCSpeaker		;   no, use speaker
-	pusha
-	movzx	ax,byte ptr TIAVal[bp]
-	push	ax
-	movzx	ax,byte ptr TIAReg[bp]
-	push	ax
+
 	call	_Update_tia_sound
-	pop	cx
-	pop	cx
-	popa
+
 TRQuiet:
 	ret
 	

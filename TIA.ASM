@@ -45,9 +45,7 @@ ENDIF
 	xor	al,al
 	rep	stosb			; clear memory
 
-	call	CommandLine		; Process the command line (*** again! ***)
-					; I don't know why we need to call this from here
-					; as well as from the "C" program ...
+	call	CommandLine		; Process the command line
 
 	cmp	[_quiet],0
 	jnz	STUP_4
@@ -56,7 +54,6 @@ ENDIF
 	jnz	ReallyQuit		;   yes
 
 STUP_4:
-
 	call	Reset			; Reset the CPU
 
 	call	_SetupTimer		; put timer in mode 2
@@ -98,24 +95,13 @@ xm1:
 Paused:	call	[CtrlFn]		; check which keys pressed
 	test	[GamePaused],1		; game paused ?
 	jz	xmain			;   no, next frame
-	call	PauseDMA		;   yes, pause sound
+
 PausedLoop:
 	call	[CtrlFn]		; check which keys pressed
 	test	[GamePaused],1		; game paused ?
 	jnz	PausedLoop		;   yes
-	call	ContinueDMA		;   no, continue sound
 	jmp	xmain			; to next frame
 
-PauseDMA:
-	cmp	[_Sb_init],0		; SoundBlaster initialized ?
-	jz	PDRET			;   no, just return
-;	call	_SilenceBuffer		;   yes, fill buffer with silence
-PDRET:	ret
-
-ContinueDMA:
-	cmp	[_Sb_init],0		; SoundBlaster initialized ?
-	jz	CDRET			;   no, just return
-CDRET:	ret
 
 
 ;*

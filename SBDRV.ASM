@@ -1,5 +1,5 @@
-; sbdrv.asm -- assembly language portion of z26 sound drivers
-;              based in part on Asteroids v3.02 (c) 1997 by Chris Pile
+; sbdrv.asm -- z26 sound drivers
+;              based on Asteroids v3.02 (c) 1997 by Chris Pile
 
 ; Mar 27, 1998 -- first release
 ;
@@ -10,6 +10,7 @@
 ;-----------------------------------------------------------------------------
 ;DMA equates
 ;-----------------------------------------------------------------------------
+
 dma_mask	equ	0Ah
 dma_mode	equ	0Bh
 dma_flipflop	equ	0Ch
@@ -22,6 +23,7 @@ BUF_SIZE	equ	128	; DMA buffer size  (256 is maximum)
 
 				;(8   gives an interrupt frequency of 31400/4  = 7850       hz)
 				;(note:  8 is not recommended -- Cyrix 6x86 PR166 clogs here )
+				;(       4 pretty much locks up the system all together )
 
 				;(16  gives an interrupt frequency of 31400/8   = 3925      hz)
 				;(32  gives an interrupt frequency of 31400/16  = 1962.5    hz)
@@ -44,10 +46,9 @@ _sbDSPVersion	dw	0
 _sbIRQNumber	db	0
 _sbTimeConstant	db	0
 
-_DMABuf		dw	0
-_gDMABufNowPlaying db	0
-
-_DMABufToLoad	db	0
+_DMABuf		   dw	0
+_gDMABufNowPlaying dw	0
+_DMABufToLoad	   dw	0
 
 _sbDMAPage	db	0
 _sbDMAOffset	dw	0
@@ -67,9 +68,11 @@ dma_address	dw	0
 dma_length	dw	0
 dma_page	dw	0
 
+
 ;-----------------------------------------------------------------------------
 ;DMA page port value tables
 ;-----------------------------------------------------------------------------
+
 dma_0	db	87h
 dma_1	db	83h
 dma_2	db	81h
@@ -92,15 +95,26 @@ sound_int:
 	push	ax
 	push	dx
 	push	ds
+
 	mov	ax,[cs:sbDataSegSave]	; set up by SetISR
 	mov	ds,ax
 	mov	dx,[_sbBaseIOPort]
 	add	dx,14
 	in	al,dx			; ACK the Sound Blaster
-	xor	[_gDMABufNowPlaying],1
+	xor	[_gDMABufNowPlaying],BUF_SIZE/2
 
-	call	_xFillbuffer
+	mov	ax,[_DMABufToLoad]
+	cmp	ax,[_gDMABufNowPlaying]	; buffer ready for filling ?
+	je	xFB_Done		;   no
 
+	pushad
+
+	call	_Tia_process		; fill buffer
+	xor	[_DMABufToLoad],BUF_SIZE/2
+
+	popad
+
+xFB_Done:
 	mov	al,32			; EOI command
 	cmp	[_sbIRQNumber],7
 	jle	low_int_only
@@ -109,6 +123,7 @@ sound_int:
 low_int_only:
 	mov	dx,EOI0
 	out	dx,al			; signal EOI on master PIC
+
 	pop	ds
 	pop	dx
 	pop	ax
@@ -356,23 +371,6 @@ WriteDSPBusy:
 	ret
 
 
-IFDEF compileoldcode
-
-;*
-;* SilenceBuffer()
-;*
-
-_SilenceBuffer:
-
-	mov	cx,BUF_SIZE		; buffer size
-	mov	al,080h			; Silence
-	mov	di,[_DMABuf]
-	rep	stosb			; Fill buffer
-	ret
-
-ENDIF
-
-
 ;*
 ;* GetBlastEnv() -- parse BLASTER environment string
 ;*
@@ -580,6 +578,9 @@ get_irq:
 
 _ProgramDSP:
 
+	cmp	[_Sb_init],0		; using SoundBlaster?
+	jz	NoProgramDSP		;   no
+
 	pushf
 	cli
 
@@ -607,6 +608,7 @@ SendDSPCommand:
 
 	popf
 
+NoProgramDSP:
 	ret				;Done
 
 
@@ -748,6 +750,7 @@ CheckBlasterSuccess:
 ;*
 ;* SetupSoundBlaster() -- the main startup routine
 ;*                        does everything needed to start up sound
+;*			  except turning on DMA
 ;*
 
 _SetupSoundBlaster:
@@ -781,13 +784,9 @@ _SetupSoundBlaster:
 	out	dx,al			; turn on output filter
 SSB_SetPlayback:
 	mov	[_playback_freq],bx
+	mov	[_sample_freq],31400
 
-	push	bx			; playback freq
-	mov	ax,31400		; sample freq
-	push	ax
 	call	_Tia_sound_init		; init the Ron Fries code
-	pop	cx			; restore the stack
-	pop	cx
 
 	mov	al,193			; time constant for 15700 playback
 	cmp	[_playback_freq],31400
@@ -803,9 +802,7 @@ SSB_Slow:
 SSB_NoMsg:
 	call	_SetupDMABuffer		; setup DMA buffer (page change check)
 
-;	call	_SilenceBuffer		; fill it with silence
-
-	mov	[_DMABufToLoad],1	; init buffer flags
+	mov	[_DMABufToLoad],BUF_SIZE/2	; init buffer flags
 	mov	[_gDMABufNowPlaying],0
 
 
@@ -844,65 +841,3 @@ SSB_Err3:
 	call	_ShowBlasterTooOld	; if verbose, show message
 	jmp	SSB_Done
 
-
-;*
-;* Fillbuffer() -- fill sound buffer with generated sound
-;*
-
-IFDEF compileoldcode
-
-_Fillbuffer:
-
-	ret
-
-;	call	_GetTime		; make sure clock runs properly
-
-	cmp	[_Sb_init],0		; Sound Blaster running ?
-	je	FB_Done			;   no
-	mov	bl,[_DMABufToLoad]
-	cmp	bl,[_gDMABufNowPlaying]	; buffer ready for filling ?
-	je	FB_Done			;   no
-
-;	push	[_dsp]			; digital signal processing
-	mov	ax,BUF_SIZE/2
-	push	ax			; # of bytes
-	mov	ax,[_DMABuf]
-	test	bl,bl			; doing bottom half ?
-	jz	FB1			;   yes
-	add	ax,BUF_SIZE/2		;   no, point at top
-FB1:	push	ax			; buffer address
-	call	_Tia_process		; call sound generator
-	add	sp,4			; fix up stack
-	xor	[_DMABufToLoad],1	; toggle buffer
-FB_Done:
-	ret	
-
-ENDIF
-
-;*
-;* xFillbuffer() -- fill sound buffer with generated sound
-;*                  call from interrupt handler only
-;*
-
-_xFillbuffer:
-
-;	ret
-
-	pushad
-	mov	bl,[_DMABufToLoad]
-	cmp	bl,[_gDMABufNowPlaying]	; buffer ready for filling ?
-	je	xFB_Done		;   no
-
-	mov	ax,BUF_SIZE/2
-	push	ax			; # of bytes
-	mov	ax,[_DMABuf]
-	test	bl,bl			; doing bottom half ?
-	jz	xFB1			;   yes
-	add	ax,BUF_SIZE/2		;   no, point at top
-xFB1:	push	ax			; buffer address
-	call	_Tia_process		; call sound generator
-	add	sp,4			; fix up stack
-	xor	[_DMABufToLoad],1	; toggle buffer
-xFB_Done:
-	popad
-	ret	

@@ -126,6 +126,12 @@ PAGE 66,132
 ;			(this CAUSES a click)
 ;
 ;			silence buffer when game paused
+;
+; (1.03)  May 14, 1998  fix crash if no Sound Blaster caused in 1.02
+;
+;                       faster sound interrupt handler and sound generation
+;
+;                       allow joystick swapping with -j2 parameter
 
 
 ; assembly time definitions

@@ -163,6 +163,21 @@ CtrlExit:
 	jnz	CtrlRet			;   yes, don't check joystick (sound off)	
 	call	Joystick		; peaceful coesistance between
 					; keyboard and joystick
+
+	cmp	[_Joystick],2		; reversing joystick controls?
+	jne	CtrlRet			;   no
+	mov	al,[InputLatch]		;   yes
+	mov	ah,[InputLatch+1]	; reverse buttons
+	mov	[InputLatch+1],al
+	mov	[InputLatch],ah
+	mov	al,[IOPortA]		; reverse direction switches
+	mov	bl,0fh
+	and	bl,al			; isolate low nibble
+	and	al,0f0h			; isolate hi nibble
+	shr	al,4
+	shl	bl,4			; swap nibbles
+	add	al,bl			; combine
+	mov	[IOPortA],al		
 CtrlRet:
 	ret
 	

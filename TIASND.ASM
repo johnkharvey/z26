@@ -17,6 +17,8 @@
 ; Reference: The Art of Electronics by Horowitz and Hill (1st ed.)
 ;            pages 438-441
 
+; note:  bits are numbered left to right with bit 9 being the lsb
+
 _ShiftRegister9	proc	near
 	mov	ax,[sreg]
 	and	ax,1		; bit 9 (register output & return val)
@@ -44,16 +46,8 @@ sreg	dw	1		; initialize shift register to non-zero val
 ;*
 
 _Tia_sound_init	proc	near
-	push	bp
-	mov	bp,sp
-	mov	ax,[bp+4]
-	mov	[_sample_freq],ax
-	mov	ax,[bp+6]
-	mov	[_playback_freq],ax
 
-; fill the 9-bit poly with random bits
-
-	xor	bx,bx
+	xor	bx,bx			; fill the 9-bit poly with random bits
 TSI_1:	call	_ShiftRegister9
 	mov	Bit9[bx],al
 	inc	bx
@@ -81,7 +75,6 @@ TSI_1:	call	_ShiftRegister9
 ;	mov	word ptr  P5,ax
 ;	mov	dword ptr P9,eax
 
-	pop	bp
 	ret	
 _Tia_sound_init	endp
 
@@ -103,10 +96,10 @@ ALIGN_ENTRY
 ;*
 
 _Update_tia_sound	proc	near
-	push	bp
-	mov	bp,sp
-	mov	bx,[bp+4]	; addr
-	mov	al,[bp+6]	; val
+
+	movzx	bx,byte ptr TIAReg[bp]
+	mov	al,TIAVal[bp]
+
 	sub	bx,21		; offset to AUDC
 	cmp	bx,5
 	ja	UTS_Done	; not an audio register
@@ -146,7 +139,7 @@ UTS_J4:	and	al,15
 	mov	[AUDV],al
 
 UTS_Chan0:
-	mov	bx,0
+	xor	bx,bx
 	jmp	UTS_RegSet
 
 UTS_J5:	and	al,15
@@ -166,16 +159,17 @@ UTS_RegSet:
 	mov	Outvol[bx],al		; and set output to selected volume
 	jmp	UTS_rs2
 
-UTS_rs1:movzx	ax,AUDF[bx]		; otherwise calc the 'div by N' value
+UTS_rs1:
+	movzx	ax,AUDF[bx]		; calc the 'div by N' value
 	inc	ax
 	mov	[_new_val],ax
-	movzx	ax,AUDC[bx]
-	and	ax,12
-	cmp	ax,12
+	mov	al,AUDC[bx]
+	and	al,12
+	cmp	al,12
 	jne	UTS_rs2			; if bits 2 and 3 are set ...
 	mov	ax,[_new_val]		; ... multiply by three
-	imul	ax,3
-	mov	[_new_val],ax
+	add	ax,ax
+	add	[_new_val],ax
 
 UTS_rs2:movzx	ax,Div_n_max[bx] 	; only reset channels that have changed
 	cmp	ax,[_new_val]
@@ -195,7 +189,6 @@ UTS_Done:
 
 	sti
 
-	pop	bp
 	ret	
 
 _Update_tia_sound	endp
@@ -212,25 +205,25 @@ done:
 	endm
 
 ;*
-;* Fill the output buffer with the sound output based on the tia chip parameters.
+;* Fill the output buffer with the sound output based on the TIA chip parameters.
 ;*
 
 ALIGN_ENTRY
 
 _Tia_process	proc	near
-	push	bp
-	mov	bp,sp
-	mov	ax,[bp+4]
-	mov	[buffer],ax
-	mov	ax,[bp+6]
-	mov	[n],ax
+
+	mov	cx,BUF_SIZE/2		; # of bytes
+
+	mov	di,[_DMABuf]
+	add	di,[_DMABufToLoad]	; address of buffer to fill
+
+	mov	dx,[_dsp]		; do digital signal processing flag
 
 TP_ProcessLoop:
 
 	xor	ebp,ebp			; process channel 0 first
 
 TP_ProcessChannel:
-
 	cmp	[Div_n_cnt + bp],1	; if div by N counter can count down ...
 	jb	TP_Ch0done		;   zero is special case, means AUDC==0 -- fast exit
 	je	TP_1
@@ -240,12 +233,12 @@ TP_ProcessChannel:
 TP_1:	mov	al,[Div_n_max + bp]	; otherwise reset the counter and process this channel
 	mov	[Div_n_cnt + bp],al
 
-	movzx	ecx,[AUDC + bp]		; AUDC = index into branch table
+	movzx	esi,[AUDC + bp]		; AUDC = index into branch table
 
 	inc_mod	P5+bp,31		; P5 channel has multiple uses (Div31 & P5), inc it here
 	movzx	bx,[P5 + bp]
 
-	jmp	cs:[AUDC_Jumptab + ecx*2] ; process sound changes based on AUDC
+	jmp	cs:[AUDC_Jumptab + esi*2] ; process sound changes based on AUDC
 
 AUDC_Jumptab	label	word	; HEX  D3 D2 D1 D0    Clock Source    Clock Modifier    Source Pattern
 				; --- -------------  --------------  ----------------  ----------------
@@ -352,27 +345,26 @@ TP_Ch0done:
 	mov	al,080h			; fill buffer with silence
 TP_NoSilence:
 
-	cmp	[_dsp],0		; doing digital signal processing ?
-	je	TP_ProcessDone		;   no, just store it
+	test	dx,dx			; doing digital signal processing ?
+	jz	TP_ProcessDone		;   no, just store it
 	mov	[next_sample],al	;   yes, take edge off square wave
 	xor	ah,ah
 	add	ax,[prev_sample]
 	shr	ax,1
 	mov	[prev_sample],ax	; dsp=2, scaled moving average
-	cmp	[_dsp],1
+
+	cmp	dx,1
 	jne	TP_ProcessDone
-	movzx	dx,[next_sample]	; dsp=1, simple moving average
-	mov	[prev_sample],dx
+	movzx	si,[next_sample]	; dsp=1, simple moving average
+	mov	[prev_sample],si
 
 TP_ProcessDone:
-	mov	bx,[buffer]
-	mov	[bx],al			; put byte in the buffer
-	inc	[buffer]		; bump buffer pointer
+	mov	[di],al			; put byte in buffer
+	inc	di			; bump buffer pointer
 
-	dec	[n]			; one less byte to do
+	dec	cx			; one less byte to do
 	jnz	TP_ProcessLoop
 
-	pop	bp
 	ret	
 _Tia_process	endp
 
@@ -414,14 +406,10 @@ P9		dw	2 dup (0)
 AUDC		db	2 dup (0)
 AUDF		db	2 dup (0)
 AUDV		db	2 dup (0)
-n		dw	0
-val		db	0
-chan		db	0
-addr		dw	0
 Outvol		db	2 dup (0)
-buffer		dw	0
 Div_n_cnt 	db	2 dup (0)
 Div_n_max 	db	2 dup (0)
+
 _sample_freq	dw	0
 _playback_freq	dw	0
 

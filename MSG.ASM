@@ -6,7 +6,7 @@
 
 ; ShowCopyright messages (note: only last message is terminated)
 
-msg01	db	10, 10, 'z26 -- An Atari 2600 emulator (1.02)', 10
+msg01	db	10, 10, 'z26 -- An Atari 2600 emulator (1.03)', 10
 msg02	db	'Copyright (C) 1997-1998 by John Saeger', 10
 msg03	db	'Home Page:  http://www.whimsey.com/z26', 10, 10
 msg04	db	'    F1 -- reset      F2 -- select     F3 -- B/W        F4 -- Color', 10
@@ -23,7 +23,7 @@ msg12	db	' -s    -- show sound diagnostic messages', 10
 msg13	db	' -f<n> -- run emulator for <n> frames and display timing results', 10
 msg14	db	' -d<n> -- use digital signal processing on sound (1=low, 2=high)', 10
 msg15	db	' -v<n> -- video mode (0=70Hz, 1=60Hz, 2=60Hz narrow, 3=60Hz 204 scan lines)', 10
-msg16	db	' -j<n> -- joystick (0=joystick off)', 10
+msg16	db	' -j<n> -- joystick (0=joystick off, 1=normal, 2=players reversed)', 10
 msg17	db	' -c    -- show credits (please do!)', 10,'$'
 
 ; ShowCredits messages (note: only last message is terminated)
