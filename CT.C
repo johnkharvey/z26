@@ -228,6 +228,7 @@ dd	BS_1[] = {
 	0x30eb4f7a,	/* Video Life (4K).BIN */
 	0x9afa761f,	/* Magicard (Life).bin */
 	0x266bd1b6,	/* Video Life (CommaVid).bin */
+        0xa0899305,     /* Video Life (alternative 2K) */
 	-1
 };
 
@@ -281,6 +282,7 @@ dd	BS_5[] = {
         0xd8ecf576,     /* Decathlon (PAL) */
         0x0e8757b0,     /* Robot Tank (PAL) */
         0x94e8df6b,     /* Space Shuttle (PAL) */
+        0xf3a4363c,     /* Thwocker prototype */
 	-1
 };
 
