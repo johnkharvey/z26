@@ -41,10 +41,12 @@ RetWd		db	1 dup (?)	; byte returned from hardware read
 
 ;*** keep these in order ***
 
-DumpPorts	db	4 dup (?)	; Input ports (inp0..3)
+; variables moved to C code
 
-InputLatch	db	1 dup (?)	; Input latch (inp4)
-		db	1 dup (?)	; Input latch (inp5)
+;_DumpPorts	db	4 dup (?)	; Input ports (inp0..3)
+
+;InputLatch	db	1 dup (?)	; Input latch (inp4)
+;		db	1 dup (?)	; Input latch (inp5)
 
 CH_End label byte			; <-- finish clearing here
 
@@ -56,7 +58,7 @@ CH_End label byte			; <-- finish clearing here
 
 Init_CPUhand:
 	clear_mem CH_Start, CH_End
-	mov	word ptr [InputLatch],08080h
+	mov	word ptr [_InputLatch],08080h
 	ret
 
 ; *****************************************************************************
@@ -127,38 +129,19 @@ ReadCollision:				; read the collision latch
 ReadInputLatches:			; read the input latch
 	cmp	esi,0ch
 	jb	ReadDumped
-	cmp	[_Lightgun],0		; *EST*
-	je	RILnoLightgun
+	pushad
+	mov	eax,[ScanLine]		; push parameters for C function
 	push	eax
-	mov	eax,[MLG_ShotLine]
-	cmp	[ScanLine],eax
-	jb	RILnoHit
-	mov	al,[RClock]
-	mov	ah,[MLG_ShotCycle]
-	cmp	ah,[_LG_WrapLine]	; see mouse.asm
-;	 cmp	 [MLG_ShotCycle],78	 ; 75-78
-	jb	RILnoFix
-	cmp	al,22
-	ja	RILnoFix
-	add	al,76
-RILnoFix:
-	cmp	al,[MLG_ShotCycle]
-
-	jb	RILnoHit
-
-	mov	[RetWd],07fh
+	movzx	eax,[RClock]
+	push	eax
+	call	_TestLightgunHit	; void TestLightgunHit(dd RClock, dd ScanLine)
+					; updates InputLatch[x] on Lightgun hit
 	pop	eax
-	mov	esi,offset RetWd
-	ret
-RILnoHit:
-	mov	[RetWd],0ffh
-	pop	eax
-	mov	esi,offset RetWd
-	ret	   
+	pop	eax			; clean up stack after function call
+	popad
 
-RILnoLightgun:
 	and	esi,1
-	add	esi,offset InputLatch
+	add	esi,offset _InputLatch
 	push	eax
 	mov	al,[esi]
 	or	[RetWd],al
@@ -167,15 +150,9 @@ RILnoLightgun:
 	ret
 	
 ReadDumped:
-	cmp	[_MouseBase],0ffh		; use mouse as paddles ?
-	jne	 RDump1				;   yes, check trigger
-	cmp	[_PaddleGame],0			; if not a paddle game
-	je	RetDirect			;   get state directly *EST*
-
-RDump1:
 	and	esi,3
-	mov	edx,[ChargeTrigger0 + esi*4]
-	cmp	edx,[ChargeCounter]		; this trigger expired ?
+        mov     edx,[_ChargeTrigger0 + esi*4]
+	cmp	edx,[_ChargeCounter]		; this trigger expired ?
 	jbe	TriggerExpired			;	  yes
 RetZero:or	[RetWd],0
 	mov	esi,offset RetWd
@@ -186,16 +163,6 @@ TriggerExpired:
 	mov	esi,offset RetWd
 	ret
 	
-RetDirect:
-	and	esi,3				; return state of dump port
-	add	esi,offset DumpPorts		;   directly (booster grip,
-	push	eax				;	keypad etc) *EST*
-	mov	al,[esi]
-	or	[RetWd],al
-	pop	eax
-	mov	esi,offset RetWd
-	ret
-
 
 ; *****************************************************************************
 ;   Memory mapping - Write. 

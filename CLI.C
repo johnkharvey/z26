@@ -265,21 +265,16 @@ unsigned char SCBIOS[188] = {
 **	-x	print out checksum of cartridge
 **  ->	-r	sync with monitor (full screen), -r<n> run at <n> fps
 **  ->	-d <n>  do digital signal processing
-**  ->	-j <n>	do joystick
-**	-p <n>  do paddle game with sensitivity <n>
-**	-k <n>  set keyboard player base
+**	-p <n>  set keyboard sensitivity to <n> for paddle emulation
 **	-t	trace instructions
 **  ->	-0      player 0 hard
 **  ->	-1      player 1 hard
-**	-y <n>	emulate none <0>, left <1>, right <2> or both <3> keypads *EST*
-**      -w <n>  emulate driving which controllers *EST*
 **      -g <n>  overrride bankswitching type detection *EST*
 **	-m <n>	paddle to emulate with mouse; 0xff=joystick *EST*
 **	-o	simulate PAL colour loss *EST*
 **	-l <n>	emulate lightgun and adjust horizontally *EST*
 **	-a <n>	adjust lightgun vertically *EST*
 **	-n	show line number count and FPS
-**      -i      emulate Mindlink controller, <1> right, <2> left *EST*
 **      -4      allow all 4 directions on the joystick simultaniously *EST*
 **      -e      enable faster mode X copy routines
 **      -h <n>  screen render and copy height *EST*
@@ -288,6 +283,13 @@ unsigned char SCBIOS[188] = {
 **      -!      simulate interlaced display in some video modes
 **      -B      save high-bpp screen shots as BMP file *EST*
 **      -R      sync to sound buffer
+**	-) <a>  set left controller (JS, PC, KP, DC, LG, CM, KV, ML, ST, TB, AM)
+**	-( <a>  set right controller
+**	-w	swap port 0 with port 1
+**	-i <a>	inactivate keyboard (K), mouse (M), joystick (J) or Stelladaptor (S)
+**	-P <n>  enable half resolution for joysticks in paddle emulation and
+**		delay the paddle-bit flipping by <n> scanlines
+**	-f <n>	enable phosporescent effect (n=0 through n=100; default n=77)
 */
 
 FILE *zlog;
@@ -301,6 +303,10 @@ void cli_InterpretParm(char *p)
 	ch = *p++;
 	parm = atol(p);
 
+	char cli_controllers[12][3] =
+		{"JS","PC","KP","DC","LG","CM","KV","ML","ST","TB","AM","NC"};
+	int i;
+	
 	switch (ch)
 	{
 	case 'u':  	CFirst = parm;				break;
@@ -316,22 +322,21 @@ void cli_InterpretParm(char *p)
         case 'B':       UseBMP = 1;                             break;
 	case 'x':  	DoChecksum = 1;				break;
 	case 'd':  	dsp = parm;				break;
-	case 'j':  	Joystick = parm;			break;
 	case 'c':  	PaletteNumber = parm;
 			UserPaletteNumber = parm;
                         if(parm == 2) {
                            IOPortB &= 0xf7;
                         }
                         break;
-	case 'p':  	PaddleGame = (parm & 0xf) << 1;		break;
-	case 'k':  	KeyBase = parm & 3;			break;
+	case 'p':  	PaddleSensitivity = (parm & 0xf) << 1;	break;
         case 'm':       if (parm < 100)
                         {
-                                MouseBase = parm & 3;
+                                MouseBaseX = parm & 3;
                         } else
                         {
                                 parm = parm - 100;
-                                MouseBase = 0x80 + (parm % 10) + ((parm / 10) << 2);
+                                MouseBaseX = parm / 10;
+                                MouseBaseY = parm % 10;
                                 MPdirection = 1;  /* set directions for Marble Craze */
                         }
                         break;
@@ -359,14 +364,11 @@ void cli_InterpretParm(char *p)
         case 'R':       SyncToSoundBuffer = 1;
                         NoRetrace = -1;
                         break;
-	case 'y':	KeyPad = parm & 3;		       break; /* *EST* */
-        case 'w':       Driving = parm & 3;                    break; /* *EST* */ 
         case 'g':       BSType = parm & 0x0f;                  break; /* *EST* */
 	case 'o':	SimColourLoss = 1;		       break; /* *EST* */
 	case 'l':	Lightgun = parm;		       break; /* *EST* */
 	case 'a':	LGadjust = parm;		       break; /* *EST* */
 	case 'n':	ShowLineCount = 1;		       break; /* *EST* */
-        case 'i':       Mindlink = parm & 3;                   break; /* *EST* */
         case '4':       AllowAll4 = 1;                         break; /* *EST* */
         case 'e':       if (parm == 0) 
 				Effect = 1;
@@ -405,6 +407,50 @@ void cli_InterpretParm(char *p)
 
         case 'z':       DisableCompareCopy = 1;                break; /* *EST* */
         case '!':       DoInterlace = 1;                       break; /* *EST* */
+	case 'P':	PaddleAdjust = parm;			break;
+       	case ')':	LeftController = 0xff;
+			for (i=0; i<12; i++)
+			{
+				if (strcmp(p, cli_controllers[i]) == 0)
+					LeftController=i;
+			}
+			if (LeftController == 0xff)
+			{
+				sprintf(msg, "Unknown controller type: %s", p);
+				srv_print(msg);
+				exit(1);
+			}
+			break;
+	case '(':	RightController = 0xff;
+			for (i=0; i<12; i++)
+			{
+				if (strcmp(p, cli_controllers[i]) == 0)
+					RightController=i;
+			}
+			if (RightController == 0xff)
+			{
+				sprintf(msg, "Unknown controller type: %s", p);
+				srv_print(msg);
+				exit(1);
+			}
+			break;
+        case 'w':       SwapPortsFlag = 1;			break;
+        case 'i':	for (i = 0; i < strlen(p); i++)
+        		{
+	        		switch (p[i])
+	        		{
+		        		case 'J':	JoystickEnabled = 0;		break;
+		        		case 'M':	MouseEnabled = 0;		break;
+		        		case 'K':	KeyboardEnabled = 0;		break;
+		        		case 'S':	StelladaptorEnabled = 0;	break;
+		        		default:
+		        			sprintf(msg, "Can't inactivate PC controller type: %c", p[i]);
+						srv_print(msg);
+						exit(1);
+						break;
+	        		}
+        		}
+        		break;
         default:   	sprintf(msg, "Bad command line switch seen: -%c", ch);
 			srv_print(msg);
 		   	exit(1);

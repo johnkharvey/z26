@@ -77,7 +77,7 @@ TGM_TestUltimate:
 
 TGM_Done:
 	mov	edx,[_CFirst]
-	mov	[OldCFirst],edx		; remember starting line for homing the display
+	mov	[_OldCFirst],edx	; remember starting line for homing the display
 	mov	[TopLine],edx		; set up some things in case there's no vsync
 	add	edx,[_MaxLines]		; (like bowlg_tw.bin)
 	mov	[BottomLine],edx

@@ -113,6 +113,9 @@ dd	Paddle_0[] = {
 	0x545dba81,	/* Night Driver_(eks).bin */
 	0x450650d5,	/* Super Breakout_(eks).bin */
         0x9ded5a9c,     /* Blackjack (PAL) */
+        0x7d39ac38,     /* SCSIcide release 1 */
+        0x1ccac7fd,     /* SCSIcide release 2 */
+        0x04839db5,     /* SCSIcide release 3 */
 	-1
 };
 
@@ -154,6 +157,12 @@ dd	MPdir_1[] = {
 	-1
 };
 
+dd	MPdir_2[] = {
+	0x095a655f,	/* Marble Craze NTSC */
+	0x96a0b1f9,	/* Marble Craze PAL */
+	-1
+};
+
 dd	MPdir_3[] = {
 	0xf89d2e22,	/* Backgammon (1978) (Atari) (PAL) [!].bin */
 	0xe24e8139,	/* Backgammon (1978) (Atari).bin */
@@ -165,6 +174,9 @@ dd	MPdir_3[] = {
 	0xd966099e,	/* Video Olympics - Pong Sports (1977) (Atari) [o].bin */
 	0xeb148808,	/* Video Olympics - Pong Sports (1977) (Atari).bin */
 	0x878d33f5,	/* Video Olympics (Atari) (PAL) [!].bin */
+        0x7d39ac38,     /* SCSIcide release 1 */
+        0x1ccac7fd,     /* SCSIcide release 2 */
+        0x04839db5,     /* SCSIcide release 3 */
 	-1
 };
 

@@ -27,9 +27,11 @@ page 66,132
 ;* controller interpretation files
 ;*
 
-	include paddle.asm		; (32) paddle support code
-	include keyboard.asm		; (32) convert keyboard into Atari joystick
-	include mouse.asm		; (32) convert mouse into a variety of controllers
+; these are handled in CONTROLS.C now
+
+;	include paddle.asm		; (32) paddle support code
+;	include keyboard.asm		; (32) convert keyboard into Atari joystick
+;	include mouse.asm		; (32) convert mouse into a variety of controllers
 
 ;*
 ;* emulator core files

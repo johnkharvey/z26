@@ -24,13 +24,14 @@ RBankTab label dword
 	dd	RBankCM			; 10 -- Compumate
 	dd	RBank32tv		; 11 -- 512K Tigervision
         dd      RBank8ua                ; 12 -- 8K UA Ltd.
-	dd	RBank8			; 13 -- 8K Atari
+        dd      RBankEF                 ; 13 -- 64K Homestar Runner / Paul Slocum
 	dd	RBank8P2		; 14 -- Pitfall2
 	dd	RBank_SP		; 15 -- Starpath
 	dd	RBank16			; 16 -- 16K Atari
 	dd	RBank32			; 17 -- 32K Atari
 	dd	RBankMB			; 18 -- Megaboy
         dd      RBank12                 ; 19 -- 12K
+        dd      RBank8                  ; 20 -- 8K Atari
 
 WBankTab label dword
 	dd	WBank4
@@ -46,13 +47,14 @@ WBankTab label dword
 	dd	WBankCM
 	dd	WBank32tv
         dd      WBank8ua
-	dd	WBank8
+        dd      WBankEF
 	dd	WBank8P2
 	dd	WBank_SP
 	dd	WBank16
 	dd	WBank32
 	dd	WBankMB
 	dd	WBank12
+	dd	WBank8
 
 RomBank		dd	0		; Rom bank pointer for F8 & F16
 
@@ -150,8 +152,10 @@ DetectBySize:
 ; Setup CompuMate
 
 SCM:	mov     [RomBank],03000h
-	call	InitCompuMate		; init Compumate keyboard
-	ret				; see keyboard.asm
+	pushad
+	call	_InitCompuMate		; init Compumate keyboard
+	popad
+	ret				; see controls.c
 
 
 ; Setup Commavid RAM module
@@ -165,7 +169,7 @@ SCV1:	mov	al,_CartRom[ebx]
 
 Set8kMode:
 	mov	[RomBank],01000h	; need this for moonswep and lancelot
-	mov	[_BSType],13
+        mov     [_BSType],20
 	ret
 
 Set12KMode:
@@ -456,14 +460,14 @@ local NoIncreaseKeyCount
 	jne	NoChange
 	test	[WByte],20h
 	jz	NoResetKeyCount
-	mov	[CM_Collumn],0
+	mov	[_CM_Collumn],0
 NoResetKeyCount:
 	test	[WByte],40h
 	jz	NoIncreaseKeyCount
-	inc	[CM_Collumn]
-	cmp	[CM_Collumn],10
+	inc	[_CM_Collumn]
+	cmp	[_CM_Collumn],10
 	jne	NoIncreaseKeyCount
-	mov	[CM_Collumn],0
+	mov	[_CM_Collumn],0
 NoIncreaseKeyCount:
 	mov	al,[WByte]
 	mov	[CMRamState],eax
@@ -910,3 +914,34 @@ WBank8ua:
         test_hw_write
         ret
 
+;*
+;* Homestar Runner / Paul Slocum (EF) 64K
+;*
+
+SetBank_EF macro
+local NoChange
+
+        cmp     esi,1FE0h               ; if not in switch area...
+	jb	NoChange		; ... there's no change
+        cmp     esi,1FEFh
+	ja	NoChange
+
+	mov	eax,esi
+        sub     eax,1FE0h               ; bank #
+	shl	eax,12			; bank address
+	mov	[RomBank],eax
+
+NoChange:
+	endm
+
+RBankEF:
+	test_hw_read
+        SetBank_EF
+	MapRomBank
+	ret
+
+
+WBankEF:
+	test_hw_write
+        SetBank_EF
+	ret

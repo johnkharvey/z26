@@ -37,11 +37,7 @@ void RecognizeCart(void)
 	db paddle;
         dd i,j;
 
-        if (crc == 0x9927a7ae) KidVid = 0x44;   /* Smurfs Save the Day */
-        if (crc == 0x0b63f9e3) KidVid = 0x48;   /* The Berenstain Bears */
-
-        if (crc == 0x7a0d162d) AllowAll4 = 1;   /* Bumper Bash NTSC */
-        if (crc == 0x4af43194) AllowAll4 = 1;   /* Bumper Bash PAL */
+        db LeftSuggestion, RightSuggestion;
 
 	KoolAide = 0;				/* KoolAide RESP cheat */
 	if (Lookup(Kool)) KoolAide = 1;
@@ -71,27 +67,6 @@ void RecognizeCart(void)
 
 	DefaultCFirst = CFirst;
 
-/* paddle games */
-
-	paddle = 0xff;				/* assume not recognized */
-
-	if (Lookup(Paddle_0)) paddle = 0;
-	if (Lookup(Paddle_1)) paddle = 1;
-	if (Lookup(Paddle_3)) paddle = 3;
-
-	if (paddle != 0xff)			/* if we found a paddle game set its direction */
-
-	{
-		if (PaddleGame == 0)   PaddleGame = 6;	/* default sensitivity 3 */
-		if (KeyBase == 0xff)   KeyBase = paddle;
-		if (MouseBase == 0xff) MouseBase = paddle;
-
-		MPdirection = 0;
-
-		if (Lookup(MPdir_1)) MPdirection = 1;
-		if (Lookup(MPdir_3)) MPdirection = 3;
-	}
-
 
 /* special palettes */
 
@@ -110,6 +85,7 @@ void RecognizeCart(void)
                 }
 	}
 
+
 /* phosphorescent games */
 
 	if (Phosphor > 100)
@@ -118,46 +94,109 @@ void RecognizeCart(void)
 		if ((Phosphor == 0) && Lookup(Phosphorescent))
 			Phosphor = 77;
 
+
 /* games that want Player 1 set to hard */
 
         if (Lookup(Player_1_hard)) IOPortB |= 0x80;
 
 
 /* games that want the joystick controls reversed */
+/* XOR flag bit so that ports can still be swapped by user */
+	if (Lookup(joy_rev)) SwapPortsFlag ^= 0x01;
 
-	if (Joystick == 0xff)			/* only if user didn't specify a preference */
+
+/* games that need to use "impossible" joystick positions */
+        if (crc == 0x7a0d162d) AllowAll4 = 1;   /* Bumper Bash NTSC */
+        if (crc == 0x4af43194) AllowAll4 = 1;   /* Bumper Bash PAL */
+
+
+/* detect controllers */
+       	LeftSuggestion = JS;		/* assume joystick controllers by default */
+	RightSuggestion = JS;
+
+/* paddle games */
+
+	paddle = 0xff;				/* assume not recognized */
+
+	if (Lookup(Paddle_0)) paddle = 0;
+	if (Lookup(Paddle_1)) paddle = 1;
+	if (Lookup(Paddle_3)) { paddle = 1; SwapPortsFlag ^= 0x01; }
+		/* Tac Scan uses paddle on right controller port -> swap ports */
+//	if (Lookup(Paddle_3)) paddle = 3;
+
+	/* Marble Craze NTSC and PAL -- use both mouse axis to emulate paddles */
+	if (crc == 0x095a655f) { MouseBaseX = 1; MouseBaseY = 0; paddle = 0; }	/* NTSC */
+	if (crc == 0x96a0b1f9) { MouseBaseX = 1; MouseBaseY = 0; paddle = 0; }	/* PAL */
+
+	if (paddle != 0xff)			/* if we found a paddle game set its direction */
+
 	{
-		Joystick = 1;
-		if (Lookup(joy_rev)) Joystick = 2;
+		LeftSuggestion = PC;
+		RightSuggestion = PC;
+		if (PaddleSensitivity == 0)   PaddleSensitivity = 6;	/* default sensitivity 3 */
+
+		MPdirection = 0;
+
+		/* MPdir bit0 = 1 -> vertical paddle motion */
+		if (Lookup(MPdir_1)) MPdirection = 1;
+		if (Lookup(MPdir_2)) MPdirection = 2;
+		if (Lookup(MPdir_3)) MPdirection = 3;
+		if ((MouseBaseY == 0xff) && (MPdirection & 0x01)) MouseBaseY = paddle;
+		else if ((MouseBaseX == 0xff) && !(MPdirection & 0x01)) MouseBaseX = paddle;
 	}
+
+
+/* Kid Vid games */
+        if (crc == 0x9927a7ae) { RightSuggestion = KV; KidVid = 0x44; }	/* Smurfs Save the Day */
+        if (crc == 0x0b63f9e3) { RightSuggestion = KV; KidVid = 0x48; }	/* The Berenstain Bears */
 
 
 /* keypad games */
 
-	if (Lookup(keypad_3)) KeyPad = 3;
-	if (Lookup(keypad_2)) KeyPad = 2;
+	if (Lookup(keypad_3)) { RightSuggestion = KP; LeftSuggestion = KP; }
+	if (Lookup(keypad_2)) RightSuggestion = KP;
 
 
 /* driving controller games */
 
-        if (Lookup(driving_con_2)) Driving = 2;
-        if (Lookup(driving_con_3)) Driving = 3;
+        if (Lookup(driving_con_2)) RightSuggestion = DC;
+        if (Lookup(driving_con_3)) { RightSuggestion = DC; LeftSuggestion = DC; }
 
 
 /* lightgun games */
 
 	LG_WrapLine = 78;
 
-	if (crc == 0x0febd060) { Lightgun = 7; LGadjust = 11; }			  /* shootacd */
-	if (crc == 0x56e2d735) { Lightgun = 8; LGadjust = 0;  }			  /* sentinel */
-	if (crc == 0xdde8600b) { Lightgun = 9; LGadjust = 5;  LG_WrapLine = 75; } /* guntest4 */
+	if (crc == 0x0febd060) { LeftSuggestion = LG; Lightgun = 7; LGadjust = 11; }			/* shootacd */
+	if (crc == 0x56e2d735) { LeftSuggestion = LG; Lightgun = 8; LGadjust = 0;  }			/* sentinel */
+	if (crc == 0xdde8600b) { LeftSuggestion = LG; Lightgun = 9; LGadjust = 5;  LG_WrapLine = 75; }	/* guntest4 */
 
 
 /* Mindlink games */
 
-        if (crc == 0x81187400) Mindlink = 1;    /* Telepathy */
-        if (crc == 0x3183c019) Mindlink = 2;    /* Bionic Breakthrough */
+        if (crc == 0x81187400) RightSuggestion = ML;	/* Telepathy */
+        if (crc == 0x3183c019) LeftSuggestion = ML;	/* Bionic Breakthrough */
 
+
+/* CompuMate keyboard */
+        if (crc == 0xa01ebff4) { RightSuggestion = CM; LeftSuggestion = CM; }	/* Spectravideo CompuMate PAL */
+
+
+/* TrakBalls */
+        if (crc == 0x16119bbc) { RightSuggestion = ST; LeftSuggestion = ST; }	/* Missile Command hack NTSC ST mouse */
+        if (crc == 0x094ed116) { RightSuggestion = ST; LeftSuggestion = ST; }	/* Missile Command hack PAL ST mouse */
+        if (crc == 0x8f7e1223) { RightSuggestion = TB; LeftSuggestion = TB; }	/* Missile Command hack NTSC CX-22 */
+        if (crc == 0x90215889) { RightSuggestion = TB; LeftSuggestion = TB; }	/* Missile Command hack PAL CX-22 */
+        if (crc == 0x8590dabb) { RightSuggestion = AM; LeftSuggestion = AM; }	/* Missile Command hack NTSC Amiga mouse */
+        if (crc == 0xe4062d87) { RightSuggestion = AM; LeftSuggestion = AM; }	/* Missile Command hack PAL Amiga mouse */
+        if (crc == 0xd4f23bda) { RightSuggestion = AM; LeftSuggestion = AM; }	/* Missile Command hack NTSC Amiga mouse (v1.2) */
+        if (crc == 0x9593b81c) { RightSuggestion = AM; LeftSuggestion = AM; }	/* Missile Command hack PAL Amiga mouse (v1.2) */
+
+        
+
+/* if the user didn't specify controllers, use autodetection */
+        if (LeftController == 0xff) LeftController = LeftSuggestion;
+	if (RightController == 0xff) RightController = RightSuggestion;
 
 /* bankswitching */
 

@@ -41,7 +41,7 @@ gs_store macro arg1, arg2
 Init_Service:
 	call	_SetupSoundBlaster
 	call	_TIAGraphicMode		; Switch into VGA mode
-	call	MouseInit		; *EST*
+;	call	MouseInit		; *EST*
 	ret
 
 ;*
@@ -83,10 +83,12 @@ _get_mouse_movement:
 ;*
 
 _TestEscExit:
-	test	[_KeyTable+KeyEsc],128	; ESC pressed ?
-	jnz	GoDOS			;   yes
-	test	[_KeyTable+KeyBackSlash],128
+	test	[_ExitEmulator],128	; ESC or backslash pressed?
 	jnz	GoDOS
+;	test	[_KeyTable+KeyEsc],128	; ESC pressed ?
+;	jnz	GoDOS			;   yes
+;	test	[_KeyTable+KeyBackSlash],128
+;	jnz	GoDOS
 	ret
 
 ;*
@@ -132,6 +134,8 @@ _TIARestoreVideoMode:
 ;*
 ;* turn on graphics mode
 ;*
+
+PUBLIC _TIAGraphicMode
 
 _TIAGraphicMode:
 	pushad

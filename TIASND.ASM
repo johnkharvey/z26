@@ -396,7 +396,7 @@ TSB_NotPitfall2:
 	add	al,[Outvol+1]		; sum the channels
 
 TSB_Pitfall2_Done:
-	cmp	[GamePaused],0		; if game paused
+	cmp	[_GamePaused],0		; if game paused
 	jz	TSB_NoSilence
 	mov	al,080h			; fill buffer with silence
 TSB_NoSilence:

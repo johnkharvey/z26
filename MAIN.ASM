@@ -47,7 +47,7 @@ start:
 	call	SetupBanks
 	call	Reset			; Reset the CPU -- must follow SetupBanks
 	call	Init_Service
-	call	Controls		; check controls before emulation starts
+	call	_Controls		; check controls before emulation starts
 
 ;*
 ;* the main outer loop
@@ -58,13 +58,17 @@ xmain:
 	call	_ModeXCopyScreen	; copy screenbuffer to video RAM
 	call	ScanFrame
 
-Paused:	call	Controls		; check which keys pressed
-	test	[GamePaused],1		; game paused ?
+Paused:	pushad
+	call	_Controls		; check which keys pressed
+	popad
+	test	[_GamePaused],1		; game paused ?
 	jz	xmain			;   no, next frame
 
 PausedLoop:
-	call	Controls		; check which keys pressed
-	test	[GamePaused],1		; game paused ?
+	pushad
+	call	_Controls		; check which keys pressed
+	popad
+	test	[_GamePaused],1		; game paused ?
 	jnz	PausedLoop		;   yes
 	jmp	xmain			; to next frame
 
@@ -88,9 +92,9 @@ ScanFrameLoop:
 	test	[VBlank],080h		; discharging capacitors ?
 	jnz	ScanBailOut		;   yes
 					;	 no, put some charge on the capacitors
-	test [ChargeCounter],080000000h ; already fully charged ?
+	test [_ChargeCounter],080000000h ; already fully charged ?
 	jnz	ScanBailOut		;   yes, don't increment
-	inc  [ChargeCounter]		;   no, add some charge
+	inc  [_ChargeCounter]		;   no, add some charge
 
 ScanBailOut:
 	mov	eax,[ScanLine]		; do emergency bail-out test

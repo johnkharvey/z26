@@ -13,7 +13,6 @@
 
 IN_Start label byte			; <-- start clearing hera
 
-;_KeyTable	db	128 dup (?)	; Key pressed table
 RiotRam		db	128 dup (?)	; RIOT ram (must be initially zero)
 TIA		db 	64 dup (?)	; TIA Registers (also should be zero)
 _Ram		db	2048 dup (?)	; extra ram
@@ -32,10 +31,6 @@ OurBailoutLine	dd	1 dup (?)	; initial bailout line
 TopLine		dd	1 dup (?)	; top line of display
 BottomLine	dd	1 dup (?)	; bottom line of display
 
-OldCFirst	dd	1 dup (?)	; remember original CFirst
-					; (for homing the display)
-
-GamePaused	db	1 dup (?)	; game paused
 WByte		db	1 dup (?)	; byte to write
 
 DisplayPointer	dd	1 dup (?)	; pointer into display RAM
@@ -87,9 +82,6 @@ InitData:
 	mov	[OurBailoutLine],1000
 	mov	[ScanLine],1
 	mov	[VBlanking],-1
-
-;	mov	dword ptr [OldInt9],0
-	mov	[CtrlSkipFlag],0
 
 	mov	eax,[_ScreenBuffer]
 	mov	[DisplayPointer],eax

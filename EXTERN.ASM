@@ -22,12 +22,13 @@ EXTRN _VideoMode:byte
 EXTRN _CFirst:dword
 EXTRN _quiet:byte
 EXTRN _IOPortA:byte
+EXTRN _IOPortA_Controllers:byte
+EXTRN _IOPortA_UnusedBits:byte
 EXTRN _IOPortB:byte
 EXTRN _DoChecksum:byte
 EXTRN _dsp:byte
 EXTRN _Joystick:byte
 EXTRN _PaletteNumber:byte
-EXTRN _PaddleGame:dword
 EXTRN _KeyBase:byte
 EXTRN _TraceCount:byte
 EXTRN _TraceEnabled:byte
@@ -162,3 +163,25 @@ EXTRN _NoRetrace:dword
 
 EXTRN _SyncToSoundBuffer:byte
 
+EXTRN _ChargeTrigger0:dword
+;EXTRN _ChargeTrigger1:dword
+;EXTRN _ChargeTrigger2:dword
+;EXTRN _ChargeTrigger3:dword
+
+EXTRN _ChargeCounter:dword
+
+EXTRN _DumpPorts:byte
+EXTRN _InputLatch:byte
+
+EXTRN _CM_Collumn:byte
+
+EXTRN _ExitEmulator:byte
+EXTRN _GamePaused:byte
+
+EXTRN _OldCFirst:dword
+
+EXTRN _Controls:near
+EXTRN _InitCompuMate:near
+EXTRN _ControlSWCHAWrite:near
+EXTRN _TestLightgunHit:near
+EXTRN _UpdateTrakBall:near

@@ -27,6 +27,9 @@ TimerIntReg	db	0		; Timer Interrupt Register
 ; *EST* variables
 DDR_A		db	0
 DDR_B		db	0
+IOPortA_read	db	0		; generate IOportA value on SWCHA read
+					;   when it needs some adjusting for some
+					;   controllers
 
 ALIGN 2
 
@@ -76,7 +79,7 @@ ReadDDR_A:				; read data direction register A
 	mov	esi,offset DDR_A
 	ret
 
-ReadDDR_B:				; read data direction rigister B
+ReadDDR_B:				; read data direction register B
 	mov	esi,offset DDR_B
 	ret
 
@@ -85,7 +88,19 @@ ReadPortB:				; read console switches (port b)
 	ret
 
 ReadPortA:				; read hand controllers (port a)
-	mov	esi,offset _IOPortA
+	pushad
+	mov	eax,[ScanLine]
+	push	eax
+	call	_UpdateTrakBall
+	pop	eax
+	popad
+	push	eax
+	mov	al,[_IOPortA_Controllers] ; pins grounded by controller ...
+	or	al,[_IOPortA_UnusedBits] ; read 0 even on pins where HIGH ...
+	and	al,[_IOPortA]		; was written to (see Star Raiders)
+	mov	[IOPortA_read],al
+	pop	eax
+	mov	esi,offset IOPortA_read
 	ret
 
 ;*
@@ -122,41 +137,15 @@ WritePortA:
 	and	ah,[_IOPortA]		;
 	or	al,ah			;
 
-	cmp	[_KeyPad],2		; *EST* cheat for Star Raiders
-	jne	WPAapply		;   wouldn'd read Joystick
-	and	al,00Fh			;   without it
-	mov	ah,[_IOPortA]		;
-	and	ah,0F0h			;
-	or	al,ah			;
-WPAapply:
 	mov	[_IOPortA],al
-	cmp	[_KidVid],0		; Kid Vid game?
-	je	WPAtestML
-	call	KidVidWrite		; in keyboard.asm
+
 	pop	eax
+	pushad
+	call	_ControlSWCHAWrite	; update controllers on SWCHA write
+					; Keypad, Compumate, Mindlink
+	popad
 	ret
-
-WPAtestML:
-	test	[_Mindlink],3		; Mindlink game?
-	jnz	[WPAhandleML]
-	pop	eax
-	cmp	[_BSType],10		; CompuMate?
-	je	WPAhandleCM
-	call	HandleKeyPad
-	ret
-
-WPAhandleCM:
-	call	HandleCompuMate
-	ret
-
-WPAhandleML:
-	test	al,[MindlinkTEST]	; ready to receive next bit?
-	jz	WPAhML1
-	call	NextMindlinkBit		; in mouse.asm
-WPAhML1:
-	pop	eax
-	ret
-
+	
 
 WriteDDR_A:
 	push	eax

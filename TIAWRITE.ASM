@@ -447,12 +447,12 @@ WVBPastMin:
 HandleDumpedInputs:
 	test	[VBlank],080h		; discharging capacitors ?
 	jz	HandleLatchedInputs	;   no
-	mov	dword ptr [ChargeCounter],0 ;   yes, zero the line counter
+	mov	dword ptr [_ChargeCounter],0 ;   yes, zero the line counter
 
-	mov	[DumpPorts],0h		; reset booster grip buttons
-	mov	[DumpPorts+1],0h	;
-	mov	[DumpPorts+2],0h	;
-	mov	[DumpPorts+3],0h	;
+	mov	[_DumpPorts],0h		; reset booster grip buttons
+	mov	[_DumpPorts+1],0h	;
+	mov	[_DumpPorts+2],0h	;
+	mov	[_DumpPorts+3],0h	;
 
 HandleLatchedInputs:
 	ret

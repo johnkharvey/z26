@@ -27,6 +27,7 @@
 #include "sdlsrv.c"
 #include "text.c"
 #include "pcx.c"
+#include "controls.c"
 
 char *default_arg[] = { "z26", "-r100000", "-f5000", "demonatk.bin" };
 
@@ -44,7 +45,7 @@ int main(int argc, char *argv[])
 	if (argc == 1)
 	{
 //		cli_CommandLine(4, default_arg);
-                srv_print("version 2.11");
+                srv_print("version 2.12");
 		exit(1);
 	}
 	else

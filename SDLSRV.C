@@ -43,8 +43,8 @@ db z26IconShape[1024]={
         4,4,4,4,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,3,3,4,4,4,4,4,4,4,4,
         4,4,4,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,3,3,4,4,4,4,4,4,4,4,4,
         4,4,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,3,3,4,4,4,4,4,4,4,4,4,4,
-        4,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,3,
-        0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,3,
+        4,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,4,
+        0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,4,
         0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,3,3,
         0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,3,3,
         0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,3,3,
@@ -78,8 +78,8 @@ db z26IconMask[128]={
         0x0f,0xff,0xff,0x00,
         0x1f,0xff,0xfe,0x00,
         0x3f,0xff,0xfc,0x00,
-        0x7f,0xff,0xff,0xff,
-        0xff,0xff,0xff,0xff,
+        0x7f,0xff,0xff,0xfc,
+        0xff,0xff,0xff,0xfc,
         0xff,0xff,0xff,0xff,
         0xff,0xff,0xff,0xff,
         0xff,0xff,0xff,0xff,
@@ -121,7 +121,7 @@ void srv_CreateIcon()
 //        SDL_SetColorKey(z26Icon, SDL_SRCCOLORKEY, 3);
 }
 
-SDL_Joystick *joy0, *joy1;
+SDL_Joystick *JoystickTable[16];
 
 SDL_Surface *srv_screen;
 Uint8 *srv_buffer;
@@ -294,6 +294,7 @@ void srv_CreateScreen(void)
 	int    done;
 	SDL_Event event;
 	int bpp;
+	int i;
 
 //	SDL_GrabMode grabmode = SDL_GRAB_ON;
 //	SDL_WM_GrabInput(grabmode);
@@ -309,12 +310,28 @@ void srv_CreateScreen(void)
         srv_CreateIcon();
         SDL_WM_SetIcon(z26Icon, z26IconMask);
 
-        if (Joystick)   //joystick support not disabled with -j0
+        if (JoystickEnabled)	/* joystick support not disabled with -iJ */
         {
                 SDL_InitSubSystem(SDL_INIT_JOYSTICK);
-                if (SDL_NumJoysticks() > 1) joy1 = SDL_JoystickOpen(1);
-                if (SDL_NumJoysticks() > 0) joy0 = SDL_JoystickOpen(0);
-                SDL_JoystickEventState(SDL_ENABLE);
+                if ((SDL_NumJoysticks()>0)&&(SDL_NumJoysticks()<17))
+                {
+			for (i=0; i<SDL_NumJoysticks(); i++)
+			{
+				JoystickTable[i]=SDL_JoystickOpen(i);
+				/* Stelladaptor only has 2 buttons and 2 axes */
+				if ((SDL_JoystickNumAxes(JoystickTable[i]) == 2) &&
+				    (SDL_JoystickNumButtons(JoystickTable[i]) == 2) &&
+				    (SDL_JoystickNumHats(JoystickTable[i]) == 0) &&
+				    (SDL_JoystickNumBalls(JoystickTable[i]) == 0) &&
+				    (StelladaptorEnabled))
+				{
+					Stelladaptor[i] = 1;
+				}
+				else Stelladaptor[i] = 0;
+			}
+//	                SDL_JoystickEventState(SDL_ENABLE);
+		}
+		else JoystickEnabled = 0;	/* disable joystick polling */
         }
 
 	if (srv_bpp == 0)
@@ -840,6 +857,8 @@ srv_Events()
 //
 //	if (++i%10 != 0) return;
 
+	if (JoystickEnabled) SDL_JoystickUpdate();	/* poll joysticks once per frame */
+
 	while ( SDL_PollEvent(&event) ) {
 		switch (event.type) {
 
@@ -857,66 +876,21 @@ srv_Events()
 				srv_done = 1;
 				break;
 
-                        case SDL_JOYBUTTONDOWN:
-                                if (event.jbutton.which == 0) KeyTable[0x1d]=0x80;
-                                else if (event.jbutton.which == 1)
-                                        KeyTable[0x31]=0x80;    // N - fire player 1
-                                break;
+			case SDL_JOYBUTTONDOWN:
+				if (event.jbutton.which < 17)
+					JoystickButton[event.jbutton.which][event.jbutton.button] = 0x80;
+				break;
+				
+			case SDL_JOYBUTTONUP:
+				if (event.jbutton.which < 17)
+					JoystickButton[event.jbutton.which][event.jbutton.button] = 0;
+				break;
 
-                        case SDL_JOYBUTTONUP:
-                                if (event.jbutton.which == 0) KeyTable[0x1d]=0;
-                                else if (event.jbutton.which == 1)
-                                        KeyTable[0x31]=0;       // N - fire player 1
-                                break;
-
-                        case SDL_JOYAXISMOTION:
-                                if (event.jaxis.which == 0)
-                                {
-                                        if (event.jaxis.axis == 0)
-                                        {
-                                                KeyTable[0x4b]=0;       // left
-                                                KeyTable[0x4d]=0;       // right
-                                                if (event.jaxis.value > 16384)
-                                                        KeyTable[0x4d]=0x80;
-
-                                                else if (event.jaxis.value < -16384)
-                                                        KeyTable[0x4b]=0x80;
-                                        }
-                                        else if (event.jaxis.axis == 1)
-                                        {
-                                                KeyTable[0x48]=0;       // up
-                                                KeyTable[0x50]=0;       // down
-                                                if (event.jaxis.value > 16384)
-                                                        KeyTable[0x50]=0x80;
-                                                else if (event.jaxis.value < -16384)
-                                                        KeyTable[0x48]=0x80;
-                                        }
-                                }
-                                else if (event.jaxis.which == 1)
-                                {
-                                        if (event.jaxis.axis == 0)
-                                        {
-                                                KeyTable[0x1f]=0;       // S left
-                                                KeyTable[0x21]=0;       // F right
-                                                if (event.jaxis.value > 16384)
-                                                        KeyTable[0x21]=0x80;
-
-                                                else if (event.jaxis.value < -16384)
-                                                        KeyTable[0x1f]=0x80;
-                                        }
-                                        else if (event.jaxis.axis == 1)
-                                        {
-                                                KeyTable[0x12]=0;       // E up
-                                                KeyTable[0x20]=0;       // D down
-                                                if (event.jaxis.value > 16384)
-                                                        KeyTable[0x20]=0x80;
-                                                else if (event.jaxis.value < -16384)
-                                                        KeyTable[0x12]=0x80;
-                                        }
-                                }
-                                break;
-
-                        default:
+			case SDL_JOYAXISMOTION:
+				if (event.jaxis.which < 17)
+					JoystickAxis[event.jaxis.which][event.jaxis.axis] = event.jaxis.value;
+				break;
+			default:
 				break;
 		}
 	}
