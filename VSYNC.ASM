@@ -24,9 +24,10 @@ VSync:
 ;* the default Vsync code -- look for non-display interval
 ;*
 
-	and	[hi_time],07fffh	; clear hi order bit in hi order time word
-					; (so we don't have to worry about overflow...)
-					; this means frame timer won't work beyond ~ 40 minutes
+	and	dword ptr [hi_time],0ffffh ; clear hi order bit in hi order time word
+					   ; (so we don't have to worry about overflow...)
+					   ; this means frame timer won't work beyond ~ 40 minutes
+
 NDLoop:	sti
 	mov	dx,CRTSTAT		; wait for display disable
 	cli

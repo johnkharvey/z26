@@ -5,9 +5,21 @@
 	TIMER0=		040h
 	TIMER_CTL=	043h
 
+.CEND
+.DATASEGMENT
+
+DelayTime	dd	0
+DelayStart	dd	0
+
+hi_time		dd	0
+low_time	dw	0
+
+.DEND
+.CODESEGMENT
+
 ;*
 ;* GetTime -- return 32-bit hardware time in eax
-;*            must call at least 18 times per second or will fail (54 ms)
+;*            must call at least 36 times per second or will fail (27 ms)
 ;*
 ;*	      rolls over approx every 40 minutes (because VSync strips top bit)
 
@@ -24,9 +36,11 @@ _GetTime:
 	cmp	ax,[low_time]		; time run backward ?
 	ja	gt_fwd			;   no
 	inc	[hi_time]		;   yes, inc hi-order time value
-gt_fwd:	mov	[low_time],ax		; we have a new lo-order time value
-	mov	eax,dword ptr [low_time]
-
+gt_fwd:	shr	ax,1			; cut rate in half
+	mov	[low_time],ax		; we have a new lo-order time value
+	mov	eax,[hi_time]
+	shl	eax,15
+	or	ax,[low_time]
 	ret
 
 ;*
@@ -49,13 +63,13 @@ DelayLoop:
 
 
 ;*
-;* SetupTimer -- put the system timer in Mode 2 (divide by N)
+;* SetupTimer -- put the system timer in Mode 3 (was mode 2 -- divide by N)
 ;*
 
 _SetupTimer:
 
 	cli
-	mov	al,034h
+	mov	al,036h			; was 034h
 	out	TIMER_CTL,al
 	xor	al,al
 	out	TIMER0,al		; divide by 65536
@@ -70,24 +84,13 @@ _SetupTimer:
 
 _RestoreTimer:
 
-	cli
-	mov	al,036h
-	out	TIMER_CTL,al
-	xor	al,al
-	out	TIMER0,al		; divide by 65536
-	out	TIMER0,al
-	sti
+;	cli
+;	mov	al,036h
+;	out	TIMER_CTL,al
+;	xor	al,al
+;	out	TIMER0,al		; divide by 65536
+;	out	TIMER0,al
+;	sti
 
 	ret
 
-.CEND
-.DATASEGMENT
-
-DelayTime	dd	0
-DelayStart	dd	0
-
-low_time	dw	0
-hi_time		dw	0
-
-.DEND
-.CODESEGMENT

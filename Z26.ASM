@@ -141,6 +141,8 @@ PAGE 66,132
 ;			opcode definition macros
 ;			timing in effective address calculation
 ;			change timing of some TIA writes, CO=0
+;
+; (1.07) July 12, 1998  new timer code, use default mode 3 only
 
 
 ; assembly time definitions
