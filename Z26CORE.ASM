@@ -9,8 +9,7 @@ page 66,132
 
 TRACE = 1
 showdeep = 1
-
-NEWTIA = 1
+CHEATS = 1
 
 .model large				; if large module define ModuleReturnAdr -- dword
 .386					; allow 32-bit instructions

@@ -128,6 +128,8 @@ P1_Color	dw	0	;  /  the old color translation table
 P0_Color	dw	0	; /
 BL_Color	dw	0	; ball color -- this is new
 
+RenderingHBLANK	dw	-1
+
 ActiveObjects	dw	0
 CosmicScanLine	dw	0
 HBlanking	dw	0
@@ -135,7 +137,10 @@ SetHBlanking	db	0
 Invisible	db	0
 HMOVE_Pending	db	0
 HMOVE_Cycle	db	0	; remember cycle of last HMOVE
+Last_HMOVE_Cycle db	0
 M0_Confused	db	0
+
+
 CosmicGraphicsTable	db	040h,040h,0c0h,0
 
 
@@ -179,6 +184,8 @@ Init_TIA:
 	mov	[BL_Position],228-68
 
 	mov	[M0_Confused],0
+
+	mov	[RenderingHBLANK],-1
 	ret
 
 ;*
@@ -253,8 +260,9 @@ local BKPFonly
 	mov	bl,[bx+si]
 
 BKPFonly:
-	add	di,2
 	mov	ax,[ColorValue+ebx*2]
+	add	di,2
+	and	ax,[RenderingHBLANK]
 	inc	cl
 	mov	es:[di-2],ax
 	cmp	cl,ch
@@ -505,10 +513,26 @@ SolidDone:
 
 
 ;*
+;* render HBLANK
+;*
+
+ALIGN 2
+
+RenderHBLANK:
+	cmp	[ActiveObjects],2
+	jb	RenderNothing
+	mov	si,[ActiveObjects]
+	and	esi,63
+	mov	[RenderingHBLANK],0
+	call	[RenderingRoutine + esi*2]	; call rendering routine
+	mov	[RenderingHBLANK],-1
+	ret
+
+;*
 ;*  render blackness
 ;*
-;*  note:  This approach causes collisions not to be processed during HMOVE
-;*         blanks and vertical blanks.  This may not be correct.
+;*  note:  This approach causes collisions not to be processed during
+;*         vertical blanks.  This may not be correct.
 ;*
 
 ALIGN 2
@@ -543,13 +567,12 @@ RenderPixels:
 	cmp	cl,75			; render pointer past HBlank?
 	ja	RenderMiddle		;   yes
 	cmp	ch,75			; final pointer before end of HBlank?
-	jbe	RenderNothing		;   yes, render blackness
+	jbe	RenderHBLANK		;   yes, render blackness
 
 	mov	al,ch			;   no, render pixels through HBlank
 	push	ax
 	mov	ch,75
-	xor	eax,eax
-	call	RenderSolid
+	call	RenderHBLANK
 	pop	ax
 	mov	ch,al
 
@@ -671,7 +694,10 @@ nTIALineTo:
 
 	call	_QueueSoundBytes	; put another 2 bytes in the sound queue
 
+	mov	dl,[HMOVE_Cycle]
+	mov	[Last_HMOVE_Cycle],dl
 	mov	[HMOVE_Cycle],0		; forget where last HMOVE was (cosmic)
+
 	cmp	[M0_Confused],0
 	jz	NotCosmic
 

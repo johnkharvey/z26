@@ -180,6 +180,8 @@ Set16kMode:
 	je	SSC			; dsrtfalc
 	cmp	ax,01088h
 	je	SSC			; darkcham
+	cmp	eax,1fb7fbh
+	je	SSC			; shoot(ing gallery)
 	cmp	ax,0c525h
 	je	SSC			; sprfootb
 	cmp	ax,08037h
@@ -395,7 +397,7 @@ NotRam:
 FAW_TestRam macro
 local NotRam
 
-	cmp	si,11ffh
+	cmp	si,10ffh
 	ja	NotRam
 	add	si,offset _Ram - 1000h
 	WriteRam

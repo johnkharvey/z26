@@ -8,12 +8,12 @@
 */
 
 
-#define version "z26 (1.30)"
+#define version "z26 (1.31)"
 
 #define rom_list "ROM List"
 
 /*
-#define rom_list "Preview version B -- Please don't distribute."
+#define rom_list "Preview version D -- Please don't distribute."
 */
 
 
@@ -55,7 +55,8 @@ main(int argc, char *argv[])
 */
 
 		printf("Entering graphics mode ... \n");
-		delay(100);
+		delay(50);
+		delay(50);
 
 		gui_CheckMouse();
 		gui_GraphicsMode();

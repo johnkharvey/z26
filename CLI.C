@@ -91,7 +91,7 @@ cli_InterpretParm(char *p)
 	case 'c':  	PaletteNumber = parm;		break;
 	case 'p':  	PaddleGame = (parm & 0xf) << 1;	break;
 	case 'k':  	KeyBase = parm & 3;			break;
-	case 't':  	TraceCount = 1;
+	case 't':  	if (parm) TraceCount = parm; else TraceCount = 0xff;
 			log = fopen("z26.log", "w");
 			if (log == NULL)
 			{
@@ -202,6 +202,7 @@ cli_CommandLine(int argc, char *argv[])
 				strcat(FileName,".bin");
 			ROMLoaded = cli_LoadROM(FileName);
 			ROMSeen = 1;
+			if (TraceCount) fprintf(log,"%s\n\n", FileName);
 		}
 	}
 

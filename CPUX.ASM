@@ -1008,7 +1008,7 @@ ENDIF
 	endm
 
 _JSR macro
-	inc_clock 6
+	inc_clock 4
 
 	absolute		; call address in bx now
 	push	ax
@@ -1016,7 +1016,13 @@ _JSR macro
 	mov	[reg_pc],bx	; transfer control
 	dec	ax		; push return-1
 	zpush	ah
+
+	inc_clock 1
+
 	zpush	al
+
+	inc_clock 1
+
 	pop	ax
 
 IFDEF z64

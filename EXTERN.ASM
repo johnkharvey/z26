@@ -69,4 +69,6 @@ EXTRN _ShowDeep:far
 EXTRN _ShowVeryDeep:far
 EXTRN _ShowP2W:far
 EXTRN _ShowP2R:far
-
+EXTRN _ShowAdjusted:far
+EXTRN _ShowUndocTIA:far
+EXTRN _ShowCollision:far

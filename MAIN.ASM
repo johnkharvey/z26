@@ -200,11 +200,7 @@ ScanFrame:
         mov	[DisplayPointer],0	; reset display pointer
 ScanFrameLoop:
 
-IFDEF NEWTIA
-	call	nTIALineTo
-ELSE
-	call	TIALineTo		; generate a raster line
-ENDIF
+	call	nTIALineTo		; generate a raster line
 
 	test	[KeyTable+KeyEsc],128	; ESC pressed ?
 	jnz	GoDOS			;   yes

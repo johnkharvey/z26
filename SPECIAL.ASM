@@ -1,16 +1,10 @@
-.data
-
-BailoutLine	dw	0
-
-.code
-
 ;*
 ;* do special setup for recognized cartridges
 ;*
 
 SetupSpecial:
 	mov	eax,[_Checksum]
-	jmp	SSGRPx
+	jmp	SSKOOL
 
 
 ;*
@@ -39,55 +33,61 @@ SSFIND_Done:
 
 
 ;*
-;* process GRPx delay requests
+;* process KoolAide RESP cheat
 ;*
 
-SSGRPx:
-	mov	[GRPxDelay],1		; assume 1
-	cmp	eax,0736a0h		; spidrftr
-	je	SSGRP_M2
-	jmp	SSRESP
+.data
+KoolAide	db	0
+.code
 
-SSGRP_M2:
-	mov	[GRPxDelay],-2
-	jmp	SSRESP
+SSKOOL:
+	mov	[KoolAide],0		; assume 0
+IFDEF CHEATS
+	cmp	eax,0715a2h		; koolaide
+	je	SSKOOL_Set
+	cmp	eax,071b5dh		; kool-sc
+	je	SSKOOL_Set
+;	cmp	eax,071a88h		; kool-fix
+;	je	SSKOOL_Set
+ENDIF
+	jmp	SSTZ
+
+SSKOOL_Set:
+	mov	[KoolAide],1
+	jmp	SSTZ
 
 ;*
-;* process weird RESP requests
+;* process requests to return zero for all undoc TIA reads
 ;*
 
-SSRESP:
-	mov	[WeirdRESP],0
-	cmp	eax,1c5b2ah		; dbldragn
-	je	SSRESP_Weird
-	cmp	eax,12157eh		; pitfall2
-	je	SSRESP_Weird
-	cmp	eax,076289h		; crackpot
-	je	SSRESP_Weird
-	cmp	eax,0dad52h		; decathln
-	je	SSRESP_Weird
-	cmp	eax,07220fh		; dolphin
-	je	SSRESP_Weird
-	cmp	eax,0658a6h		; holehunt
-	je	SSRESP_Weird
-;	cmp	eax,0d1cd4h		; moonptrl
-;	je	SSRESP_Weird
-	cmp	eax,0cf815h		; robotank
-	je	SSRESP_Weird
-	cmp	eax,1d8b25h		; track
-	je	SSRESP_Weird
-	cmp	eax,07153bh		; tubybird
-	je	SSRESP_Weird
+.data
+TIAZero		db	0
+.code
+
+SSTZ:	mov	[TIAZero],0
+IFDEF CHEATS
+	cmp	eax,067d00h		; berzerk
+	je	SSTZ_Set
+	cmp	eax,0d5653h		; qbrtqube
+	je	SSTZ_Set
+	cmp	eax,069fa4h		; spacecav
+	je	SSTZ_Set
+;	cmp	eax,069409h		; spacanyn
+;	je	SSTZ_Set
+	cmp	eax,070d15h		; tps
+	je	SSTZ_Set
+ENDIF
 	jmp	SSCFF
 
-SSRESP_Weird:
-	mov	[WeirdRESP],1
+SSTZ_Set:
+	mov	[TIAZero],1
 	jmp	SSCFF
+
 
 ;*
 ;* process requests to clear the first few frames
 ;*
-;* (kludge, should really have vsync clear to end of frame if it comes before MaxLines)
+;* (Should really have VSYNC clear to end of frame if it comes before MaxLines.)
 ;* (but I'm too lazy...)
 ;*
 
@@ -123,6 +123,9 @@ SSCFF_C:
 SSTALL:
 	mov	[MaxLines],204
 	mov	[InitialMaxLines],204
+
+;	cmp	eax,1fb7fbh		; shoot
+;	je	SetTall
 
 	cmp	eax,043a0bh		; 32in1-07
 	je	SetMedium
@@ -747,6 +750,8 @@ LineTable label byte
 	db	42
 	dd	06badeh			; sharkatk
 	db	37
+;	dd	1fb7fbh			; shoot
+;	db	45
 	dd	07be3h			; shootin
 	db	35
 	dd	0dde3ah			; skatebrd
@@ -1109,6 +1114,10 @@ SP1HARD:
 ;*
 ;* select how sharp to make the auto-sync test (bailout)
 ;*
+
+.data
+BailoutLine	dw	0
+.code
 
 SetupLong:
 	cmp	eax,1d2f8eh	; *aciddrop

@@ -72,17 +72,32 @@ void ti_showhex8(int num)
 
 void ShowWeird(int Cycle)
 {
-	fprintf(log,"<-- weird (%d)", Cycle);
+	fprintf(log,"<-- weird (%d)\n", Cycle);
 }
 
 void ShowDeep(int Now, int Prev, int Cycle)
 {
-	fprintf(log,"<-- deep (%d, %x, %x)", Cycle, Prev, Now);
+	fprintf(log,"<-- deep (%d, %x, %x)\n", Cycle, Prev, Now);
 }
 
-void ShowVeryDeep()
+void ShowVeryDeep(int Now, int Prev, int Cycle)
 {
-	fprintf(log,"<-- very deep");
+	fprintf(log,"<-- very deep (%d, %x, %x)\n", Cycle, Prev, Now);
+}
+
+void ShowAdjusted()
+{
+	fprintf(log,"Adjusted\n");
+}
+
+void ShowUndocTIA()
+{
+	fprintf(log,"<-- Undoc TIA\n");
+}
+
+void ShowCollision()
+{
+	fprintf(log,"<-- Collision\n");
 }
 
 void ShowP2R(int adr)

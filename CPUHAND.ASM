@@ -13,7 +13,7 @@
 ;*    X                     X                                TIA
 ;*    X            X        X                                RIOT
 ;*
-;* If the 2000h bit (bit 12) is set, it's a ROM access.  This is handled
+;* If the 1000h bit (bit 12) is set, it's a ROM access.  This is handled
 ;* in banks.asm and we'll never come here.
 ;*
 ;* Otherwise it's a hardware access.
@@ -25,12 +25,7 @@
 
 .data
 
-;MagicNoise	db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0fh,0fh		; old z26 does this
-;MagicNoise	db 0,1,0,13h,1,1,1,1,8,0,0,0,0,0,0fh,0fh	; PCAE does this
-;MagicNoise	db 0,1,2,3,4,5,6,0,7fh,7fh,7fh,7fh,7fh,7fh,0eh,0fh ; Stella 1.1 does this
-MagicNoise	db 0,1,0,  0,1,1,1,1,8,0,0,0,0,0,0fh,0fh		; we do this...
-								; congbong needs 0 at disp 3
-								; berzerk is a little happier too...
+MagicNoise	db 0,1,0,13h,1,1,1,1,8,0,0,0,0,0,0fh,0fh	; do what PCAE does most of the time
 
 RT_Reg	dw	0			; TIA reg to read (ReadCollision)
 
@@ -63,7 +58,13 @@ ReadRiotMaybe:
 ReadTIA:
 	push	ax
 	and	si,0fh
+	xor	al,al
+	cmp	[TIAZero],0		; berzerk or qbrtqube?
+	jnz	ReadTIAZero		;   yes, start with zero
+
 	mov	al,[MagicNoise+si]	; start out with the undocumented magical noise
+
+ReadTIAZero:
 	mov	[RetWd],al		; results get OR'd into this
 	pop	ax
 	cmp	si,08h			; reading collision registers ???
@@ -71,6 +72,16 @@ ReadTIA:
 	cmp	si,0Eh
 	jb	ReadInputLatches
 
+IFDEF showdeep
+	test	[_TraceCount],08h
+	jz	NoLogUndocTIA
+
+	pusha
+	call	_ShowUndocTIA
+	popa
+ENDIF
+	
+NoLogUndocTIA:
 	mov	si,offset RetWd
 	ret
 
@@ -79,7 +90,16 @@ ReadTIA:
 ;*
 
 ReadCollision:				; read the collision latch
+IFDEF showdeep
+	test	[_TraceCount],08h
+	jz	NoLogCollisions
 
+	pusha
+	call	_ShowCollision
+	popa
+ENDIF
+
+NoLogCollisions:
 	mov	[RT_Reg],si
 	SaveCPUState
 	mov	dl,0

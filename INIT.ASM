@@ -31,8 +31,6 @@ MaxLines	dw	204		; max # of lines to scan
 DisplayPointer	dw	0		;pointer into display RAM
 
 GamePaused	db	0		; game paused
-GRPxDelay	db	1		; delay for write to GRPx register
-WeirdRESP	db	0		; allow weird RESPs in this game
 
 WByte		db	0		; byte to write
 

@@ -40,11 +40,11 @@ TIARegHandler label word
 	dw	H_ENAM0		; 1d -- ENAM0
 	dw	H_ENAM1		; 1e -- ENAM1
 	dw	H_ENABL		; 1f -- ENABL
-	dw	H_Motion	; 20 -- HMP0
-	dw	H_Motion	; 21 -- HMP1
+	dw	H_HMP0		; 20 -- HMP0
+	dw	H_HMP1		; 21 -- HMP1
 	dw	H_HMM0		; 22 -- HMM0
-	dw	H_Motion	; 23 -- HMM1
-	dw	H_Motion	; 24 -- HMBL
+	dw	H_HMM1		; 23 -- HMM1
+	dw	H_HMBL		; 24 -- HMBL
 	dw	H_VDELP0	; 25 -- VDELP0
 	dw	H_VDELP1	; 26 -- VDELP1
 	dw	H_VDELBL	; 27 -- VDELBL
@@ -105,33 +105,10 @@ TIAReflect8 label byte
  db 15,143,79,207,47,175,111,239,31,159,95,223,63,191,127,255
 
 
-MaxCycle label byte
-;			         HMPx values
-;			 -Cyc-   0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f     
-
-	db	 7	;4C 76   0  +1  +2  +3  +4  +5  +6  +7  -8  -7  -6  -5  -4  -3  -2  -1
-	db	 7	;4D  1   0  +1  +2  +3  +4  +5  +6  +7  -8  -7  -6  -5  -4  -3  -2  -1
-	db	 7	;4E  2   0  +1  +2  +3  +4  +5  +6  +7  -8  -7  -6  -5  -4  -3  -2  -1
-	db	 7	;4F  3   0  +1  +2  +3  +4  +5  +6  +7  -8  -7  -6  -5  -4  -3  -2  -1
-	db	 6	;50  4   0  +1  +2  +3  +4  +5  +6  +6  -8  -7  -6  -5  -4  -3  -2  -1
-	db	 5	;51  5   0  +1  +2  +3  +4  +5  +5  +5  -8  -7  -6  -5  -4  -3  -2  -1
-	db	 5	;52  6   0  +1  +2  +3  +4  +5  +5  +5  -8  -7  -6  -5  -4  -3  -2  -1
-	db	 4	;53  7   0  +1  +2  +3  +4  +4  +4  +4  -8  -7  -6  -5  -4  -3  -2  -1
-	db	 3	;54  8   0  +1  +2  +3  +3  +3  +3  +3  -8  -7  -6  -5  -4  -3  -2  -1
-	db	 2	;55  9   0  +1  +2  +2  +2  +2  +2  +2  -8  -7  -6  -5  -4  -3  -2  -1
-	db	 2	;0A 10   0  +1  +2  +2  +2  +2  +2  +2  -8  -7  -6  -5  -4  -3  -2  -1
-	db	 1	;0B 11   0  +1  +1  +1  +1  +1  +1  +1  -8  -7  -6  -5  -4  -3  -2  -1
-	db	 0	;0C 12   0   0   0   0   0   0   0   0  -8  -7  -6  -5  -4  -3  -2  -1
-	db	-1	;0D 13  -1  -1  -1  -1  -1  -1  -1  -1  -8  -7  -6  -5  -4  -3  -2  -1
-	db	-1	;0E 14  -1  -1  -1  -1  -1  -1  -1  -1  -8  -7  -6  -5  -4  -3  -2  -1
-	db	-2	;0F 15  -2  -2  -2  -2  -2  -2  -2  -2  -8  -7  -6  -5  -4  -3  -2  -2
-	db	-3	;10 16  -3  -3  -3  -3  -3  -3  -3  -3  -8  -7  -6  -5  -4  -3  -3  -3
-	db	-4	;11 17  -4  -4  -4  -4  -4  -4  -4  -4  -8  -7  -6  -5  -4  -4  -4  -4
-	db	-4	;12 18  -4  -4  -4  -4  -4  -4  -4  -4  -8  -7  -6  -5  -4  -4  -4  -4
-	db	-5	;13 19  -5  -5  -5  -5  -5  -5  -5  -5  -8  -7  -6  -5  -5  -5  -5  -5
-	db	-6	;14 20  -6  -6  -6  -6  -6  -6  -6  -6  -8  -7  -6  -6  -6  -6  -6  -6
-			;15 21   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0     
-
+WeirdRespCorrection label word
+ dw   0,  0,  0,  0,  0,  0,  1,  2,  2,  3
+ dw   4,  5,  5,  6,  7,  8,  8,  9, 10, 11
+ dw  11, 12, 13, 14, 14, 15
 
 
 .code
@@ -141,15 +118,20 @@ MaxCycle label byte
 ;*
 
 CheckDeep macro
-local NotDeep, VeryDeep
+local NotDeep, IsDeep, VeryDeep
 IFDEF showdeep
-	cmp	[_TraceCount],0
+	test	[_TraceCount],4
 	jz	NotDeep
 
-	cmp	[RClock],27
+	cmp	[RClock],25
 	ja	NotDeep
 	cmp	[HMOVE_Cycle],0
-	je	NotDeep
+	jne	IsDeep
+	cmp	[Last_HMOVE_Cycle],54
+	ja	IsDeep
+	jmp	NotDeep
+
+IsDeep:
 	cmp	[HMOVE_Cycle],3
 	jne	VeryDeep
 
@@ -174,7 +156,20 @@ IFDEF showdeep
 
 VeryDeep:
 	pusha
+	movzx	dx,[RClock]
+	push	dx
+	movzx	dx,[TIA+si]
+	and	dx,0fh
+	push	dx
+	mov	dl,[WByte]
+	sar	dl,4
+	movzx	dx,dl
+	and	dx,0fh
+	push	dx
 	call	_ShowVeryDeep
+	pop	dx
+	pop	dx
+	pop	dx
 	popa
 
 NotDeep:
@@ -188,13 +183,16 @@ ENDIF
 CheckWeird macro
 local NotWeird
 IFDEF showdeep
-	cmp	[_TraceCount],0
+	test	[_TraceCount],2
 	jz	NotWeird
 
 	cmp	[RClock],3
-	jbe	NotWeird
-	cmp	[RClock],73
-	jae	NotWeird
+	je	NotWeird
+
+;	cmp	[RClock],55
+;	jb	NotWeird
+;	cmp	[RClock],73
+;	ja	NotWeird
 
 	pusha
 	movzx	dx,[RClock]
@@ -208,7 +206,7 @@ ENDIF
 	endm
 
 ;*
-;* This is the new TIA write handler.
+;* This is the TIA write handler.
 ;*
 ;* on entry:
 ;*
@@ -255,7 +253,10 @@ H_VSYNC:
 	jz	ZRET
 	test	[VSyncFlag],2		; somebody hitting Vsync more than necessary?
 	jnz	VSyncAlreadySet		;   yep
+	mov	dx,[ScanLine]
 	mov	[ScanLine],1		; back to screen top
+	cmp	dx,5			; a quick double hit (pickpile)?
+	jb	VSyncAlreadySet		;   yes, no new frame
 	inc	[Frame]			; new frame.
 VSyncAlreadySet:
 	mov	dx,[_CFirst]
@@ -330,20 +331,37 @@ HandleLatchedInputs:
 ;* get object position into bx
 ;*
 
-PositionObject macro
-local HBLwrap, HBLdone
+.code
+
+PositionObject macro %1
+local HBLnowrap, HBLdone, HBLnotweird, HBLinrange
 
 	movzx	ebx,[RClock]
-	sub	ebx,CYCLESPERSCANLINE
-	jae	HBLwrap	
-	add	ebx,CYCLESPERSCANLINE
-HBLwrap:
+	sub	ebx,CYCLESPERSCANLINE	; beyond end of scanline?
+	jb	HBLnowrap		;   no
+HBLnotweird:
 	lea	ebx,[ebx+ebx*2]
-
-	cmp	bl,67			; positioned in HBLANK area
+	cmp	bl,67			; positioned in HBLANK area?
 	ja	HBLdone			;   no
-	mov	bl,226			;   yes, position near end instead
+	mov	bl,226
+	jmp	HBLdone
 
+HBLnowrap:
+	add	ebx,CYCLESPERSCANLINE
+	cmp	[HMOVE_Cycle],3		; HMOVE happening?
+	jne	HBLnotweird		;   no
+	cmp	bl,24			; affected by weirdness?
+	ja	HBLnotweird		;   no
+	mov	bx,[WeirdRespCorrection+2*ebx]
+	sub	bx,[%1&_Motion]
+	add	bx,226
+	cmp	bx,234
+	jbe	HBLinrange
+	mov	bx,234
+HBLinrange:	
+	cmp	bx,228
+	jb	HBLdone
+	sub	bx,160
 HBLdone:
 	endm
 
@@ -357,11 +375,11 @@ HBLdone:
 GetObjectDelay macro %1
 local done, nowrap
 
+	PositionObject %1
+	mov	si,bx
+
 	xor	dl,dl			; assume delay 0
 	xor	al,al			; assume no triple flag
-
-	PositionObject
-	mov	si,bx
 
 	sub	si,[%1&_Position]	; where the object is
 	jae	nowrap
@@ -731,11 +749,20 @@ SMS_done:
 ;* missile locking support macro
 ;*
 
+.data
+MissileOffset db 5, 5, 5, 5, 5, 8, 5, 12
+.code
+
 LockMissile macro %1, %2
 local nowrap
 
-	mov	dx,[%2&_Position]
-	add	dx,5
+	push	si
+	movzx	si,[TIA+NUSIZ&%1]
+	and	si,7
+	movzx	dx,[MissileOffset+si]
+	pop	si
+
+	add	dx,[%2&_Position]
 	cmp	dx,227
 	jbe	nowrap
 	sub	dx,160
@@ -908,7 +935,6 @@ positive:
 	cmp	[%1&_Position],228
 	jb	done
 	sub	[%1&_Position],160
-
 done:
 	endm
 
@@ -917,7 +943,8 @@ done:
 ;*
 
 ;*
-;* this is called at beginning of a scanline
+;* this could be called at beginning of a scanline
+;* but it's called at register write time
 ;*
 
 doHMOVE:
@@ -942,13 +969,22 @@ noHMOVE:
 ;* macro to set up amount of motion for HMOVES near beginning of scan line
 ;*
 
+.data
+
+MaxMotion label byte
+ db   7,  7,  7,  7,  6,  5,  5,  4,  3,  2
+ db   2,  1,  0, -1, -1, -2, -3, -4, -4, -5
+ db  -6
+
+.code
+
 FixupMotionLow macro %1
 local MotionOK
 
 	movsx	dx,[TIA+HM&%1]
 	push	bx
 	movzx	bx,[RClock]
-	movsx	bx,[MaxCycle+bx]
+	movsx	bx,[MaxMotion+bx]
 	cmp	dx,bx
 	jl	MotionOK
 	mov	dx,bx
@@ -1015,12 +1051,40 @@ HiBlank:
 	call	doHMOVE
 	ret	
 
+.data
+
+HiTable db 14, 13, 12, 12, 11, 10, 9, 9, 8, 7, 6, 6, 5, 4, 3, 3, 2, 1, 0, 0
+
+.code
+
+FixupMotionHi macro %1
+local SetMotion
+
+	movsx	dx,[TIA+HM&%1]
+	add	dx,8
+	push	bx
+	movzx	bx,[RClock]
+	sub	bx,55
+	movsx	bx,[HiTable+bx]
+	sub	dx,bx
+	cmp	dx,0
+	jg	SetMotion
+	mov	dx,0
+
+SetMotion:
+	mov	[%1&_Motion],dx
+	pop	bx
+	endm
+
+
+
 NoBlank:
-	add	[P0_Motion],8		; weird HMOVE, move a little extra
-	add	[P1_Motion],8
-	add	[M0_Motion],8
-	add	[M1_Motion],8
-	add	[BL_Motion],8
+	FixupMotionHi P0
+	FixupMotionHi P1
+	FixupMotionHi M0
+	FixupMotionHi M1
+	FixupMotionHi BL
+
 	call	doHMOVE
 	ret
 
@@ -1035,56 +1099,9 @@ NoMotion:
 
 H_RESBL:
 	GetObjectDelay BL
-
-
+	push	bx			; save object position
 	call	CatchUpPixels
-
-	PositionObject
-
-	cmp	[WeirdRESP],0
-	jz	NotWeird_RESBL
-
-	cmp	[HMOVE_Cycle],3		; handle crackpot
-	jne	Weird_RESBL_1
-	cmp	[BL_Motion],0
-	jne	Weird_RESBL_1
-	cmp	[RClock],6
-	jne	Weird_RESBL_1
-
-	mov	bx,227
-
-Weird_RESBL_1:
-	cmp	[HMOVE_Cycle],3		; handle holehunt
-	jne	Weird_RESBL_2
-	cmp	[BL_Motion],0
-	jne	Weird_RESBL_2
-	cmp	[RClock],9
-	jne	Weird_RESBL_2
-
-	mov	bx,69
-
-Weird_RESBL_2:
-	cmp	[HMOVE_Cycle],3		; handle robotank
-	jne	Weird_RESBL_3
-	cmp	[BL_Motion],0
-	jne	Weird_RESBL_3
-	cmp	[RClock],10
-	jne	Weird_RESBL_3
-
-	mov	bx,70
-
-Weird_RESBL_3:
-	cmp	[HMOVE_Cycle],3		; handle track
-	jne	Weird_RESBL_4
-	cmp	[BL_Motion],7
-	jne	Weird_RESBL_4
-	cmp	[RClock],11
-	jne	Weird_RESBL_4
-
-	mov	bx,224
-
-Weird_RESBL_4:
-NotWeird_RESBL:
+	pop	bx			; restore object position
 
 	mov	[TIA+RESBL],bl
 	mov	[BL_Position],bx
@@ -1093,30 +1110,39 @@ NotWeird_RESBL:
 
 
 ;*
+;* a positioning cheat for Kool Aide
+;*
+
+CheatKoolAidePosition macro %1, %2, %3
+local done
+
+	cmp	[KoolAide],0		; doing Kool Aide cheat?
+	jz	done			;   no
+	cmp	[ScanLine],%1
+	jne	done
+	cmp	bx,%2+68-5
+	jne	done
+
+	mov	bx,%3+68-5		;   yes, do the cheat
+
+done:
+	endm
+
+
+;*
 ;* RESP0
 ;*
 
 H_RESP0:
 	GetObjectDelay P0
-	cmp	[WeirdRESP],0
-	jz	NotWeird_RESP0
-
-	cmp	[HMOVE_Cycle],3		; handle dbldragn
-	jne	Weird_RESP0_1
-	cmp	[P0_Motion],0
-	jne	Weird_RESP0_1
-	cmp	[RClock],22
-	jne	Weird_RESP0_1
-
-	mov	bx,74
-
-Weird_RESP0_1:
-NotWeird_RESP0:
 	push	bx			; save object position
 	mov	[P0_TripleFlag],al
 	call	CatchUpPixels
 	call	UpdateP0Table
 	pop	bx			; restore object position
+
+	CheatKoolAidePosition 40 54 52
+	CheatKoolAidePosition 49 63 61
 
 	mov	[TIA+RESP0],bl
 	mov	[P0_Position],bx
@@ -1137,6 +1163,9 @@ H_RESP1:
 	call	CatchUpPixels
 	call	UpdateP1Table
 	pop	bx			; restore object position
+
+	CheatKoolAidePosition 40 63 65
+	CheatKoolAidePosition 49 72 74
 
 	mov	[TIA+RESP1],bl
 	mov	[P1_Position],bx
@@ -1176,21 +1205,6 @@ H_RESM1:
 	jnz	noRESM1			;   yes, don't position
 
 	GetObjectDelay M1
-
-	cmp	[WeirdRESP],0
-	jz	NotWeird_RESM1
-
-	cmp	[HMOVE_Cycle],3		; handle dbldragn, pitfall2
-	jne	Weird_RESM1_1
-	cmp	[M1_Motion],0
-	jne	Weird_RESM1_1
-	cmp	[RClock],6
-	jne	Weird_RESM1_1
-
-	mov	bx,227
-
-Weird_RESM1_1:
-NotWeird_RESM1:
 	push	bx			; save object position
 	mov	[M1_TripleFlag],al
 	call	CatchUpPixels
@@ -1249,39 +1263,70 @@ H_ENAM1:
 	ret
 
 ;*
+;* macro to handle writes to NUSIZ register
+;*
+
+DoNUSIZ macro %1
+local NoCatchup, CatchupWide, done
+
+	GetObjectDelay M&%1
+	call	CatchUpPixels		; render any missile in progress
+	
+	mov	dl,[TIA+NUSIZ&%1]
+	and	dl,7
+	cmp	dl,7			; quad wide player?
+	je	CatchupWide		;   yes
+	cmp	dl,5			; double wide player?
+	je	CatchupWide		;   yes
+
+	GetObjectDelay P&%1		;   no
+	call	CatchUpPixels		; complete the player in progress
+	jmp	NoCatchup
+
+CatchupWide:
+	GetObjectDelay P&%1
+	test	dl,dl			; are we in the wide sprite?
+	jz	NoCatchup		;   no
+	mov	dl,4			; (4 for sentinel)
+	call	CatchUpPixels		; render a few trailing pixels
+
+NoCatchup:
+	mov	dl,[WByte]
+	mov	[TIA+NUSIZ&%1],dl	; switch to new NUSIZ
+
+	call	UpdateM&%1&Graphics	; update things
+	call	UpdateP&%1&Table
+	call	UpdateM&%1&Table
+
+	mov	dl,[P&%1&_Graphics]
+	push	dx			; save current player graphics
+	mov	[P&%1&_Graphics],0	; set to zero to render nothing
+	GetObjectDelay P&%1
+	test	dl,dl			; would table switch land us in a sprite?
+	jz	done			;   no
+	call	CatchUpPixels		;   yes, render nothing thru new sprite
+
+done:
+	pop	dx
+	mov	[P&%1&_Graphics],dl	; restore player graphics
+	ENDM
+
+
+;*
 ;* NUSIZ0
 ;*
 
 H_NUSIZ0:
-	GetObjectDelay M0
-	call	CatchUpPixels
-	GetObjectDelay P0
-	call	CatchUpPixels
-
-	mov	dl,[WByte]
-	mov	[TIA+NUSIZ0],dl
-
-	call	UpdateM0Graphics
-	call	UpdateP0Table
-	call	UpdateM0Table
+	DoNUSIZ 0
 	ret
+
 
 ;*
 ;* NUSIZ1
 ;*
 
 H_NUSIZ1:
-	GetObjectDelay M1
-	call	CatchUpPixels
-	GetObjectDelay P1
-	call	CatchUpPixels
-
-	mov	dl,[WByte]
-	mov	[TIA+NUSIZ1],dl
-
-	call	UpdateM1Graphics
-	call	UpdateP1Table
-	call	UpdateM1Table
+	DoNUSIZ 1
 	ret
 
 
@@ -1334,7 +1379,7 @@ H_VDELP1:
 ;*
 
 H_GRP0:
-	mov	dl,[GRPxDelay]		; -2 for spidrftr, 1 for picnic
+	mov	dl,1
 	call	CatchUpPixels
 
 	mov	dl,[WByte]
@@ -1353,7 +1398,7 @@ H_GRP0:
 ;*
 
 H_GRP1:
-	mov	dl,[GRPxDelay]		; -2 for spidrftr, 1 for picnic
+	mov	dl,1
 	call	CatchUpPixels
 
 	mov	dl,[WByte]
@@ -1373,13 +1418,78 @@ H_GRP1:
 ;* handle a non-M0 motion register
 ;*
 
-H_Motion:
-	CheckDeep
+HandleMotion macro %1
+local NormalMotion, MaybeWeird
+
+	push	bx
+
+	cmp	[HMOVE_Cycle],3
+	jne	NormalMotion
+
+;	cmp	[HMOVE_Cycle],0
+;	jnz	MaybeWeird
+;	cmp	[Last_HMOVE_Cycle],55
+;	jb	NormalMotion
+
+
+MaybeWeird:
+	cmp	[RClock],26
+	jae	NormalMotion
+	movzx	bx,[TIA+HM&%1]
+	and	bx,0fh
+	shl	bx,4
+	movzx	dx,[WByte]
+	shr	dx,4
+	and	dx,0fh
+	add	bx,dx
+	shl	bx,5
+	movzx	dx,[RClock]
+	and	dx,01fh
+	add	bx,dx
+	mov	dl,[DeepHMOVE + bx]
+	test	dl,dl
+	jz	NormalMotion
+	cmp	dl,99
+	je	NormalMotion		; cosmic is normal for now
+	movsx	dx,dl
+	neg	dx
+	mov	[%1&_Motion],dx
+	DoMotion %1
+	cmp	[_TraceCount],0
+	jz	NormalMotion
+
+	pusha
+	call	_ShowAdjusted
+	popa
+
+NormalMotion:
 	mov	dl,[WByte]
 	sar	dl,4			; pre-shift right 4 bits (preserve sign)
-	mov	[TIA+si],dl
+	mov	[TIA+HM&%1],dl
+	pop	bx
+
+	endm
+
+
+H_HMP0:
+	CheckDeep
+	HandleMotion P0
 	ret
 
+H_HMP1:
+	CheckDeep
+	HandleMotion P1
+	ret
+
+H_HMM1:
+	CheckDeep
+	HandleMotion M1
+	ret
+
+H_HMBL:
+	CheckDeep
+	HandleMotion BL
+	ret
 
 ;*
 ;* HMM0
@@ -1401,9 +1511,11 @@ H_HMM0:
 	DoMotion M0
 
 NotConfused:
-	mov	dl,[WByte]
-	sar	dl,4			; pre-shift right 4 bits (preserve sign)
-	mov	[TIA+si],dl
+;	mov	dl,[WByte]
+;	sar	dl,4			; pre-shift right 4 bits (preserve sign)
+;	mov	[TIA+si],dl
+
+	HandleMotion M0
 	ret
 
 ;*
@@ -1411,12 +1523,30 @@ NotConfused:
 ;*
 
 H_HMCLR:
+	mov	dl,[WByte]
+	push	dx
+	mov	[WByte],0
+
 	CheckDeep
+
+	HandleMotion M0
+	HandleMotion M1
+	HandleMotion P0
+	HandleMotion P1
+	HandleMotion BL
+
+	pop	dx
+	mov	[WByte],dl
+	jmp	HMCLR_Done
+
+HMCLR_NotWeird:
 	mov	[TIA+HMP0],0
 	mov	[TIA+HMP1],0
 	mov	[TIA+HMM0],0
 	mov	[TIA+HMM1],0
 	mov	[TIA+HMBL],0
+
+HMCLR_Done:
 	ret
 
 
