@@ -10,19 +10,54 @@
 ** Please see COPYING.TXT for details.
 */
 
+unsigned char SCBIOS[188] = { 
+0xa5,0xfa,0x85,0x81,0x4c,0x0e,0xf8,0xff,
+0xff,0xff,0xa9,0x00,0x85,0x81,0xa9,0x00,
+0x85,0x1b,0x85,0x1c,0x85,0x1d,0x85,0x1e,
+0x85,0x1f,0x85,0x19,0x85,0x1a,0x85,0x08,
+0x85,0x01,0xa9,0x10,0x85,0x21,0x85,0x02,
+0xa2,0x07,0xca,0xca,0xd0,0xfd,0xa9,0x00,
+0x85,0x20,0x85,0x10,0x85,0x11,0x85,0x02,
+0x85,0x2a,0xa9,0x05,0x85,0x0a,0xa9,0xff,
+0x85,0x0d,0x85,0x0e,0x85,0x0f,0x85,0x84,
+0x85,0x85,0xa9,0xf0,0x85,0x83,0xa9,0x74,
+0x85,0x09,0xa9,0x0c,0x85,0x15,0xa9,0x1f,
+0x85,0x17,0x85,0x82,0xa9,0x07,0x85,0x19,
+0xa2,0x08,0xa0,0x00,0x85,0x02,0x88,0xd0,
+0xfb,0x85,0x02,0x85,0x02,0xa9,0x02,0x85,
+0x02,0x85,0x00,0x85,0x02,0x85,0x02,0x85,
+0x02,0xa9,0x00,0x85,0x00,0xca,0x10,0xe4,
+0x06,0x83,0x66,0x84,0x26,0x85,0xa5,0x83,
+0x85,0x0d,0xa5,0x84,0x85,0x0e,0xa5,0x85,
+0x85,0x0f,0xa6,0x82,0xca,0x86,0x82,0x86,
+0x17,0xe0,0x0a,0xd0,0xc3,0xa9,0x02,0x85,
+0x01,0xa5,0x81,0xa2,0x1c,0xa0,0x00,0x84,
+0x19,0x84,0x09,0x94,0x81,0xca,0x10,0xfb,
+0xa2,0xff,0x29,0xff,0xd0,0x03,0x4c,0xf1,
+0xff,0x4c,0xf0,0xff
+};
 
 /*
 ** load next Starpath Rom
 */
 
-int cli_LoadNextStarpath(int LoadNum)
+void cli_LoadNextStarpath(void)
 {
-	int i,j;
+        int i,j, LoadCount, LoadNum;
 	unsigned int pageadr, pagebyte, pagecount;
 	unsigned char *p;
 	unsigned char *q;
 
-	if (LoadNum > 4) return(0);
+        SC_StartAddress=0;
+        LoadCount=4;
+        LoadNum=SC_ControlByte;
+        for (i = 1; i < 4; i++)
+        {
+                if (CartRom[i*8448 + 0x2005] == LoadNum) LoadCount=i;
+        }
+        LoadNum=LoadCount;
+
+        if (LoadNum == 4) return;
 
 	pagecount = CartRom[LoadNum*8448 + 0x2003];
 
@@ -39,24 +74,31 @@ int cli_LoadNextStarpath(int LoadNum)
 			*p++ = *q++;
 		}
 	}
-
-	return(1);
+        SC_StartAddress=CartRom[LoadNum*8448+0x2001]*256+CartRom[LoadNum*8448+0x2000];
+        SC_ControlByte=CartRom[LoadNum*8448+0x2002];
 }
 
 /*
 ** reload a Starpath file
 */
 
-int cli_ReloadStarpath(unsigned char *filename)
+void cli_ReloadStarpath(void)
 {
 	int i,j;
-	FILE *fp;
 	unsigned int pageadr, pagebyte, pagecount;
 	unsigned char *p;
+        unsigned char far *q;
 
-	fp = fopen(filename, "rb");
-	if (fp == NULL) return(0);
-
+        if(CartSize == 6144)
+        {
+                for(i = 0; i < 6144; i++)
+                {
+                        CartRom[i]=Megaboy[i];
+                }
+                SC_StartAddress=CartRom[0x17fd]*256+CartRom[0x17fc];
+                SC_ControlByte=0x0d;
+        }else
+        {
 	pagecount = CartRom[0x2003];
 
 	for (i = 0; i < pagecount; i++)
@@ -64,16 +106,64 @@ int cli_ReloadStarpath(unsigned char *filename)
 		pagebyte = CartRom[0x2010 + i];
 		pageadr = ((pagebyte & 3) * 0x800) + ((pagebyte & 0x1f) >> 2) * 256;
 
-		p = CartRom + pageadr;
+                p = CartRom + pageadr;
+                q = Megaboy + i*256;
 		for (j = 0; j < 256; j++)
 		{
-			*p++ = getc(fp);
+                        *p++ = *q++;
 		}
 	}
 
-	fclose(fp);
-	return(1);
+        SC_StartAddress=CartRom[0x2001]*256+CartRom[0x2000];
+        SC_ControlByte=CartRom[0x2002];
+        }
 }
+
+
+#define CRC16_REV 0xA001	/* CRC-16 polynomial reversed */
+#define CRC32_REV 0xA0000001	/* CRC-32 polynomial reversed */
+
+
+/*
+** used for generating the CRC lookup table
+*/
+
+dd crcrevhware(dd data, dd genpoly, dd accum) 
+{
+  int i;
+  data <<= 1;
+  for (i=8;i>0;i--) {
+    data >>= 1;
+    if ((data ^ accum) & 1)
+      accum = (accum >> 1) ^ genpoly;
+    else
+      accum >>= 1;
+    }
+  return(accum);
+}
+
+
+/*
+** init the CRC lookup table
+*/
+
+void init_crc(void) 
+{
+  int i;
+  for (i=0;i<256;i++)
+    crctab[i] = crcrevhware(i,CRC32_REV,0);
+}
+
+
+/*
+** update CRC
+*/
+
+void ucrc(unsigned char data) 
+{
+   crc = (crc >> 8) ^ crctab[(crc ^ data) & 0xff];
+}
+
 
 /*
 ** load a ROM image
@@ -89,6 +179,8 @@ int cli_LoadROM(unsigned char *filename)
 	unsigned int MBcount;
 	unsigned char *p;
 
+	init_crc();
+
 	fp = fopen(filename, "rb");
 	if (fp == NULL)	return(0);
 			
@@ -96,11 +188,13 @@ int cli_LoadROM(unsigned char *filename)
 	CartSize = 0;
 	Checksum = 0;
 	XChecksum = 0;
+	crc = 0;
 
 	while ( (ch = getc(fp)) != EOF )
 	{
 		*p++ = ch;
 		Checksum += ch;
+		ucrc(ch);
 		if (XChecksum & 0x8000000) XChecksum |= 1;
 		XChecksum = (XChecksum << 1) ^ ch;
 		++CartSize;
@@ -129,14 +223,29 @@ int cli_LoadROM(unsigned char *filename)
 		}
 	}
 
-	if (CartSize == 8448)	/* Starpath image -- reload according to page table */
+        if ((CartSize == 6144)||(CartSize == 8448)||(CartSize == 2*8448)
+                ||(CartSize == 3*8448)||(CartSize == 33792))
+        /* Starpath image -- reload according to page table */
 	{
-		for (i = 0; i < 0x2000; i++)	/* fill everything with Starpath halts */
+                for (i = 0; i < 8448; i++)      /* save first SC load */
+                {
+                        Megaboy[i] = CartRom[i];
+                }
+
+                for (i = 0; i < 0x2000; i++)	/* fill everything with Starpath halts */
 		{
 			CartRom[i] = 0x52;
 		}
 
-		cli_ReloadStarpath(filename);
+                for (i = 0; i< 188; i++)        /* generate fake SC BIOS */
+                {
+                        CartRom[i + 0x1800] = SCBIOS[i];
+                }
+
+                CartRom[0x1ffc]=0x0a;           /* setup BIOS reset vector */
+                CartRom[0x1ffd]=0xf8;
+
+                cli_ReloadStarpath();
 	}
 
 	return(1);
@@ -196,7 +305,9 @@ void cli_InterpretParm(char *p)
 	case 'f':  	FrameExit = parm;			break;
 	case 'd':  	dsp = parm;				break;
 	case 'j':  	Joystick = parm;			break;
-	case 'c':  	PaletteNumber = parm;			break;
+	case 'c':  	PaletteNumber = parm;
+			UserPaletteNumber = parm;
+			break;
 	case 'p':  	PaddleGame = (parm & 0xf) << 1;		break;
 	case 'k':  	KeyBase = parm & 3;			break;
 	case 'm':	MouseBase = parm & 3;			break;
@@ -219,12 +330,12 @@ void cli_InterpretParm(char *p)
 			break;
 	case 'y':	KeyPad = parm & 3;		       break; /* *EST* */
 	case 'w':	Driving = 1;			       break; /* *EST* */ 
-	case 'g':	BSType = parm & 7;		       break; /* *EST* */
+        case 'g':       BSType = parm & 0x0f;                  break; /* *EST* */
 	case 'o':	SimColourLoss = 1;		       break; /* *EST* */
 	case 'l':	Lightgun = parm;		       break; /* *EST* */
 	case 'a':	LGadjust = parm;		       break; /* *EST* */
 	case 'n':	ShowLineCount = 1;		       break; /* *EST* */
-	default:   	printf("Bad command line switch seen: -%c", ch);
+        default:   	printf("Bad command line switch seen: -%c", ch);
 		   	exit(1);
 	}
 }
@@ -301,7 +412,7 @@ void cli_CommandLine(int argc, char *argv[])
 	int ch, cnt;
 	unsigned char *p;
 	char ROMLoaded = 0; char ROMSeen = 0;
-	char FileName[260];
+/*      char FileName[260]; */ /* to z26.c */
 
 	cli_ReadParms();
 
@@ -345,7 +456,7 @@ void cli_CommandLine(int argc, char *argv[])
 */
 	if (DoChecksum)
 	{
-		printf("%lx checksum -- %lx alternative checksum\n", Checksum, XChecksum);
+		printf("%06lx checksum -- %08lx crc\n", Checksum, crc);
 		printf("%ld bytes", (long int) CartSize);
 		exit(1);
 	}

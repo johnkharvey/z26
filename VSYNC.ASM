@@ -2,7 +2,7 @@
 ;* frame synchronization code for z26
 ;*
 
-; z26 is Copyright 1997-1999 by John Saeger and is a derived work with many
+; z26 is Copyright 1997-2000 by John Saeger and is a derived work with many
 ; contributors.  z26 is released subject to the terms and conditions of the 
 ; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ; Please see COPYING.TXT for details.
@@ -90,9 +90,11 @@ DoSync:
 	cmp	[_VideoMode],0
 	je	SetPG0
 	mov	[PreGap],19000
+	mov	[PreFlip],18000
 	jmp	NDLoop
 
 SetPG0:	mov	[PreGap],16000
+	mov	[PreFlip],16000
 
 NDLoop:	sti
 	mov	dx,CRTSTAT		; wait for display disable
@@ -134,7 +136,7 @@ FrameLimiter:
 
 	mov	eax,[TicksPerSecond]
 	xor	edx,edx
-	movzx	ecx,[_NoRetrace]		; pick up # of frames per second
+	movzx	ecx,[_NoRetrace]	; pick up # of frames per second
 	div	ecx			; eax = # of ticks per frame
 	add	[FrameTime],eax		; make it next frame time
 

@@ -26,12 +26,8 @@ OldCFirst	dw	0		; remember original CFirst
 OurBailoutLine	dw	1000		; initial bailout line
 					; we fine tune it if exceeded
 
-DefaultCFirst	dw	0ffffh		; recommended start of game
-UserCFirst	dw	0ffffh		; remember what user specified (if anything)
-
-InitialMaxLines	dw	204		; for remembering which games are medium and tall					 
-MaxLines	dw	204		; max # of lines to scan
-					; (gets changed by graphics.asm)
+;DefaultCFirst	dw	0ffffh		; recommended start of game
+;UserCFirst	dw	0ffffh		; remember what user specified (if anything)
 
 DisplayPointer	dw	0		;pointer into display RAM
 
@@ -62,105 +58,16 @@ InputLatch	db	080h		; Input latch (inp4)
 
 ALIGN 2
 
-; *** stuff that gets shared with "C" program ***
-; (gets saved / initialized externally)
-
-PUBLIC _psp
-_psp		dw	0		; gets set by calling C program
-
-PUBLIC _Checksum
-_Checksum	dd	0		; gets cart checksum
-
-PUBLIC _XChecksum
-_XChecksum	dd	0		; gets alternative checksum
-
-PUBLIC _dsp
-_dsp		db	0		; do digital signal processing
-
-PUBLIC _VideoMode
-_VideoMode	db	0ffh		; default video mode
-
-PUBLIC _CFirst
-_CFirst		dw	0ffffh		; <-- gets changed by SetupSpecial
-					; (zero has VBlank trigger a new frame)
-PUBLIC _SoundMode
-_SoundMode	db	0ffh		; sound mode
-
-PUBLIC _IOPortB
-_IOPortB	db	00Bh		; IO Port B (switches)
-
-PUBLIC _IOPortA
-_IOPortA	db	0FFh		; IO Port A (joystick)
-
-PUBLIC _DoChecksum
-_DoChecksum	db	0		; set if we should print out checksum
-
-PUBLIC _NoRetrace
-_NoRetrace	db	0		; don't wait for retrace (if 0ffh) otherwise framerate
-
-PUBLIC _FrameExit
-_FrameExit	dd	0		; do this many frames and exit
-
-PUBLIC _Joystick
-_Joystick	db	1		; do joystick
-
-PUBLIC _quiet
-_quiet		db	0		; set if we want no sound
-
-PUBLIC _PaletteNumber
-_PaletteNumber	db	0ffh		; gets set by cmdline.asm
-
-PUBLIC _PaddleGame
-_PaddleGame	dd	0		; this is a paddle game (sensitivity)
-
-PUBLIC _KeyBase
-_KeyBase	db	0ffh		; which paddle to emulate
-
-PUBLIC _CartSize
-_CartSize	dw	0		; gets cart size (cmdline.asm)
-
-PUBLIC _TraceCount
-_TraceCount	db	0		; gets trace count
-
-PUBLIC _TraceEnabled
-_TraceEnabled	db	0		; if trace is enabled
-
-PUBLIC _OldTraceCount
-_OldTraceCount	db	0		; for saving trace count if we turn off tracing
-
-PUBLIC _Use50Hz
-_Use50Hz	db	0		; O.K. to use 50Hz video modes
-
-PUBLIC _KeyPad
-_KeyPad		db	0		; which keypad to emulate *EST*
-
-PUBLIC _Driving
-_Driving	db	0		; emulate driving controller *EST
-
-PUBLIC _BSType
-_BSType		db	0		; override bankswitching type *EST*
-
-PUBLIC _MouseBase
-_MouseBase	db	0ffH		; paddle to emulate with mouse
-					; 0ffH = joystick *EST*
-PUBLIC _SimColourLoss
-_SimColourLoss	db	0		; simulate PAL colour loss *EST*
-
-PUBLIC _Lightgun
-_Lightgun	db	0		; emulate lightgun *EST*
-					;   and adjust horizontally
-PUBLIC _LGadjust
-_LGadjust	dw	5		; adjust lightgun vertically *EST*
-
 ; *** new stuff ***
 
-InTextMode	db	0		; in text mode (TIATextMode -- graphics.asm)
 BlasterLoopCount dd	0		; count # of trys initting the soundblaster
 					; (sbdrv.asm)
 
 .code
 
 InitData:
+	call	_InitCVars
+
 	call	Init_CPU
 	call	Init_TIA
 	call	Init_Riot
@@ -171,7 +78,6 @@ InitData:
 
 
 	mov	[BlasterLoopCount],0
-	mov	[InTextMode],0
 
 	mov	[Frame],0
 	mov	[PrevFrame],0
@@ -181,10 +87,8 @@ InitData:
 	mov	[ScanLine],1
 
 	mov	[OldCFirst],0
-	mov	[DefaultCFirst],0ffffh
-	mov	[UserCFirst],0ffffh
-	mov	[InitialMaxLines],204
-	mov	[MaxLines],204
+;	mov	[DefaultCFirst],0ffffh
+;	mov	[UserCFirst],0ffffh
 
 	mov	[DisplayPointer],0
 	mov	[GamePaused],0

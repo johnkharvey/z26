@@ -150,6 +150,23 @@ CopyTable label word
 	dw	MX7CopyLine	; 13
 	dw	DoRegularCopy	; 14
 
+StartLineTable label word
+	dw	32		; 0
+	dw	32		; 1
+	dw	32		; 2
+	dw	30		; 3
+	dw	22		; 4
+	dw	22		; 5
+	dw	22		; 6
+	dw	1		; 7
+	dw	22		; 8
+	dw	1		; 9
+	dw	38		; 10
+	dw	38		; 11
+	dw	38		; 12
+	dw	1		; 13
+	dw	38		; 14
+
 MaxLineTable label word
 	dw	200		; 0
 	dw	200		; 1
@@ -387,8 +404,8 @@ SetCRTParmsLoop:
 SetCRTParmsDone:
 	movzx	si,[_VideoMode]
 	cmp	[DoubleScanTable + si],0 ; doing doublescan?
-	jz	MXPRet			;	 yes
-	mov	dx,CRTC_INDEX		;	no, turn off doublescan mode
+	jz	MXPRet			;   yes
+	mov	dx,CRTC_INDEX		;   no, turn off doublescan mode
 	mov	al,9			; cell height
 	out	dx,al
 	inc	dx
@@ -410,7 +427,7 @@ MXPRet:
 
 MXClearMem:
 	cmp	[ModeX],0		; in ModeX ?
-	jz	MXRet			;	no, ignore call
+	jz	MXRet			;   no, ignore call
 
 	pushad
 	push	es
@@ -430,6 +447,63 @@ MXClearMem:
 	popad
 
 MXRet:	ret
+
+
+;*
+;* blank to end of ModeX page
+;*
+
+MXBlankMem:
+	cmp	[ModeX],0		; in ModeX ?
+	jz	MXRet			;   no, ignore call
+
+	cmp	[_VideoMode],9		; debugger is responsible for it's own clearing
+	jz	MXRet
+
+	pushad
+	push	es
+
+	mov	dx,SC_INDEX
+	mov	ax,0f02h
+	out	dx,ax			; enable writes to all four planes
+
+	mov	ax,SCREEN_SEG		; now clear memory ...
+	mov	es,ax			; ... 4 pixels at a time
+	mov	di,[ModeXDisplayPointer]; point es:di to display memory
+	sub	ax,ax			; clear to zero-value pixels
+	mov	cx,di
+
+	cmp	[_VideoMode],7		; really big video modes shouldn't split buffer
+	jz	DontSplitBuffer
+	cmp	[_VideoMode],13
+	jz	DontSplitBuffer
+
+	and	cx,07fffh
+
+DontSplitBuffer:
+	cmp	cx,01000h
+	jb	MXBlankDone		; ignore call if short frame (aciddrop)
+
+	movzx	ebx,[_MaxLines]
+	lea	ebx,[ebx+ebx*4]
+	shl	bx,4			; *320/4
+
+	cmp	cx,bx
+	ja	MXBlankDone
+
+MXBlankLoop:
+	mov	es:[di],al
+	inc	cx
+	inc	di
+	cmp	cx,bx
+	jbe	MXBlankLoop
+
+MXBlankDone:
+	pop	es
+	popad
+
+	ret
+
 
 ;*
 ;* Flip ModeX page
@@ -476,7 +550,7 @@ DoFlip:
 	out	dx,al			; lower byte of display page is always zero
 	
 NoFlipping:
-	cmp	[MaxLines],220		; doing partial screen
+	cmp	[_MaxLines],220		; doing partial screen
 	ja	MXRet			;	no
 	add	[ModeXDisplayPointer],800 ; yes, start 10 lines down
 	cmp	[_VideoMode],9
@@ -491,7 +565,7 @@ NoFlipping:
 
 ModeXNewLine:
 	cmp	[ModeX],0		; in ModeX ?
-	jz	MXRet			;	no, ignore call
+	jz	MXRet			;   no, ignore call
 	mov	[DisplayPointer],0	; point rendering pointer at start of buffer
 	ret
 
@@ -516,7 +590,7 @@ MXMove4 macro op1
 
 ModeXCopyLine:
 	cmp	[ModeX],0		; in ModeX ?
-	jz	MXRet			;	no, ignore call
+	jz	MXRet			;   no, ignore call
 	pusha
 	push	es
 
@@ -562,9 +636,9 @@ MXOddLoop:
 	movzx	si,[_VideoMode]
 	cmp	[ScanLineTable + si],0	; a scanline mode?
 	pop	si
-	jz	MXCRet			;	no
+	jz	MXCRet			;   no
 
-	add	[ModeXDisplayPointer],80 ;	 yes, skip a line
+	add	[ModeXDisplayPointer],80 ;    yes, skip a line
 	
 MXCRet:	pop	es
 	popa

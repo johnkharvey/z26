@@ -735,10 +735,10 @@ NotCosmic:
 	cmp	bx,[BottomLine]		; line after last displayable?
 	jae	nTIANoGenerate		;	 yes, don't render
 
-;	mov	ax,[MaxLines]
+;	mov	ax,[_MaxLines]
 ;	imul	ax,320
 
-	movzx	eax,[MaxLines]
+	movzx	eax,[_MaxLines]
 	lea	eax,[eax+eax*4]
 	shl	ax,6			; *320
 

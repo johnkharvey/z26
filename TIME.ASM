@@ -70,6 +70,20 @@ DelayLoop:
 
 	ret
 
+;*
+;* C function entry point for long delays
+;* set _DelayTime before calling
+;*
+
+public _LongDelay
+_LongDelay proc far
+	pushad
+	call	_SetupTimer
+	mov	eax,[_DelayTime]
+	call	_Delay
+	popad
+	ret
+_LongDelay endp
 
 ;*
 ;* SetupTimer -- put the system timer in Mode 3 (was mode 2 -- divide by N)

@@ -59,21 +59,16 @@ start:
 	rep	stosb			; clear memory
 
 	call	InitData		; initialize data
-	call	SetupSpecial
+
+	call	_RecognizeCart		; do special setup for individual carts
+
+;	call	SetupSpecial
 	call	SetupBanks
 
 ; reset must follow SetupBanks...
 
 	call	Reset			; Reset the CPU
 
-; so the Starpath start address must be set up after Reset
-
-	cmp	[Starpath],0
-	jz	NotStarpath
-	mov	bx, word ptr [_CartRom + 02000h]; pick up start adr
-	mov	[reg_pc],bx			; tell CPU where to go
-
-NotStarpath:
 	cmp	[_quiet],0
 	jnz	STUP_4
 	cmp	[_SoundMode],1		; sound mode 1 (force PC speaker) ?
@@ -115,16 +110,13 @@ STUP_4:
 
 	mov	dx,[_CFirst]		; set up some things in case there's no vsync
 	mov	[TopLine],dx		; (like bowlg_tw.bin)
-	add	dx,[MaxLines]
+	add	dx,[_MaxLines]
 	mov	[BottomLine],dx
-
-
 
 
 ;*
 ;* the main outer loop
 ;*
-
 
 xmain:  
 	cmp	[OriginalFrameExit],0	; exiting after <n> frames ?
@@ -138,15 +130,6 @@ xm1:
 	call	VSync			; now look for vblank
 	call	ScanFrame
 
-; the following kludge is needed for frogpond and congbong only
-
-	cmp	[MXDelayedClear],0	; doing delayed clear to clean up mess in first couple of frames ?
-	jz	ClearDone		;   no
-	dec	[MXDelayedClear]	;	  yes
-	call	MXClearMem		; clear mem 
-
-ClearDone:
-
 Paused:	call	Controls		; check which keys pressed
 	test	[GamePaused],1		; game paused ?
 	jz	xmain			;	no, next frame
@@ -156,7 +139,6 @@ PausedLoop:
 	test	[GamePaused],1		; game paused ?
 	jnz	PausedLoop		;   yes
 	jmp	xmain			; to next frame
-
 
 
 ;*
@@ -240,13 +222,13 @@ ScanBailOut:
 	mov	ax,[ScanLine]		; do emergency bail-out test
 	cmp	ax,[OurBailoutLine]	; too many lines?
 	jl	NDret			;	not yet
-	mov	ax,[BailoutLine]	;	  yes, sharpen (or loosen) the test
+	mov	ax,[_BailoutLine]	;	  yes, sharpen (or loosen) the test
 	mov	[OurBailoutLine],ax	
 DontSharpen:
 	inc	[Frame]			; to the next frame
 	mov	[ScanLine],1
 
-NDret:  
+NDret:
 	mov	eax,[Frame]
 	cmp	eax,[PrevFrame]		; have we gone to a new frame ?
 	je	ScanFrameLoop		;   not yet

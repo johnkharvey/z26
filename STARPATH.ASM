@@ -32,10 +32,11 @@ SP_RamWord label word
 SP_RamByte	db	0,0		; byte to write to RAM (pad to allow word write)
 
 Starpath	db	0		; global Starpath flag
-SP_Loads	db	0		; # of loads in memory
 SP_WriteEnable	db	0		; SC RAM write enabled
 
 star_msg db	'Starpath call ','$'
+
+star_msg_load db 'Unable to find load ','$'
 
 .code
 
@@ -68,7 +69,6 @@ Init_Starpath:
 	mov	[SPSlice0],0
 	mov	[SPSlice1],3*800h
 	mov	[Starpath],0
-	mov	[SP_Loads],0
 	mov	[SP_WriteEnable],0
 	mov	[SP_RamByte],0
 	mov	[SP_PulseDelay],7
@@ -77,22 +77,6 @@ Init_Starpath:
 
 ; <-- from banks.asm
 
-SetStarpath4:				; 4 loads (max)
-	mov	[SP_Loads],4
-	jmp	SetStarpath
-
-SetStarpath3:				; 3 loads
-	mov	[SP_Loads],3
-	jmp	SetStarpath
-
-SetStarpath2:				; 2 loads
-	mov	[SP_Loads],2
-	jmp	SetStarpath
-
-SetStarpath1:				; 1 load
-	mov	[SP_Loads],1
-	jmp	SetStarpath
-
 SetStarpath:
 	push	bx
 	mov	[ReadBank], offset RBank_SP
@@ -100,12 +84,13 @@ SetStarpath:
 	mov	[Starpath],1
 ;	mov	bx, word ptr [_CartRom + 02000h]; pick up start adr
 ;	mov	[reg_pc],bx			; tell CPU where to go
-	mov	[_CartRom + 01800h],052h	; plant Starpath JAM at ROM entry point
-	mov	bl,[_CartRom + 02002h]		; bank switch scheme at startup
-	or	bl,040h
-	mov	[RiotRam],bl			; Starpath loader does this I think
+;        mov     [_CartRom + 01800h],052h        ; plant Starpath JAM at ROM entry point
+;        mov     bl,[_CartRom + 02002h]          ; bank switch scheme at startup
+        mov     bl,0
+        or      bl,040h
+        mov     [RiotRam],bl                    ; Starpath loader does this I think
 	
-	SP_SetScheme
+        SP_SetScheme
 
 	pop	bx
 	ret
@@ -115,7 +100,70 @@ SetStarpath:
 ;*
 
 StarpathJAM:
-	call	TIATextMode
+        pushad
+        mov     ax,[reg_pc]
+        and     ax,01fffh
+;        cmp     ax,01800h
+        cmp     ax,01ff0h
+        jne     SPJ1
+	push	si
+        mov     si,[000faH]
+
+	mov	[debugflag],1
+        call    [ReadHardware]
+	mov	[debugflag],0
+
+	mov	al,[si]
+        pop	si
+        mov     [_SC_ControlByte],al
+
+        push    es
+        call    _cli_LoadNextStarpath
+        pop     es
+        mov     ax,[_SC_StartAddress]
+        cmp     ax,0
+        je      StarpathLoadNotFound
+        mov     [reg_pc],ax
+        mov     bl,[_SC_ControlByte]            ; bank switch scheme at startup
+	or	bl,040h
+	mov	[RiotRam],bl			; Starpath loader does this I think
+	
+	SP_SetScheme
+
+        popad
+        ret
+SPJ1:
+;        cmp     ax,0180ah
+        cmp     ax,01ff1h
+        jne     StarpathRealJAM
+        push    es
+        call    _cli_ReloadStarpath
+        pop     es
+        mov     ax,[_SC_StartAddress]
+        cmp     ax,0
+        je      StarpathLoadNotFound
+        mov     [reg_pc],ax
+        mov     bl,[_SC_ControlByte]            ; bank switch scheme at startup
+	or	bl,040h
+	mov	[RiotRam],bl			; Starpath loader does this I think
+	
+	SP_SetScheme
+
+        popad
+        ret
+
+StarpathLoadNotFound:
+        popad
+        call    TIATextMode
+        push    offset star_msg_load
+        call    _put_str
+        mov     al,[_SC_ControlByte]
+        call    ConHex
+        jmp     StarWaitEsc
+
+StarpathRealJAM:
+        popad
+        call	TIATextMode
 	push	offset star_msg
 	call	_put_str
 	mov	al,'@'

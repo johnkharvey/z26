@@ -5,7 +5,7 @@
 ;
 ; *****************************************************************************
 
-; z26 is Copyright 1997-1999 by John Saeger and is a derived work with many
+; z26 is Copyright 1997-2000 by John Saeger and is a derived work with many
 ; contributors.  z26 is released subject to the terms and conditions of the 
 ; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ; Please see COPYING.TXT for details.
@@ -56,7 +56,7 @@ AudV1	db	-1
 AudMask db	15,15,31,31,15,15	; bitmask for the registers
 
 SDMPX	db	2			; 0 = ch1,1 = ch2,2 = both,-1 = quiet
-MinVol	db	8			; minimum volume for PC Speaker
+;MinVol	db	8			; minimum volume for PC Speaker
 
 
 .code
@@ -119,7 +119,7 @@ PCSound:
         
 	in	al,97			; read the speaker port
 	and	al,0FCh			; bits 1 & 0 set to zero.
-	cmp	bh,[MinVol]		; if sound is on...
+	cmp	bh,[_MinVol]		; if sound is on...
 	jle	PCSwitch
 	or	al,3			; set bits 0 & 1 on PC Speaker
 PCSwitch:

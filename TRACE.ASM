@@ -37,6 +37,25 @@ _ReallyReadROM proc far
 	ret
 _ReallyReadROM endp
 
+PUBLIC _ReallyReadRAM
+
+_ReallyReadRAM proc far
+
+	push	si
+        mov     si,[_cpu_MAR]
+
+	mov	[debugflag],1
+        call    [ReadHardware]
+	mov	[debugflag],0
+
+	mov	al,[si]
+	mov	[_cpu_Rbyte],al
+
+	pop	si
+
+	ret
+_ReallyReadRAM endp
+
 ;ALIGN 16 *EST*
 
 TraceInstruction:
@@ -66,7 +85,7 @@ TraceInstruction:
 
 	mov	ax,[reg_pc]
 	mov	[_cpu_pc],ax
-	and	[_cpu_pc],01fffh
+;        and     [_cpu_pc],01fffh
 	mov	al,[reg_x]
 	mov	[_cpu_x],al
 	mov	al,[reg_y]

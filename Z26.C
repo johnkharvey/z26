@@ -10,14 +10,14 @@
 */
 
 
-
-#define version "z26 (1.38)"
+#define version "z26 (1.39)"
 
 
 #define rom_list "ROM List"
 
+
 /*
-#define rom_list "Preview version I -- Please don't distribute."
+#define rom_list "Preview version J -- Please don't distribute."
 */
 
 #include <dos.h>		/* _psp */
@@ -28,19 +28,8 @@
 #include <stdlib.h>
 #include <time.h>
 
-
-extern short int psp;		/* (data.asm) */
-extern unsigned int CartSize;
-extern long int Checksum;
-extern long int XChecksum;
-
-unsigned char CartRom[34000]; 
-
-unsigned char far *Megaboy;
-unsigned int MBseg, MBofs, LinesInFrame;
-int ShowLineCount=0;
-
-#include "def.c"
+#include "globals.c"
+#include "carts.c"
 #include "cli.c"
 #include "gui.c"
 #include "trace.c"
@@ -48,35 +37,53 @@ int ShowLineCount=0;
 
 void main(int argc, char *argv[])
 {
-	def_SaveDefaults();
+	def_LoadDefaults();
 	Megaboy=(char *) calloc(32768,sizeof(char));
 	MBseg=FP_SEG(Megaboy);
 	MBofs=FP_OFF(Megaboy);
 	if (argc != 1)
 	{
-	   cli_CommandLine(argc, argv);
-	   psp = _psp;		   /* for environment scanner  (sbdrv.asm) */
-	   emulator();		   /* call emulator		 (tia.asm) */
-	   if(ShowLineCount) printf("%u scanlines in last frame\n",LinesInFrame);
+	   	cli_CommandLine(argc, argv);
+	   	psp = _psp;		   /* for environment scanner	 (sbdrv.asm) */
+	   	emulator();		   /* call emulator		 (main.asm) */
+	   	if(ShowLineCount) 
+		{
+			printf("Filename %s\n", FileName);
+			printf("%06lx checksum -- %08lx crc\n", Checksum, crc);
+			printf("%u scanlines in last frame\n",LinesInFrame);
+			printf("VBlank Off %u\n", VBlankOff);
+			printf("VBlank On %u\n", VBlankOn);
+			printf("BailoutLine %u\n", BailoutLine);
+			printf("CFirst %u\n", CFirst);
+			printf("MaxLines %u\n", MaxLines);
+	   		DelayTime = 250000;
+	   		LongDelay();
+		}
+		else if (!InTextMode)
+		{
+	   		gui_GraphicsMode();
+	   		gui_SetPalette(35, 40, 45);
+	   		gui_ShowExitScreen();
+	   		DelayTime = 250000;
+	   		LongDelay();
+	   		gui_RestoreVideoMode();
+		}
 	}
 	else
 	{
-
-/*
-** The following printf is to prevent Win98 from halting if z26 is launched
-** from a shortcut made into a button in the task bar.
-*/
-
 		printf("Entering graphics mode ... \n");
-		delay(50);
-		delay(50);
+		DelayTime = 250000;
+		LongDelay();
 
 		gui_CheckMouse();
 		gui_GraphicsMode();
-		gui_SetPalette(35, 40, 45);	/* 31, 34, 41 */
+		gui_SetPalette(35, 40, 45);
 
 		gui_ShowList();
 
+		gui_ShowExitScreen();
+		DelayTime = 250000;
+		LongDelay();
 		gui_RestoreVideoMode();
 	}
 	free(Megaboy);

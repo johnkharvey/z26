@@ -64,7 +64,7 @@ ReadTIA:
 	push	ax
 	and	si,0fh
 	xor	al,al
-	cmp	[TIAZero],0		; berzerk or qbrtqube?
+	cmp	[_TIAZero],0		; berzerk or qbrtqube?
 	jnz	ReadTIAZero		;   yes, start with zero
 
 	mov	al,[MagicNoise+si]	; start out with the undocumented magical noise
@@ -117,7 +117,7 @@ ReadInputLatches:			; read the input latch
 	jb	RILnoHit
 	mov	al,[RClock]
 	mov	ah,[MLG_ShotCycle]
-	cmp	ah,[LG_WrapLine]	; see mouse.asm
+	cmp	ah,[_LG_WrapLine]	; see mouse.asm
 ;	 cmp	 [MLG_ShotCycle],78	 ; 75-78
 	jb	RILnoFix
 	cmp	al,22
@@ -152,7 +152,9 @@ RILnoLightgun:
 	ret
 	
 ReadDumped:
-	cmp	[_MouseBase],0ffh		; use mouse as paddles ?
+        cmp     [_Checksum],072902h             ; duckshot.bin requires
+        je      RetZero                         ;   always zero *EST*
+        cmp	[_MouseBase],0ffh		; use mouse as paddles ?
 	jne	 RDump1				;   yes, check trigger
 	cmp	dword ptr [_PaddleGame],0	; if not a paddle game
 	je	RetDirect			;   get state directly *EST*

@@ -11,7 +11,50 @@ EXTRN _CartRom:byte
 EXTRN _MBseg:word
 EXTRN _MBofs:word
 
+EXTRN _psp:word
+EXTRN _CartSize:word
+EXTRN _Checksum:dword
+EXTRN _XChecksum:dword
+EXTRN _VideoMode:byte
+EXTRN _CFirst:word
+EXTRN _quiet:byte
+EXTRN _SoundMode:byte
+EXTRN _IOPortA:byte
+EXTRN _IOPortB:byte
+EXTRN _DoChecksum:byte
+EXTRN _NoRetrace:byte
+EXTRN _FrameExit:dword
+EXTRN _dsp:byte
+EXTRN _Joystick:byte
+EXTRN _PaletteNumber:byte
+EXTRN _PaddleGame:dword
+EXTRN _KeyBase:byte
+EXTRN _TraceCount:byte
+EXTRN _TraceEnabled:byte
+EXTRN _OldTraceCount:byte
+EXTRN _Use50Hz:byte
+EXTRN _KeyPad:byte
+EXTRN _Driving:byte
+EXTRN _BSType:byte
+EXTRN _MouseBase:byte
+EXTRN _SimColourLoss:byte
+EXTRN _Lightgun:byte
+EXTRN _LGadjust:word
+
 EXTRN _LinesInFrame:word	; *EST*
+EXTRN _PrevLinesInFrame:word
+EXTRN _VBlankOn:word
+EXTRN _VBlankOff:word
+EXTRN _BailoutLine:word
+EXTRN _MaxLines:word
+EXTRN _UserPaletteNumber:byte
+
+EXTRN _SC_StartAddress:word
+EXTRN _SC_ControlByte:byte
+
+EXTRN _DelayTime:dword
+EXTRN _InTextMode:byte
+
 
 ;dw cpu_pc;
 ;db cpu_a, cpu_carry, cpu_x, cpu_y, cpu_sp;
@@ -46,6 +89,8 @@ EXTRN _P1_Pos:word
 EXTRN _adr:word
 EXTRN _prevadr:word
 
+EXTRN _InitCVars:far
+
 EXTRN _ShowRegisters:far
 EXTRN _ShowInstruction:far
 
@@ -58,3 +103,16 @@ EXTRN _ShowCollision:far
 EXTRN _Showaddress:far
 EXTRN _ShowSCWrite:far
 
+EXTRN _cli_LoadNextStarpath:far
+EXTRN _cli_ReloadStarpath:far
+
+EXTRN _KoolAide:byte
+EXTRN _RSBoxing:byte
+EXTRN _TIAZero:byte
+EXTRN _UserCFirst:word
+EXTRN _DefaultCFirst:word
+EXTRN _MPdirection:byte
+EXTRN _MinVol:byte
+EXTRN _LG_WrapLine:byte
+
+EXTRN _RecognizeCart:far

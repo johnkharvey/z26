@@ -28,7 +28,7 @@ CHEATS = 1
 
 	include console.asm		; console output
 	include msg.asm			; messages
-	include special.asm		; process special cartridges
+;	include special.asm		; process special cartridges
 
 	include vga.asm			; VGA graphics initialization
 	include	modex.asm		; Mode-X support

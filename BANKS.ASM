@@ -83,13 +83,13 @@ SetupBanks:
 	je	SSC			; 16K superchip
 	cmp	al,7
 	je	SMN			; 16K M-Network
+	cmp	al,8
+	je	SetFatalRun		; Atari 32K
+	cmp	al,9
+	je	F8Backwards		; 8K with banks backwards
 
 DetectBySize:
 	mov	ax,[_CartSize]
-	cmp	ax,00800h
-	je	Set2KMode		; 2K cart
-	cmp	ax,01000h
-	je	Set4KMode		; 4K cart
 	cmp	ax,02000h
 	je	Set8kMode		; 8K cart
 	cmp	ax,03000h
@@ -101,29 +101,17 @@ DetectBySize:
 	cmp	ax,028ffh
 	je	SetPitfallII		; Pitfall II cart
 	cmp	ax,8448
-	je	SetStarpath1		; Supercharger image
+        je      SetStarpath             ; Supercharger image
 	cmp	ax,8448*2
-	je	SetStarpath2
+        je      SetStarpath
 	cmp	ax,8448*3
-	je	SetStarpath3
+        je      SetStarpath
 	cmp	ax,8448*4
-	je	SetStarpath4
-	cmp	ax,33999
+        je      SetStarpath
+        cmp     ax,6144
+        je      SetStarpath
+        cmp	ax,33999
 	je	SMB			; Megaboy 64K cart *EST*
-	ret
-
-Set2KMode:
-	mov	eax,[_Checksum]
-	cmp	eax,03b72bh
-	je	SCV			; vidlife (2K final version)
-	cmp	eax,038191h
-	je	SCV			; magicard
-	ret
-
-Set4KMode:
-	mov	eax,[_Checksum]
-	cmp	eax,08f5eeh
-	je	SCV			; vidlife (4K first version)
 	ret
 
 SCV:
@@ -141,68 +129,15 @@ SCV1:					; *EST*
 	
 
 Set8kMode:
-	mov	eax,[_Checksum]
-	cmp	ax,032cfh
-	je	SSC8			; stargate
-	cmp	ax,025efh
-	je	SSC8			; defendr2
-
-	cmp	ax,0e446h
-	je	SPB			; dethstar
-	cmp	ax,0f9f8h
-	je	SPB			; gyruss
-	cmp	ax,09a6dh
-	je	SPB			; sprcobra
-	cmp	ax,0c831h
-	je	SPB			; tutank
-	cmp	ax,0c026h
-	je	SPB			; popeye
-	cmp	ax,0ce17h
-	je	SPB			; swarcade
-	cmp	eax,0cc455h
-	je	SPB			; swtagpro
-	cmp	ax,05653h
-	je	SPB			; qbrtqube
-	cmp	ax,0e31ah
-	je	SPB			; frogger2
-	cmp	ax,0fce0h
-	je	SPB			; montzrev
-	cmp	ax,01113h
-	je	SPB			; docastle
-	cmp	ax,09379h
-	je	SPB			; toothpro
-	cmp	eax,0e1923h
-	je	SPB			; jamebond
-
-	cmp	ax,0e35eh
-	je	STV			; riverp
-	cmp	ax,0cf71h
-	je	STV			; springer
-	cmp	ax,060bfh
-	je	STV			; polaris
-	cmp	ax,02510h
-	je	STV			; mnr2049r
-	cmp	ax,0ec87h
-	je	STV			; minrvol2
-	cmp	ax,04d38h
-	je	STV			; espial
-
-	cmp	ax,0ad52h
-	je	SFE			; decathln
-	cmp	ax,0f815h
-	je	SFE			; robotank
-
 SetF8:
 	mov	[ReadBank], offset RBank8
 	mov	[WriteBank], offset WBank8
-
-	cmp	eax,0d7238h		; priveye
-	je	F8Backwards
-
 	mov	[RomBank],01000h	; need this for moonswep and lancelot
 	ret
 
 F8Backwards:
+	mov	[ReadBank], offset RBank8
+	mov	[WriteBank], offset WBank8
 	ret
 
 
@@ -212,11 +147,13 @@ SPB:	mov	[ReadBank], offset RBank8pb
 	mov	[WriteBank], offset WBank8pb
 	ret
 
+
 ; set up Tigervision 8K bank switch scheme
 
 STV:	mov	[ReadBank], offset RBank8tv
 	mov	[WriteBank], offset WBank8tv
 	ret
+
 
 ; set up FE (flat model) bank switch scheme
 
@@ -230,53 +167,11 @@ Set12KMode:
 	ret
 
 Set16kMode:
-	mov	eax,[_Checksum]
-	cmp	ax,02416h
-	je	SSC			; digdug
-	cmp	ax,0a44ch
-	je	SSC			; cryscast
-	cmp	ax,0bc36h
-	je	SSC			; milliped
-	cmp	ax,0bd1dh
-	je	SSC			; jrpacman
-	cmp	ax,084ach
-	je	SSC			; dsrtfalc
-	cmp	ax,01088h
-	je	SSC			; darkcham
-	cmp	eax,1fb7fbh
-	je	SSC			; shoot(ing gallery)
-	cmp	ax,0c525h
-	je	SSC			; sprfootb
-	cmp	ax,08037h
-	je	SSC			; sprnmast
-	cmp	ax,05f30h
-	je	SSC			; ofthwall
-	cmp	ax,06db1h
-	je	SSC			; secretq
-	cmp	ax,09ffah
-	je	SSC			; radarlok
-	cmp	ax,04f39h
-	je	SSC			; klax
-	cmp	ax,04887h
-	je	SSC			; klaxntsc
-	cmp	eax,16217bh
-	je	SSC			; savemary
-
-	cmp	ax,094a9h
-	je	SMN			; he_man
-	cmp	ax,003c8h
-	je	SMN			; bnj
-	cmp	ax,08504h
-	je	SMN			; burgtime
-
 	mov	[ReadBank], offset RBank16
 	mov	[WriteBank], offset WBank16
 	ret
 
 Set32kMode:
-	mov	eax,[_Checksum]
-	cmp	eax,0299233h
-	je	SetFatalRun
 	mov	[ReadBank], offset RBank32tv
 	mov	[WriteBank], offset WBank32tv
 	ret

@@ -115,6 +115,14 @@ WeirdRespCorrection label word
  dw   4,  5,  5,  6,  7,  8,  8,  9, 10, 11
  dw  11, 12, 13, 14, 14, 15
 
+TempCFirst		dw	0
+MinCFirst		dw	0
+MinVBlankOff		dw	0
+FavorTop		dw	0
+StableCount		dw	0
+TopLineToCenter		dw	0
+MaxVisibleToCenter	dw	0
+
 
 .code
 
@@ -253,27 +261,185 @@ H_VSYNC:
 	jz	ZRET
 	test	[VSyncFlag],2		; somebody hitting Vsync more than necessary?
 	jnz	VSyncAlreadySet		;	  yep
-	mov	dx,[ScanLine]
 
+	mov	dx,[_LinesInFrame]
+	mov	[_PrevLinesInFrame],dx
+	mov	dx,[ScanLine]
 	mov	[_LinesInFrame],dx	; *EST*
 	dec	[_LinesInFrame]
+
+DontUpdateLinesInFrame:
+	mov	dword ptr [LooseColour],0ffffffffh
+	cmp	[_PaletteNumber],1	; PAL palette?
+	jne	GrayFrame		;   no, don't simulate color loss
 	test	[_SimColourLoss],1
 	jz	GrayFrame
-	mov	dword ptr [LooseColour],007070707h ; see tialine.asm
 	test	[_LinesInFrame],1
-	jnz	GrayFrame
-	mov	dword ptr [LooseColour],0ffffffffh
+	jz	GrayFrame
+	mov	dword ptr [LooseColour],007070707h ; see tialine.asm
 GrayFrame:
 	mov	[ScanLine],1		; back to screen top
+
 	cmp	dx,5			; a quick double hit (pickpile)?
-	jb	VSyncAlreadySet		;	 yes, no new frame
+	jb	VSyncAlreadySet		;   yes, no new frame
 	inc	[Frame]			; new frame.
+
+;*
+;* automatic adjustment of game position (and video mode)
+;*
+
+	mov	dx,[_CFirst]
+	mov	[TempCFirst],dx	; to see how much we're changing by
+
+	cmp	[Frame],5
+	je	AdjustUnstable		; force adjustment of unstable games (pickpile)
+
+	mov	dx,[_LinesInFrame]
+	cmp	dx,[_PrevLinesInFrame]
+	jne	AlreadyInPALMode	; don't change video mode if not matching previous frame (quadrun)
+
+	test	[_IOPortB],1		; reset being pressed?
+	jz	VSyncAlreadySet		;   yes, don't adjust
+
+AdjustUnstable:
+	cmp	[_LinesInFrame],282	; NTSC game? (pharhcrs 296 when fire button pressed ...
+					;	     (... air_raid 292, zoofun 291, dumbo 286, curtiss 286,
+					;	     (... tps 285, galaga 282, tomboy 277)
+	jb	AlreadyInPALMode	;   yes
+
+	cmp	[_PaletteNumber],1	; PAL mode already ?
+	jz	AlreadyInPALMode	;   yes
+	cmp	[_UserPaletteNumber],0ffh ; is there a palette override?
+	jnz	AlreadyInPALMode	;   yes, don't switch
+	mov	[_PaletteNumber],1	; set up PAL palette
+	pushad
+	call	TIAGraphicMode		; reset video mode for PAL games
+	popad
+
+AlreadyInPALMode:
+	cmp	[_LinesInFrame],512	; game ridiculously large?
+	ja	VSyncAlreadySet		;   yes, no automatic adjustment
+	cmp	[_LinesInFrame],220	; game ridiculously small?
+	ja	GameSizeOK		;   no
+	cmp	[_BailoutLine],512	; maybe BailoutLine is too small -- too big already?
+	ja	GameSizeOK
+	mov	dx,[_LinesInFrame]
+	add	dx,4			; match offset to below (aciddrop)
+	add	[_BailoutLine],dx
+	jmp	BailoutSet
+
+GameSizeOK:
+	mov	dx,[_LinesInFrame]
+	cmp	dx,[_PrevLinesInFrame]
+	jne	BailoutSet		; don't reset BailoutLine if not matching previous frame (quadrun)
+	add	dx,4			; minimum 6 is needed for aciddrop or it flashes
+	mov	[_BailoutLine],dx
+
+BailoutSet:
+	cmp	[_CFirst],0		; forcing first line?
+	jz	VSyncAlreadySet		;   yes, don't adjust position
+	cmp	[_CFirst],1		; ultimate reality mode?
+	jz	VSyncAlreadySet		;   yes, don't adjust position
+	cmp	[_DefaultCFirst],0ffffh	; does game have a recommended starting line?
+					; (or automatic positioning disabled?)
+	jne	VSyncAlreadySet		;   yes, don't adjust position
+	cmp	[_UserCFirst],0ffffh	; did user specify a line number?
+	jne	VSyncAlreadySet		;   yes, don't adjust position
+
+; start out with default video mode CFirst
+
+	push	si
+	movzx	si,[_VideoMode]
+	cmp	[_PaletteNumber],1	; PAL mode ?
+	jne	DontRemap		;   no
+	movzx	si,[Remap50Hz + si]	;   yes, remap in case PAL in NTSC mode
+DontRemap:
+	shl	si,1
+	mov	si,[StartLineTable + si]
+	mov	[_CFirst],si		; use the standard default
+	sub	si,2
+	mov	[MinCFirst],si		; allow a small shift
+	mov	si,[_CFirst]
+	sub	si,10
+	mov	[MinVBlankOff],si
+	pop	si
+
+; set up some parameters based on video mode
+
+	mov	[FavorTop],13		;these are for NTSC
+	mov	[TopLineToCenter],260
+	mov	[MaxVisibleToCenter],240;219
+	cmp	[_PaletteNumber],1	; NTSC game?
+	jnz	UseNTSCParms		;   yes
+	mov	[FavorTop],7
+	mov	[TopLineToCenter],310
+	mov	[MaxVisibleToCenter],256
+
+UseNTSCParms:
+
+; figure out where game should start
+
+	mov	dx,[_VBlankOff]
+	cmp	dx,[MinVBlankOff]	; does VBlankOff seem viable? 
+	jb	VSyncAlreadySet		;   no, don't adjust position
+	mov	[_CFirst],dx		;   yes, use it as proposed start line
+;	mov	[MinCFirst],dx		; and the new MinCFirst
+
+	mov	dx,[_VBlankOn]		; figure out how big game is
+	test	dx,dx			; VBlankOn viable?
+	jnz	UseVBlankOn		;   yes
+	mov	dx,[TopLineToCenter]
+
+UseVBlankOn:
+	sub	dx,[_CFirst]		; # of visible lines
+	cmp	dx,[MaxVisibleToCenter]	; more than we're comfortable centering?
+	jb	CenterWholeGame		;   no
+	mov	dx,[MaxVisibleToCenter]
+CenterWholeGame:
+	cmp	dx,[_MaxLines]		; will game fit on screen?
+	ja	GameTooBigForVideoMode	;   no
+	sub	dx,[_MaxLines]		; -(how much too small)
+	sar	dx,1			; split the difference (signed shift)
+	add	[_CFirst],dx
+	jmp	VSyncSet
+
+GameTooBigForVideoMode:
+	sub	dx,[_MaxLines]		; how much too big
+	shr	dx,1			; split the difference
+	sub	dx,[FavorTop]
+	add	[_CFirst],dx		; almost center the game
+					; (but favor the top by a few lines)
+VSyncSet:
+	mov	[_VBlankOn],0
+	mov	[_VBlankOff],0
+
+	mov	dx,[_CFirst]
+	cmp	dx,[MinCFirst]
+	jge	GameStartFoundAgain	; signed comparison
+	mov	dx,[MinCFirst]		; game too high
+
+GameStartFoundAgain:
+	mov	[_CFirst],dx
+	sub	dx,[TempCFirst]
+	jae	VSyncSetPos
+	neg	dx
+
+VSyncSetPos:
+	cmp	dx,7			; change to CFirst too small?  (actionmn 4, Pharoah's Curse (PAL) 7)
+	jae	VSyncAlreadySet		;   no, do it
+	mov	dx,[TempCFirst]		;   (avoid small wiggles in some games...
+	mov	[_CFirst],dx		;    ... like gashog, airlock, and actionmn)
+
 VSyncAlreadySet:
 	mov	dx,[_CFirst]
 	cmp	dx,0			; forcing first line ?
 	jz	ZRET			;   no, let vblank take care of it
+
+	call	TIABlank
+
+DontBlank:
 	mov	[TopLine],dx
-	add	dx,[MaxLines]
+	add	dx,[_MaxLines]
 	mov	[BottomLine],dx
 ZRET:	mov	dl,[WByte]
 	mov	[VSyncFlag],dl	
@@ -293,6 +459,13 @@ H_VBLANK:
 	mov	[VBlank],dl
 	test	dl,2			; setting or clearing ?
 	jz	WVBClear		;	  clearing
+
+	mov	dx,[ScanLine]
+	cmp	dx,200
+	jb	VBOnAlreadySet
+	mov	[_VBlankOn],dx
+
+VBOnAlreadySet:
 	cmp	[_CFirst],0		; VBlank triggering new frame ?
 	je	WTB_1			;	yes, don't mess with VBlanking
 	mov	[VBlanking],0
@@ -304,6 +477,20 @@ WTB_1:
 	jmp	HandleDumpedInputs
 
 WVBClear:
+	mov	dx,[ScanLine]
+	cmp	[_PaletteNumber],1	; NTSC game?
+	jnz	DoNTSCTest		;   yes
+	cmp	dx,78			; allow penguin vblank
+	ja	VBOffAlreadySet
+	mov	[_VBlankOff],dx
+	jmp	VBOffAlreadySet
+
+DoNTSCTest:
+	cmp	dx,58			; allow brickick vblank
+	ja	VBOffAlreadySet
+	mov	[_VBlankOff],dx
+
+VBOffAlreadySet:
 	cmp	[_CFirst],0		; VBlank triggering new frame ?
 	je	WTB_2			;	yes, don't mess with VBlanking
 	mov	[VBlanking],-1
@@ -317,7 +504,7 @@ WTB_2:
 WVBPastMin:
 	inc	dx
 	mov	[TopLine],dx
-	add	dx,[MaxLines]
+	add	dx,[_MaxLines]
 	mov	[BottomLine],dx
 	jmp	HandleDumpedInputs	 
 
@@ -1117,7 +1304,7 @@ RBL_goahead:
 CheatKoolAidePosition macro arg1, arg2, arg3
 local done
 
-	cmp	[KoolAide],0		; doing Kool Aide cheat?
+	cmp	[_KoolAide],0		; doing Kool Aide cheat?
 	jz	done			;   no
 	cmp	[ScanLine],arg1
 	jne	done
@@ -1306,7 +1493,7 @@ NoCatchup:
 	test	dl,dl			; would table switch land us in a sprite?
 	jz	done			;   no
 
-	cmp	[RSBoxing],0		; doing RSBOXING cheat?
+	cmp	[_RSBoxing],0		; doing RSBOXING cheat?
 	jz	NoCheat			;	  no
 	sub	dl,2			;	yes, don't render completely thru new sprite
 

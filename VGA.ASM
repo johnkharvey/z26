@@ -173,7 +173,7 @@ TIARestoreVideoMode:
 
 TIAGraphicMode:
 	pushad
-	mov	[InTextMode],0
+	mov	[_InTextMode],0
 
 	mov	ax,013h			; switch to 320x200 VGA mode
 	int	010h
@@ -186,13 +186,15 @@ TIAGraphicMode:
 ;*
 
 	cmp	[_VideoMode],0ffh	; did user specify a video mode?
-	jne	TGM_RemapVideo		;	 yes, don't use defaults
-	cmp	[MaxLines],204		; is MaxLines above what mode 3 can handle?
-	ja	TGM_SetMX5		;   yes, use mode 5
-	mov	[_VideoMode],3		;	 no,  use mode 3
-	jmp	TGM_RemapVideo
+	jne	TGM_RemapVideo		;   yes, don't use defaults
 
-TGM_SetMX5:	
+;	cmp	[_MaxLines],204		; is _MaxLines above what mode 3 can handle?
+;	ja	TGM_SetMX5		;   yes, use mode 5
+;	mov	[_VideoMode],3		;   no,  use mode 3
+;	jmp	TGM_RemapVideo
+;
+;TGM_SetMX5:	
+
 	mov	[_VideoMode],5
 
 ;*
@@ -200,10 +202,10 @@ TGM_SetMX5:
 ;*
 
 TGM_RemapVideo:
-	cmp	[_Use50Hz],0		; PAL modes allowed?
-	jz	TGM_SetMaxLines		;	 no
-	cmp	[_PaletteNumber],1	; PAL mode ?
-	jne	TGM_SetMaxLines		;	  no
+	cmp	[_Use50Hz],0			; PAL modes allowed?
+	jz	TGM_SetMaxLines			;   no
+	cmp	[_PaletteNumber],1		; PAL mode ?
+	jne	TGM_SetMaxLines			;   no
 
 	movzx	si,[_VideoMode]
 	mov	al,[Remap50Hz + si]
@@ -217,43 +219,40 @@ TGM_SetMaxLines:
 	movzx	si,[_VideoMode]
 	shl	si,1
 	mov	si,[MaxLineTable + si]
-	mov	[MaxLines],si
+	mov	[_MaxLines],si
 
 ;*
 ;* set up CFirst (first line to display)
 ;*
 
-	mov	dx,[UserCFirst]
+	mov	dx,[_UserCFirst]
 	mov	[_CFirst],dx
-	cmp	[UserCFirst],0ffffh		; did user specify a line number?
+	cmp	[_UserCFirst],0ffffh		; did user specify a line number?
 	jne	TGM_TestUltimate		;   yes, don't override
-	mov	dx,[DefaultCFirst]
+	mov	dx,[_DefaultCFirst]
 	mov	[_CFirst],dx
-	cmp	[DefaultCFirst],0ffffh		; does game have a recommended starting line?
+	cmp	[_DefaultCFirst],0ffffh		; does game have a recommended starting line?
 	jne	TGM_TestUltimate		;   yes, use it
-	mov	[_CFirst],DEFAULT_CFirst	;	  no, use the standard default
+
+	movzx	si,[_VideoMode]
+	cmp	[_PaletteNumber],1		; PAL mode ?
+	jne	DontRemapStartLine		;   no
+	movzx	si,[Remap50Hz + si]		;   yes, remap in case PAL in NTSC mode
+DontRemapStartLine:
+	shl	si,1
+	mov	si,[StartLineTable + si]
+	mov	[_CFirst],si			; use the standard default
 
 ;*
 ;* adjust CFirst based on game size
 ;*
 
 TGM_TestUltimate:
-	cmp	[MaxLines],480			; in a very tall video mode?
-	jb	TGM_TestMedium			;	 no
-	cmp	[_CFirst],0			; frogpond or pharhcrs ?
-	jz	TGM_TestMedium			;	 yes
-	mov	[_CFirst],1			;   no, this is ultimate reality mode
-	jmp	TGM_Done
-
-TGM_TestMedium:
-	cmp	[InitialMaxLines],MAX_TallGame	; is this a known tall game?
-	je	TGM_Done			;   yes, done
-	cmp	[MaxLines],240			; in a tall video mode?
+	cmp	[_MaxLines],480			; in a very tall video mode?
 	jb	TGM_Done			;   no
-
-	cmp	[_CFirst],MEDIUM_Offset+1	; medium or small game, enough room to subtract the offset?
-	jbe	TGM_Done			;   no, done
-	sub	[_CFirst],MEDIUM_Offset		;	  yes, move it down a bit
+	cmp	[_CFirst],0			; frogpond or pharhcrs ?
+	jz	TGM_Done			;   yes
+	mov	[_CFirst],1			;   no, this is ultimate reality mode
 
 TGM_Done:
 	mov	dx,[_CFirst]
@@ -274,10 +273,10 @@ GeneratePalette:
 	cmp	[_PaletteNumber],0	; user specify palette 0 ?
 	je	GPUseNTSC		;   yes, use NTSC
 	cmp	[_PaletteNumber],1	; user specify palette 1 ?
-	je	GPUsePAL		;	  yes, use PAL
-	cmp	[DefaultCFirst],0ffffh	; is there a default starting line ?
+	je	GPUsePAL		;   yes, use PAL
+	cmp	[_DefaultCFirst],0ffffh	; is there a default starting line ?
 	je	GPUseNTSC		;   no, use NTSC
-	cmp	[DefaultCFirst],50	; starting line < 50 ?
+	cmp	[_DefaultCFirst],50	; starting line < 50 ?
 	jb	GPUseNTSC		;   no, use NTSC
 
 GPUsePAL:
@@ -363,15 +362,7 @@ DoTrixter60Hz:
 
 TIABlank:
 	cmp	[ModeX],0		; in ModeX ?
-	jnz	TBRet			;	 yes, don't do this
-					;
-					;	      Since this routine is only called
-					;	      when vblank triggers a new frame
-					;	      and since that only happens for
-					;	      two games now, and hopefully none
-					;	      someday, I'm not updating this
-					;	      routine for modex for now.
-
+	jnz	MXBlankMem		;   yes, do ModeX version
 	push	ax
 	push	bx
 	push	di
@@ -379,11 +370,11 @@ TIABlank:
 	mov	di,[DisplayPointer]
 	cmp	di,30000
 	jb	TIABRet
-	mov	bx,[MaxLines]
+	mov	bx,[_MaxLines]
 	imul	bx,320
 TIABLoop:
-	cmp	di,bx		; (64000) reached end of display area?
-	jae	TIABRet		;	   yes, done
+	cmp	di,bx			; (64000) reached end of display area?
+	jae	TIABRet			;	   yes, done
 	mov	gs:[di],eax
 	add	di,4
 	jmp	TIABLoop
@@ -401,12 +392,12 @@ TBRet:	ret
 ;*
 
 TIATextMode:
-	cmp	[InTextMode],0
+	cmp	[_InTextMode],0
 	jz	TIATextDoIt
 	ret
 
 TIATextDoIt:
-	mov	[InTextMode],1
+	mov	[_InTextMode],1
 	mov	ah,0			; switch to 80x25 colour mode
 	mov	al,3
 	int	010h

@@ -9,7 +9,7 @@
 
 .data
 MouseAvail		db	0
-MPdirection		db	0	; gets changed in keyboard.asm
+;MPdirection		db	0	; gets changed in keyboard.asm
 
 MJ_Cnt			db	0
 MJ_Last_IOPortA		db	0
@@ -28,7 +28,7 @@ MLG_Colour		db	0	; colour cycling the marker
 MLG_ShotCycle		db	0	; cycle and line of hit - gets
 MLG_ShotLine		dw	0	;   checked in cpuhand.asm
 
-LG_WrapLine		db	78	; for sentinel & shooting arcade
+;LG_WrapLine		db	78	; for sentinel & shooting arcade
 					;   75 for guntest4
 
 .code
@@ -205,11 +205,11 @@ MouseAsPaddle:
 	push	esi
 	movzx	esi,[_MouseBase]
 	mov	ebx,[ChargeTrigger0 + esi*4]
-	test	[MPdirection],1
+	test	[_MPdirection],1
 	jz	MP0
 	mov	cx,dx
 MP0:
-	test	[MPdirection],2
+	test	[_MPdirection],2
 	jz	MP0a
 	add	bx,cx
 	jmp	MP0b

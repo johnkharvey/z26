@@ -455,6 +455,22 @@ void gui_ShowMainInset(void)
 	gui_FilledRectangle(6,25,633,467, 1);
 }
 
+/* show inset for exit screen */
+
+void gui_ShowExitInset(void)
+{
+	gui_FilledRectangle(6,6,633,473,1);
+}
+
+/* show exit screen */
+
+void gui_ShowExitScreen(void)
+{
+	gui_Panel(0,0,639,479, 3,4,2);
+	gui_ShowExitInset();
+	gui_Drawstring(280,210,5,"Exiting z26...");
+}
+
 /* show the help screen title */
 
 void gui_ShowTitleBar(char *text)
@@ -656,6 +672,7 @@ gui_GetScanCode(void)
 
 		if (scode = gui_MouseScan())
 		{
+			gui_LastAscii = 0;
 			return(scode);
 		}
 
@@ -913,7 +930,7 @@ void gui_ShowList(void)
 			strncpy(FileNamePtrs[i++],ffblk.ff_name,14);
 			done = findnext(&ffblk);
 			if (!done)
-				if (i >= maxfiles)
+				if (i > maxfiles)
 				{
 					toomanyfiles = 1;
 					break;

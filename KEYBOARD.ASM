@@ -273,40 +273,55 @@ Ctrl7:	test	[KeyTable+KeyEsc],128
 ;	jz	Ctrl8
 ;	jmp	GoDOS			; ESC pressed -	exit
 
+;*
+;* handle screen positioning
+;*
+
 Ctrl8:	test	[KeyTable+KeyPgUp],128	; scroll up ?
-	jz	Ctrl9			;	no
-	cmp	[_CFirst],0		;   yes, scrolling disabled ?
-	je	CtrlPCX			;		 yes, skip scrolling
+	jz	Ctrl9			;   no
+	cmp	[_CFirst],0		; scrolling disabled ?
+	je	CtrlPCX			;    yes, skip scrolling
 	cmp	[CtrlSkipFlag],0	; skipping this test ?
 	jne	CtrlPCX			;   yes
 	mov	[CtrlSkipFlag],4	; no set skip count
 	cmp	[_CFirst],1		; already at top ?
-	je	CtrlPCX			;	  yes
-	dec	[_CFirst]		;   no, scroll up
+	je	CtrlPCX			;   yes
+
+	dec	[_CFirst]		; scroll up
+	mov	dx,[_CFirst]
+	mov	[_DefaultCFirst],dx	; turn off automatic positioning
+					; (and remember if video mode changes)
 
 
 Ctrl9:	test	[KeyTable+KeyPgDn],128	; scroll down ?
-	jz	CtrlPCX			;	  no
-	cmp	[_CFirst],0		;   yes, scrolling disabled ?
-	je	CtrlPCX			;		 yes, skip scrolling
+	jz	CtrlPCX			;   no
+	cmp	[_CFirst],0		; scrolling disabled ?
+	je	CtrlPCX			;   yes, skip scrolling
 	cmp	[CtrlSkipFlag],0	; skipping this test ?
 	jne	CtrlPCX			;   yes
 	mov	[CtrlSkipFlag],4	; no set skip count
 	cmp	[_CFirst],99		; already at bottom ?
 	jae	CtrlPCX			;   yes
-	inc	[_CFirst]		;   no, scroll down
+
+	inc	[_CFirst]		; scroll down
+	mov	dx,[_CFirst]
+	mov	[_DefaultCFirst],dx	; turn off automatic positioning
+					; (and remember if video mode changes)
 
 
 CtrlPCX:cmp	[CtrlSkipFlag],0	; skip flag already zero ?
-	jz	CtrlPCX1		;	  yes
-	dec	[CtrlSkipFlag]		;	 no, decrement it
+	jz	CtrlPCX1		;   yes
+	dec	[CtrlSkipFlag]		;   no, decrement it
 CtrlPCX1:
 	test	[KeyTable+KeyHome],128	; home key pressed ?
-	jz	CtrlPCX3		;	  no
+	jz	CtrlPCX3		;   no
 	cmp	[OldCFirst],0		; is OldCFirst zero ?
-	jz	CtrlPCX3		;	  yes, don't home the display
+	jz	CtrlPCX3		;   yes, don't home the display
+
+	mov	[_DefaultCFirst],0ffffh	; turn on automatic positioning
 	mov	dx,[OldCFirst]
 	mov	[_CFirst],dx
+
 CtrlPCX3:
 	test	[KeyTable+KeyEquals],128
 	jz	CtrlVid
@@ -395,8 +410,8 @@ CtrlVid9:
 CtrlVidDone:
 	test	[KeyTable+KeyTab],128
 	jz	CtrlTrace
-	dec	[MPdirection]		; switch mouse-paddle direction *EST*
-	and	[MPdirection],003h
+	dec	[_MPdirection]		; switch mouse-paddle direction *EST*
+	and	[_MPdirection],003h
 	mov	[KeyTable+KeyTab],0
 CtrlTrace:
 	test	[KeyTable+KeyF11],128	; turn on trace?
