@@ -90,7 +90,6 @@ InitData:
 ;	mov	[DefaultCFirst],0ffffh
 ;	mov	[UserCFirst],0ffffh
 
-	mov	[DisplayPointer],0
 	mov	[GamePaused],0
 	mov	[WByte],0
 
@@ -104,6 +103,9 @@ InitData:
 
 	mov	dword ptr [OldInt9],0
 	mov	[CtrlSkipFlag],0
+
+        mov     ax,[_ScreenOfs]
+        mov     [DisplayPointer],ax
 
 	ret
 

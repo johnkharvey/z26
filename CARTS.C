@@ -37,6 +37,9 @@ void RecognizeCart(void)
 	db paddle;
         dw i,j;
 
+        if (crc == 0x7a0d162d) AllowAll4 = 1;   /* Bumper Bash NTSC */
+        if (crc == 0x4af43194) AllowAll4 = 1;   /* Bumper Bash PAL */
+
 	KoolAide = 0;				/* KoolAide RESP cheat */
 	if (Lookup(Kool)) KoolAide = 1;
 

@@ -280,6 +280,8 @@ int cli_LoadROM(unsigned char *filename)
 **	-a <n>	adjust lightgun vertically *EST*
 **	-n	show line number count *EST*
 **      -i      emulate Mindlink controller, <1> right, <2> left *EST*
+**      -4      allow all 4 directions on the joystick simultaniously *EST*
+**      -e      enable faster mode X copy routines
 */
 
 FILE *log;
@@ -341,6 +343,8 @@ void cli_InterpretParm(char *p)
 	case 'a':	LGadjust = parm;		       break; /* *EST* */
 	case 'n':	ShowLineCount = 1;		       break; /* *EST* */
         case 'i':       Mindlink = parm & 3;                   break; /* *EST* */
+        case '4':       AllowAll4 = 1;                         break; /* *EST* */
+        case 'e':       EnableFastCopy = 1;                    break; /* *EST* */
         default:   	printf("Bad command line switch seen: -%c", ch);
 		   	exit(1);
 	}

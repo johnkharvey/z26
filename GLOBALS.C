@@ -22,6 +22,12 @@ dd DelayTime=0;		/* gets long delay value */
 db CartRom[34000]; 	/* 34000 ROM image goes here */
 db FileName[260];	/* filename of current ROM being run */
 
+db PCXPalette[384];     /* palette information for PCX files goes here */
+
+db far *ScreenBuffer;   /* pointer to screen buffer */
+dw ScreenSeg;           /* in seg and ofs form */
+dw ScreenOfs;
+
 db far *Megaboy;	/* pointer to Megaboy ROM */
 dw MBseg, MBofs;	/* in seg, ofs form */
 dw LinesInFrame;	/* # of lines in last frame */
@@ -94,7 +100,8 @@ db Lightgun;		/* emulate lightgun and adjust horizontally *EST* */
 dw LGadjust;		/* adjust lightgun vertically *EST* */
 dw ShowLineCount;	/* display stats on game exit */
 db Mindlink;            /* emulate Mindlink controller in which port *EST* */
-
+db AllowAll4;           /* allow all 4 directions on the joystick simultaniously */
+db EnableFastCopy;      /* use 32 bit mode X copy routines */
 /*
 ** reinitialize the above variables
 */
@@ -129,4 +136,6 @@ void def_LoadDefaults(void)
 	LGadjust = 5;
 	ShowLineCount = 0;
         Mindlink = 0;
+        AllowAll4 = 0;
+        EnableFastCopy = 0;
 }

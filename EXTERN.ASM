@@ -11,6 +11,10 @@ EXTRN _CartRom:byte
 EXTRN _MBseg:word
 EXTRN _MBofs:word
 
+EXTRN _ScreenSeg:word
+EXTRN _ScreenOfs:word
+EXTRN _PCXPalette:byte
+
 EXTRN _psp:word
 EXTRN _CartSize:word
 EXTRN _Checksum:dword
@@ -41,6 +45,8 @@ EXTRN _SimColourLoss:byte
 EXTRN _Lightgun:byte
 EXTRN _LGadjust:word
 EXTRN _Mindlink:byte
+EXTRN _AllowAll4:byte
+EXTRN _EnableFastCopy:byte
 
 EXTRN _LinesInFrame:word	; *EST*
 EXTRN _PrevLinesInFrame:word
@@ -116,3 +122,5 @@ EXTRN _MinVol:byte
 EXTRN _LG_WrapLine:byte
 
 EXTRN _RecognizeCart:far
+
+EXTRN _PCXWriteFile:far

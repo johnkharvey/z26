@@ -266,7 +266,8 @@ DontRemapStartLine:
 ;*
 
 TGM_TestUltimate:
-	cmp	[_MaxLines],480			; in a very tall video mode?
+;        cmp     [_MaxLines],480                 ; in a very tall video mode?
+        cmp     [_MaxLines],400                 ; in a very tall video mode?
 	jb	TGM_Done			;   no
 	cmp	[_CFirst],0			; frogpond or pharhcrs ?
 	jz	TGM_Done			;   yes
@@ -303,7 +304,7 @@ GPUsePAL:
 	mov	si,offset PALPaletteTable
 	mov	[_PaletteNumber],1	; mark PAL mode
 GPUseNTSC:
-	mov	di,offset PCXPalette
+        mov     di,offset _PCXPalette
 	mov	[PaletteCount],0	; do 16 colors
 PaletteLoop:				; <-- for each color
 	xor	ecx,ecx			; initialize 8 values of LUM
@@ -353,7 +354,7 @@ LUMDone:
 
         jz      HardwareStuff
 GPUseSECAM:
-        mov	di,offset PCXPalette
+        mov     di,offset _PCXPalette
         mov     dx, 16                  ; do 16 colours
 SLoop1:
         mov     bx,0                    
@@ -373,13 +374,14 @@ HardwareStuff:
 
 	call	TIAPalette		; set up the palette
 
-	mov	ax,0a000h
+;        mov     ax,0a000h
+        mov     ax,[_ScreenSeg]
 	mov	gs,ax			; point GS to VGA area
 
-	cmp	[_VideoMode],0		; doing offbeat video modes ?
-	jnz	RegularOffBeat		;	 yes
-	popad
-	ret
+        cmp     [_VideoMode],0          ; doing offbeat video modes ?
+        jnz     RegularOffBeat          ;        yes
+        popad
+        ret
 
 RegularOffBeat:
 	cmp	[_VideoMode],3		; doing Trixter 60Hz (mode 1, 2 or 3) ?
@@ -399,17 +401,19 @@ DoTrixter60Hz:
 ;*
 
 TIABlank:
-	cmp	[ModeX],0		; in ModeX ?
-	jnz	MXBlankMem		;   yes, do ModeX version
 	push	ax
 	push	bx
 	push	di
+        push    gs
+        mov     ax,[_ScreenSeg]
+        mov     gs,ax
 	xor	eax,eax
-	mov	di,[DisplayPointer]
+        mov     di,[DisplayPointer]
 	cmp	di,30000
 	jb	TIABRet
 	mov	bx,[_MaxLines]
-	imul	bx,320
+;        imul    bx,320
+        imul    bx,160
 TIABLoop:
 	cmp	di,bx			; (64000) reached end of display area?
 	jae	TIABRet			;	   yes, done
@@ -418,8 +422,9 @@ TIABLoop:
 	jmp	TIABLoop
 
 TIABRet:
-	mov	[DisplayPointer],di
-	pop	di
+        mov     [DisplayPointer],di
+        pop     gs
+        pop	di
 	pop	bx
 	pop	ax
 TBRet:	ret
@@ -552,7 +557,7 @@ Tr60f:	VidOut	CRTC,   001h, 04fh	; horizontal display enable end
 ; *****************************************************************************
 
 TIAPalette:
-	mov	di,offset PCXPalette
+        mov     di,offset _PCXPalette
 	mov	cl,0
 TIAPalLoop:
 	mov	al,255

@@ -126,9 +126,11 @@ xmain:
 	jz	GoTIME			;	   zero, exit now
 
 xm1:
+;        call    ModeXCopyScreen         ; copy screenbuffer to video RAM
 	call	ModeXFlipPage		; done rendering, flip page display page
 	call	VS_PreGap		; this is how we ignore false triggers
 	call	VSync			; now look for vblank
+        call    ModeXCopyScreen         ; copy screenbuffer to video RAM
 	call	ScanFrame
 
 Paused:	call	Controls		; check which keys pressed
@@ -196,7 +198,8 @@ ReallyQuit:
 
 
 ScanFrame:
-	mov	[DisplayPointer],0	; reset display pointer
+        mov     ax,[_ScreenOfs]          ; reset display pointer
+        mov     [DisplayPointer],ax
 ScanFrameLoop:
 
 	call	nTIALineTo		; generate a raster line

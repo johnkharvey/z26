@@ -17,10 +17,8 @@ MISC_OUTPUT =	03c2h		; miscellaneous output register
 SCREEN_SEG =	0a000h		; segment of display memory in mode X
 
 .data
-
-ModeXBufferSeg		dw	0	; segment adr of ModeX line buffer
-ModeXBufferPointer	dw	0
 ModeXDisplayPointer	dw	0
+ModeX79Shift            dw      50      ; offset each line's copy pointer
 ModeX			db	0	; set if in modex
 ModeXPage		db	0	; for telling if even or odd page (Frame not reliable)
 
@@ -124,7 +122,7 @@ ParmTable label word
 	dw	CRTParms	; 4
 	dw	MX5Parms	; 5
 	dw	MX5Parms	; 6
-	dw	MX5Parms	; 7
+        dw      MX5Parms        ; 7
 	dw	MX8Parms	; 8
 	dw	MX9Parms	; 9
 	dw	MX10Parms	; 10
@@ -134,21 +132,38 @@ ParmTable label word
 	dw	MX14Parms	; 14
 
 CopyTable label word
-	dw	DoRegularCopy	; 0
-	dw	DoRegularCopy	; 1
-	dw	DoRegularCopy	; 2
-	dw	DoRegularCopy	; 3
-	dw	DoRegularCopy	; 4
-	dw	DoRegularCopy	; 5
-	dw	DoRegularCopy	; 6
-	dw	MX7CopyLine	; 7
-	dw	DoRegularCopy	; 8
-	dw	MX7CopyLine	; 9
-	dw	DoRegularCopy	; 10
-	dw	DoRegularCopy	; 11
-	dw	DoRegularCopy	; 12
-	dw	MX7CopyLine	; 13
-	dw	DoRegularCopy	; 14
+        dw      DoLinearCopy    ; 0
+        dw      DoLinearCopy    ; 1
+        dw      DoLinearCopy    ; 2
+        dw      DoLinearCopy    ; 3
+        dw      DoRegularCopy   ; 4
+        dw      DoRegularCopy   ; 5
+        dw      MX6CopyScreen   ; 6
+        dw      MX7CopyScreen   ; 7
+        dw      DoRegularCopy   ; 8
+        dw      MX7CopyScreen   ; 9
+        dw      DoRegularCopy   ; 10
+        dw      DoRegularCopy   ; 11
+        dw      MX6CopyScreen   ; 12
+        dw      MX7CopyScreen   ; 13
+        dw      DoRegularCopy   ; 14
+
+FastCopyTable label word
+        dw      FDoLinearCopy    ; 0
+        dw      FDoLinearCopy    ; 1
+        dw      FDoLinearCopy    ; 2
+        dw      FDoLinearCopy    ; 3
+        dw      FDoRegularCopy   ; 4
+        dw      FDoRegularCopy   ; 5
+        dw      FMX6CopyScreen   ; 6
+        dw      FMX7CopyScreen   ; 7
+        dw      FDoRegularCopy   ; 8
+        dw      FMX7CopyScreen   ; 9
+        dw      FDoRegularCopy   ; 10
+        dw      FDoRegularCopy   ; 11
+        dw      FMX6CopyScreen   ; 12
+        dw      FMX7CopyScreen   ; 13
+        dw      FDoRegularCopy   ; 14
 
 StartLineTable label word
 	dw	32		; 0
@@ -175,14 +190,32 @@ MaxLineTable label word
 	dw	240		; 4
 	dw	240		; 5
 	dw	240		; 6
-	dw	480		; 7
+        dw      400             ; 7
 	dw	240		; 8
-	dw	480		; 9
+        dw      400             ; 9
 	dw	256		; 10
 	dw	256		; 11
 	dw	256		; 12
-	dw	512		; 13
+        dw      400             ; 13
 	dw	256		; 14
+
+
+CopyCounterTable label word
+        dw      200*40          ; 0
+        dw      200*40          ; 1
+        dw      200*40          ; 2
+        dw      204*40          ; 3
+        dw      240*20          ; 4
+        dw      240*20          ; 5
+        dw      240             ; 6
+        dw      400             ; 7     hardcoded into copy routine
+        dw      240*20          ; 8
+        dw      400             ; 9     hardcoded into copy routine
+        dw      256*20          ; 10
+        dw      256*20          ; 11
+        dw      256             ; 12
+        dw      400             ; 13    hardcoded into copy routine
+        dw      256*20          ; 14
 
 
 ; index data pairs for CRT controller registers that differ between mode 13 and mode X
@@ -336,21 +369,14 @@ ModeXInit:
 	pusha
 	push	es
 
-	cmp	[_VideoMode],14		; doing a valid mode ?
+        cmp	[_VideoMode],14		; doing a valid mode ?
 	ja	MXPRet			;	 no, ret for now
 
 	mov	[ModeX],1
 
 
-	mov	ax,offset ModeXBuffer	; address within data segment
-	shr	ax,4			; paragraph
-	inc	ax			; just in case... make sure we point inside buffer
-	mov	dx,ds
-	add	dx,ax
-	mov	[ModeXBufferSeg],dx	; save segment pointer
-	mov	gs,dx			; and set graphics segment to render into buffer
-	shl	ax,4
-	mov	[ModeXBufferPointer],ax	; save rounded buffer pointer
+        mov     ax,[_ScreenSeg]        ; make sure we render into screen buffer
+        mov     gs,ax
 
 ; here comes the real stuff...
 
@@ -450,62 +476,6 @@ MXRet:	ret
 
 
 ;*
-;* blank to end of ModeX page
-;*
-
-MXBlankMem:
-	cmp	[ModeX],0		; in ModeX ?
-	jz	MXRet			;   no, ignore call
-
-	cmp	[_VideoMode],9		; debugger is responsible for it's own clearing
-	jz	MXRet
-
-	pushad
-	push	es
-
-	mov	dx,SC_INDEX
-	mov	ax,0f02h
-	out	dx,ax			; enable writes to all four planes
-
-	mov	ax,SCREEN_SEG		; now clear memory ...
-	mov	es,ax			; ... 4 pixels at a time
-	mov	di,[ModeXDisplayPointer]; point es:di to display memory
-	sub	ax,ax			; clear to zero-value pixels
-	mov	cx,di
-
-	cmp	[_VideoMode],7		; really big video modes shouldn't split buffer
-	jz	DontSplitBuffer
-	cmp	[_VideoMode],13
-	jz	DontSplitBuffer
-
-	and	cx,07fffh
-
-DontSplitBuffer:
-	cmp	cx,01000h
-	jb	MXBlankDone		; ignore call if short frame (aciddrop)
-
-	movzx	ebx,[_MaxLines]
-	lea	ebx,[ebx+ebx*4]
-	shl	bx,4			; *320/4
-
-	cmp	cx,bx
-	ja	MXBlankDone
-
-MXBlankLoop:
-	mov	es:[di],al
-	inc	cx
-	inc	di
-	cmp	cx,bx
-	jbe	MXBlankLoop
-
-MXBlankDone:
-	pop	es
-	popad
-
-	ret
-
-
-;*
 ;* Flip ModeX page
 ;*
 
@@ -560,55 +530,139 @@ NoFlipping:
 
 
 ;*
-;* set up to do next modex scan line
-;*
-
-ModeXNewLine:
-	cmp	[ModeX],0		; in ModeX ?
-	jz	MXRet			;   no, ignore call
-	mov	[DisplayPointer],0	; point rendering pointer at start of buffer
-	ret
-
-;*
 ;* copy line to modex display
 ;*
 
 MXMove4 macro op1
 
-	mov	al,[si+op1]
-	mov	bl,[si+op1+4]
-	mov	es:[di],al
-	mov	es:[di+1],bl
-	mov	al,[si+op1+8]
-	mov	bl,[si+op1+12]
-	mov	es:[di+2],al
-	mov	es:[di+3],bl
-	add	si,16
+	add	si,op1
+        mov     al,es:[si]
+        add	si,2
+        mov     gs:[di],al
+        inc	di
+        mov     al,es:[si]
+        add	si,2
+        mov     gs:[di],al
+        inc	di
+        mov     al,es:[si]
+        add	si,2
+        mov     gs:[di],al
+        inc	di
+        mov     al,es:[si]
+	add	si,2-op1
+        mov     gs:[di],al
+	inc	di
+
+	endm
+
+xMXMove4 macro op1
+
+        mov     al,es:[si+op1]
+        mov     ah,es:[si+op1+2]
+        mov     gs:[di],al
+        mov     gs:[di+1],ah
+        mov     al,es:[si+op1+4]
+        mov     ah,es:[si+op1+6]
+        mov     gs:[di+2],al
+        mov     gs:[di+3],ah
+        add     si,8
 	add	di,4
 
 	endm
 
-ModeXCopyLine:
-	cmp	[ModeX],0		; in ModeX ?
-	jz	MXRet			;   no, ignore call
+
+ModeXCopyScreen:
 	pusha
 	push	es
+        push    gs                      ;???? *EST*
 
-	mov	ax,0a000h
-	mov	es,ax			; dest segment is VGA area
+        mov     ax,0a000h
+        mov     gs,ax
+
+        mov     ax,[_ScreenSeg]
+        mov     es,ax                   ; dest segment is ScreenBuffer
 
 	movzx	si,[_VideoMode]
 	shl	si,1
+        test    [_EnableFastCopy],1
+        jnz     JumpToFast
 	jmp	[CopyTable + si]
+JumpToFast:
+        jmp     [FastCopyTable + si]
+
+
+;*
+;* fast linear copy screen (160 pixels)
+;*
+
+FDoLinearCopy:
+        mov     ax,[MaxLineTable + si]
+        mov     si,[_ScreenOfs]
+        mov     di,80
+
+	push	ds
+	push	es
+
+	push	es
+	pop	ds	; make ds source
+	push	gs
+	pop	es	; make es dest
+
+FDLCLoop:
+	mov	cx,40
+	rep	movsd
+
+	add	di,160
+	dec	ax
+	jnz	FDLCLoop
+
+	pop	es
+	pop	ds
+
+        jmp     MXCRet
+        
+;*
+;* linear copy screen
+;*        
+
+DoLinearCopy:
+        mov     cx,[CopyCounterTable + si]
+        mov     si,[_ScreenOfs]
+        mov     di,0
+
+	push	ebx
+
+DLCLoop:
+        mov     al,es:[si+1]
+        mov     bl,es:[si+3]
+        mov     ah,al
+        mov     bh,bl
+	shl	eax,16
+	shl	ebx,16
+        mov     al,es:[si]
+        mov     bl,es:[si+2]
+        mov     ah,al
+        mov     bh,bl
+        mov     gs:[di],eax
+        add     si,4
+        mov     gs:[di+4],ebx
+        add     di,8
+	loop	DLCLoop
+
+	pop	ebx
+
+        jmp     MXCRet
+
 
 ;*
 ;* normal copy line
 ;*
 
 DoRegularCopy:
-	mov	cx,20
-	mov	si,[ModeXBufferPointer]
-	mov	di,[ModeXDisplayPointer]
+        mov     cx,[CopyCounterTable + si]
+        push    cx
+        mov     si,[_ScreenOfs]
+        mov     di,[ModeXDisplayPointer]
 
 	mov	dx,SC_INDEX
 	mov	ax,0302h
@@ -619,116 +673,381 @@ MXEvenLoop:
 	dec	cx
 	jnz	MXEvenLoop
 
-	mov	cx,20
-	mov	si,[ModeXBufferPointer]
-	mov	di,[ModeXDisplayPointer]
+        pop     cx
+        mov     si,[_ScreenOfs]
+        mov     di,[ModeXDisplayPointer]
 	mov	ax,0c02h
 	out	dx,ax			; enable planes 2,3 for odd pixels
 
 MXOddLoop:
-	MXMove4	2
+        MXMove4 1
 	dec	cx
 	jnz	MXOddLoop
 	
-	add	[ModeXDisplayPointer],80
-
-	push	si
-	movzx	si,[_VideoMode]
-	cmp	[ScanLineTable + si],0	; a scanline mode?
-	pop	si
-	jz	MXCRet			;   no
-
-	add	[ModeXDisplayPointer],80 ;    yes, skip a line
-	
-MXCRet:	pop	es
+MXCRet:
+        pop     gs
+        pop     es
 	popa
 	ret
 
+
+;*
+;* mode 6 and 12 screen copy
+;*
+
+MX6CopyScreen:
+        mov     cx,[CopyCounterTable + si]
+        push    cx
+        mov     si,[_ScreenOfs]
+        mov     di,[ModeXDisplayPointer]
+
+	mov	dx,SC_INDEX
+	mov	ax,0302h
+	out	dx,ax			; enable planes 0,1 for even pixels
+
+MX6EvenLine:
+        mov     bx,20
+MX6EvenLoop:
+	MXMove4	0
+        dec     bx
+        jnz     MX6EvenLoop
+        add     di,80                   ; skip one scanline
+        dec     cx
+        jnz     MX6EvenLine
+
+        pop     cx
+        mov     si,[_ScreenOfs]
+        mov     di,[ModeXDisplayPointer]
+	mov	ax,0c02h
+	out	dx,ax			; enable planes 2,3 for odd pixels
+
+MX6OddLine:
+        mov     bx,20
+MX6OddLoop:
+        MXMove4 1
+        dec     bx
+        jnz     MX6OddLoop
+        add     di,80                   ; skip one scanline
+        dec     cx
+        jnz     MX6OddLine
+        jmp     MXCRet
+	
 
 ;*
 ;* mode 7 and 9 line copy
 ;*
 
 MX7Move4 macro op1
-	mov	al,[si+op1]
-	mov	bl,[si+op1+8]
-	mov	es:[di],al
-	mov	es:[di+1],bl
-	mov	al,[si+op1+16]
-	mov	bl,[si+op1+24]
-	mov	es:[di+2],al
-	mov	es:[di+3],bl
-	add	si,32
+        mov     al,es:[si+op1]
+        mov     ah,es:[si+op1+4]
+        mov     gs:[di],al
+        mov     gs:[di+1],ah
+        mov     al,es:[si+op1+8]
+        mov     ah,es:[si+op1+12]
+        mov     gs:[di+2],al
+        mov     gs:[di+3],ah
+        add     si,16
 	add	di,4
 
 	endm
 
-MX7CopyLine:
-	cmp	[_VideoMode],9
+MX7CopyScreen:
+        mov     [ModeX79Shift],50
+        cmp	[_VideoMode],9
 	je	MX7CopyContinue
 
-	add	[ModeXDisplayPointer],20	; move mode 7 toward middle
+        add     [ModeXDisplayPointer],20        ; move mode 7 toward middle
+        mov     [ModeX79Shift],40
 
 MX7CopyContinue:
-	mov	cx,10
-	mov	si,[ModeXBufferPointer]
-	mov	di,[ModeXDisplayPointer]
+        mov     bx,[_LinesInFrame]
+        cmp     bx,400
+        jbe     MX7skip
+        mov     bx,400
+MX7skip:
+        push    bx
+        mov     si,[_ScreenOfs]
+        mov     di,[ModeXDisplayPointer]
 
 	mov	dx,SC_INDEX
 	mov	ax,0102h
 	out	dx,ax			; enable plane 0 for these pixels
 
+MX7Loop0a:
+        mov     cx,10
 MX7Loop0:
 	MX7Move4 0
 	dec	cx
 	jnz	MX7Loop0
+        add     di,[ModeX79Shift]
+        dec     bx
+        jnz     MX7Loop0a
 
-	mov	cx,10
-	mov	si,[ModeXBufferPointer]
-	mov	di,[ModeXDisplayPointer]
+        pop     bx
+        push    bx
+        mov     si,[_ScreenOfs]
+        mov     di,[ModeXDisplayPointer]
 
 	mov	dx,SC_INDEX
 	mov	ax,0202h
 	out	dx,ax			; enable plane 1 for these pixels
 
+MX7Loop1a:
+        mov     cx,10
 MX7Loop1:
-	MX7Move4 2
+        MX7Move4 1
 	dec	cx
-	jnz	MX7Loop1
+        jnz     MX7Loop1
+        add     di,[ModeX79Shift]
+        dec     bx
+        jnz     MX7Loop1a
 
-	mov	cx,10
-	mov	si,[ModeXBufferPointer]
-	mov	di,[ModeXDisplayPointer]
+        pop     bx
+        push    bx
+        mov     si,[_ScreenOfs]
+        mov     di,[ModeXDisplayPointer]
 
 	mov	dx,SC_INDEX
 	mov	ax,0402h
 	out	dx,ax			; enable plane 2 for these pixels
 
+MX7Loop2a:
+        mov     cx,10
 MX7Loop2:
-	MX7Move4 4
+        MX7Move4 2
 	dec	cx
-	jnz	MX7Loop2
+        jnz     MX7Loop2
+        add     di,[ModeX79Shift]
+        dec     bx
+        jnz     MX7Loop2a
 
-	mov	cx,10
-	mov	si,[ModeXBufferPointer]
-	mov	di,[ModeXDisplayPointer]
+        pop     bx
+        mov     si,[_ScreenOfs]
+        mov     di,[ModeXDisplayPointer]
 
 	mov	dx,SC_INDEX
 	mov	ax,0802h
 	out	dx,ax			; enable plane 3 for these pixels
 
+MX7Loop3a:
+        mov     cx,10
 MX7Loop3:
-	MX7Move4 6
+        MX7Move4 3
 	dec	cx
-	jnz	MX7Loop3
-
-	add	[ModeXDisplayPointer],60
-	cmp	[_VideoMode],9
-	jne	MXCRet			; if mode 7 we've added enough offset
-	add	[ModeXDisplayPointer],20
-	add	[ModeXDisplayPointer],10
+        jnz     MX7Loop3
+        add     di,[ModeX79Shift]
+        dec     bx
+        jnz     MX7Loop3a
 
 	jmp	MXCRet
+
+
+
+;*
+;* Fast Mode X copy routines
+;*
+
+;*
+;* copy line to modex display
+;*
+
+FMXMove4 macro op1
+
+        mov     al,es:[si+op1+4]
+        mov     ah,es:[si+op1+6]
+        shl     eax,16
+        mov     al,es:[si+op1]
+        mov     ah,es:[si+op1+2]
+        mov     gs:[di],eax
+        add     si,8
+        add     di,4
+
+	endm
+
+;*
+;* normal copy line
+;*
+
+FDoRegularCopy:
+        mov     cx,[CopyCounterTable + si]
+        push    cx
+        mov     si,[_ScreenOfs]
+        mov     di,[ModeXDisplayPointer]
+
+	mov	dx,SC_INDEX
+	mov	ax,0302h
+	out	dx,ax			; enable planes 0,1 for even pixels
+
+FMXEvenLoop:
+        FMXMove4 0
+	dec	cx
+        jnz     FMXEvenLoop
+
+        pop     cx
+        mov     si,[_ScreenOfs]
+        mov     di,[ModeXDisplayPointer]
+	mov	ax,0c02h
+	out	dx,ax			; enable planes 2,3 for odd pixels
+
+FMXOddLoop:
+        FMXMove4 1
+	dec	cx
+        jnz     FMXOddLoop
+	
+FMXCRet:
+        pop     gs
+        pop     es
+	popa
+	ret
+
+
+;*
+;* mode 6 and 12 screen copy
+;*
+
+FMX6CopyScreen:
+        mov     cx,[CopyCounterTable + si]
+        push    cx
+        mov     si,[_ScreenOfs]
+        mov     di,[ModeXDisplayPointer]
+
+	mov	dx,SC_INDEX
+	mov	ax,0302h
+	out	dx,ax			; enable planes 0,1 for even pixels
+
+FMX6EvenLine:
+        mov     bx,20
+FMX6EvenLoop:
+        FMXMove4 0
+        dec     bx
+        jnz     FMX6EvenLoop
+        add     di,80                   ; skip one scanline
+        dec     cx
+        jnz     FMX6EvenLine
+
+        pop     cx
+        mov     si,[_ScreenOfs]
+        mov     di,[ModeXDisplayPointer]
+	mov	ax,0c02h
+	out	dx,ax			; enable planes 2,3 for odd pixels
+
+FMX6OddLine:
+        mov     bx,20
+FMX6OddLoop:
+        FMXMove4 1
+        dec     bx
+        jnz     FMX6OddLoop
+        add     di,80                   ; skip one scanline
+        dec     cx
+        jnz     FMX6OddLine
+        jmp     FMXCRet
+	
+
+;*
+;* mode 7 and 9 line copy
+;*
+
+FMX7Move4 macro op1
+        mov     al,es:[si+op1+8]
+        mov     ah,es:[si+op1+12]
+        shl     eax,16
+        mov     al,es:[si+op1]
+        mov     ah,es:[si+op1+4]
+        mov     gs:[di],eax
+        add     si,16
+	add	di,4
+
+	endm
+
+FMX7CopyScreen:
+        mov     [ModeX79Shift],50
+        cmp	[_VideoMode],9
+        je      FMX7CopyContinue
+
+        add     [ModeXDisplayPointer],20        ; move mode 7 toward middle
+        mov     [ModeX79Shift],40
+
+FMX7CopyContinue:
+        mov     bx,[_LinesInFrame]
+        cmp     bx,400
+        jbe     FMX7skip
+        mov     bx,400
+FMX7skip:
+        push    bx
+        mov     si,[_ScreenOfs]
+        mov     di,[ModeXDisplayPointer]
+
+	mov	dx,SC_INDEX
+	mov	ax,0102h
+	out	dx,ax			; enable plane 0 for these pixels
+
+FMX7Loop0a:
+        mov     cx,10
+FMX7Loop0:
+        FMX7Move4 0
+	dec	cx
+        jnz     FMX7Loop0
+        add     di,[ModeX79Shift]
+        dec     bx
+        jnz     FMX7Loop0a
+
+        pop     bx
+        push    bx
+        mov     si,[_ScreenOfs]
+        mov     di,[ModeXDisplayPointer]
+
+	mov	dx,SC_INDEX
+	mov	ax,0202h
+	out	dx,ax			; enable plane 1 for these pixels
+
+FMX7Loop1a:
+        mov     cx,10
+FMX7Loop1:
+        FMX7Move4 1
+	dec	cx
+        jnz     FMX7Loop1
+        add     di,[ModeX79Shift]
+        dec     bx
+        jnz     FMX7Loop1a
+
+        pop     bx
+        push    bx
+        mov     si,[_ScreenOfs]
+        mov     di,[ModeXDisplayPointer]
+
+	mov	dx,SC_INDEX
+	mov	ax,0402h
+	out	dx,ax			; enable plane 2 for these pixels
+
+FMX7Loop2a:
+        mov     cx,10
+FMX7Loop2:
+        FMX7Move4 2
+	dec	cx
+        jnz     FMX7Loop2
+        add     di,[ModeX79Shift]
+        dec     bx
+        jnz     FMX7Loop2a
+
+        pop     bx
+        mov     si,[_ScreenOfs]
+        mov     di,[ModeXDisplayPointer]
+
+	mov	dx,SC_INDEX
+	mov	ax,0802h
+	out	dx,ax			; enable plane 3 for these pixels
+
+FMX7Loop3a:
+        mov     cx,10
+FMX7Loop3:
+        FMX7Move4 3
+	dec	cx
+        jnz     FMX7Loop3
+        add     di,[ModeX79Shift]
+        dec     bx
+        jnz     FMX7Loop3a
+
+        jmp     FMXCRet
 
 
 

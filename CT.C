@@ -229,6 +229,7 @@ dd	BS_1[] = {
 	0x9afa761f,	/* Magicard (Life).bin */
 	0x266bd1b6,	/* Video Life (CommaVid).bin */
         0xa0899305,     /* Video Life (alternative 2K) */
+        0xfbb4ac5f,     /* Video Life (4K) from DP */
 	-1
 };
 
@@ -273,6 +274,8 @@ dd	BS_4[] = {
 	0x7ce5312e,	/* Polaris.bin */
 	0x40706361,	/* River Patrol (Tigervision).bin */
 	0x2c34898f,	/* Springer.bin */
+        0x09a71583,     /* Miner 2049er PAL */
+        0xd5645294,     /* Miner Volume 2 NTSC */
 	-1
 };
 

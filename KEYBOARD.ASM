@@ -234,6 +234,10 @@ StickL:
 	ifpress	P1Left,64
 	ifpress	P1Down,32
 	ifpress	P1Up,16
+
+        test    [_AllowAll4],1          ; "impossible" combinations allowed?
+        jnz     SLnoDU
+
         test    ah,0c0h                 ; right & left pressed simultaniously?
         jnz     SLnoRL
         or      ah,0c0h                 ; yes, fix for no signal *EST*
@@ -268,6 +272,10 @@ StickR:
 	ifpress	P2Left,4
 	ifpress	P2Down,2
 	ifpress	P2Up,1
+
+        test    [_AllowAll4],1          ; "impossible" combinations allowed?
+        jnz     SRnoDU
+
         test    ah,00ch                 ; right & left pressed simultaniously?
         jnz     SRnoRL
         or      ah,00ch                 ; yes, fix for no signal *EST*
@@ -362,7 +370,10 @@ CtrlPCX1:
 CtrlPCX3:
 	test	[KeyTable+KeyEquals],128
 	jz	CtrlVid
-	call	PCXWriteFile		; = pressed - PCX screen dump
+
+        push    es
+        call    _PCXWriteFile            ; = pressed - PCX screen dump
+        pop     es
 
 	;kludge - make it think the key has already been released
 	; hope it doesn't make it write out PCX files constantly

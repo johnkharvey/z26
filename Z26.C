@@ -11,10 +11,10 @@
 
 
 
-#define version "z26 (1.47)"
+#define version "z26 (1.48)"
 
 /*
-#define version "Pre 1.42-B"
+#define version "Pre 1.48-C"
 */
 
 /*
@@ -31,6 +31,7 @@
 #include <process.h>
 #include <stdlib.h>
 #include <time.h>
+#include <alloc.h>
 
 #include "globals.c"
 #include "ct.c"
@@ -38,11 +39,31 @@
 #include "cli.c"
 #include "gui.c"
 #include "trace.c"
+#include "pcx.c"
+
+
+extern unsigned _stklen = 16384U;       /* set stack size to 16K */ 
+
 
 void main(int argc, char *argv[])
 {
-	def_LoadDefaults();
-	Megaboy=(char *) calloc(39000,sizeof(char));
+        def_LoadDefaults();
+
+        ScreenBuffer=(char *) calloc(65000,sizeof(char));
+        if(ScreenBuffer==NULL)
+        {
+                printf("Couldn't allocate ScreenBuffer!\n");
+                exit(1);
+        }
+        ScreenSeg=FP_SEG(ScreenBuffer);
+        ScreenOfs=FP_OFF(ScreenBuffer);
+
+        Megaboy=(char *) calloc(39000,sizeof(char));
+        if(Megaboy==NULL)
+        {
+                printf("Couldn't allocate Megaboy buffer!\n");
+                exit(1);
+        }
 	MBseg=FP_SEG(Megaboy);
 	MBofs=FP_OFF(Megaboy);
 
@@ -74,6 +95,7 @@ void main(int argc, char *argv[])
 	{
 		printf("Entering graphics mode ... \n");
 		DelayTime = 250000;
+
 		LongDelay();
 
                 gui_CheckLFN();		/* check for long filename support */
@@ -88,5 +110,7 @@ void main(int argc, char *argv[])
 		LongDelay();
 		gui_RestoreVideoMode();
 	}
-	free(Megaboy);
+
+        free(ScreenBuffer);
+        free(Megaboy);
 }

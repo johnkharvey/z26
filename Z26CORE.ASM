@@ -55,7 +55,7 @@ CHEATS = 1
 	include keyboard.asm		; convert keyboard into Atari joystick
 	include joy.asm			; joystick routines
 	include sound.asm		; PC speaker support
-	include pcx.asm			; Ronnie Greene's PCX file dumper
+;        include pcx.asm                 ; Ronnie Greene's PCX file dumper
 
 	include memory.asm		; RIOT ram, cart ROM, & optional stack
 

@@ -261,16 +261,16 @@ MouseAsLightgun:
 	jb	MLG1
 	mov	dx,0
 MLG1:
-	cmp	dx,480
+        cmp     dx,480
 	jb	MLG1a
-	mov	dx,479
+        mov     dx,479
 MLG1a:
 	mov	[MLG_mouseY],dx
 
 	shr	dx,1
-	add	dx,[_CFirst]
-	mov	[MLG_Ypos],dx	        
+	mov	[MLG_Ypos],dx
 
+        add     dx,[_CFirst]
 	add	dx,4
 	sub	dx,[_LGadjust]
 	mov	[MLG_ShotLine],dx
@@ -287,10 +287,8 @@ MLG2:
 MLG2a:
 	mov	[MLG_mouseX],cx
 
-	shr	cx,1
-	and	cx,0fffeh
+        shr     cx,2
 	mov	[MLG_Xpos],cx
-	shr	cx,1
 	mov	ax,cx
 	mov	cl,3
 	div	cl
@@ -302,6 +300,23 @@ MLG2a:
 MLG3:
 	mov	[MLG_ShotCycle],al
 
+        push    gs
+	inc	[MLG_Colour]
+	and	[MLG_Colour],007h
+        mov     ax,[_ScreenSeg]
+        mov     gs,ax
+        mov     ax,[MLG_Ypos]
+        imul    ax,160
+        mov     di,ax
+        add     di,[_ScreenOfs]
+        add     di,[MLG_Xpos]
+        mov     al,[MLG_Colour]
+        mov     gs:[di-160],al
+        mov     gs:[di+160],al
+        mov     gs:[di-1],al
+        mov     gs:[di+1],al
+        pop     gs
+
 	mov	ax,03H
 	int	33H
 
@@ -312,44 +327,6 @@ MLG3:
 MLGret:
 	ret
 
-; <--- from tialine.asm
-
-ShowLightgun0:
-	inc	[MLG_Colour]
-	and	[MLG_Colour],007h
-
-ShowLightgun2:
-	push	di
-
-	mov	di,[DisplayPointer]
-	sub	di,320
-	add	di,[MLG_Xpos]
-	mov	al,[MLG_Colour]
-
-	mov	gs:[di],al
-	mov	gs:[di+1],al
-
-	pop	di
-SLGret:
-	ret
-
-
-
-ShowLightgun1:
-	push	di
-
-	mov	di,[DisplayPointer]
-	sub	di,320
-	add	di,[MLG_Xpos]
-	mov	al,[MLG_Colour]
-
-	mov	gs:[di-2],al
-	mov	gs:[di-1],al
-	mov	gs:[di+2],al
-	mov	gs:[di+3],al
-
-	pop	di
-	ret
 
 MouseAsMindlink:
 	test	[MouseAvail],1

@@ -17,7 +17,7 @@ db	0,0,0	; force PF0 onto a 4 byte boundary
 
 TIA		db 	64 dup (?)	; TIA Registers (also should be zero)
 
-PCXPalette 	db	128*3 dup (?)	; 384 -- generated palette goes here
+;PCXPalette      db      128*3 dup (?)   ; 384 -- generated palette goes here
 
 TIADisplay	db	320 dup (?)	; Display as currently setup
 
@@ -27,7 +27,7 @@ Bit9		db	511 dup (?)	; for sound generation
 SoundQ		db	(SQ_MAX + 2) dup (?)
 _BaseDMABuf	db	BUF_SIZE*2+2 dup (?)	; Sound Blaster DMA buffer
 
-ModeXBuffer	db	320+64 dup (?)	; for ModeX line rendering (a little extra here)
+;ModeXBuffer     db      320+64 dup (?)  ; for ModeX line rendering (a little extra here)
 
 P2_Flags	db	8 dup (?)
 P2_Counters	db	16 dup (?)

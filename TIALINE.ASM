@@ -271,10 +271,10 @@ local BKPFonly
 BKPFonly:
 	mov	ax,[ColorValue+ebx*2]
 	and	ax,word ptr [LooseColour]	; *EST*
-	add	di,2
+        add     di,1
 	and	ax,[RenderingHBLANK]
 	inc	cl
-	mov	es:[di-2],ax
+        mov     es:[di-1],al
 	cmp	cl,ch
 
 	endm
@@ -303,7 +303,7 @@ PIX_loop:
 	RenderPixel arg1, arg2, arg3, arg4, arg5, arg6
 	ja	done
 	
-	test	di,7
+        test    di,3
 	jnz	PIX_loop
 
 	jmp	PF_loop
@@ -444,20 +444,20 @@ NextPFTest:
 	jnz	PFLoop			;	  yes
 
 BKLoop:
-	mov	es:[di],ax
-	add	di,2
+        mov     es:[di],al
+        add     di,1
 	dec	ch			; done?
 	jz	RenderPlayfieldDone	;   yes
-	test	di,7			; more odd pixels to do?
+        test    di,3                    ; more odd pixels to do?
 	jz	NextPFQuad		;   no
 	jmp	BKLoop
 
 PFLoop:
-	mov	es:[di],dx
-	add	di,2
+        mov     es:[di],dl
+        add     di,1
 	dec	ch			; done?
 	jz	RenderPlayfieldDone	;   yes
-	test	di,7			; more odd pixels to do?
+        test    di,3                    ; more odd pixels to do?
 	jz	NextPFQuad		;   no
 	jmp	PFLoop
 
@@ -469,16 +469,16 @@ NextPFQuad:
 	jnz	DoPFQuad		;   yes
 
 	mov	es:[di],eax		; render BK quad
-	mov	es:[di+4],eax
-	add	di,8
+;        mov     es:[di+4],eax
+        add     di,4
 	sub	ch,4			; done?
 	jnz	NextPFQuad		;   no, keep going
 	jmp	RenderPlayfieldDone
 
 DoPFQuad:
 	mov	es:[di],edx		; render PF quad
-	mov	es:[di+4],edx
-	add	di,8
+;        mov     es:[di+4],edx
+        add     di,4
 	sub	ch,4			; done?
 	jnz	NextPFQuad		;   no, keep going
 
@@ -512,14 +512,15 @@ RenderSolid:				; << enter here to render EAX
 	inc	cl			; pixel count
 	test	cl,1			; any odd pixels?
 	jz	SolidDouble		;   no
-	mov	es:[di],ax		;   yes, render single pixel
-	add	di,2
+        mov     es:[di],al              ;   yes, render single pixel
+        add     di,1
 	dec	cx			; done?
 	jz	SolidDone		;   yes
 
 SolidDouble:
 	shr	cx,1			; do the double pixels
-	rep	stosd
+;        rep     stosd
+        rep     stosw
 
 SolidDone:
 	pop	cx			; restore old start and finish pointers
@@ -740,14 +741,15 @@ NotCosmic:
 
 	movzx	eax,[_MaxLines]
 	lea	eax,[eax+eax*4]
-	shl	ax,6			; *320
+        shl     ax,5                    ; *160
+
+        add     ax,[_ScreenOfs]
 
 	cmp	[DisplayPointer],ax	; render pointer past end of displayable?
 	jae	nTIANoGenerate		;	 yes, don't render
 
 	push	bp			; rendering -- free up a register
 
-	call	ModeXNewLine		; init mode-x code for this line
 	mov	di,[DisplayPointer]
 	mov	cl,68			; point TIARenderPointer at beginning of playfield
 
@@ -774,29 +776,6 @@ nLastPixels:
 
 nTIAExit:				; we've finished the scanline...
 	mov	[DisplayPointer],di
-
-	cmp	[_Lightgun],0
-	jz	NoLightGun
-	mov	ax,[ScanLine]
-;	 add	 ax,4
-	cmp	ax,[MLG_Ypos]
-	jne	nSNL1
-	call	ShowLightgun1		 ; in mouse.asm
-	jmp	NoLightGun
-
-nSNL1:	dec	ax
-	cmp	ax,[MLG_Ypos]
-	jne	nSNL2
-	call	ShowLightgun0
-	jmp	NoLightGun
-
-nSNL2:	add	ax,2
-	cmp	ax,[MLG_Ypos]
-	jne	NoLightGun
-	call	ShowLightgun2
-
-NoLightGun:
-	call	ModeXCopyLine
 
 	pop	bp
 	ret
