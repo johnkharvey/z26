@@ -6,6 +6,11 @@
 ;* Based in part on David Crane's U.S. Patent 4,644,495, Feb 17,1987.
 ;*
 
+; z26 is Copyright 1997-1999 by John Saeger and is a derived work with many
+; contributors.  z26 is released subject to the terms and conditions of the 
+; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
+; Please see COPYING.TXT for details.
+
 .data
 
 ; global Pitfall2 flag 

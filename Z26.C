@@ -4,11 +4,18 @@
 */
 
 /*
+** z26 is Copyright 1997-1999 by John Saeger and is a derived work with many
+** contributors.  z26 is released subject to the terms and conditions of the 
+** GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
+** Please see COPYING.TXT for details.
+*/
+
+/*
 ** If you hang onto the past you die a little every day.
 */
 
 
-#define version "z26 (1.34)"
+#define version "z26 (1.35)"
 
 
 #define rom_list "ROM List"
@@ -31,6 +38,8 @@ extern unsigned int CartSize;
 extern long int Checksum;
 extern long int XChecksum;
 
+void far VGATextMode(void);	/* (vga.asm) */
+
 unsigned char CartRom[34000];
 
 #include "def.c"
@@ -46,7 +55,7 @@ main(int argc, char *argv[])
 	{
 		cli_CommandLine(argc, argv);
 		psp = _psp;		/* for environment scanner  (sbdrv.asm) */
-		emulator();		/* call emulator              (tia.asm) */
+		emulator();		/* call emulator             (main.asm) */
 	}
 	else
 	{
@@ -61,11 +70,23 @@ main(int argc, char *argv[])
 		delay(50);
 
 		gui_CheckMouse();
+
 		gui_GraphicsMode();
-		gui_SetPalette(35, 40, 45);	/* 31, 34, 41 */
 
 		gui_ShowList();
 
-		gui_RestoreVideoMode();
 	}
+
+/*
+** I've been having some problems *restoring* DOS text mode; Sometimes my 
+** Win98 system crashes on exit. So I want the restore done the same way 
+** whether it's from the GUI or not.
+**
+** But I've noticed that if I do a fresh boot and never run the SETI client,
+** z26 will run all day, exiting as many times as I like without crashing.
+**
+** So I suspect it's a problem in the O.S. ;-)
+*/
+
+	VGATextMode();
 }

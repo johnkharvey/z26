@@ -1,6 +1,34 @@
 ; tiasnd.asm -- z26 sound generation routines
 ;               based on TIASound (c) 1996-1997 by Ron Fries
 
+; /*****************************************************************************/
+; /*                                                                           */
+; /*                 License Information and Copyright Notice                  */
+; /*                 ========================================                  */
+; /*                                                                           */
+; /* TiaSound is Copyright(c) 1996 by Ron Fries                                */
+; /*                                                                           */
+; /* This library is free software; you can redistribute it and/or modify it   */
+; /* under the terms of version 2 of the GNU Library General Public License    */
+; /* as published by the Free Software Foundation.                             */
+; /*                                                                           */
+; /* This library is distributed in the hope that it will be useful, but       */
+; /* WITHOUT ANY WARRANTY; without even the implied warranty of                */
+; /* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Library */
+; /* General Public License for more details.                                  */
+; /* To obtain a copy of the GNU Library General Public License, write to the  */
+; /* Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.   */
+; /*                                                                           */
+; /* Any permitted reproduction of these routines, in whole or in part, must   */
+; /* bear this legend.                                                         */
+; /*                                                                           */
+; /*****************************************************************************/
+
+; z26 is Copyright 1997-1999 by John Saeger and is a derived work with many
+; contributors.  z26 is released subject to the terms and conditions of the 
+; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
+; Please see COPYING.TXT for details.
+
 ; 04-08-98 -- first release
 ; 04-19-99 -- added sound queue
 
@@ -383,7 +411,6 @@ local done
 	mov	[op1],0
 done:
 	endm
-
 
 _FillSoundBuffer proc near
 	pushf

@@ -1,6 +1,11 @@
 ; sbdrv.asm -- z26 sound drivers
 ;              based on Asteroids v3.02 (c) 1997 by Chris Pile
 
+; z26 is Copyright 1997-1999 by John Saeger and is a derived work with many
+; contributors.  z26 is released subject to the terms and conditions of the 
+; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
+; Please see COPYING.TXT for details.
+
 ; Mar 27, 1998 -- first release
 ;
 ; Apr  4, 1998 -- major overhaul, most functions that were in sb.c are now here

@@ -6,6 +6,12 @@
 ;* text output based on code from The Graphics Programming Black Book by Michael Abrash
 ;*
 
+; z26 is Copyright 1997-1999 by John Saeger and is a derived work with many
+; contributors.  z26 is released subject to the terms and conditions of the 
+; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
+; Please see COPYING.TXT for details.
+
+
 .model large
 .386
 
@@ -1135,6 +1141,19 @@ db	'   `oChris Wilkson`d -- Helped with Pitfall II.`n`n'
 db	'`nThanks to one and all!!`n`n'
 
 db	0
+
+public _help_3
+_help_3 label byte
+
+db	'`y`UCopyright/License`u`d`n`n'
+db	'z26 is Copyright 1997-1999 by John Saeger and is a derived work with many`n'
+db	'contributors.  z26 is released subject to the terms and conditions of the`n'
+db	'GNU General Public License Version 2 (GPL).  `oz26 comes with no warranty.`d`n'
+db	'Please see the included COPYING.TXT for details.  Source code for the`n'
+db	'current release is available at the homepage shown elsewhere on the screen.`n'
+
+db	0
+
 
 	END
 

@@ -1,5 +1,10 @@
 ; trace.asm -- z26 trace stuff
 
+; z26 is Copyright 1997-1999 by John Saeger and is a derived work with many
+; contributors.  z26 is released subject to the terms and conditions of the 
+; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
+; Please see COPYING.TXT for details.
+
 ;dw cpu_pc;
 ;db cpu_a, cpu_carry, cpu_x, cpu_y, cpu_sp;
 ;db cpu_ZTest, cpu_NTest, cpu_D, cpu_V, cpu_I, cpu_B;

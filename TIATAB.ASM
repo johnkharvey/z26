@@ -2,6 +2,11 @@
 ;* tiatab.asm -- tables needed for z26 TIA emulator
 ;*
 
+; z26 is Copyright 1997-1999 by John Saeger and is a derived work with many
+; contributors.  z26 is released subject to the terms and conditions of the 
+; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
+; Please see COPYING.TXT for details.
+
 .data
 
 ALIGN 4

@@ -1,6 +1,12 @@
 ;
 ; Code for tiny5.f8
 ;
+
+; z26 is Copyright 1997-1999 by John Saeger and is a derived work with many
+; contributors.  z26 is released subject to the terms and conditions of the 
+; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
+; Please see COPYING.TXT for details.
+
  db 000h,000h,000h,000h,000h,000h,000h,000h,038h,044h,092h,0bah,092h,044h,038h,000h,038h,044h,082h,082h,082h,044h,038h,000h,03ch,042h,0a1h,091h,089h,085h,042h,03ch
  db 0ffh,0ffh,0ffh,0ffh,0ffh,0ffh,0ffh,0ffh,000h,078h,078h,07ah,07ah,002h,03eh,000h,0e0h,0e8h,0e8h,00ah,07ah,002h,03eh,000h,0ffh,081h,081h,081h,081h,081h,081h,0ffh
  db 0ffh,081h,0bdh,0bdh,0bdh,0bdh,081h,0ffh,0feh,082h,082h,082h,082h,082h,0feh,000h,000h,07eh,07eh,07eh,07eh,07eh,07eh,000h,0feh,082h,0aah,092h,0aah,082h,0feh,000h
