@@ -86,9 +86,11 @@ SML1:	cmp	[_VideoMode],3
 	mov	[MaxLines],204		; mode 3 gets 204 lines
 	jmp	GeneratePalette
 
-SML2:	cmp	[_VideoMode],7		; anything above 7 ?
+SML2:	cmp	[_VideoMode],8		; anything above 8 ?
 	ja	Set200			;   yes, 200 lines
-	je	SetMode7		;   no, if Mode7 handle special
+	je	SetMode8		;   no, if mode 8 handle special
+	cmp	[_VideoMode],7		; mode 7 ?
+	je	SetMode7		;   yes, handle special
 	mov	[MaxLines],MAX_TallGame	;   no, X modes get 240 lines
 	jmp	GeneratePalette
 	
@@ -104,6 +106,10 @@ SetMode7:
 
 JustDoMaxLines:
 	mov	[MaxLines],480
+	jmp	GeneratePalette
+
+SetMode8:
+	mov	[MaxLines],252
 	jmp	GeneratePalette
 
 	
@@ -391,7 +397,16 @@ PaletteCount	db	0
 ;* these numbers define relative brightness of the LUM values
 ;*
 
-LUMCoeff db	0,	56	; LUM 0
+LUMCoeff db	0,	80	; LUM 0
+	db	17,	80
+	db	30,	80
+	db	42,	80
+	db	53,	80
+	db	63,	80
+	db	72,	80
+	db	80,	80	; LUM 7
+
+xLUMCoeff db	0,	56	; LUM 0
 	db	8,	56
 	db	16,	56
 	db	24,	56
@@ -424,17 +439,18 @@ VR = G*MIX5/MIX5	; virtual red (force orange-green)
 ;*
 
 H  = 63		; Hi levels
-H2 = H*59/63
-H3 = H*54/63
+H2 = H*58/63
+H3 = H*53/63
+H4 = H*48/63
 
-L  = H*42/63	; Lo levels
+L  = H*44/63	; Lo levels
 L0 = L*106/100	; extra fading for pure colors
 L1 = L*95/100	; less fading for yellow-green
 L2 = L*90/100	; less fading for orange-green
 L3 = L*80/100	; less fading for light-orange
-L4 = L*60/100	; less fading for bright orange
-L5 = L*40/100	; less fading for yellow orange
-L6 = L*20/100	; least fading for gold
+L4 = L*70/100	; less fading for bright orange
+L5 = L*60/100	; less fading for yellow orange
+L6 = L*50/100	; least fading for gold
 
 DefaultPaletteTable db	0,		0,		0		; 00 -- (grey)
 		db	H2,		H2,		H2		; 0E
@@ -451,25 +467,25 @@ DefaultPaletteTable db	0,		0,		0		; 00 -- (grey)
 		db	R,		0,		0 		; 40 -- *(pink)
 		db	H,		L0,		L0		; 4E
 
-		db	R*MIX2/100,	0,		B*MIX5/100	; 50 -- (purple)
-		db	H,		L,		H2		; 5E
+		db	R*MIX3/100,	0,		B*MIX3/100	; 50 -- (purple)
+		db	H2,		L,		H2		; 5E
 
-		db	R*MIX4/100,	0,		B*MIX3/100	; 60 -- (purple-blue)
-		db	H2,		L,		H		; 6E
+		db	R*MIX5/100,	0,		B*MIX2/100	; 60 -- (purple-blue)
+		db	H3,		L,		H		; 6E
 
-		db	R*MIX6/100,	0,		B*MIX1/100	; 70 -- (atlantis right blinker blue)
-		db	H3,		L,		H		; 7E
+		db	R*MIX7/100,	0,		B*MIX1/100	; 70 -- (atlantis right blinker blue)
+		db	L,		L,		H		; 7E
 
 		db	0,		0,		B		; 80 -- *(blue)
-		db	L0,		L0,		H		; 8E
+		db	L1,		H4,		H		; 8E
 
-		db	0,		G*MIX7/100,	B*MIX2/100	; 90 -- (light blue)
+		db	0,		G*MIX6/100,	B*MIX2/100	; 90 -- (light blue)
 		db	L1,		H3,		H		; 9E
 
-		db	0,		G*MIX5/100,	B*MIX4/100	; A0 -- (atlantis turquoise)
+		db	0,		G*MIX4/100,	B*MIX4/100	; A0 -- (atlantis turquoise)
 		db	L1,		H2,		H		; AE
 
-		db	0,		G*MIX2/100,	B*MIX6/100	; B0 -- (green-blue)
+		db	0,		G*MIX1/100,	B*MIX6/100	; B0 -- (green-blue)
 		db	L1,		H,		H2		; BE
 
 		db	0,		G,		0		; C0 -- *(light green)

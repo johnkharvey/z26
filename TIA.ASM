@@ -50,6 +50,8 @@ ENDIF
 
 	cmp	[_quiet],0
 	jnz	STUP_4
+	cmp	[SoundMode],1		; sound mode 1 (force PC speaker) ?
+	je	STUP_4			;   yes
 	call	_SetupSoundBlaster
 	test	ax,ax			; did user press escape ?
 	jnz	ReallyQuit		;   yes
@@ -90,7 +92,10 @@ xmain:
 	jz	GoTIME			;     zero, exit now
 
 xm1:
+	call	ModeXFlipPage		; done rendering, flip page display page
+
 	call	VSync
+
 	call	ScanFrame
 
 	cmp	[MXDelayedClear],0	; was there a mode change into modex ?
@@ -186,7 +191,6 @@ ALIGN_ENTRY
 
 ScanFrame:
         mov	[DisplayPointer],0	; reset display pointer
-	call	ModeXNewFrame
 ScanFrameLoop:
 	mov	bx,offset TIABuffer
 	mov	[TIAWritePointer],bx

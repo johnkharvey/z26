@@ -61,6 +61,8 @@ KeyUp =			048h		; Up arrow
 KeyDown	=		050h		; Down arrow
 
 KeyCtrl = 		01dh		; Ctrl
+KeyLShift =		02ah 
+KeyRShift =		036h
 
 ;KeyZ =			02Ch		; Z (P2	left)
 ;KeyX =			02Dh		; X (P2	right)
@@ -277,11 +279,17 @@ CtrlVid7:
 	mov	[KeyTable+Key7],0
 
 CtrlVid8:
-;	test	[KeyTable+Key8],128	; video mode 8 ?
-;	jz	CtrlVidDone
-;	mov	[_VideoMode],8
-;	call	TIAGraphicMode
-;	mov	[KeyTable+Key8],0
+	test	[KeyTable+Key8],128	; video mode 8 ?
+	jz	CtrlVidDone
+	test	[KeyTable+KeyLShift],128
+	jnz	DoMode8Change
+	test	[KeyTable+KeyRShift],128
+	jz	CtrlVidDone
+
+DoMode8Change:
+	mov	[_VideoMode],8
+	call	TIAGraphicMode
+	mov	[KeyTable+Key8],0
 
 CtrlVidDone:
 CtrlExit:

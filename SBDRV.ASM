@@ -768,9 +768,11 @@ _SetupSoundBlaster:
 	jb	SSB_Err3		;   no
 
 	mov	[HiSpeedDMA],0		; assume normal DMA
-	mov	bx,15400		; assume slowest playback speed
+	mov	bx,15700		; assume slowest playback speed
 	cmp	ax,0200h		; DSP == 2.00 ?
 	je	SSB_SetPlayback		;   yes, use slow speed
+	cmp	[SoundMode],2		; forcing slow speed ?
+	je	SSB_SetPlayback		;   yes
 	mov	bx,31400		; assume faster playback freq
 	cmp	ax,0400h		; DSP version >= 4.00?
 	jge	SSB_SetPlayback		;   yes, normal DMA O.K.
@@ -795,8 +797,8 @@ SSB_SetPlayback:
 SSB_Slow:
 	mov	[_sbTimeConstant],al	; save
 
-	cmp	[_verbose],0
-	je	SSB_NoMsg
+	cmp	[SoundMode],0
+	jne	SSB_NoMsg
 	call	_ShowBlasterDetected	; if verbose, show message
 
 SSB_NoMsg:
@@ -822,22 +824,22 @@ SSB_Exit:
 	ret
 
 SSB_Err1:
-	cmp	[_verbose],0
-	je	SSB_Done
+	cmp	[SoundMode],0
+	jne	SSB_Done
 	call	_ShowBlasterEnvBad	; if verbose, show message
 	jmp	SSB_Done
 
 SSB_Err2:
 	cmp	ax,SB_EXIT		; did user press escape
 	je	SSB_Exit		;   yes
-	cmp	[_verbose],0
-	je	SSB_Done
+	cmp	[SoundMode],0
+	jne	SSB_Done
 	call	_ShowBlasterNotFound	; if verbose, show message
 	jmp	SSB_Done
 
 SSB_Err3:
-	cmp	[_verbose],0
-	je	SSB_Done
+	cmp	[SoundMode],0
+	jne	SSB_Done
 	call	_ShowBlasterTooOld	; if verbose, show message
 	jmp	SSB_Done
 

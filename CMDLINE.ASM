@@ -194,7 +194,7 @@ CMQuiet:				; quiet!
 	jmp	CLSkip
 
 CMVerbose:
-	mov	[_verbose],1		; verbose
+	mov	[SoundMode],al		; verbose
 	jmp	CLSkip
 
 CMD0:	mov	al,[IOPortB]		; p0 hard

@@ -56,6 +56,24 @@ MX5Parms label word
 	dw	00616h	; vblank end
 MX5_PARM_LENGTH = (($-MX5Parms)/2)
 
+MX8Parms label word
+	dw	06c00h	; horizontal total
+	dw	04f01h	; horizontal display enable end
+	dw	05002h	; horizontal blanking start
+	dw	08203h	; horizontal blanking end
+	dw	05b04h	; horizontal retrace start
+	dw	08705h	; horizontal retrace end
+
+	dw	00506h	; vertical total
+	dw	01107h	; overflow (bit 8 of vertical counts)
+	dw	04009h	; cell height (2 to double scan)
+	dw	0f310h	; v sync start
+	dw	0a511h	; (ac) v sync end and protect cr0-cr7
+	dw	0ef12h	; vertical displayed
+	dw	0f015h	; vblank start
+	dw	00516h	; vblank end
+MX8_PARM_LENGTH = (($-MX8Parms)/2)
+
 .DEND
 .CODESEGMENT
 
@@ -67,7 +85,7 @@ ModeXInit:
 	pusha
 	push	es
 
-	cmp	[_VideoMode],7		; doing mode 7 or less ?
+	cmp	[_VideoMode],8		; doing mode 7 or less ?
 	ja	MXPRet			;   no, ret for now
 
 	mov	[ModeX],1
@@ -106,11 +124,16 @@ ModeXInit:
 					; for safety, even though clock unchanged
 
 	cmp	[_VideoMode],4		; doing tweaked ModeX ?
-	jne	MX5a
+	jne	MX5a			;   yes
 	mov	al,0e3h			;   no,  select 25MHz dot clock & 60Hz scanning rate
 	jmp	MX4a
 
-MX5a:	mov	al,0e7h			;   yes, select 28MHz dot clock & 60Hz scanning rate
+MX5a:	cmp	[_VideoMode],8		; mode 8 ?
+	jb	MX6a			;   no
+	mov	al,0a7h			;   yes, misc output for mode 8 (28 Mhz clock)
+	jmp	MX4a
+
+MX6a:	mov	al,0e7h			; select 28MHz dot clock & 60Hz scanning rate
 MX4a:	mov	dx,MISC_OUTPUT
 	out	dx,al
 
@@ -135,7 +158,13 @@ MX4a:	mov	dx,MISC_OUTPUT
 	mov	cx,CRT_PARM_LENGTH	;       # of table entries
 	jmp	MX4b
 
-MX5b:	mov	si,offset MX5Parms	;   yes, point to tweaked CRT parameter table
+MX5b:	cmp	[_VideoMode],8
+	jb	MX6b
+	mov	si,offset MX8Parms
+	mov	cx,MX8_PARM_LENGTH
+	jmp	MX4b
+	
+MX6b:	mov	si,offset MX5Parms	;   yes, point to tweaked CRT parameter table
 	mov	cx,MX5_PARM_LENGTH
 MX4b:
 
@@ -180,29 +209,63 @@ MXClearMem:
 	mov	es,ax			; ... 4 pixels at a time
 	sub	di,di			; point es:di to display memory
 	sub	ax,ax			; clear to zero-value pixels
-	mov	cx,80*480 + 1		; # of dwords to clear 
+	mov	cx,0ffffh		; # of dwords to clear 
 	rep	stosb
 
 	pop	es
 	popad
 
-	ret
+MXRet:	ret
 
 ;*
-;* set up to do next modex frame
+;* Flip ModeX page
 ;*
 
-ModeXNewFrame:
+ModeXFlipPage:
 	cmp	[ModeX],0		; in ModeX ?
 	jz	MXRet			;   no, ignore call
+	mov	[ModeXDisplayPointer],0	; assume even frame or no flipping
+	cmp	[_VideoMode],4		; modes 4, 5 and 8 can do page flipping
+	je	DoFlipping
+	cmp	[_VideoMode],5
+	je	DoFlipping
+	cmp	[_VideoMode],8
+	jne	NoFlipping
+
+
+FlipThrottleLoop:
+	call	_GetTime		; prevent false alarms if running in a fast refresh mode (mode 8)
+	sub	eax,[LastVsyncTime]	; (see vsync.asm for LastVsyncTime and PreGap)
+	cmp	eax,[PreGap]		; at least 7/8 of a frame or so since last Vsync?
+	jb	FlipThrottleLoop	;   no, keep waiting
+
+DoFlipping:
+	mov	ah,080h
+	test	[Frame],1
+	jz	DoFlip
+	mov	ah,0
+	mov	[ModeXDisplayPointer],08000h
+
+DoFlip:
+	mov	dx,CRTC_INDEX
+	mov	al,00ch
+	out	dx,al			; select upper byte of display page adr
+	mov	al,ah
+	inc	dx
+	out	dx,al
+	mov	dx,CRTC_INDEX
+	mov	al,00dh
+	out	dx,al			; select low byte of display page adr
+	xor	al,al
+	inc	dx
+	out	dx,al			; lower byte of display page is always zero
+	
+NoFlipping:
 	cmp	[MaxLines],220		; doing partial screen
-	ja	MXStartAtZero		;   no
-	mov	[ModeXDisplayPointer],800 ; yes, start 10 lines down
+	ja	MXRet			;   no
+	add	[ModeXDisplayPointer],800 ; yes, start 10 lines down
 	ret
 
-MXStartAtZero:
-	mov	[ModeXDisplayPointer],0	; reset output pointer
-MXRet:	ret
 
 ;*
 ;* set up to do next modex scan line
@@ -242,7 +305,8 @@ ModeXCopyLine:
 	mov	ax,0a000h
 	mov	es,ax			; dest segment is VGA area
 
-
+	cmp	[_VideoMode],8		; doing mode 8
+	je	DoRegularCopy		;   yes, regular
 	cmp	[_VideoMode],6		; doing video mode 4, 5 or 6
 	ja	MX7CopyLine		;   no
 

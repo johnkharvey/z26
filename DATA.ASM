@@ -59,6 +59,7 @@ CPUClock	db	0
 WrapZero	db	0		; wrap negative player pos to zero
 WrapWsync	db	0		; push late Wsyncs to next line
 OldMissile	db	0		; use old missile code for resmpx
+SoundMode	db	0ffh		; sound mode
 
 ALIGN	2
 
@@ -89,7 +90,6 @@ _dsp		dw	0		; do digital signal processing
 _VideoMode	db	0ffh		; default video mode
 _Joystick	db	1		; do joystick
 _DoChecksum	db	0		; set if we should print out checksum
-_verbose	db	0		; verbose
 _quiet		db	0		; set if we want no sound
 
 ALIGN 2
