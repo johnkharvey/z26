@@ -20,8 +20,45 @@ HuntForLockTime		dd	19886		; NominalFrameTime
 PreGap			dd	17401		; (7/8)*NominalFrameTime
 PostGap			dd	22372		; (9/8)*NominalFrameTime
 
+ReSyncFlag		db	1		; force re-sync (happens in video mode change)
+BadSyncCount		db	0		; count up to see if we need to auto-resync
+
 .DEND
 .CODESEGMENT
+
+;*
+;* start off on the right foot -- initialize VSYNC time
+;*
+
+ReSync:
+	pushad
+ReSyncLoop:
+	sti
+	mov	dx,CRTSTAT
+	cli
+	in	al,dx
+	test	al,8
+	jnz	RealSyncSeen
+	jmp	ReSyncLoop
+
+;RealVsync:
+;	pushad
+;RealVsyncLoop:
+;	sti
+;	mov	dx,CRTSTAT
+;	cli
+;	in	al,dx
+;	test	al,8
+;	jnz	RealSyncSeen
+;	call	_GetTime
+;	sub	eax,[LastVsyncTime]
+;	cmp	eax,[PostGap]
+;	jb	RealVsyncLoop
+;	mov	eax,[NominalFrameTime]
+;	add	[LastVsyncTime],eax
+;	sti
+;	popad
+;	ret
 
 
 VSync:	cmp	[NoRetrace],0ffh	; -r no param
@@ -37,11 +74,22 @@ VSync:	cmp	[NoRetrace],0ffh	; -r no param
 	and	dword ptr [hi_time],0ffffh ; clear hi order bit in hi order time word
 					   ; (so we don't have to worry about overflow...)
 					   ; this means frame timer won't work beyond ~ 40 minutes
+	cmp	[ReSyncFlag],0
+	jz	NoReSyncNeeded
+	call	ReSync
+	mov	[ReSyncFlag],0
 
-	mov	[TimeLimit],132		; normal delay time (3.5 VGA scanlines)
+NoReSyncNeeded:
+
+;***
+;	popad
+;	jmp	RealVsync
+;***
+
+	mov	[TimeLimit],132		;(132) normal delay time (3.5 VGA scanlines)
 	cmp	[_VideoMode],8
 	jne	NDLoop
-	mov	[TimeLimit],94		; a little shorter for mode 8 (2.5 VGA scanlines)
+	mov	[TimeLimit],94		; (94) a little shorter for mode 8 (2.5 VGA scanlines)
 
 NDLoop:	sti
 	mov	dx,CRTSTAT		; wait for display disable
@@ -74,7 +122,12 @@ NDOff:	mov	dx,CRTSTAT		; time the off period
 DontRecord:
 	mov	eax,[HuntForLockTime]	;   yes, pretend we saw NDI ...
 	add	[LastVsyncTime],eax	;        ... one frame time after last one ...
-	jmp	NDRet			;        ... and exit
+	inc	[BadSyncCount]
+	cmp	[BadSyncCount],5
+	jb	NDRet
+	call	ReSync
+	mov	[BadSyncCount],0
+	jmp	NDRet
 
 RealSyncSeen:
 	call	_GetTime

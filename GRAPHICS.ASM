@@ -10,6 +10,8 @@ TIAGraphicMode:
 	mov	ax,013h			; switch to 320x200 VGA mode
 	int	010h
 
+	mov	[ReSyncFlag],1		; need to re-sync
+
 	mov	[ModeX],0		; assume we're not in modex
 
 ;*
