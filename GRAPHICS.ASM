@@ -63,7 +63,7 @@ RGBLoop:
 	cmp	[_VideoMode],0		; doing ModeX ?
 	jz	GRRet			;   no
 
-GRV1:	cmp	[_VideoMode],2		; doing Trixter 60Hz (mode 1 or 2) ?
+GRV1:	cmp	[_VideoMode],3		; doing Trixter 60Hz (mode 1, 2 or 3) ?
 	ja	GRRet			;   no
 	call	Trixter60Hz		;   yes
 	mov	[_VideoMode],0		; pretend we're mode 13
@@ -112,7 +112,7 @@ Trixter60Hz:
 	mov	al,063h			; mode 1 -- 63=squished maybe
 	jmp	Tr60b			;           e3=squished definitely
 
-Tr60a:	mov	al,0e7h			; mode 2 -- 28 Mhz clock
+Tr60a:	mov	al,0e7h			; mode 2 or 3 -- 28 Mhz clock
 Tr60b:	out	dx,al
 
 	mov	dx,CRTSEQ
@@ -134,27 +134,36 @@ Tr60b:	out	dx,al
 	VidOut	CRTC,   004h, 054h	; horizontal retrace start
 	VidOut	CRTC,   005h, 080h	; horizontal retrace end
 	jmp	Tr60d
-					; * mode 2 *
+					; * mode 2 or 3 *
 Tr60c:	VidOut	CRTC,   000h, 06ch	; horizontal total
 	VidOut	CRTC,   004h, 05bh	; horizontal retrace start
 	VidOut	CRTC,   005h, 087h	; horizontal retrace end
 
-Tr60d:	VidOut	CRTC,   001h, 04fh	; horizontal display enable end
+Tr60d:	cmp	[_VideoMode],3
+	je	Tr60e
+					; * mode 1 or 2 *
+	VidOut	CRTC,   012h, 08fh	; <8f> vertical display enable end
+	VidOut	CRTC,   015h, 090h	; <90> vertical blanking start
+	jmp	Tr60f
+
+Tr60e:					; * mode 3 *
+	VidOut	CRTC,   012h, 097h	; <8f> vertical display enable end
+	VidOut	CRTC,   015h, 098h	; <90> vertical blanking start
+
+Tr60f:	VidOut	CRTC,   001h, 04fh	; horizontal display enable end
 	VidOut	CRTC,   002h, 050h	; horizontal blanking start
 	VidOut	CRTC,   003h, 082h	; horizontal blanking end
 	VidOut	CRTC,   006h, 00ah	; vertical total
 	VidOut	CRTC,   007h, 03eh	; overflow
 	VidOut	CRTC,   008h, 000h	; preset row scan
 	VidOut	CRTC,   009h, 041h	; maximum scan line
-	VidOut	CRTC,   010h, 0bah	; vertical retrace start
-	VidOut	CRTC,   011h, 08ch	; vertical retrace end
-	VidOut	CRTC,   012h, 08fh	; vertical display enable end
+	VidOut	CRTC,   010h, 0c2h	; (ba) vertical retrace start
+	VidOut	CRTC,   011h, 094h	; (8c) vertical retrace end
 	VidOut	CRTC,   013h, 028h	; offset (logical line width)
 	VidOut	CRTC,   014h, 040h	; underline location
-	VidOut	CRTC,   015h, 090h	; vertical blanking start
 	VidOut	CRTC,   016h, 008h	; vertical blanking end
 	VidOut	CRTC,   017h, 0a3h	; mode control
-	VidOut	CRTSEQ, 001h, 001h	; (1) clocking mode
+	VidOut	CRTSEQ, 001h, 001h	; clocking mode
 	VidOut	CRTSEQ, 003h, 000h	; map select
 	VidOut	CRTSEQ, 004h, 00eh	; memory mode
 	VidOut	CRTGFX, 005h, 040h	; graphics mode

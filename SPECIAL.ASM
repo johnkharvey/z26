@@ -88,7 +88,7 @@ SSLINE:
 	cmp	ax,0f578h
 	je	Line32			; buckrog
 	cmp	ax,08387h
-	je	Line64			; actionmn
+	je	Line62			; actionmn
 	cmp	ax,0ab1ch
 	je	Line52			; fighterp (* doesn't fix *)
 	cmp	ax,07f62h
@@ -110,9 +110,9 @@ SSLINE:
 	cmp	ax,0a9c2h
 	je	Line18			; jawbreak
 	cmp	ax,00b7ah
-	je	Line31			; lasrgate
+	je	Line28			; lasrgate
 	cmp	ax,0ff2ch
-	je	Line31			; lasrvoly
+	je	Line28			; lasrvoly
 	cmp	ax,03769h
 	je	Line46			; malagai
 	cmp	ax,0dc54h
@@ -122,7 +122,7 @@ SSLINE:
 	cmp	ax,00fc5h
 	je	Line28			; packong
 	cmp	ax,045aeh
-	je	Line66			; phantomt
+	je	Line60			; phantomt
 	cmp	ax,04f0eh
 	je	Line24			; pharhcrs
 	cmp	ax,0200ah
@@ -136,7 +136,7 @@ SSLINE:
 	cmp	ax,0769ch
 	je	Line40			; sssnake
 	cmp	ax,0deebh
-	je	Line40			; strwbery
+	je	Line37			; strwbery
 	cmp	ax,08000h
 	je	Line60			; surfprds
 	cmp	ax,04d67h
@@ -150,9 +150,9 @@ SSLINE:
 	cmp	ax,062d5h
 	je	Line34			; zoofun
 	cmp	ax,08698h
-	je	Line40			; combat
+	je	Line39			; combat
 	cmp	ax,09318h
-	je	Line35			; indy500
+	je	Line33			; indy500
 	cmp	ax,0e5beh
 	je	Line37			; Tetris26
 	cmp	ax,0a402h
@@ -185,7 +185,7 @@ SSLINE:
 	je	Line42			; harbresc
 
 	cmp	ax,044dch
-	je	Line34			; xenophob
+	je	Line32			; xenophob
 	cmp	ax,0ffb5h
 	je	Line36			; alphbeam
 	cmp	ax,0e0e9h
@@ -207,7 +207,7 @@ SSLINE:
 	cmp	ax,08e07h
 	je	Line34			; catmouse
 	cmp	ax,045cbh
-	je	Line35			; chinasyn
+	je	Line33			; chinasyn
 	cmp	ax,08d5ch
 	je	Line36			; colorbar
 	cmp	ax,02415h
@@ -223,9 +223,9 @@ SSLINE:
 	cmp	ax,0ccd7h
 	je	Line40			; eggomana
 	cmp	ax,00cb2h
-	je	Line40			; front_rk
+	je	Line39			; front_rk
 	cmp	ax,08828h
-	je	Line36			; infiltrt
+	je	Line32			; infiltrt
 	cmp	ax,0cb15h
 	je	Line30			; karate
 	cmp	ax,06097h
@@ -263,7 +263,7 @@ SSLINE:
 	cmp	ax,046d8h
 	je	Line34			; tanksbut
 	cmp	ax,01866h
-	je	Line40			; tapeworm
+	je	Line38			; tapeworm
 	cmp	ax,08822h
 	je	Line24			; ufopatrl
 	cmp	ax,08272h
@@ -297,7 +297,7 @@ SSLINE:
 	cmp	ax,06c7ch
 	je	Line42			; kaboom
 	cmp	ax,00264h
-	je	Line42			; mastbuld
+	je	Line38			; mastbuld
 	cmp	ax,057cah
 	je	Line32			; mogulman
 	cmp	ax,01cd4h
@@ -321,7 +321,7 @@ SSLINE:
 	cmp	ax,0f52dh
 	je	Line37			; surround
 	cmp	ax,070c4h
-	je	Line12			; survlrun
+	je	Line9			; survlrun
 	cmp	ax,0ad92h
 	je	Line38			; tictac3d
 	cmp	ax,09fcch
@@ -329,19 +329,37 @@ SSLINE:
 	cmp	ax,0153bh
 	je	Line40			; tubybird
 	cmp	ax,0811h
-	je	Line44			; walker
+	je	Line42			; walker
 	cmp	ax,0cd03h
 	je	Line66			; supferar
 	cmp	ax,0cc64h
 	je	Line34			; supferri
 	cmp	ax,07c2bh
-	je	Line86			; motocros
+	je	Line83			; motocros
 	cmp	ax,054f5h
-	je	Line62			; parachut
+	je	Line59			; parachut
 	cmp	ax,08ed6h
 	je	Line34			; surfsup1
 	cmp	ax,08ed5h
 	je	Line34			; surf_fix
+	cmp	ax,06000h
+	je	Line28			; burndesr
+	cmp	ax,0cbe1h
+	je	Line39			; tacscan
+	cmp	ax,07d16h
+	je	Line26			; carnival
+	cmp	ax,0a01ch
+	je	Line43			; coln
+	cmp	ax,0657eh
+	je	Line38			; crusmisl
+	cmp	ax,0885ch
+	je	Line28			; dragster
+	cmp	ax,02018h
+	je	Line30			; earthdie
+	cmp	ax,058a6h
+	je	Line35			; holehunt
+	cmp	ax,04000h
+	je	Line28			; jnglfevr
 
 
 	jmp	SSTR			; process Timer1 requests
@@ -351,7 +369,10 @@ SSLINE:
 ; * start line setting handlers *
 ; *
 
-Line12:	mov	[CFirst],12
+Line2:	mov	[CFirst],2
+	jmp	SSTR
+
+Line9:	mov	[CFirst],9
 	jmp	SSTR
 
 Line18:	mov	[CFirst],18
@@ -376,6 +397,9 @@ Line31:	mov	[CFirst],31
 	jmp	SSTR
 
 Line32:	mov	[CFirst],32
+	jmp	SSTR
+
+Line33: mov	[CFirst],33
 	jmp	SSTR
 
 Line34:	mov	[CFirst],34
@@ -444,6 +468,9 @@ Line56: mov	[CFirst],56
 Line58:	mov	[CFirst],58
 	jmp	SSTR
 
+Line59:	mov	[CFirst],59
+	jmp	SSTR
+
 Line60:	mov	[CFirst],60
 	jmp	SSTR
 
@@ -468,7 +495,7 @@ Line72:	mov	[CFirst],72
 Line74:	mov	[CFirst],74
 	jmp	SSTR
 
-Line86:	mov	[CFirst],86
+Line83:	mov	[CFirst],83
 	jmp	SSTR
 
 ; *

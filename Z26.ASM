@@ -80,6 +80,7 @@ entry:	jmp	start			; jump around our data
 	include cpu.asm			; 6502 opcodes, macros and support routines
 	include math.asm		; Paul Robson's original math routines
 	include cpuhand.asm		; cpu memory & register handlers
+	include banks.asm		; bank switch code
 	include cmdline.asm		; command line interpreter
 	include special.asm		; process special cartridges
 	include console.asm		; console output (for debugging)

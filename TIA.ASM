@@ -71,7 +71,7 @@ StartupDelayLoop:
 	je	StartupDelayLoop
 	mov	edx,eax			; remember prev
 	inc	cx
-	cmp	cx,18			; been a second?
+	cmp	cx,22			; been a second or so?
 	jbe	StartupDelayLoop
 
 RTLoop:
@@ -623,7 +623,7 @@ TIALineTo:
 	jb	TIANoGenerate
 	cmp	bx,[BottomLine]		;was 250
 	jae	TIANoGenerate
-	cmp	[DisplayPointer],64000
+	cmp	[DisplayPointer],65280	;was 64000
 	jae	TIANoGenerate
 
 ALIGN_ENTRY

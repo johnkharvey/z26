@@ -69,7 +69,7 @@ CFirst		dw	0		; <-- gets changed by SetupSpecial
 					 
 CLast		dw	256		; was 256 last scan line (from CMDLine)
 
-MaxLines	dw	200		;max # of lines to scan
+MaxLines	dw	204		;max # of lines to scan
 					;gets changed if doing shrunk screen
 
 DisplayPointer	dw	0		;pointer into display RAM
@@ -214,7 +214,7 @@ global	_dsp
 _dsp		dw	0		; do digital signal processing
 
 global	_VideoMode
-_VideoMode	dw	2		; video mode (default mode 2 60Hz)
+_VideoMode	dw	3		; video mode (default mode 3 60Hz)
 
 global	_Joystick
 _Joystick	dw	1		; do joystick

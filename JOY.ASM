@@ -18,61 +18,37 @@ JoyCenter:
 	test	di,di
 	jz	NoJoy
 
-	mov	bx,16			; read center position 16 times
+	mov	bx,16
 
 JoyInitLoop:				; get a good reading of center
-	call	JoyRead			; call JoyRead Direct
+	call	JoyRead
 	add	[JoyHorizontalCenter],si
 	add	[JoyVerticalCenter],di
 	dec	bx
 	jnz	JoyInitLoop
 
-	shr	[JoyHorizontalCenter],4	; divide by 16
-	shr	[JoyVerticalCenter],4	; we have the average values
+	shr	[JoyHorizontalCenter],4
+	shr	[JoyVerticalCenter],4
 
-	mov	ax,[JoyHorizontalCenter]
-	shr	ax,1
-	mov	[JoyHorizontalMinimum],ax ; min value = 1/2 of center
-	add	ax,[JoyHorizontalCenter]
-	mov	[JoyHorizontalMaximum],ax ; max value = 3/2 of center
-
-	mov	ax,[JoyVerticalCenter]
-	shr	ax,1
-	mov	[JoyVerticalMinimum],ax
-	add	ax,[JoyVerticalCenter]
-	mov	[JoyVerticalMaximum],ax
-
-	cmp	ax,[JoyHorizontalMaximum] ; which is bigger, horiz or vert ?
-	ja	JoyVertBigger		;     vert is bigger
-	mov	ax,[JoyHorizontalMaximum]
-JoyVertBigger:
-	mov	[JoyMaximum],ax
-
-	mov	si,[JoyHorizontalCenter] ; use the average center value
+	mov	si,[JoyHorizontalCenter]
 	mov	di,[JoyVerticalCenter]
 
-	call	JoyStabilizeInit	; initialize stabilization routine
+	call	JoyStabilizeInit
 
 	mov	[JoyLeft],si		; center position of stick
 	mov	[JoyRight],si
 	mov	[JoyUp],di
 	mov	[JoyDown],di
 
-;	shr	si,3			; compute guard band
-;	mov	ax,si			; 3/8 * center value
-;	add	si,ax
-;	add	si,ax
+	shr	si,3			; compute guard band
+	mov	ax,si			; 3/8 * center value
+	add	si,ax
+	add	si,ax
 
-;	shr	di,3
-;	mov	ax,di
-;	add	di,ax
-;	add	di,ax
-
-	imul	si,3			; compute guard band
-	shr	si,3			; 3/8 * center value
-
-	imul	di,3
 	shr	di,3
+	mov	ax,di
+	add	di,ax
+	add	di,ax
 
 	test	si,si			; reality check
 	jz	NoJoy
@@ -103,7 +79,7 @@ Joystick:
 	cmp	[_Joystick],0
 	jz	NoJoy
 	call	_Fillbuffer		; fill sound buffer
-	call	FastJoyRead
+	call	JoyRead
 	call	JoyStabilize
 
 	mov	ah,[IOPortA]
@@ -177,9 +153,6 @@ AtariDown:				; stick is down
 ;* adapted from The Art of Assembly Language Programming
 ;*              by Randall Hyde
 ;*
-;* si gets horizontal reading
-;* di gets vertical reading
-;*
 
 JoyRead:
 	mov	cx,1000h	;Max times through loop
@@ -203,53 +176,25 @@ JoyReadDone:
 	ret
 
 ;*
-;* fast version of above
-;*
-
-FastJoyRead:
-	mov	cx,[JoyMaximum]	;Max times through loop
-	xor	si,si		;We’ll put readings in SI and
-	xor	di,di		; di.
-	xor	ax,ax		;Set AH to zero.
-	mov	dx,201h		;Point at joystick port.
-	out	dx,al		;Trigger the timer chip.
-
-FastJoyLoop:
-	in	al,dx		;Read joystick port.
-	and	al,11b		;Strip unwanted bits.
-	jz	FastJoyReadDone
-	shr	ax,1		;Put pot 0 value into carry.
-	adc	si,0		;Bump pot 0 value if still active.
-	add	di,ax		;Bump pot 1 value if pot 1 active.
-	loop	FastJoyLoop	;Repeat while high.
-	cmp	si,[JoyHorizontalMinimum]
-	ja	FastJoyVert
-	mov	si,[JoyHorizontalMinimum]
-FastJoyVert:
-	cmp	di,[JoyVerticalMinimum]
-	ja	FastJoyReadDone
-	mov	di,[JoyVerticalMinimum]
-FastJoyReadDone:
-	ret
-
-
-;*
 ;* stabilize the joystick reading
 ;*
 
 JoyStabilize:
 
-	mov	ax,[JH1]	; do a moving average of 3 values
+	mov	ax,[JH1]	; do a moving average of 4 values
 	add	ax,[JH2]
 	shr	ax,1
 	mov	[JH1],ax
 	add	ax,[JH3]
 	shr	ax,1
 	mov	[JH2],ax
+	add	ax,[JH4]
+	shr	ax,1
+	mov	[JH3],ax
 
 	add	ax,si
 	shr	ax,1
-	mov	[JH3],ax
+	mov	[JH4],ax
 
 	mov	ax,[JV1]
 	add	ax,[JV2]
@@ -258,18 +203,24 @@ JoyStabilize:
 	add	ax,[JV3]
 	shr	ax,1
 	mov	[JV2],ax
-
-	add	ax,di
+	add	ax,[JV4]
 	shr	ax,1
 	mov	[JV3],ax
 
-	mov	si,[JH2]	; then a straight average of the last two
-	add	si,[JH3]
+	add	ax,di
+	shr	ax,1
+	mov	[JV4],ax
+
+	mov	si,[JH3]	; then a straight average of the last two
+	add	si,[JH4]
 	shr	si,1
 
-	mov	di,[JV2]
-	add	di,[JV3]
+	mov	di,[JV3]
+	add	di,[JV4]
 	shr	di,1
+
+;	mov	si,[JH4]
+;	mov	di,[JV4]
 
 	ret
 
@@ -278,10 +229,12 @@ JoyStabilizeInit:
 	mov	[JH1],si
 	mov	[JH2],si
 	mov	[JH3],si
+	mov	[JH4],si
 
 	mov	[JV1],di
 	mov	[JV2],di
 	mov	[JV3],di
+	mov	[JV4],di
 
 	ret
 
@@ -292,20 +245,15 @@ JoyStabilizeInit:
 JH1			dw	0
 JH2			dw	0
 JH3			dw	0
+JH4			dw	0
 
 JV1			dw	0
 JV2			dw	0
 JV3			dw	0
+JV4			dw	0
 
 JoyHorizontalCenter	dw	0
 JoyVerticalCenter	dw	0
-
-JoyHorizontalMinimum	dw	0
-JoyHorizontalMaximum	dw	0
-JoyVerticalMinimum	dw	0
-JoyVerticalMaximum	dw	0
-
-JoyMaximum		dw	0
 
 JoyLeft			dw	0
 JoyRight		dw	0
