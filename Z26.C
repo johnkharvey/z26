@@ -5,19 +5,19 @@
 /*
 ** z26 is Copyright 1997-2000 by John Saeger and is a derived work with many
 ** contributors.  z26 is released subject to the terms and conditions of the 
-** GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
+** GNU General Public License Version 2 (GPL).	z26 comes with no warranty.
 ** Please see COPYING.TXT for details.
 */
 
 
 
-#define version "z26 (1.37)"
+#define version "z26 (1.38)"
 
 
 #define rom_list "ROM List"
 
 /*
-#define rom_list "Preview version B (EST/D) -- Please don't distribute."
+#define rom_list "Preview version I -- Please don't distribute."
 */
 
 #include <dos.h>		/* _psp */
@@ -34,7 +34,11 @@ extern unsigned int CartSize;
 extern long int Checksum;
 extern long int XChecksum;
 
-unsigned char CartRom[34000];
+unsigned char CartRom[34000]; 
+
+unsigned char far *Megaboy;
+unsigned int MBseg, MBofs, LinesInFrame;
+int ShowLineCount=0;
 
 #include "def.c"
 #include "cli.c"
@@ -45,11 +49,15 @@ unsigned char CartRom[34000];
 void main(int argc, char *argv[])
 {
 	def_SaveDefaults();
+	Megaboy=(char *) calloc(32768,sizeof(char));
+	MBseg=FP_SEG(Megaboy);
+	MBofs=FP_OFF(Megaboy);
 	if (argc != 1)
 	{
-		cli_CommandLine(argc, argv);
-		psp = _psp;		/* for environment scanner  (sbdrv.asm) */
-		emulator();		/* call emulator              (tia.asm) */
+	   cli_CommandLine(argc, argv);
+	   psp = _psp;		   /* for environment scanner  (sbdrv.asm) */
+	   emulator();		   /* call emulator		 (tia.asm) */
+	   if(ShowLineCount) printf("%u scanlines in last frame\n",LinesInFrame);
 	}
 	else
 	{
@@ -71,4 +79,5 @@ void main(int argc, char *argv[])
 
 		gui_RestoreVideoMode();
 	}
+	free(Megaboy);
 }

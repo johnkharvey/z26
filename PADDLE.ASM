@@ -2,8 +2,8 @@
 ;* paddle.asm -- z26 paddle support
 ;*
 
-; z26 is Copyright 1997-1999 by John Saeger and is a derived work with many
-; contributors.  z26 is released subject to the terms and conditions of the 
+; z26 is Copyright 1997-2000 by John Saeger and is a derived work with many
+; contributors.	 z26 is released subject to the terms and conditions of the 
 ; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ; Please see COPYING.TXT for details.
 
@@ -22,7 +22,8 @@ ChargeTrigger3	dd	TRIGMAX / 2
 PaddleRepeat	dd	0
 PrevPaddleFrame	dd	0
 
-PaddleBits	db	080h, 040h, 2, 4
+PaddleBits	db	080h,040h, 8, 4
+; *EST* was PaddleBits	    db	    080h, 040h, 2, 4
 
 .code
 
@@ -36,8 +37,8 @@ CalcPaddleAcceleration:
 	mov	edx,[Frame]
 	sub	edx,[PrevPaddleFrame]
 	cmp	edx,1			; key being held down ?
-	jne	NewPaddleRepeat		;   no, fresh hit
-	inc	[PaddleRepeat]		;   yes, increment repeat count
+	jne	NewPaddleRepeat		;	  no, fresh hit
+	inc	[PaddleRepeat]		;	 yes, increment repeat count
 	mov	edx,[_PaddleGame]
 	cmp	edx,[PaddleRepeat]	; repeat count hit max sensitivity ?
 	ja	PaddleInRange		;   yes

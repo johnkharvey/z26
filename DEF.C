@@ -1,7 +1,7 @@
 /*
-** z26 is Copyright 1997-1999 by John Saeger and is a derived work with many
+** z26 is Copyright 1997-2000 by John Saeger and is a derived work with many
 ** contributors.  z26 is released subject to the terms and conditions of the 
-** GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
+** GNU General Public License Version 2 (GPL).	z26 comes with no warranty.
 ** Please see COPYING.TXT for details.
 */
 
@@ -22,8 +22,13 @@ extern char TraceCount;
 extern char TraceEnabled;
 extern char OldTraceCount;
 extern char Use50Hz;
-extern char KeyPad;             /* *EST* */
-extern char Driving;            /* *EST */
+extern char KeyPad;		/* *EST* */
+extern char Driving;		/* *EST */
+extern char BSType;		/* *EST* */
+extern char MouseBase;		/* *EST* */
+extern char SimColourLoss;	/* *EST* */
+extern char Lightgun;		/* *EST* */
+extern int LGadjust;		/* *EST* */
 
 char def_VideoMode;
 short int def_CFirst;
@@ -40,8 +45,13 @@ long int def_PaddleGame;
 char def_KeyBase;
 long int def_TraceCount;
 char def_Use50Hz;
-char def_KeyPad;                /* *EST* */
-char def_Driving;               /* *EST* */
+char def_KeyPad;		/* *EST* */
+char def_Driving;		/* *EST* */
+char def_BSType;		/* *EST* */
+char def_MouseBase;		/* *EST* */
+char def_SimColourLoss;		/* *EST* */  
+char def_Lightgun;		/* *EST* */
+int def_LGadjust;		/* *EST* */
 
 void def_SaveDefaults(void)
 {
@@ -60,8 +70,13 @@ void def_SaveDefaults(void)
 	def_TraceCount = TraceCount;
 	def_NoRetrace = NoRetrace;
 	def_Use50Hz = Use50Hz;
-        def_KeyPad = KeyPad;    /* *EST* */
-        def_Driving = Driving;  /* *EST* */
+	def_KeyPad = KeyPad;			/* *EST* */
+	def_Driving = Driving;			/* *EST* */
+	def_BSType = BSType;			/* *EST* */
+	def_MouseBase = MouseBase;		/* *EST* */
+	def_SimColourLoss = SimColourLoss;	/* *EST* */
+	def_Lightgun = Lightgun;		/* *EST* */
+	def_LGadjust = LGadjust;		/* *EST* */
 }
 
 void def_LoadDefaults(void)
@@ -81,7 +96,12 @@ void def_LoadDefaults(void)
 	TraceCount = def_TraceCount;
 	NoRetrace = def_NoRetrace;
 	Use50Hz = def_Use50Hz;
-        KeyPad = def_KeyPad;    /* *EST* */
-        Driving = def_Driving;  /* *EST* */
+	KeyPad = def_KeyPad;			/* *EST* */
+	Driving = def_Driving;			/* *EST* */
+	BSType = def_BSType;			/* *EST* */
+	MouseBase = def_MouseBase;		/* *EST* */
+	SimColourLoss = def_SimColourLoss;	/* *EST* */
+	Lightgun = def_Lightgun;		/* *EST* */
+	LGadjust = def_LGadjust;		/* *EST* */
 }
 

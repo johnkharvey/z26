@@ -6,8 +6,8 @@
 ;* Based in part on David Crane's U.S. Patent 4,644,495, Feb 17,1987.
 ;*
 
-; z26 is Copyright 1997-1999 by John Saeger and is a derived work with many
-; contributors.  z26 is released subject to the terms and conditions of the 
+; z26 is Copyright 1997-2000 by John Saeger and is a derived work with many
+; contributors.	 z26 is released subject to the terms and conditions of the 
 ; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ; Please see COPYING.TXT for details.
 
@@ -19,7 +19,7 @@ Pitfall2	db	0		; tell RIOT timer to clock the music
 
 ;P2_Flags	db	8 dup (?)	; \
 ;P2_Counters	db	16 dup (?)	;  \
-;P2_Top		db	8 dup (?)	;   these are in memory.asm
+;P2_Top		db	8 dup (?)	;	  these are in memory.asm
 ;P2_Bottom	db	8 dup (?)	;  /
 ;P2_Enable	db	8 dup (?)	; /
 ;P2_Music_Top	dw	8 dup (?)
@@ -226,7 +226,7 @@ R_P2:
 
 W_P2:
 	cmp	si,1040h		; write in range?
-	jb	P2_NoIO			;   no
+	jb	P2_NoIO			;	  no
 	and	esi,07fh
 	jmp	[P2_Vectors+esi*2]
 
@@ -442,21 +442,21 @@ P2_Read_Sound:
 Clock_Channel macro arg1
 local MusicZero, ChannelDone
 
-        test    [P2_Enable + arg1],010h           ; channel enabled?
+	test	[P2_Enable + arg1],010h		  ; channel enabled?
 	jz	ChannelDone			;   no
-        mov     dx,[P2_Music_Count + arg1*2]      ; use old counter value for flag test
-        dec     word ptr [P2_Music_Count + arg1*2]; decrement for current fetch
-        cmp     dx,[P2_Music_Bottom + arg1*2]     ; equal to bottom value?
+	mov	dx,[P2_Music_Count + arg1*2]	  ; use old counter value for flag test
+	dec	word ptr [P2_Music_Count + arg1*2]; decrement for current fetch
+	cmp	dx,[P2_Music_Bottom + arg1*2]	  ; equal to bottom value?
 	je	MusicZero			;   yes, clear flag
 	cmp	dx,-1				; time to reset?
 	jnz	ChannelDone			;   no
-        mov     dx,[P2_Music_Top + arg1*2]        ;   yes, reset counter
-        mov     word ptr [P2_Music_Count + arg1*2],dx
-        mov     [P2_Flags + arg1],0ffh            ; set flag
+	mov	dx,[P2_Music_Top + arg1*2]	  ;   yes, reset counter
+	mov	word ptr [P2_Music_Count + arg1*2],dx
+	mov	[P2_Flags + arg1],0ffh		  ; set flag
 	jmp	ChannelDone
 
 MusicZero:
-        mov     [P2_Flags + arg1],0               ; clear flag
+	mov	[P2_Flags + arg1],0		  ; clear flag
 
 ChannelDone:
 	endm

@@ -1,7 +1,7 @@
 ; init.asm -- initialize all data in z26 asm modules
 
-; z26 is Copyright 1997-1999 by John Saeger and is a derived work with many
-; contributors.  z26 is released subject to the terms and conditions of the 
+; z26 is Copyright 1997-2000 by John Saeger and is a derived work with many
+; contributors.	 z26 is released subject to the terms and conditions of the 
 ; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ; Please see COPYING.TXT for details.
 
@@ -17,7 +17,7 @@ StartTicks	dd	0		; ticks at start
 StopTicks	dd	0		; ticks at finish
 
 ScanLine	dw	1		; current scan line
-TopLine		dw	0		; was 36     top line of display
+TopLine		dw	0		; was 36	    top line of display
 BottomLine	dw	0		; was 36+200 bottom line of display
 
 OldCFirst	dw	0		; remember original CFirst
@@ -132,10 +132,25 @@ PUBLIC _Use50Hz
 _Use50Hz	db	0		; O.K. to use 50Hz video modes
 
 PUBLIC _KeyPad
-_KeyPad         db      0               ; which keypad to emulate *EST*
+_KeyPad		db	0		; which keypad to emulate *EST*
 
 PUBLIC _Driving
-_Driving        db      0               ; emulate driving controller *EST
+_Driving	db	0		; emulate driving controller *EST
+
+PUBLIC _BSType
+_BSType		db	0		; override bankswitching type *EST*
+
+PUBLIC _MouseBase
+_MouseBase	db	0ffH		; paddle to emulate with mouse
+					; 0ffH = joystick *EST*
+PUBLIC _SimColourLoss
+_SimColourLoss	db	0		; simulate PAL colour loss *EST*
+
+PUBLIC _Lightgun
+_Lightgun	db	0		; emulate lightgun *EST*
+					;   and adjust horizontally
+PUBLIC _LGadjust
+_LGadjust	dw	5		; adjust lightgun vertically *EST*
 
 ; *** new stuff ***
 

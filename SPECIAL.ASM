@@ -2,8 +2,8 @@
 ;* do special setup for recognized cartridges
 ;*
 
-; z26 is Copyright 1997-1999 by John Saeger and is a derived work with many
-; contributors.  z26 is released subject to the terms and conditions of the 
+; z26 is Copyright 1997-2000 by John Saeger and is a derived work with many
+; contributors.	 z26 is released subject to the terms and conditions of the 
 ; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ; Please see COPYING.TXT for details.
 
@@ -25,7 +25,7 @@ SSFIND_Loop:
 	je	SSFIND_Done
 	test	edx,0ffff0000h		; top word set ?
 	jnz	SSFIND_TestDouble	;   yes, do full dword test
-	cmp	ax,dx			;   no, test words
+	cmp	ax,dx			;	 no, test words
 	je	SSFIND_Done		; match
 	jmp	SSFIND_Loop
 
@@ -371,7 +371,7 @@ SSLINE_Loop:
 	je	SSLINE_SearchDone
 	test	edx,0ffff0000h		; top word set ?
 	jnz	SSLINE_TestDouble	;   yes, do full dword test
-	cmp	ax,dx			;   no, test words
+	cmp	ax,dx			;	 no, test words
 	je	SSLINE_SetLine		; match
 	inc	si
 	jmp	SSLINE_Loop
@@ -989,6 +989,8 @@ SSPADDLE:
 	je	SPG0
 	cmp	eax,055706h		; bachlrtt
 	je	SPG0
+        cmp     eax,0852b2h             ; backgam
+	je	SPG0
 	cmp	eax,062e00h		; beatem
 	je	SPG0
 	cmp	eax,03b06fh		; blakjack
@@ -997,6 +999,8 @@ SSPADDLE:
 	je	SPG0
 	cmp	eax,0683f6h		; bugs
 	je	SPG0
+	cmp	eax,03d843h		; canyonb
+	je	SPG1
 	cmp	eax,07e271h		; casino
 	je	SPG0
 	cmp	eax,05485dh		; circatri
@@ -1031,6 +1035,8 @@ SSPADDLE:
 	je	SPG0
 	cmp	eax,06ae62h		; piececke
 	je	SPG0
+	cmp	eax,0751c3h		; sagent
+	je	SPG0
 	cmp	eax,06eaa5h		; solrstrm
 	je	SPG0
 	cmp	eax,03978ch		; stplchse
@@ -1048,8 +1054,8 @@ SSPADDLE:
 	cmp	eax,07e2eah		; warplock
 	je	SPG0
 
-
 	jmp	SSP
+
 
 SPG0:	mov	dx,0600h		; sensitivity 3, paddle 0
 	jmp	SPGSet
@@ -1068,6 +1074,39 @@ SPGSkipSensitivity:
 	jne	SPGSkipKeyBase
 	mov	[_KeyBase],dl
 SPGSkipKeyBase:
+	cmp	[_MouseBase],0ffh	; *EST*
+	jne	SPGSkipMouseBase
+	mov	[_MouseBase],dl
+SPGSkipMouseBase:
+
+	mov	[MPdirection],0
+	cmp	eax,03b0a9h		; 32in1-09
+	je	SD01
+	cmp	eax,054e06h		; bachelor
+	je	SD01
+	cmp	eax,055706h		; bachlrtt
+	je	SD01
+        cmp     eax,0852b2h             ; backgam
+        je      SD03
+	cmp	eax,03b06fh		; blakjack
+	je	SD01
+	cmp	eax,03d843h		; canyonb
+	je	SD03
+	cmp	eax,07e271h		; casino
+	je	SD01
+	cmp	eax,08929fh		; mpong10
+	je	SD03
+	cmp	eax,03978ch		; stplchas
+	je	SD01
+	cmp	eax,035e7eh		; vidolymp
+	je	SD03
+
+	jmp	SSP
+
+SD01:	mov	[MPdirection],1
+	jmp	SSP
+
+SD03:	mov	[MPdirection],3
 	jmp	SSP
 
 ;*
@@ -1084,7 +1123,7 @@ SPGSkipKeyBase:
 ; don't have Traffic
 
 SSP:	cmp	[_PaletteNumber],0ffh	; did user specify a palette number ?
-	jne	SSAU			;   yes, don't override
+	jne	SSAU			;	yes, don't override
 
 	cmp	eax,03f28eh		; 32in1-01
 	je	SSPAL
@@ -1204,15 +1243,15 @@ SSAUQ:
 SetP1Hard:
 	cmp	ax,094a9h
 	je	SP1HARD
-;        jmp     SetupLong
-        jmp     SSKEYPAD
+;	 jmp	 SetupLong
+	jmp	SSKEYPAD
 
 SP1HARD:
 	mov	dl,[_IOPortB]		; p1 hard
 	or	dl,128
 	mov	[_IOPortB],dl
-;        jmp     SetupLong
-        jmp     SSKEYPAD
+;	 jmp	 SetupLong
+	jmp	SSKEYPAD
 
 
 ;*
@@ -1220,49 +1259,79 @@ SP1HARD:
 ;*
 
 SSKEYPAD:
-        cmp     eax,039135h             ; concentr.bin
-        je      SKP3
-        cmp     eax,0fffb5h             ; alphbeam.bin
-        je      SKP3
-        cmp     eax,084398h             ; basic.bin
-        je      SKP3
-        cmp     eax,0d8234h             ; eggcatch.bin
-        je      SKP3
-        cmp     eax,03cccdh             ; braingms.bin
-        je      SKP3
-        cmp     eax,03a688h             ; codebrk.bin
-        je      SKP3
-        cmp     eax,0ddca2h             ; cookmons.bin
-        je      SKP3
-        cmp     eax,0a31dfh             ; grover.bin
-        je      SKP3
-        cmp     eax,038191h             ; magicard.bin
-        je      SKP3
-        cmp     eax,0e2b06h             ; oscar.bin
-        je      SKP3
-        cmp     eax,09fbedh             ; starraid.bin
-        je      SKP2
-        jmp     SSDRIVING
+	cmp	eax,039135h		; concentr.bin
+	je	SKP3
+	cmp	eax,0fffb5h		; alphbeam.bin
+	je	SKP3
+	cmp	eax,084398h		; basic.bin
+	je	SKP3
+	cmp	eax,0d8234h		; eggcatch.bin
+	je	SKP3
+	cmp	eax,03cccdh		; braingms.bin
+	je	SKP3
+	cmp	eax,03a688h		; codebrk.bin
+	je	SKP3
+	cmp	eax,0ddca2h		; cookmons.bin
+	je	SKP3
+	cmp	eax,0a31dfh		; grover.bin
+	je	SKP3
+	cmp	eax,038191h		; magicard.bin
+	je	SKP3
+	cmp	eax,0e2b06h		; oscar.bin
+	je	SKP3
+	cmp	eax,09fbedh		; starraid.bin
+	je	SKP2
+	jmp	SSDRIVING
 
 SKP2:
-        mov     [_KeyPad],2
-        jmp     SSDRIVING
+	mov	[_KeyPad],2
+	jmp	SSDRIVING
 
 SKP3:
-        mov     [_KeyPad],3
-        jmp     SSDRIVING
+	mov	[_KeyPad],3
+	jmp	SSDRIVING
 
 ;*
 ;* process requestes for driving controller games
 ;*
 
 SSDRIVING:
-        cmp     eax,039318h             ; indy_500.bin
-        je      SDrC
-        jmp     SetupLong
+	cmp	eax,039318h		; indy_500.bin
+	je	SDrC
+	jmp	SSLIGHTGUN
 SDrC:
-        mov     [_Driving],1
-        jmp     SetupLong
+	mov	[_Driving],1
+	jmp	SSLIGHTGUN
+
+;*
+;* process requestes for lightgun games
+;*
+
+SSLIGHTGUN:
+	cmp	[_Lightgun],0
+	jne	SetupLong
+
+	cmp	eax,01fb7fbh		; shootacd.bin
+	je	SSLG1
+	cmp	eax,01a3410h		; sentinel
+	je	SSLG2
+	cmp	eax,0d62feh		; guntest4.bin
+	je	SSLG3
+	jmp	SetupLong
+SSLG1:
+	mov	[_Lightgun],7
+	mov	[_LGadjust],11
+	jmp	SetupLong
+SSLG2:
+	mov	[_Lightgun],8
+	mov	[_LGadjust],0
+	jmp	SetupLong
+SSLG3:
+	mov	[_Lightgun],9
+	mov	[_LGadjust],5
+	mov	[LG_WrapLine],75
+	jmp	SetupLong
+
 
 ;*
 ;* select how sharp to make the auto-sync test (bailout)
@@ -1364,15 +1433,15 @@ NotLong:
 
 BailoutLong:
 	mov	[BailoutLine],350
-        jmp     SetupDone
+	jmp	SetupDone
 
 BailoutShort:
 	mov	[BailoutLine],270
-        jmp     SetupDone
+	jmp	SetupDone
 
 BailoutVeryLong:
 	mov	[BailoutLine],5000
-        jmp     SetupDone
+	jmp	SetupDone
 
 SetupDone:
 	ret

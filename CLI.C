@@ -4,9 +4,9 @@
 
 
 /*
-** z26 is Copyright 1997-1999 by John Saeger and is a derived work with many
+** z26 is Copyright 1997-2000 by John Saeger and is a derived work with many
 ** contributors.  z26 is released subject to the terms and conditions of the 
-** GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
+** GNU General Public License Version 2 (GPL).	z26 comes with no warranty.
 ** Please see COPYING.TXT for details.
 */
 
@@ -86,6 +86,7 @@ int cli_LoadROM(unsigned char *filename)
 	FILE *fp;
 	int i, j;
 	int ch;
+	unsigned int MBcount;
 	unsigned char *p;
 
 	fp = fopen(filename, "rb");
@@ -104,6 +105,18 @@ int cli_LoadROM(unsigned char *filename)
 		XChecksum = (XChecksum << 1) ^ ch;
 		++CartSize;
 		if (CartSize > 33998) break;
+	}
+
+	if(CartSize==33999)
+	{
+	   fseek(fp, 32768, SEEK_SET);
+	   MBcount=0;
+	   while ( (ch = getc(fp)) != EOF )
+	   {
+		Megaboy[MBcount] = ch;
+		++MBcount;
+		if (MBcount==32768) break;
+	   }
 	}
 
 	fclose(fp);
@@ -146,11 +159,17 @@ int cli_LoadROM(unsigned char *filename)
 **  ->	-j <n>	do joystick
 **	-p <n>  do paddle game with sensitivity <n>
 **	-k <n>  set keyboard player base
-**      -t      trace instructions
+**	-t	trace instructions
 **  ->	-0      player 0 hard
 **  ->	-1      player 1 hard
-**      -y <n>  emulate none <0>, left <1>, right <2> or both <3> keypads *EST*
-**      -w      emulate driving controllers *EST*
+**	-y <n>	emulate none <0>, left <1>, right <2> or both <3> keypads *EST*
+**	-w	emulate driving controllers *EST*
+**	-g	overrride bankswitching type detection *EST*
+**	-m <n>	paddle to emulate with mouse; 0xff=joystick *EST*
+**	-o	simulate PAL colour loss *EST*
+**	-l <n>	emulate lightgun and adjust horizontally *EST*
+**	-a <n>	adjust lightgun vertically *EST*
+**	-n	show line number count *EST*
 */
 
 FILE *log;
@@ -180,6 +199,7 @@ void cli_InterpretParm(char *p)
 	case 'c':  	PaletteNumber = parm;			break;
 	case 'p':  	PaddleGame = (parm & 0xf) << 1;		break;
 	case 'k':  	KeyBase = parm & 3;			break;
+	case 'm':	MouseBase = parm & 3;			break;
 	case 't':  	if (parm) TraceCount = parm; else TraceCount = 0xff;
 			TraceEnabled = 1;
 			log = fopen("z26.log", "w");
@@ -197,9 +217,14 @@ void cli_InterpretParm(char *p)
 			else
 				NoRetrace = parm;
 			break;
-        case 'y':       KeyPad = parm & 3;                     break; /* *EST* */
-        case 'w':       Driving = 1;                           break; /* *EST* */ 
-        default:   	printf("Bad command line switch seen: -%c", ch);
+	case 'y':	KeyPad = parm & 3;		       break; /* *EST* */
+	case 'w':	Driving = 1;			       break; /* *EST* */ 
+	case 'g':	BSType = parm & 7;		       break; /* *EST* */
+	case 'o':	SimColourLoss = 1;		       break; /* *EST* */
+	case 'l':	Lightgun = parm;		       break; /* *EST* */
+	case 'a':	LGadjust = parm;		       break; /* *EST* */
+	case 'n':	ShowLineCount = 1;		       break; /* *EST* */
+	default:   	printf("Bad command line switch seen: -%c", ch);
 		   	exit(1);
 	}
 }
@@ -248,7 +273,7 @@ void cli_ReadParms(void)
 
 	fp = fopen("z26.cli", "r");
 	if (fp == NULL)
-                return; /* was return(0); *EST* */
+		return; /* was return(0); *EST* */
 	i = 0;
 
 	while ( (( ch = fgetc(fp)) != EOF) && (i <= 1022) )
@@ -311,13 +336,13 @@ void cli_CommandLine(int argc, char *argv[])
 		printf("File not found... %s", FileName);
 		exit(1);
 	}
-
+/*
 	if (CartSize > 32768)
 	{
 		printf("Unsupported file.");
 		exit(1);
 	}
-
+*/
 	if (DoChecksum)
 	{
 		printf("%lx checksum -- %lx alternative checksum\n", Checksum, XChecksum);

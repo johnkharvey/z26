@@ -2,8 +2,8 @@
 ;* 6507 CPU emulator for z26
 ;*
 
-; z26 is Copyright 1997-1999 by John Saeger and is a derived work with many
-; contributors.  z26 is released subject to the terms and conditions of the 
+; z26 is Copyright 1997-2000 by John Saeger and is a derived work with many
+; contributors.	 z26 is released subject to the terms and conditions of the 
 ; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ; Please see COPYING.TXT for details.
 
@@ -139,8 +139,8 @@ readzx	macro	op1,op2		; zero extended
 	movzx	op1,byte ptr [si]
 	endm
 
-slack_read macro arg1             ; read and throw away result
-        mov     si,arg1
+slack_read macro arg1		  ; read and throw away result
+	mov	si,arg1
 	read_bank
 	endm
 
@@ -464,7 +464,7 @@ useztest macro	op1		; use to test Z
 	mov	[RZTest],op1
 	endm
 
-usentest macro	op1		; use to test N	     
+usentest macro	op1		; use to test N		 
 	mov	[RNTest],op1
 	endm
 
@@ -823,7 +823,7 @@ SBCBCD:	push	cx
 	sub	ax,dx		; subtract top nybbles
 	test	cx,010h		; bottom nybble underflow ?
 	je	SBCD_5
-	add	ax,-16		;   yes, fixup
+	add	ax,-16		;	 yes, fixup
 	mov	dx,cx
 	add	dx,-6
 	jmp	SBCD_6
@@ -833,7 +833,7 @@ SBCD_6:	and	dx,0fh
 	or	ax,dx		; combine lower and upper nybble result
 	test	ax,0100h	; upper nybble underflow ?
 	je	SBCD_7
-	sub	ax,060h		;   yes, fixup
+	sub	ax,060h		;	  yes, fixup
 SBCD_7:	mov	ah,[_flag_carry]
 	mov	dl,[_value]	; SBC must preserve dl for ISB
 
@@ -1069,7 +1069,7 @@ DoBranch:
 	je	dbjn		;   no
 
 	xchg	bh,dh
-	slack_fetch		;   yes, another cycle
+	slack_fetch		;	  yes, another cycle
 	xchg	bh,dh
 
 dbjn:	slack_fetch		; branch is taken -- one extra cycle
@@ -1126,7 +1126,7 @@ PutPSW:	mov	[RNTest],dh	; PSW will do for N
 ;* opcode vector table
 ;*
 ;* note:  the jam handler should be defined externally
-;*        (since it is typically environment dependent)
+;*	  (since it is typically environment dependent)
 ;*
 
 vectors label word

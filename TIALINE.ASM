@@ -1,11 +1,11 @@
 ;*     
-;*  generate a raster line        
+;*  generate a raster line	  
 ;*
 ;*  3-18-99  -- break ground
 ;*
 
-; z26 is Copyright 1997-1999 by John Saeger and is a derived work with many
-; contributors.  z26 is released subject to the terms and conditions of the 
+; z26 is Copyright 1997-2000 by John Saeger and is a derived work with many
+; contributors.	 z26 is released subject to the terms and conditions of the 
 ; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ; Please see COPYING.TXT for details.
 
@@ -27,13 +27,17 @@
 
 .data
 
+LooseColour		dd     0ffffffffh     ; and this with pixels to turn
+					      ;	  frame gray *EST*
+					      ;	  see tiawrite.asm
+
 ;*
 ;* Table of low level rendering routines.
 ;* Index with the ActiveObjects variable.
 ;*
 ;* note:  If any delays are in effect, be sure to set the DL_BIT in the
-;*        ActiveObjects variable to ensure that delays are processed
-;*        correctly.
+;*	  ActiveObjects variable to ensure that delays are processed
+;*	  correctly.
 ;*
 
 align 2
@@ -47,16 +51,16 @@ align 2
 
 RenderingRoutine label word
 
-	dw	RenderBackground	;  0
-	dw	RenderPlayfield		;  1
+	dw	RenderBackground	;	0
+	dw	RenderPlayfield		;	1
 
 	dw	BK_BL			;  2
 	dw	PF_BL			;  3
 
 	dw	BK_P1			;  4
 	dw	PF_P1			;  5
-	dw	BK_P1_BL		;  6
-	dw	PF_P1_BL		;  7
+	dw	BK_P1_BL		;	 6
+	dw	PF_P1_BL		;	 7
 
 	dw	BK_M1			;  8
 	dw	PF_M1			;  9
@@ -155,13 +159,13 @@ CosmicGraphicsTable	db	040h,040h,0c0h,0
 
 DefineObjectVars macro arg1
 ALIGN 2
-arg1&_Table       dw      arg1&_Sprite
-arg1&_Position    dw      0
-arg1&_Size        dw      arg1&_SpriteSize
-arg1&_Motion      dw      0
-arg1&_Graphics    db      0
-arg1&_Delayed     db      0
-arg1&_TripleFlag  db      0
+arg1&_Table	  dw	  arg1&_Sprite
+arg1&_Position	  dw	  0
+arg1&_Size	  dw	  arg1&_SpriteSize
+arg1&_Motion	  dw	  0
+arg1&_Graphics	  db	  0
+arg1&_Delayed	  db	  0
+arg1&_TripleFlag  db	  0
 	endm
 
 DefineObjectVars BL
@@ -204,18 +208,18 @@ SetObjectBit macro arg1
 local done, nowrap
 
 	movzx	si,cl
-        sub     si,[arg1&_Position]
+	sub	si,[arg1&_Position]
 	jae	nowrap
 	add	si,160
 nowrap:	
-        cmp     si,[arg1&_Size]
+	cmp	si,[arg1&_Size]
 	ja	done
 	add	si,si
-        add     si,[arg1&_Table]
-        mov     al,[arg1&_Graphics]
+	add	si,[arg1&_Table]
+	mov	al,[arg1&_Graphics]
 	test	al,[si]
 	jz	done
-        or      bl,arg1&_BIT
+	or	bl,arg1&_BIT
 done:
 	endm
 
@@ -250,12 +254,12 @@ local BKPFonly
 
 	movzx	ebx,dh			; PF bit
 
-        arg1
-        arg2
-        arg3
-        arg4
-        arg5
-        arg6
+	arg1
+	arg2
+	arg3
+	arg4
+	arg5
+	arg6
 
 	cmp	bl,2
 	jb	BKPFonly
@@ -266,6 +270,7 @@ local BKPFonly
 
 BKPFonly:
 	mov	ax,[ColorValue+ebx*2]
+	and	ax,word ptr [LooseColour]	; *EST*
 	add	di,2
 	and	ax,[RenderingHBLANK]
 	inc	cl
@@ -295,7 +300,7 @@ PF_loop:
 	add	bp,4
 
 PIX_loop:
-        RenderPixel arg1, arg2, arg3, arg4, arg5, arg6
+	RenderPixel arg1, arg2, arg3, arg4, arg5, arg6
 	ja	done
 	
 	test	di,7
@@ -319,7 +324,7 @@ ALIGN 2
 	xor	dh,dh
 
 BK_Loop:
-        RenderPixel arg1, arg2, arg3, arg4, arg5, arg6
+	RenderPixel arg1, arg2, arg3, arg4, arg5, arg6
 	jbe	BK_Loop
 
 done:
@@ -426,13 +431,17 @@ RenderPlayfield:
 	shl	eax,16
 	mov	ax,[BK_Color]		; 32-bit background color
 
+	and	eax,[LooseColour]	; *EST*
+
 	mov	dx,[PF_Color]
 	shl	edx,16
 	mov	dx,[PF_Color]		; 32-bit playfield color
 
+	and	edx,[LooseColour]	; *EST*
+
 NextPFTest:
 	test	ebp,[si]		; setting a playfield bit ?
-	jnz	PFLoop			;   yes
+	jnz	PFLoop			;	  yes
 
 BKLoop:
 	mov	es:[di],ax
@@ -494,6 +503,8 @@ RenderBackground:
 	shl	eax,16
 	mov	ax,[BK_Color]		; 32-bit background color
 
+	and	eax,[LooseColour]	; *EST*
+
 RenderSolid:				; << enter here to render EAX
 	push	cx
 	sub	ch,cl
@@ -537,7 +548,7 @@ RenderHBLANK:
 ;*  render blackness
 ;*
 ;*  note:  This approach causes collisions not to be processed during
-;*         vertical blanks.  This may not be correct.
+;*	   vertical blanks.  This may not be correct.
 ;*
 
 ALIGN 2
@@ -571,7 +582,7 @@ RenderPixels:
 	cmp	ch,75			; final pointer before end of HBlank?
 	jbe	RenderHBLANK		;   yes, render blackness
 
-	mov	al,ch			;   no, render pixels through HBlank
+	mov	al,ch			;	 no, render pixels through HBlank
 	push	ax
 	mov	ch,75
 	call	RenderHBLANK
@@ -582,9 +593,9 @@ RenderPixels:
 
 RenderMiddle:
 	cmp	ch,227			; final request for this line?
-	jne	RenderPartial		;   no
+	jne	RenderPartial		;	no
 	test	[ActiveObjects],3	; PF or Ball active ?
-	jz	RenderShortcutBK	;   no, take a shortcut
+	jz	RenderShortcutBK	;	 no, take a shortcut
 
 RenderPartial:
 	cmp	cl,147			; render pointer past mid-playfield?
@@ -592,7 +603,7 @@ RenderPartial:
 	cmp	ch,147			; final pointer before mid-playfield?
 	jbe	RenderFinal		;   yes
 
-	mov	al,ch			;   no, render pixels through mid-playfield
+	mov	al,ch			;	 no, render pixels through mid-playfield
 	push	ax
 	mov	ch,147
 	call	DoRender
@@ -632,7 +643,7 @@ RenderDone:
 ;* providing the delays don't need to straddle a line.
 ;*
 ;* note: Ignoring invisible regions might cause off-screen collisions to be 
-;*       missed.
+;*	 missed.
 ;*
 
 ALIGN 2
@@ -647,13 +658,13 @@ CatchUpPixels:
 	add	ch,ch
 	add	ch,[RClock]		;   no, compute last clock to render
 	dec	ch
-	add	ch,dl			;       add the extra offset
+	add	ch,dl			;	     add the extra offset
 
 	cmp	ch,227			; request too many pixels?
 	jbe	CatchupGo		;   no
 
 CatchupLast:
-	mov	ch,227			;   yes, limit to 227
+	mov	ch,227			;	  yes, limit to 227
 CatchupGo:
 	push	si			; for the sake of TIA write handlers
 	call	RenderPixels
@@ -720,9 +731,9 @@ nTIALineTo:
 NotCosmic:
 	mov	bx,[ScanLine]
 	cmp	bx,[TopLine]		; line before first displayable?
-	jb	nTIANoGenerate		;   yes, don't render
+	jb	nTIANoGenerate		;	yes, don't render
 	cmp	bx,[BottomLine]		; line after last displayable?
-	jae	nTIANoGenerate		;   yes, don't render
+	jae	nTIANoGenerate		;	 yes, don't render
 
 ;	mov	ax,[MaxLines]
 ;	imul	ax,320
@@ -732,7 +743,7 @@ NotCosmic:
 	shl	ax,6			; *320
 
 	cmp	[DisplayPointer],ax	; render pointer past end of displayable?
-	jae	nTIANoGenerate		;   yes, don't render
+	jae	nTIANoGenerate		;	 yes, don't render
 
 	push	bp			; rendering -- free up a register
 
@@ -743,7 +754,7 @@ NotCosmic:
 	mov	[HBlanking],-1		; assume we're not HBlanking
 	cmp	[SetHBlanking],0	; should we be HBlanking?
 	je	NoColumnBlank		;   no
-	mov	[HBlanking],0		;   yes, start HBlanking
+	mov	[HBlanking],0		;	yes, start HBlanking
 
 NoColumnBlank:
 	mov	[SetHBlanking],0	; clear the set HBlanking flag
@@ -751,8 +762,8 @@ NoColumnBlank:
 	call	SetupMultiSpriteTrick
 
 	cmp	[RClock],CYCLESPERSCANLINE ; done before we started ?
-	jae	nLastPixels		   ;   yes, WSYNC straddled a line
-					;	    render pixels w/o CPU
+	jae	nLastPixels		   ;	 yes, WSYNC straddled a line
+					;		   render pixels w/o CPU
 
 	mov	[Invisible],0		; tell CatchUpPixels to render pixels
 	nDoInstructions			; do a line full of instructions
@@ -762,8 +773,30 @@ nLastPixels:
 	call	RenderPixels
 
 nTIAExit:				; we've finished the scanline...
-	call	ModeXCopyLine
 	mov	[DisplayPointer],di
+
+	cmp	[_Lightgun],0
+	jz	NoLightGun
+	mov	ax,[ScanLine]
+;	 add	 ax,4
+	cmp	ax,[MLG_Ypos]
+	jne	nSNL1
+	call	ShowLightgun1		 ; in mouse.asm
+	jmp	NoLightGun
+
+nSNL1:	dec	ax
+	cmp	ax,[MLG_Ypos]
+	jne	nSNL2
+	call	ShowLightgun0
+	jmp	NoLightGun
+
+nSNL2:	add	ax,2
+	cmp	ax,[MLG_Ypos]
+	jne	NoLightGun
+	call	ShowLightgun2
+
+NoLightGun:
+	call	ModeXCopyLine
 
 	pop	bp
 	ret

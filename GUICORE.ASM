@@ -1094,27 +1094,34 @@ public _help_1
 _help_1 label byte
 
 db	'`y`UPausing a Game`u`n`n'
-db	'     `op`d -- pause`n'
-db	' `oEnter`d -- resume`n`n'
+db      '    `op`d -- pause`n'
+db      '`oEnter`d -- resume`n`n'
 
 db	'`y`UVideo Modes`u`n`n'
-db      ' `oAlt 0 `d-- 320x200 70Hz (standard mode 13)`n'
-db      ' `oAlt 1 `d-- 320x200 60Hz`n'
-db      ' `oAlt 2 `d-- 320x200 60Hz narrow`n'
-db      ' `oAlt 3 `d-- 320x204 60Hz narrow`n'
-db      ' `oAlt 4 `d-- 320x240 60Hz (standard Mode-X)`n'
-db      ' `oAlt 5 `d-- 320x240 60Hz narrow`n'
-db      ' `oAlt 6 `d-- 320x240 60Hz scanline`n'
-db      ' `oAlt 7 `d-- 320x480 60Hz very narrow and tall`n'
-db      ' `oAlt 8 `d-- 320x240 60Hz intense scanline`n`n'
+db      '`oAlt 0 `d-- 320x200 70Hz (standard mode 13)`n'
+db      '`oAlt 1 `d-- 320x200 60Hz`n'
+db      '`oAlt 2 `d-- 320x200 60Hz narrow`n'
+db      '`oAlt 3 `d-- 320x204 60Hz narrow`n'
+db      '`oAlt 4 `d-- 320x240 60Hz (standard Mode-X)`n'
+db      '`oAlt 5 `d-- 320x240 60Hz narrow`n'
+db      '`oAlt 6 `d-- 320x240 60Hz scanline`n'
+db      '`oAlt 7 `d-- 320x480 60Hz very narrow and tall`n'
+db      '`oAlt 8 `d-- 320x240 60Hz intense scanline`n`n'
 
 db	'`y`UScrolling the Screen`u`d`n`n'
-db	' `oPgUp`d -- scroll screen up.`n'
-db	' `oPgDn`d -- scroll screen down.`n'
-db	' `oHome`d -- return to default screen position or top of file.`n`n'
+db      ' `oPgUp`d -- scroll screen up.`n'
+db      ' `oPgDn`d -- scroll screen down.`n'
+db      ' `oHome`d -- return to default screen position or top of file.`n`n'
 
 db	'`y`UScreen Capture`u`d`n`n'
-db	'    `o=`d -- PCX screen capture`n`n'
+db      '    `o=`d -- PCX screen capture`n`n'
+
+db      '`y`UMouse Handling in Paddle Emulation`u`d`n`n'
+db      '  `oTab`d -- switch between horiz. normal, vert. normal, horiz. reversed and vert. reversed`n`n'
+
+db      '`y`UTrace Mode`u`d`n`n'
+db      '  `oF11`d -- resume tracing`n'
+db      '  `oF12`d -- interrupt tracing`n`n'
 
 db	0
 
@@ -1129,29 +1136,51 @@ db	'  `o-1`d  -- start with player 1 hard`n`n'
 db	'  `o-5`d  -- enable 50Hz video modes`n`n'
 db	'  `o-b`d  -- start in black and white mode`n`n'
 db	'  `o-c`yN`d -- color palette  (`y0`d = NTSC  `y1`d = PAL)`n`n'
-db	'  `o-d`yN`d -- DSP processing level  (`y1`d = low   `y2`d = high)`n`n'
+db      '  `o-d`yN`d -- DSP processing level  (`y1`d = low   `y2`d = high)`n`n'
 db	'  `o-f`yN`d -- run `yN`d frames and print timing results`n`n'
-db	'  `o-j`yN`d -- joystick option    (`y0`d = keyboard only (analog joystick off),`n'
-db	'                             `y2`d = reverse keyboard controls)`n`n'
-db	'  `o-k`yN`d -- paddle to emulate   (`y0`d - `y3`d)`n'
-db	'  `o-p`yN`d -- paddle sensitivity  (`y1`d - `y15`d)`n`n'
+db      '  `o-g`yN`d -- override game type  (`y1`d - Commavid extra RAM,`n'
+db      '                              `y2`d - 8K superchip,`n'
+db      '                              `y3`d - 8K Parker Brothers,`n'
+db      '                              `y4`d - 8K Tigervision,`n'
+db      '                              `y5`d - 8K Decathlon & Robot Tank,`n'
+db      '                              `y6`d - 16K superchip,`n'
+db      '                              `y7`d - 16K M-Network)`n`n'
+db      '  `o-j`yN`d -- joystick option     (`y0`d = keyboard only (analog joystick off),`n'
+db      '                              `y2`d = reverse keyboard controls)`n`n'
+db      '  `o-k`yN`d -- paddle to emulate with keyboard  (`y0`d - `y3`d)`n'
+db      '  `o-p`yN`d -- paddle sensitivity  (`y1`d - `y15`d -- keyboard only)`n'
+db      '  `o-m`yN`d -- paddle to emulate with mouse  (`y0`d - `y3`d)`n`n'
+db      '  `o-l`yN`d -- enable lightgun emulation and adjust by `yN`d cycles`n'
+db      '  `o-a`yN`d -- adjust lightgun emulation by `yN`d scanlines`n`n'
+db      '  `o-n`d  -- show line number count after end of emulation`n`n'
+db      '  `o-o`d  -- simulate PAL colour loss`n`n'
 db	'  `o-q`d  -- quiet`n`n'
 db	'  `o-r`d  -- run full speed  (vsync off)`n'
-db	'  `o-r`yN`d -- run at `yN`d frames per second`n`n'
-db	'  `o-s`yN`d -- sound option   (`y0`d = show diagnostic messages,`n'
-db	'                         `y1`d = use PC speaker,`n'
-db	'                         `y2`d = run Soundblaster at 15700 Hz)`n`n'
-db	'  `o-u`yN`d -- start scanning game at line `yN`d`n`n'
-db	'  `o-v`yN`d -- start in video mode `yN`d`n`n'
-db      '  `o-x`d  -- print out checksum of cartridge`n`n'
-db      '  `o-y`yN`d -- emulate keyboard controller  (`y1`d = left   `y2`d = right   `y3`d = both)`n`n'
-db      '  `o-w`d  -- emulate driving controllers`n'
+db      '  `o-r`yN`d -- run at `yN`d frames per second`n'
 
 db	0
 
 
 public _help_3
 _help_3 label byte
+db      '`y`UCommand Line Switches (continued)`u`d`n`n'
+
+db	'  `o-s`yN`d -- sound option   (`y0`d = show diagnostic messages,`n'
+db	'                         `y1`d = use PC speaker,`n'
+db	'                         `y2`d = run Soundblaster at 15700 Hz)`n`n'
+db      '  `o-t`d  -- write code-trace to file Z26.LOG`n`n'
+db	'  `o-u`yN`d -- start scanning game at line `yN`d`n`n'
+db	'  `o-v`yN`d -- start in video mode `yN`d`n`n'
+db      '  `o-w`d  -- emulate driving controllers`n`n'
+db      '  `o-x`d  -- print out checksum of cartridge`n`n'
+db      '  `o-y`yN`d -- emulate keyboard controller  (`y1`d = left   `y2`d = right   `y3`d = both)`n'
+
+
+db	0
+
+
+public _help_4
+_help_4 label byte
 
 db	'`y`UCredits`u`d`n`n'
 db	'     `oPaul Robson`d -- Wrote original A26.`n'

@@ -2,8 +2,8 @@
 ;* z26 joystick code
 ;*
 
-; z26 is Copyright 1997-1999 by John Saeger and is a derived work with many
-; contributors.  z26 is released subject to the terms and conditions of the 
+; z26 is Copyright 1997-2000 by John Saeger and is a derived work with many
+; contributors.	 z26 is released subject to the terms and conditions of the 
 ; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ; Please see COPYING.TXT for details.
 
@@ -60,7 +60,7 @@ JoyCenter proc near
 	mov	[DoJoystick],al		; copy joystick parameter
 
 	cmp	[DoJoystick],0		; doing joystick?
-	jz	NoJoy			;   no
+	jz	NoJoy			;	no
 	call	JoyRead
 
 	test	si,si			; reality check
@@ -162,33 +162,33 @@ JoyTestButtons:
 ; But three seems to be enough too.
 
 	in	al,dx
-        test    al,080h                 ; button four pressed ?
-        jnz     JoyTestB2               ;   no
+	test	al,080h			; button four pressed ?
+	jnz	JoyTestB2		;   no
 
 	in	al,dx
-        test    al,080h                 ; button four pressed ?
-        jnz     JoyTestB2               ;   no
+	test	al,080h			; button four pressed ?
+	jnz	JoyTestB2		;   no
 
 	in	al,dx
-        test    al,080h                 ; button four pressed ?
-        jnz     JoyTestB2               ;   no
+	test	al,080h			; button four pressed ?
+	jnz	JoyTestB2		;   no
 
-        mov     [DumpPorts+1],080h
+	mov	[DumpPorts+1],080h
 
 JoyTestB2:
 	in	al,dx
-        test    al,020h                 ; button two pressed ?
-        jnz     JoyTestB1               ;   no
+	test	al,020h			; button two pressed ?
+	jnz	JoyTestB1		;   no
 
 	in	al,dx
-        test    al,020h                 ; button two pressed ?
-        jnz     JoyTestB1               ;   no
+	test	al,020h			; button two pressed ?
+	jnz	JoyTestB1		;   no
 
 	in	al,dx
-        test    al,020h                 ; button two pressed ?
-        jnz     JoyTestB1               ;   no
+	test	al,020h			; button two pressed ?
+	jnz	JoyTestB1		;   no
 
-        mov     [DumpPorts],080h
+	mov	[DumpPorts],080h
 
 JoyTestB1:
 	in	al,dx
@@ -234,7 +234,7 @@ Joystick endp
 ;* do the actual joystick read
 ;*
 ;* adapted from The Art of Assembly Language Programming
-;*              by Randall Hyde
+;*		by Randall Hyde
 ;*
 
 JoyRead proc near

@@ -2,8 +2,8 @@
 ;* cpu memory and register handlers -- used by the CPU emulator
 ;*
 
-; z26 is Copyright 1997-1999 by John Saeger and is a derived work with many
-; contributors.  z26 is released subject to the terms and conditions of the 
+; z26 is Copyright 1997-2000 by John Saeger and is a derived work with many
+; contributors.	 z26 is released subject to the terms and conditions of the 
 ; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ; Please see COPYING.TXT for details.
 
@@ -13,17 +13,17 @@
 ;* Dan Boris' 2600 schematics show the TIA and RIOT chips hooked up to the
 ;* CPU with the following address lines hooked up.
 ;*
-;*   12 | 11  10  09  08 | 07  06  05  04 | 03  02  01  00 
+;*   12 | 11  10  09  08 | 07  06  05  04 | 03	02  01	00 
 ;* 
-;*    X                     X                                TIA
-;*    X            X        X                                RIOT
+;*    X			    X				     TIA
+;*    X		   X	    X				     RIOT
 ;*
-;* If the 1000h bit (bit 12) is set, it's a ROM access.  This is handled
+;* If the 1000h bit (bit 12) is set, it's a ROM access.	 This is handled
 ;* in banks.asm and we'll never come here.
 ;*
 ;* Otherwise it's a hardware access.
 ;*
-;* If the 200h bit is     set and the 80h bit is     set then it's a RIOT access.
+;* If the 200h bit is	  set and the 80h bit is     set then it's a RIOT access.
 ;* If the 200h bit is not set and the 80h bit is     set then it's a RAM access.
 ;* If the 200h bit is not set and the 80h bit is not set then it's a TIA access.
 ;*
@@ -47,11 +47,11 @@ RetWd		db	0		; byte returned from hardware read
 
 ReadHardware:
 	test	si,0200h		; possible RIOT read?
-	jnz	ReadRiotMaybe		;   yes
+	jnz	ReadRiotMaybe		;	yes
 
 ReadHardwarePage0:
 	test	si,080h			; RAM Read?
-	jz	ReadTIA			;   no
+	jz	ReadTIA			;	  no
 	and	si,0ffh
 	add	si,offset RiotRam-128
 	ret
@@ -109,6 +109,36 @@ ReadCollision:				; read the collision latch
 ReadInputLatches:			; read the input latch
 	cmp	si,0ch
 	jb	ReadDumped
+	cmp	[_Lightgun],0		; *EST*
+	je	RILnoLightgun
+	push	ax
+	mov	ax,[MLG_ShotLine]
+	cmp	[ScanLine],ax
+	jb	RILnoHit
+	mov	al,[RClock]
+	mov	ah,[MLG_ShotCycle]
+	cmp	ah,[LG_WrapLine]	; see mouse.asm
+;	 cmp	 [MLG_ShotCycle],78	 ; 75-78
+	jb	RILnoFix
+	cmp	al,22
+	ja	RILnoFix
+	add	al,76
+RILnoFix:
+	cmp	al,[MLG_ShotCycle]
+
+	jb	RILnoHit
+
+	mov	[RetWd],07fh
+	pop	ax
+	mov	si,offset RetWd
+	ret
+RILnoHit:
+	mov	[RetWd],0ffh
+	pop	ax
+	mov	si,offset RetWd
+	ret	   
+
+RILnoLightgun:
 	and	si,1
 	add	si,offset InputLatch
 	push	ax
@@ -122,13 +152,17 @@ ReadInputLatches:			; read the input latch
 	ret
 	
 ReadDumped:
+	cmp	[_MouseBase],0ffh		; use mouse as paddles ?
+	jne	 RDump1				;   yes, check trigger
 	cmp	dword ptr [_PaddleGame],0	; if not a paddle game
-        je      RetDirect                       ;   get state directly *EST*
-;        je      RetZero                         ;   always return zero (astrblst)
-        and	esi,3
+	je	RetDirect			;   get state directly *EST*
+;	 je	 RetZero			 ;   always return zero (astrblst)
+						; *EST*
+RDump1:
+	and	esi,3
 	mov	edx,dword ptr [ChargeTrigger0 + esi*4]
 	cmp	edx,dword ptr [ChargeCounter]	; this trigger expired ?
-	jbe	TriggerExpired			;   yes
+	jbe	TriggerExpired			;	  yes
 RetZero:or	[RetWd],0
 	mov	si,offset RetWd
 	ret
@@ -139,9 +173,9 @@ TriggerExpired:
 	ret
 	
 RetDirect:
-        and     si,3                            ; return state of dump port
-        add     si,offset DumpPorts             ;   directly (booster grip,
-        push    ax                              ;   keypad etc) *EST*
+	and	si,3				; return state of dump port
+	add	si,offset DumpPorts		;   directly (booster grip,
+	push	ax				;   keypad etc) *EST*
 	mov	al,[si]
 	
 	or	al,07fh
@@ -160,11 +194,11 @@ RetDirect:
 
 WriteHardware:
 	test	si,0200h		; possible RIOT write?
-	jnz	WriteRiotMaybe		;   yes
+	jnz	WriteRiotMaybe		;	 yes
 
 WriteHardwarePage0:
 	test	si,080h			; RAM write?
-	jz	NewTIA			;   no
+	jz	NewTIA			;	 no
 	and	si,0ffh
 	mov	dl,[WByte]		; writing to RAM
 	mov	[RiotRam-128 + si],dl

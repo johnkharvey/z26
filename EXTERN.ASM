@@ -2,12 +2,16 @@
 ;* extern.asm -- z26 externals (external to asm, internal to C program)
 ;*
 
-; z26 is Copyright 1997-1999 by John Saeger and is a derived work with many
-; contributors.  z26 is released subject to the terms and conditions of the 
+; z26 is Copyright 1997-2000 by John Saeger and is a derived work with many
+; contributors.	 z26 is released subject to the terms and conditions of the 
 ; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ; Please see COPYING.TXT for details.
 
 EXTRN _CartRom:byte
+EXTRN _MBseg:word
+EXTRN _MBofs:word
+
+EXTRN _LinesInFrame:word	; *EST*
 
 ;dw cpu_pc;
 ;db cpu_a, cpu_carry, cpu_x, cpu_y, cpu_sp;
@@ -53,3 +57,4 @@ EXTRN _ShowUndocTIA:far
 EXTRN _ShowCollision:far
 EXTRN _Showaddress:far
 EXTRN _ShowSCWrite:far
+

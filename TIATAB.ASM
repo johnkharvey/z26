@@ -2,8 +2,8 @@
 ;* tiatab.asm -- tables needed for z26 TIA emulator
 ;*
 
-; z26 is Copyright 1997-1999 by John Saeger and is a derived work with many
-; contributors.  z26 is released subject to the terms and conditions of the 
+; z26 is Copyright 1997-2000 by John Saeger and is a derived work with many
+; contributors.	 z26 is released subject to the terms and conditions of the 
 ; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ; Please see COPYING.TXT for details.
 
@@ -41,7 +41,7 @@ PFClockToBitReversed label dword
 	dd	1 shl 21	;17
 	dd	1 shl 22	;18
 	dd	1 shl 23	;19
-		        
+			  
 	dd	1 shl 23	;20	reversed
 	dd	1 shl 22	;21
 	dd	1 shl 21	;22
@@ -85,7 +85,7 @@ PFClockToBitForward label dword
 	dd	1 shl 21	;17
 	dd	1 shl 22	;18
 	dd	1 shl 23	;19
-		        
+			  
 	dd	1 shl 4		;0	forward
 	dd	1 shl 5		;1
 	dd	1 shl 6		;2
@@ -203,8 +203,8 @@ PixelColorTable	dw	TIADisplayToColour	; pixel to color translation table
 ;* This means subsequent RESPx outputs the leading sprite.
 ;*
 ;* Note:  There is an entry just before the first entry of a single-width 
-;*        player sprite that isn't there, that should have the triple flag
-;*        set.  That is there should be four entries with the triple flag set.
+;*	  player sprite that isn't there, that should have the triple flag
+;*	  set.	That is there should be four entries with the triple flag set.
 ;* 
 
 LeadingPlayer macro

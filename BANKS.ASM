@@ -1,7 +1,7 @@
 ; banks.asm -- z26 bank switch stuff
 
-; z26 is Copyright 1997-1999 by John Saeger and is a derived work with many
-; contributors.  z26 is released subject to the terms and conditions of the 
+; z26 is Copyright 1997-2000 by John Saeger and is a derived work with many
+; contributors.	 z26 is released subject to the terms and conditions of the 
 ; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ; Please see COPYING.TXT for details.
 
@@ -66,6 +66,25 @@ SetupBanks:
 	mov	[Pitfall2],0
 	mov	[Starpath],0
 
+	mov	al,[_BSType]		; bankswitching type specified
+	cmp	al,0			;    by user?
+	je	DetectBySize		; no ... autodetect it *EST*
+	cmp	al,1		        
+	je	SCV			; Commavid extra RAM
+	cmp	al,2
+	je	SSC8			; 8K superchip
+	cmp	al,3
+	je	SPB			; 8K Parker Brothers
+	cmp	al,4
+	je	STV			; 8K Tigervision
+	cmp	al,5
+	je	SFE			; 8K Activision (Decathlon, Robot Tank)
+	cmp	al,6
+	je	SSC			; 16K superchip
+	cmp	al,7
+	je	SMN			; 16K M-Network
+
+DetectBySize:
 	mov	ax,[_CartSize]
 	cmp	ax,00800h
 	je	Set2KMode		; 2K cart
@@ -89,6 +108,8 @@ SetupBanks:
 	je	SetStarpath3
 	cmp	ax,8448*4
 	je	SetStarpath4
+	cmp	ax,33999
+	je	SMB			; Megaboy 64K cart *EST*
 	ret
 
 Set2KMode:
@@ -106,6 +127,13 @@ Set4KMode:
 	ret
 
 SCV:
+	mov	bx,2047			; copy ROM to RAM for MagiCard
+SCV1:					; *EST*
+	mov	al,_CartRom[bx]
+	mov	_Ram[bx],al
+	dec	bx
+	jns	SCV1
+
 	mov	[ReadBank], offset RBankCV
 	mov	[WriteBank], offset WBankCV
 	ret
@@ -274,6 +302,12 @@ SMN:	mov	[ReadBank], offset RBank16mn
 
 SSC8:	mov	[ReadBank], offset RBank8sc
 	mov	[WriteBank], offset WBank8sc
+	ret
+
+; setup Megaboy vectors *EST*
+
+SMB:	mov	[ReadBank], offset RBankMB
+	mov	[WriteBank], offset WBankMB
 	ret
 
 ;*
@@ -751,7 +785,7 @@ WBank8FE:
 
 ; small chunks mapped at 0 to 3FF
 ;
-; 0 --  00 -  FF
+; 0 --	00 -  FF
 ; 1 -- 100 - 1FF
 ; 2 -- 200 - 2FF
 ; 3 -- 300 - 3FF
@@ -776,7 +810,7 @@ local Done, ReadBig
 
 ReadBig:
 	cmp	[MNSlice0],0ffffh	; RAM mapped in ?
-	jne	Done			;   no
+	jne	Done			;	no
 	add	si,offset _Ram - 1400h + 400h
 	ret
 
@@ -801,7 +835,7 @@ local Done, WriteBig
 
 WriteBig:
 	cmp	[MNSlice0],0ffffh	; RAM mapped in ?
-	jne	Done			;   no
+	jne	Done			;	no
 	add	si,offset _Ram - 1000h + 400h
 	WriteRam
 	ret
@@ -879,3 +913,56 @@ WBank16mn:
 	MN_SetRamSlice
 	MNW_TestRam
 	ret
+;*
+;* Megaboy (F0) *EST*
+;*
+
+SetBank_MB macro
+local NoChange
+local NoSwap
+local Swap
+
+	cmp	si,1FF0h		; if not in switch area ...
+	jne	NoChange		; ... there's no change
+
+	push	ax
+	mov	ax,[RomBank]
+	add	ax,01000h
+	and	ax,07000h
+	jnz	NoSwap
+	mov	bx,fs
+	pushad
+	mov	ax,_MBseg
+	mov	fs,ax
+	mov	si,_MBofs
+	mov	bx,0
+Swap:
+	mov	eax,fs:[si]
+	mov	ecx,dword ptr _CartRom[bx]
+	mov	dword ptr _CartRom[bx],eax
+	mov	fs:[si],ecx
+	add	bx,4
+	add	si,4
+	test	bx,08000h
+	je	Swap
+	popad
+	mov	fs,bx
+NoSwap:
+	mov	[RomBank],ax
+	pop	ax
+
+NoChange:
+	endm
+
+RBankMB:
+	test_hw_read
+	SetBank_MB
+	MapRomBank
+	ret
+
+
+WBankMB:
+	test_hw_write
+	SetBank_MB
+	ret
+

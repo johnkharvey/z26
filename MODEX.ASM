@@ -6,8 +6,8 @@
 ; Graphics Programming Black Book, listing 47.1
 ; which itself is based on public-domain code by John Bridges
 
-; z26 is Copyright 1997-1999 by John Saeger and is a derived work with many
-; contributors.  z26 is released subject to the terms and conditions of the 
+; z26 is Copyright 1997-2000 by John Saeger and is a derived work with many
+; contributors.	 z26 is released subject to the terms and conditions of the 
 ; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ; Please see COPYING.TXT for details.
 
@@ -320,7 +320,7 @@ ModeXInit:
 	push	es
 
 	cmp	[_VideoMode],14		; doing a valid mode ?
-	ja	MXPRet			;   no, ret for now
+	ja	MXPRet			;	 no, ret for now
 
 	mov	[ModeX],1
 
@@ -387,8 +387,8 @@ SetCRTParmsLoop:
 SetCRTParmsDone:
 	movzx	si,[_VideoMode]
 	cmp	[DoubleScanTable + si],0 ; doing doublescan?
-	jz	MXPRet			;   yes
-	mov	dx,CRTC_INDEX		;   no, turn off doublescan mode
+	jz	MXPRet			;	 yes
+	mov	dx,CRTC_INDEX		;	no, turn off doublescan mode
 	mov	al,9			; cell height
 	out	dx,al
 	inc	dx
@@ -410,7 +410,7 @@ MXPRet:
 
 MXClearMem:
 	cmp	[ModeX],0		; in ModeX ?
-	jz	MXRet			;   no, ignore call
+	jz	MXRet			;	no, ignore call
 
 	pushad
 	push	es
@@ -438,7 +438,7 @@ MXRet:	ret
 
 ModeXFlipPage:
 	cmp	[ModeX],0		; in ModeX ?
-	jz	MXRet			;   no, ignore call
+	jz	MXRet			;	no, ignore call
 	mov	[ModeXDisplayPointer],0	; assume even frame or no flipping
 
 	push	si
@@ -451,7 +451,7 @@ FlipThrottleLoop:
 	call	_GetTime		; prevent false alarms if running in a fast refresh mode (mode 8)
 	sub	eax,dword ptr [LastVsyncTime]	; (see vsync.asm for LastVsyncTime and PreGap)
 	cmp	eax,dword ptr [PreFlip]		; at least 7/8 of a frame or so since last Vsync?	
-	jb	FlipThrottleLoop	;   no, keep waiting
+	jb	FlipThrottleLoop	;	 no, keep waiting
 
 DoFlipping:
 	inc	[ModeXPage]
@@ -477,7 +477,7 @@ DoFlip:
 	
 NoFlipping:
 	cmp	[MaxLines],220		; doing partial screen
-	ja	MXRet			;   no
+	ja	MXRet			;	no
 	add	[ModeXDisplayPointer],800 ; yes, start 10 lines down
 	cmp	[_VideoMode],9
 	jne	MXRet
@@ -491,7 +491,7 @@ NoFlipping:
 
 ModeXNewLine:
 	cmp	[ModeX],0		; in ModeX ?
-	jz	MXRet			;   no, ignore call
+	jz	MXRet			;	no, ignore call
 	mov	[DisplayPointer],0	; point rendering pointer at start of buffer
 	ret
 
@@ -516,7 +516,7 @@ MXMove4 macro op1
 
 ModeXCopyLine:
 	cmp	[ModeX],0		; in ModeX ?
-	jz	MXRet			;   no, ignore call
+	jz	MXRet			;	no, ignore call
 	pusha
 	push	es
 
@@ -562,9 +562,9 @@ MXOddLoop:
 	movzx	si,[_VideoMode]
 	cmp	[ScanLineTable + si],0	; a scanline mode?
 	pop	si
-	jz	MXCRet			;  no
+	jz	MXCRet			;	no
 
-	add	[ModeXDisplayPointer],80 ;  yes, skip a line
+	add	[ModeXDisplayPointer],80 ;	 yes, skip a line
 	
 MXCRet:	pop	es
 	popa
@@ -576,7 +576,6 @@ MXCRet:	pop	es
 ;*
 
 MX7Move4 macro op1
-
 	mov	al,[si+op1]
 	mov	bl,[si+op1+8]
 	mov	es:[di],al

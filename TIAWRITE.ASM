@@ -1,7 +1,7 @@
 ; new TIA write handlers
 
-; z26 is Copyright 1997-1999 by John Saeger and is a derived work with many
-; contributors.  z26 is released subject to the terms and conditions of the 
+; z26 is Copyright 1997-2000 by John Saeger and is a derived work with many
+; contributors.	 z26 is released subject to the terms and conditions of the 
 ; GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ; Please see COPYING.TXT for details.
 
@@ -211,7 +211,7 @@ ENDIF
 ;* on entry:
 ;*
 ;*	si =	  TIA register to write to
-;*      [WByte] = value to write
+;*	[WByte] = value to write
 ;*
 
 NewTIA:	
@@ -252,11 +252,21 @@ H_VSYNC:
 	test	[WByte],2		; if d1 is set then ....
 	jz	ZRET
 	test	[VSyncFlag],2		; somebody hitting Vsync more than necessary?
-	jnz	VSyncAlreadySet		;   yep
+	jnz	VSyncAlreadySet		;	  yep
 	mov	dx,[ScanLine]
+
+	mov	[_LinesInFrame],dx	; *EST*
+	dec	[_LinesInFrame]
+	test	[_SimColourLoss],1
+	jz	GrayFrame
+	mov	dword ptr [LooseColour],007070707h ; see tialine.asm
+	test	[_LinesInFrame],1
+	jnz	GrayFrame
+	mov	dword ptr [LooseColour],0ffffffffh
+GrayFrame:
 	mov	[ScanLine],1		; back to screen top
 	cmp	dx,5			; a quick double hit (pickpile)?
-	jb	VSyncAlreadySet		;   yes, no new frame
+	jb	VSyncAlreadySet		;	 yes, no new frame
 	inc	[Frame]			; new frame.
 VSyncAlreadySet:
 	mov	dx,[_CFirst]
@@ -282,20 +292,20 @@ H_VBLANK:
 	mov	dl,[WByte]
 	mov	[VBlank],dl
 	test	dl,2			; setting or clearing ?
-	jz	WVBClear		;   clearing
+	jz	WVBClear		;	  clearing
 	cmp	[_CFirst],0		; VBlank triggering new frame ?
-	je	WTB_1			;   yes, don't mess with VBlanking
+	je	WTB_1			;	yes, don't mess with VBlanking
 	mov	[VBlanking],0
 	jmp	HandleDumpedInputs
 
 WTB_1:
-	mov	[TopLine],65535		;   setting -- turn off Tia
+	mov	[TopLine],65535		;	  setting -- turn off Tia
 	call	TIABlank		; clear rest of screen
 	jmp	HandleDumpedInputs
 
 WVBClear:
 	cmp	[_CFirst],0		; VBlank triggering new frame ?
-	je	WTB_2			;   yes, don't mess with VBlanking
+	je	WTB_2			;	yes, don't mess with VBlanking
 	mov	[VBlanking],-1
 	jmp	HandleDumpedInputs
 
@@ -309,7 +319,7 @@ WVBPastMin:
 	mov	[TopLine],dx
 	add	dx,[MaxLines]
 	mov	[BottomLine],dx
-	jmp	HandleDumpedInputs  
+	jmp	HandleDumpedInputs	 
 
 
 HandleDumpedInputs:
@@ -342,7 +352,7 @@ local HBLnowrap, HBLdone, HBLnotweird, HBLinrange, HBLhandle78
 HBLnotweird:
 	lea	ebx,[ebx+ebx*2]
 	cmp	bl,67			; positioned in HBLANK area?
-	ja	HBLdone			;   no
+	ja	HBLdone			;	  no
 	mov	bl,226
 	jmp	HBLdone
 
@@ -355,7 +365,7 @@ HBLnowrap:
 	cmp	bl,24			; affected by weirdness?
 	ja	HBLnotweird		;   no
 	mov	bx,[WeirdRespCorrection+2*ebx]
-        sub     bx,[arg1&_Motion]
+	sub	bx,[arg1&_Motion]
 	add	bx,226
 	cmp	bx,234
 	jbe	HBLinrange
@@ -378,24 +388,24 @@ HBLdone:
 GetObjectDelay macro arg1
 local done, nowrap
 
-        PositionObject arg1
+	PositionObject arg1
 	mov	si,bx
 
 	xor	dl,dl			; assume delay 0
 	xor	al,al			; assume no triple flag
 
-        sub     si,[arg1&_Position]       ; where the object is
+	sub	si,[arg1&_Position]	  ; where the object is
 	jae	nowrap
 	add	si,160			
 nowrap:	
-        cmp     si,[arg1&_Size]           ; beyond it's size?
+	cmp	si,[arg1&_Size]		  ; beyond it's size?
 	ja	done			;   yes, no delay
 	add	si,si
 	inc	si			; point at delay byte
-        add     si,[arg1&_Table]          ; object's table
+	add	si,[arg1&_Table]	  ; object's table
 	mov	dl,[si]			; get delay byte
 	test	dl,080h			; triple flag set?
-	setnz	al			;   set al if so
+	setnz	al			;	set al if so
 	and	dl,07fh			; delay value
 done:
 	endm
@@ -406,15 +416,15 @@ local done, nowrap
 
 	xor	dl,dl
 	mov	si,68			; beginning of scan line
-        sub     si,[arg1&_Position]       ; where the object is
+	sub	si,[arg1&_Position]	  ; where the object is
 	jae	nowrap
 	add	si,160			
 nowrap:	
-        cmp     si,[arg1&_Size]           ; beyond it's size?
+	cmp	si,[arg1&_Size]		  ; beyond it's size?
 	ja	done			;   yes, no delay
 	add	si,si
 	inc	si			; point at delay byte
-        add     si,[arg1&_Table]          ; object's table
+	add	si,[arg1&_Table]	  ; object's table
 	mov	dl,[si]			; get delay byte
 	and	dl,07fh			; delay value
 done:
@@ -428,11 +438,11 @@ done:
 ;*
 
 ActivateObject macro arg1
-        or      [ActiveObjects],arg1
+	or	[ActiveObjects],arg1
 	endm
 
 DeactivateObject macro arg1
-        and     [ActiveObjects], not arg1
+	and	[ActiveObjects], not arg1
 	endm
 
 
@@ -450,7 +460,7 @@ doUpdatePlayfieldColor:
 
 	mov	dx,offset TIADisplayToColour
 	test	[TIA+CTRLPF],PFP	; does playfield have priority?
-	jz	UPFC_CheckScore		;   no
+	jz	UPFC_CheckScore		;	 no
 	mov	dx,offset TIADisplayToColour2
 	mov	[PixelColorTable],dx	;   yes, update pixel to color translation table
 	jmp	UPFC_done		; don't pay attention to score mode...
@@ -462,7 +472,7 @@ UPFC_CheckScore:
 	mov	dx,[P0_Color]		; assume Player 0 color
 	cmp	cl,147			; right side of playfield?
 	jbe	UPFC_SetReg		;   no
-	mov	dx,[P1_Color]		;   yes, use Player 1 color
+	mov	dx,[P1_Color]		;	yes, use Player 1 color
 UPFC_SetReg:
 	mov	[PF_Color],dx		; update the register
 
@@ -486,7 +496,7 @@ local UPFR_Ret
 
 	mov	[PF_Table],offset PFClockToBitForward
 	test	[TIA+CTRLPF],REF	; playfield reflected?
-	jz	UPFR_Ret		;   no
+	jz	UPFR_Ret		;	  no
 	mov	[PF_Table],offset PFClockToBitReversed
 UPFR_Ret:
 
@@ -502,7 +512,7 @@ UpdateBallGraphics:
 	mov	dl,[TIA+ENABL]		; assume regular ball
 	test	[TIA+VDELBL],1		; using delayed register?
 	jz	UBGtestball		;   no
-	mov	dl,[BL_Delayed]		;   yes, use delayed ball
+	mov	dl,[BL_Delayed]		;	  yes, use delayed ball
 
 UBGtestball:
 	test	dl,2			; ball turned on?
@@ -531,21 +541,21 @@ UBGnoball:
 UpdatePlayerGraphics macro arg1
 local UPnodelay, UPdone
 
-        mov     dl,[TIA+GR&arg1]          ; assume regular graphics
-        test    [TIA+VDEL&arg1],1         ; using delayed register?
+	mov	dl,[TIA+GR&arg1]	  ; assume regular graphics
+	test	[TIA+VDEL&arg1],1	  ; using delayed register?
 	jz	UPnodelay		;   no
-        mov     dl,[arg1&_Delayed]        ;   yes, use delayed graphics
+	mov	dl,[arg1&_Delayed]	  ;   yes, use delayed graphics
 UPnodelay:
-        DeactivateObject arg1&_BIT        ; assume not active
+	DeactivateObject arg1&_BIT	  ; assume not active
 	test	dl,dl			; graphics active?
-	jz	UPdone			;   no, done
-        ActivateObject arg1&_BIT          ;   yes, ActivateObject
-        test    [TIA+REF&arg1],08h        ; reflected?
-	jz	UPdone			;   no
+	jz	UPdone			;	 no, done
+	ActivateObject arg1&_BIT	  ;   yes, ActivateObject
+	test	[TIA+REF&arg1],08h	  ; reflected?
+	jz	UPdone			;	 no
 	movzx	si,dl			;   yes
 	mov	dl,[TIAReflect8+si]	; reflect it
 UPdone:
-        mov     [arg1&_Graphics],dl       ; update register
+	mov	[arg1&_Graphics],dl	  ; update register
 	endm
 
 
@@ -580,18 +590,18 @@ RESM1P = RESMP1
 UpdateMissileGraphics macro arg1
 local noMissile
 
-        DeactivateObject arg1&_BIT        ; assume inactive
-        mov     [arg1&_Graphics],0        ; clear register
-        test    [TIA+RES&arg1&P],2        ; missile locked to player?
+	DeactivateObject arg1&_BIT	  ; assume inactive
+	mov	[arg1&_Graphics],0	  ; clear register
+	test	[TIA+RES&arg1&P],2	  ; missile locked to player?
 	jnz	noMissile		;   yes, no missile
-        test    [TIA+ENA&arg1],2          ; missile enabled?
+	test	[TIA+ENA&arg1],2	  ; missile enabled?
 	jz	noMissile		;   no
-        ActivateObject arg1&_BIT          ;   yes, ActivateObject
-        movzx   si,[TIA+NUSIZ&arg1]       ; size is here
+	ActivateObject arg1&_BIT	  ;   yes, ActivateObject
+	movzx	si,[TIA+NUSIZ&arg1]	  ; size is here
 	and	si,030h			; mask size bits
 	shr	si,4
 	mov	dl,[BallSize + si]	; look up in table
-        mov     [arg1&_Graphics],dl       ; update register
+	mov	[arg1&_Graphics],dl	  ; update register
 noMissile:
 	endm
 
@@ -623,18 +633,18 @@ UpdateM1Graphics:
 UpdateTable macro arg1
 local regular_ok
 
-        movzx   si,[TIA+NUSIZ&arg1]
+	movzx	si,[TIA+NUSIZ&arg1]
 	and	si,7
-        movzx   dx,[arg1&_SizeTable+si]
-        mov     [arg1&_Size],dx
+	movzx	dx,[arg1&_SizeTable+si]
+	mov	[arg1&_Size],dx
 	shl	si,1
-        mov     dx,[arg1&_RegularTable+si] ; assume regular table
-        cmp     [arg1&_TripleFlag],0
+	mov	dx,[arg1&_RegularTable+si] ; assume regular table
+	cmp	[arg1&_TripleFlag],0
 	jnz	regular_ok
-        mov     dx,[arg1&_MultipleTable+si] ; use multiple table
+	mov	dx,[arg1&_MultipleTable+si] ; use multiple table
 
 regular_ok:
-        mov     [arg1&_Table],dx
+	mov	[arg1&_Table],dx
 
 	endm
 
@@ -720,18 +730,18 @@ LockMissile macro arg1, arg2
 local nowrap
 
 	push	si
-        movzx   si,[TIA+NUSIZ&arg1]
+	movzx	si,[TIA+NUSIZ&arg1]
 	and	si,7
 	movzx	dx,[MissileOffset+si]
 	pop	si
 
-        add     dx,[arg2&_Position]
+	add	dx,[arg2&_Position]
 	cmp	dx,227
 	jbe	nowrap
 	sub	dx,160
 nowrap:
-        mov     [TIA+RES&arg1],dl
-        mov     [arg1&_Position],dx
+	mov	[TIA+RES&arg1],dl
+	mov	[arg1&_Position],dx
 
 	endm
 
@@ -802,7 +812,7 @@ SetColor macro arg1
 
 	mov	dl,[WByte]
 	shr	dl,1			; pre shift right 1 bit
-        mov     [TIA+COLU&arg1],dl        ; update the register
+	mov	[TIA+COLU&arg1],dl	  ; update the register
 	mov	dh,dl
 
 	endm
@@ -887,17 +897,17 @@ H_PFRet:
 DoMotion macro arg1
 local positive, done
 
-        mov     dx,[arg1&_Motion]
-        sub     [arg1&_Position],dx
-        cmp     [arg1&_Position],68
+	mov	dx,[arg1&_Motion]
+	sub	[arg1&_Position],dx
+	cmp	[arg1&_Position],68
 	jae	positive
-        add     [arg1&_Position],160
+	add	[arg1&_Position],160
 	jmp	done
 
 positive:
-        cmp     [arg1&_Position],228
+	cmp	[arg1&_Position],228
 	jb	done
-        sub     [arg1&_Position],160
+	sub	[arg1&_Position],160
 done:
 	endm
 
@@ -944,14 +954,14 @@ MaxMotion label byte
 FixupMotionLow macro arg1
 local MotionOK
 
-        movsx   dx,[TIA+HM&arg1]
+	movsx	dx,[TIA+HM&arg1]
 	push	bx
 	movzx	bx,[RClock]
 	movsx	bx,[MaxMotion+bx]
 	cmp	dx,bx
 	jl	MotionOK
 	mov	dx,bx
-        mov     [arg1&_Motion],dx
+	mov	[arg1&_Motion],dx
 MotionOK:
 	pop	bx
 	endm
@@ -1023,7 +1033,7 @@ HiTable db 14, 13, 12, 12, 11, 10, 9, 9, 8, 7, 6, 6, 5, 4, 3, 3, 2, 1, 0, 0
 FixupMotionHi macro arg1
 local SetMotion
 
-        movsx   dx,[TIA+HM&arg1]
+	movsx	dx,[TIA+HM&arg1]
 	add	dx,8
 	push	bx
 	movzx	bx,[RClock]
@@ -1035,7 +1045,7 @@ local SetMotion
 	mov	dx,0
 
 SetMotion:
-        mov     [arg1&_Motion],dx
+	mov	[arg1&_Motion],dx
 	pop	bx
 	endm
 
@@ -1109,12 +1119,12 @@ local done
 
 	cmp	[KoolAide],0		; doing Kool Aide cheat?
 	jz	done			;   no
-        cmp     [ScanLine],arg1
+	cmp	[ScanLine],arg1
 	jne	done
-        cmp     bx,arg2+68-5
+	cmp	bx,arg2+68-5
 	jne	done
 
-        mov     bx,arg3+68-5              ;   yes, do the cheat
+	mov	bx,arg3+68-5		  ;   yes, do the cheat
 
 done:
 	endm
@@ -1260,22 +1270,22 @@ H_ENAM1:
 DoNUSIZ macro arg1
 local NoCatchup, CatchupWide, NoCheat, done
 
-        GetObjectDelay M&arg1
+	GetObjectDelay M&arg1
 	call	CatchUpPixels		; render any missile in progress
 	
-        mov     dl,[TIA+NUSIZ&arg1]
+	mov	dl,[TIA+NUSIZ&arg1]
 	and	dl,7
 	cmp	dl,7			; quad wide player?
 	je	CatchupWide		;   yes
 	cmp	dl,5			; double wide player?
 	je	CatchupWide		;   yes
 
-        GetObjectDelay P&arg1             ;   no
+	GetObjectDelay P&arg1		  ;   no
 	call	CatchUpPixels		; complete the player in progress
 	jmp	NoCatchup
 
 CatchupWide:
-        GetObjectDelay P&arg1
+	GetObjectDelay P&arg1
 	test	dl,dl			; are we in the wide sprite?
 	jz	NoCatchup		;   no
 	mov	dl,4			; (4 for sentinel)
@@ -1283,31 +1293,31 @@ CatchupWide:
 
 NoCatchup:
 	mov	dl,[WByte]
-        mov     [TIA+NUSIZ&arg1],dl       ; switch to new NUSIZ
+	mov	[TIA+NUSIZ&arg1],dl	  ; switch to new NUSIZ
 
-        call    UpdateM&arg1&Graphics     ; update things
-        call    UpdateP&arg1&Table
-        call    UpdateM&arg1&Table
+	call	UpdateM&arg1&Graphics	  ; update things
+	call	UpdateP&arg1&Table
+	call	UpdateM&arg1&Table
 
-        mov     dl,[P&arg1&_Graphics]
+	mov	dl,[P&arg1&_Graphics]
 	push	dx			; save current player graphics
-        mov     [P&arg1&_Graphics],0      ; set to zero to render nothing
-        GetObjectDelay P&arg1
+	mov	[P&arg1&_Graphics],0	  ; set to zero to render nothing
+	GetObjectDelay P&arg1
 	test	dl,dl			; would table switch land us in a sprite?
 	jz	done			;   no
 
 	cmp	[RSBoxing],0		; doing RSBOXING cheat?
-	jz	NoCheat			;   no
-	sub	dl,2			;   yes, don't render completely thru new sprite
+	jz	NoCheat			;	  no
+	sub	dl,2			;	yes, don't render completely thru new sprite
 
 NoCheat:
-	call	CatchUpPixels		;   yes, render nothing thru new sprite
-					;        (** messes up rsboxing a little bit -- too far into future **)
-					;        (** if I ever fix this right, it might fix PROWREST too **)
+	call	CatchUpPixels		;	 yes, render nothing thru new sprite
+					;	      (** messes up rsboxing a little bit -- too far into future **)
+					;	      (** if I ever fix this right, it might fix PROWREST too **)
 
 done:
 	pop	dx
-        mov     [P&arg1&_Graphics],dl     ; restore player graphics
+	mov	[P&arg1&_Graphics],dl	  ; restore player graphics
 	ENDM
 
 
@@ -1427,7 +1437,7 @@ local NormalMotion
 
 	cmp	[RClock],26
 	jae	NormalMotion
-        movzx   bx,[TIA+HM&arg1]
+	movzx	bx,[TIA+HM&arg1]
 	and	bx,0fh
 	shl	bx,4
 	movzx	dx,[WByte]
@@ -1445,8 +1455,8 @@ local NormalMotion
 	je	NormalMotion		; cosmic is normal for now
 	movsx	dx,dl
 	neg	dx
-        mov     [arg1&_Motion],dx
-        DoMotion arg1
+	mov	[arg1&_Motion],dx
+	DoMotion arg1
 	cmp	[_TraceCount],0
 	jz	NormalMotion
 
@@ -1457,7 +1467,7 @@ local NormalMotion
 NormalMotion:
 	mov	dl,[WByte]
 	sar	dl,4			; pre-shift right 4 bits (preserve sign)
-        mov     [TIA+HM&arg1],dl
+	mov	[TIA+HM&arg1],dl
 	pop	bx
 
 	endm

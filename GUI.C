@@ -3,9 +3,9 @@
 */
 
 /*
-** z26 is Copyright 1997-1999 by John Saeger and is a derived work with many
+** z26 is Copyright 1997-2000 by John Saeger and is a derived work with many
 ** contributors.  z26 is released subject to the terms and conditions of the 
-** GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
+** GNU General Public License Version 2 (GPL).	z26 comes with no warranty.
 ** Please see COPYING.TXT for details.
 */
 
@@ -131,17 +131,16 @@ void gui_CheckMouse(void)
 {
 	union REGS inregs, outregs;
 
-	if (gui_mouse_enabled)
-	{
-		inregs.x.ax = 0;
-		int86 (0x33, &inregs, &outregs);
+	inregs.x.ax = 0;
+	int86 (0x33, &inregs, &outregs);
 
-		if (outregs.x.ax == 0)
-		{
-			gui_mouse_enabled = 0;
-			printf("You need a mouse to run the z26 gui.");
-			exit(1);
-		}
+	if (outregs.x.ax == 0)
+	{
+		gui_mouse_enabled = 0;
+	}
+	else
+	{
+		gui_mouse_enabled = 1;
 	}
 }
 
@@ -354,18 +353,18 @@ void gui_DrawString(int col, int row, int color, char *text)
 			{
 				switch(ch)
 				{
-					case 'r':  color = 8;			break;
-					case 'o':  color = 9;			break;
-					case 'y':  color = 10;			break;
-					case 'g':  color = 11;			break;
-					case 'b':  color = 12;			break;
-					case 'i':  color = 13;			break;
-					case 'v':  color = 14;			break;
-					case 'w':  color = 15;			break;
-					case 'U':  ul = 1;				break;
-					case 'u':  ul = 0;				break;
-					case 'd':  color = gui_textColor;	break;
-					case 'n':  row += 10; col = gui_textX;	break;
+					case 'r':	color = 8;			break;
+					case 'o':	color = 9;			break;
+					case 'y':	color = 10;			break;
+					case 'g':	color = 11;			break;
+					case 'b':	color = 12;			break;
+					case 'i':	color = 13;			break;
+					case 'v':	color = 14;			break;
+					case 'w':	color = 15;			break;
+					case 'U':	ul = 1;				break;
+					case 'u':	ul = 0;				break;
+					case 'd':	color = gui_textColor;	break;
+					case 'n':	row += 10; col = gui_textX;	break;
 				}
 			}
 			break;
@@ -525,8 +524,8 @@ void gui_ShowHelpPage(int screen)
 	extern char far help_0[];
 	extern char far help_1[];
 	extern char far help_2[];
-        extern char far help_3[];       /* *EST* */
-
+	extern char far help_3[];	/* *EST* */
+        extern char far help_4[];
 	gui_FilledRectangle(6,25,609,467, 1);
 
 	gui_textX = 18;
@@ -546,36 +545,129 @@ void gui_ShowHelpPage(int screen)
 	case 2: 
 		gui_puts(help_2); 
 		break;
-        case 3:
-                gui_puts(help_3);
-                break;                  /* *EST* */
-        }
+	case 3:
+		gui_puts(help_3);
+		break;			/* *EST* */
+        case 4:
+                gui_puts(help_4);
+		break;			/* *EST* */
+	}
 
-        gui_ShowScrollBar(screen+1, 4); /* changed to 4 help screens *EST* */
+        gui_ShowScrollBar(screen+1, 5); /* changed to 5 help screens *EST* */
 }
 
 
-#define PgUp       0x49
-#define PgDn       0x51
-#define Home       0x47
-#define End        0x4f
-#define Esc        0x01
-#define F1         0x3b
-#define F10        0x44
-#define UpArrow    0x48
+#define PgUp	   0x49
+#define PgDn	   0x51
+#define Home	   0x47
+#define End	   0x4f
+#define Esc	   0x01
+#define F1	   0x3b
+#define F10	   0x44
+#define UpArrow	   0x48
 #define DownArrow  0x50
 #define LeftArrow  0x4b
 #define RightArrow 0x4d
-#define Enter      0x1c
+#define Enter	   0x1c
 #define BackSlash  0x2b
+
+/* convert mouse motion into a scan code */
+
+#define vthresh 8
+#define hthresh 24
+
+int gui_MouseScan(void)
+{
+	union REGS inregs, outregs;
+
+	int this_x, this_y;
+
+	static int dx=0;
+	static int dy=0;
+
+	if (!gui_mouse_enabled) return 0;
+
+	inregs.x.ax = 11;	/* # of mickeys since last call */
+	int86 (0x33, &inregs, &outregs);
+
+	this_x = outregs.x.cx;
+	this_y = outregs.x.dx;
+
+	/* dominance test -- make it easier to go just horiz or just vert */
+	
+	if (abs(this_x)*vthresh > 2*abs(this_y)*hthresh)
+	{
+		this_y = 0;
+		dy = 0;
+	}
+	else if (abs(this_y)*hthresh > 2*abs(this_x)*vthresh)
+	{
+		this_x = 0;
+		dx = 0;
+	}
+
+	dx += this_x;
+	dy += this_y;
+
+	if (dx < -hthresh)
+	{
+		dx += hthresh;
+		return(LeftArrow);
+	}
+	else if (dx > hthresh)
+	{
+		dx -= hthresh;
+		return(RightArrow);
+	}
+	else if (dy < -vthresh)
+	{
+		dy += vthresh;
+		return(UpArrow);
+	}
+	else if (dy > vthresh)
+	{
+		dy -= vthresh;
+		return(DownArrow);
+	}
+
+	inregs.x.ax = 3;	/* read mouse position and button status */
+	int86 (0x33, &inregs, &outregs);
+	if (outregs.x.bx & 7)
+	{
+		while (outregs.x.bx & 7)
+		{
+			int86(0x33, &inregs, &outregs);
+		}
+
+		return(Enter);
+	}	
+
+	return(0);
+}
 
 
 gui_GetScanCode(void)
 {
 	union REGS inregs, outregs;
+	int scode;
+
+	do
+	{
+
+		if (scode = gui_MouseScan())
+		{
+			return(scode);
+		}
+
+		inregs.h.ah = 1;
+		int86(0x16, &inregs, &outregs);
+
+	} while (outregs.x.flags & 64);
+
 	inregs.h.ah = 0;
 	int86(0x16, &inregs, &outregs);
 	gui_LastAscii = outregs.h.al;		/* save last ASCII value for ASCII chars */
+
 	return(outregs.h.ah);
 }
 
@@ -583,7 +675,7 @@ gui_GetScanCode(void)
 /* show help screens */
 
 #define pgmin 0
-#define pgmax 3
+#define pgmax 4
 
 void gui_ShowHelp(void)
 {
@@ -599,13 +691,14 @@ void gui_ShowHelp(void)
 	ch = 0;
 	page = 0;
 	gui_ShowHelpPage(page);
-	while (ch != Esc)
+	while ((ch != Esc) && (ch != Enter))
 	{
 		ch = 0;
-		while (ch != PgUp && ch != PgDn && ch != Esc && ch != Home && ch != End)
+		while (ch != PgUp && ch != PgDn && ch != Esc && ch != Home && ch != End 
+		       && ch != Enter && ch != UpArrow && ch != DownArrow)
 			ch = gui_GetScanCode();
 
-		if (ch == PgUp)
+		if ((ch == PgUp) || (ch == UpArrow))
 		{
 			--page;
 			if (page < pgmin) 
@@ -614,7 +707,7 @@ void gui_ShowHelp(void)
 				gui_ShowHelpPage(page);
 		}
 
-		if (ch == PgDn)
+		if ((ch == PgDn) || (ch == DownArrow))
 		{
 			++page;
 			if (page > pgmax) 
@@ -634,9 +727,9 @@ void gui_ShowHelp(void)
 
 		if (ch == End)
 		{
-                        if (page != pgmax)
+			if (page != pgmax)
 			{
-                                page = pgmax;
+				page = pgmax;
 				gui_ShowHelpPage(page);
 			}
 		}
@@ -646,7 +739,7 @@ void gui_ShowHelp(void)
 #include <dir.h>
 
 #define cols 11
-#define rows 63   /* 63 */
+#define rows 63	  /* 63 */
 #define maxfiles rows*cols
 
 void gui_ShowFile(int FileNum, char *text)
@@ -894,8 +987,9 @@ void gui_ShowList(void)
 					curfile += rows;
 					break;
 				}
+/*
 				if (curfile % rows != 0) curfile = curfile % rows + 1;
-
+*/
 				break;
 
 			case LeftArrow:
@@ -904,7 +998,7 @@ void gui_ShowList(void)
 					curfile -= rows;
 					break;
 				}
-
+/*
 				if (curfile == 1)
 					break;
 
@@ -914,6 +1008,7 @@ void gui_ShowList(void)
 					curfile += rows;
 				}
 				curfile -= rows;
+*/
 				break;
 
 			case Home:
@@ -960,7 +1055,7 @@ void gui_ShowList(void)
 			}
 
 			if (curfile > filesread) curfile = filesread;
-			if (curfile < 1)         curfile = 1;
+			if (curfile < 1)	    curfile = 1;
 
 			if (!isgraph(gui_LastAscii))
 			{
@@ -985,7 +1080,7 @@ void gui_ShowList(void)
 			cli_LoadROM(FileNamePtrs[curfile]);
 
 			psp = _psp;		/* for environment scanner  (sbdrv.asm) */
-			emulator();		/* call emulator              (tia.asm) */
+			emulator();		/* call emulator	      (tia.asm) */
 			
 			gui_SetPalette(35, 40, 45);	/* 31, 34, 41 */
 
