@@ -10,11 +10,10 @@
 ;
 ; on entry:
 ;	bx = TIA register number (which implies bh = 0)
-;	bp = pointer to TIA event in TIA buffer
+;	di = pointer to TIA event in TIA buffer
 ;
 
-.CEND
-.DATASEGMENT
+.data
 
 ALIGN 2
 
@@ -149,14 +148,12 @@ TIARegVector2 dw TRNoop		; 00 -- VSYNC
 	dw	TRNoop		; 3D
 	dw	TRNoop		; 3E
 	dw	TRNoop		; 3F
-.DEND
-.CODESEGMENT
+.code
 
 ;*
 ;* sound stuff
 ;*
 
-ALIGN_ENTRY
 
 TRSond:	cmp	[_quiet],0		; doing sound at all?
 	jnz	TRQuiet			; no
@@ -169,8 +166,8 @@ TRQuiet:
 	ret
 	
 DoPCSpeaker:
-	mov	bl,TIAReg[bp]		; bl = register
-	mov	bh,TIAVal[bp]		; bh = data
+	mov	bl,TIAReg[di]		; bl = register
+	mov	bh,TIAVal[di]		; bh = data
 	call	Sound			; do some PC speaker sound stuff
 	ret
 
@@ -178,7 +175,6 @@ DoPCSpeaker:
 ;* clear collision latches
 ;*
 
-ALIGN_ENTRY
 
 TRCClr: mov	[TIACollide],0		; reset the collision word
 	ret
@@ -187,7 +183,6 @@ TRCClr: mov	[TIACollide],0		; reset the collision word
 ;* do nothing
 ;*
 	        
-ALIGN_ENTRY
 
 TRNoop: ret				; just ignore it ......
 
@@ -196,11 +191,10 @@ TRNoop: ret				; just ignore it ......
 ;* copy register
 ;*
 
-ALIGN_ENTRY
 
-TRCopy: mov	bl,TIAReg[bp]		; register copy.offset in bx
+TRCopy: mov	bl,TIAReg[di]		; register copy.offset in bx
 					; bh is already zero
-	mov	al,TIAVal[bp]		; value in al
+	mov	al,TIAVal[di]		; value in al
 	mov	TIA[bx],al		; write it
 
 	ret
@@ -209,12 +203,11 @@ TRCopy: mov	bl,TIAReg[bp]		; register copy.offset in bx
 ;* copy color register
 ;*
 
-ALIGN_ENTRY
 
 TRCopyPFColor:
-	mov	bl,TIAReg[bp]		; register copy.offset in bx
+	mov	bl,TIAReg[di]		; register copy.offset in bx
 					; bh is already zero
-	mov	al,TIAVal[bp]		; value in al
+	mov	al,TIAVal[di]		; value in al
 	shr	al,1			; shift before storing
 	mov	TIA[bx],al		; write it
 
@@ -229,12 +222,11 @@ TRCopyPFColor:
 
 	ret
 
-ALIGN_ENTRY
 
 TRCopyBKColor:
-	mov	bl,TIAReg[bp]		; register copy.offset in bx
+	mov	bl,TIAReg[di]		; register copy.offset in bx
 					; bh is already zero
-	mov	al,TIAVal[bp]		; value in al
+	mov	al,TIAVal[di]		; value in al
 	shr	al,1			; shift before storing
 	mov	TIA[bx],al		; write it
 
@@ -247,12 +239,11 @@ TRCopyBKColor:
 
 	ret
 
-ALIGN_ENTRY
 
 TRCopyP1Color:
-	mov	bl,TIAReg[bp]		; register copy.offset in bx
+	mov	bl,TIAReg[di]		; register copy.offset in bx
 					; bh is already zero
-	mov	al,TIAVal[bp]		; value in al
+	mov	al,TIAVal[di]		; value in al
 	shr	al,1			; shift before storing
 	mov	TIA[bx],al		; write it
 
@@ -265,12 +256,11 @@ TRCopyP1Color:
 
 	ret
 
-ALIGN_ENTRY
 
 TRCopyP0Color:
-	mov	bl,TIAReg[bp]		; register copy.offset in bx
+	mov	bl,TIAReg[di]		; register copy.offset in bx
 					; bh is already zero
-	mov	al,TIAVal[bp]		; value in al
+	mov	al,TIAVal[di]		; value in al
 	shr	al,1			; shift before storing
 	mov	TIA[bx],al		; write it
 
@@ -287,11 +277,10 @@ TRCopyP0Color:
 ;* write to CtrlPF
 ;*
 
-ALIGN_ENTRY
 
-TRCtrlPF: mov	bl,TIAReg[bp]		; register copy.offset in bx
+TRCtrlPF: mov	bl,TIAReg[di]		; register copy.offset in bx
 					; bh is already zero
-	mov	al,TIAVal[bp]		; value in al
+	mov	al,TIAVal[di]		; value in al
 	mov	TIA[bx],al		; write it
 
 
@@ -308,7 +297,7 @@ TRCtrl1:
 	jz	TRCtrl2
 	mov	[TIAPFColorByClock],offset TIAColorPlayTable
 TRCtrl2:
-	mov	bl,TIAClock[bp]		; update playfield color
+	mov	bl,TIAClock[di]		; update playfield color
 	add	bx,[TIAPFColorByClock]
 	mov	al,[bx]
 	mov	[TIAColourTable+TCTPF],al
@@ -327,7 +316,6 @@ TRCtrl2:
 ;* clear horizontal motion registers
 ;*
 
-ALIGN_ENTRY
 
 TRHClr: xor	al,al			; clear the HMove registers
 	mov	[TIA+TIAHmp0],al
@@ -341,9 +329,8 @@ TRHClr: xor	al,al			; clear the HMove registers
 ;* player 0 graphics
 ;*
 
-ALIGN_ENTRY
 
-TRGrp0: mov	al,TIAVal[bp]		; update graphics register 0
+TRGrp0: mov	al,TIAVal[di]		; update graphics register 0
 	mov	[TIA+TIAGrp0],al
 	mov	al,[TIA+TIAGrp1]	; copy Grp1 to Grp1 VDelay
 	mov	[VDP1Gr],al
@@ -353,9 +340,8 @@ TRGrp0: mov	al,TIAVal[bp]		; update graphics register 0
 ;* player 1 graphics
 ;*
 
-ALIGN_ENTRY
 
-TRGrp1: mov	al,TIAVal[bp]		; update graphics register 1
+TRGrp1: mov	al,TIAVal[di]		; update graphics register 1
 	mov	[TIA+TIAGrp1],al
 	mov	al,[TIA+TIAGrp0]	; update the vertical delay registers
 	mov	[VDP0Gr],al		; for GRP 0 and ENABL
@@ -381,7 +367,6 @@ TWneg:	add	al,160			; adjust
 TWret:
 	endm
 
-ALIGN_ENTRY
 
 TIAWrap:cmp	al,240			; went negative ???
 	ja	TWneg			;   yes, adjust
@@ -414,7 +399,6 @@ TWret:	ret
 ;* by the amount in the HMxx registers
 ;*
 
-ALIGN_ENTRY
 
 TRHMov:
 ;	mov	[ColumnBlank],8
@@ -435,24 +419,23 @@ TRHMLoop:
 	call	TIASortBuffer		; order may have been compromised
 	ret
 
-ALIGN_ENTRY
 
 TIAUpdatePosition:
 	push	ax
-	push	bp
-	mov	bp,offset TIABuffer
+	push	di
+	mov	di,offset TIABuffer
 TIAUP2: 
-	cmp	byte ptr TIAClock[bp],TIAEnd	; check at the end
+	cmp	byte ptr TIAClock[di],TIAEnd	; check at the end
 	je	TIAUP1
-	add	bp,4
-	cmp	TIAReg-4[bp],al		; check if found the added one
+	add	di,4
+	cmp	TIAReg-4[di],al		; check if found the added one
 	jne	TIAUP2
-	sub	bp,4			; bp points to it
-	mov	al,TIAClock[bp]
+	sub	di,4			; di points to it
+	mov	al,TIAClock[di]
 	sub	al,ah			; add the offset to it
 	call	TIAWrap
-	mov	TIAClock[bp],al
-TIAUP1: pop	bp
+	mov	TIAClock[di],al
+TIAUP1: pop	di
 	pop	ax
 	ret
 
@@ -461,7 +444,6 @@ TIAUP1: pop	bp
 ;* apply horizontal motion (off-screen version)
 ;*
 
-ALIGN_ENTRY
 
 TRHmvB: 
 ;	mov	[ColumnBlank],8
@@ -481,10 +463,9 @@ TRHMB1: mov	ah,TIA+TIAHmp0[bx]	; get the adjustment
 ;* Set register = clock value
 ;*
 
-ALIGN_ENTRY
 
-TRSave: mov	bl,TIAReg[bp]		; bx = offset to register
-	mov	al,TIAClock[bp]		; ax = clock
+TRSave: mov	bl,TIAReg[di]		; bx = offset to register
+	mov	al,TIAClock[di]		; ax = clock
 	mov	TIA[bx],al
 	ret
         
@@ -553,7 +534,6 @@ M1:
 ;
 ; *****************************************************************************
 
-ALIGN_ENTRY
 
 TRBall:					; ok , we've found a ball draw.....
 	mov	bl,[TIA+TIAVDelbl]	; look at vertical ball delayed
@@ -565,7 +545,7 @@ TRBBall2:
 	test	al,2			; test if the ball is enabled....
 	jz	TRBNoDraw
 
-	mov	bl,TIAClock[bp]		; get the clock value
+	mov	bl,TIAClock[di]		; get the clock value
 	xor	bh,bh			; bx offset to clock
 	add	bx,offset TIADisplay	; bx points to ball start in line
 	mov	al,[TIA+TIACtrlPf]	; al (b5,b4) are the size
@@ -573,9 +553,9 @@ TRBBall2:
 	call	TIASolidObject
 
 TRBNoDraw:
-	mov	al,TIAClock[bp]		; update RESBl counter with clock
+	mov	al,TIAClock[di]		; update RESBl counter with clock
 	mov	[TIA+TIAResbl],al	; so its drawn on the next line
-	mov	al,TIAReg[bp]		; register that was written....
+	mov	al,TIAReg[di]		; register that was written....
 	test	al,128			; if bit 7 is clear (new Res...)
 	jnz	TNret
 	or	al,128
@@ -590,7 +570,6 @@ TNret:	ret
 ;
 ; *****************************************************************************
 
-ALIGN_ENTRY
 
 TIASolidObject:
 	and	al,030h			; mask out bits other than size
@@ -619,16 +598,15 @@ TSRet:
 ;
 ;				  Draw Player
 ;
-;	On entry	BP Points to the player record (clock/addr/data/0)
+;	On entry	di Points to the player record (clock/addr/data/0)
 ;
 ; *****************************************************************************
 
 
-ALIGN_ENTRY
 
 TRPlyr:
 	push	cx			; ok , we've found a player draw....
-	mov	bl,TIAReg[bp]		; bx = 0 if p0, bx = 1 if p1
+	mov	bl,TIAReg[di]		; bx = 0 if p0, bx = 1 if p1
 	and	bx,1
 
 	mov	ah,TGPlayer0		; and the pixel to set
@@ -637,7 +615,7 @@ TRPlyr:
 	mov	ah,TGPlayer1
 TGPCDraw:
 	mov	al,TIA+TIANuSiz0[bx]	; size in al
-	mov	cl,TIAReg[bp]		; if its a +64 write always size 0
+	mov	cl,TIAReg[di]		; if its a +64 write always size 0
 	test	cl,64			; (we're doing a copied player from below)
 	jz	TGPCNoCopy
 	xor	al,al
@@ -650,7 +628,7 @@ TGPCNoCopy:
 TGPCNoVDelay:
 	mov	cl,TIA+TIARefP0[bx]	; reflection in cl
 	push	bx
-	mov	bl,TIAClock[bp]		; get clock value (bh already 0)
+	mov	bl,TIAClock[di]		; get clock value (bh already 0)
 	add	bx,offset TIADisplay	; bx points to player start in line
 
 	push	si
@@ -658,11 +636,11 @@ TGPCNoVDelay:
 	pop	si
 	pop	bx
 
-	mov	al,TIAReg[bp]		; if its a copy draw....
+	mov	al,TIAReg[di]		; if its a copy draw....
 	test	al,64			; (e.g. bit 6 is set)
 	jnz	TRPNoSetRes		; don't set RESP# from the clock
 
-	mov	al,TIAClock[bp]		; update RESp# counter with clock
+	mov	al,TIAClock[di]		; update RESp# counter with clock
 	mov	TIA+TIAResp0[bx],al	; so its drawn on the next line
 
 ; *** HMMMM... ***
@@ -674,7 +652,7 @@ TGPCNoVDelay:
 	mov	TIA+TIAResm0[bx],al
 
 TRPNoSetRes:
-	mov	al,TIAReg[bp]		; register that was written....
+	mov	al,TIAReg[di]		; register that was written....
 	test	al,128			; if bit 7 is clear (new Res...)
 	jnz	TRPret
 	or	al,128
@@ -692,7 +670,6 @@ TRPret:
 ; *****************************************************************************
 
 
-ALIGN_ENTRY
 
 TIAGraphObject:
 	and	al,7			; only required bits from Graphic
@@ -712,7 +689,6 @@ TGOStd:
 	BuildForward 7
 TGORet: ret
         
-ALIGN_ENTRY
 
 TGORef: BuildReverse 0
 	BuildReverse 1
@@ -725,18 +701,17 @@ TGORef: BuildReverse 0
 	ret
         
 
-ALIGN_ENTRY
 
 TGODifferent:				; Handle oddities.......
-;	push	bp
+;	push	di
 	movzx	esi,al
 	call	[offset TGODiffTab + esi*2]
-;	pop	bp
+;	pop	di
 	ret
 
 TGO3Close:				; 3 Copies,close @ 0,16,32
 	call	TGOStd
-	mov	ax,[bp]			; al = clock, ah = reg
+	mov	ax,[di]			; al = clock, ah = reg
 	mov	cx,ax
 	add	al,16
 	or	ah,64
@@ -747,21 +722,19 @@ TGO3Close:				; 3 Copies,close @ 0,16,32
 	call	TIAInsert
 	ret
 
-ALIGN_ENTRY
 
 TGO2Close:				; 2 copies seperated by 16 cycles
 	call	TGOStd
-	mov	ax,[bp]			; al = clock, ah = reg
+	mov	ax,[di]			; al = clock, ah = reg
 	add	al,16
 	or	ah,64
 	call	TIAInsert
 	ret
 
-ALIGN_ENTRY
 
 TGO3Medium:				; 3 copies,medium @ 0,32,64
 	call	TGOStd
-	mov	ax,[bp]			; al = clock, ah = reg
+	mov	ax,[di]			; al = clock, ah = reg
 	mov	cx,ax
 	add	al,32
 	or	ah,64
@@ -772,28 +745,25 @@ TGO3Medium:				; 3 copies,medium @ 0,32,64
 	call	TIAInsert
 	ret
 
-ALIGN_ENTRY
 
 TGO2Medium:				; 2 copies seperated by 32 cycles
 	call	TGOStd
-	mov	ax,[bp]			; al = clock, ah = reg
+	mov	ax,[di]			; al = clock, ah = reg
 	add	al,32
 	or	ah,64
 	call	TIAInsert
 	ret
 
-ALIGN_ENTRY
 
 TGO2Far:			       ; 2 copies seperated by 64 cycles
 	call	TGOStd
-	mov	ax,[bp]			; al = clock, ah = reg
+	mov	ax,[di]			; al = clock, ah = reg
 	add	al,64
 	or	ah,64
 	call	TIAInsert
 	ret
 
 
-ALIGN_ENTRY
 
 TGO2Width:
 	cmp	ch,0			; do standard
@@ -811,7 +781,6 @@ TGO2Width:
 	BuildForward2 7
 	ret
         
-ALIGN_ENTRY
 
 TGO2Ref:
 	BuildReverse2 0
@@ -825,7 +794,6 @@ TGO2Ref:
 	ret
 
         
-ALIGN_ENTRY
 
 TGO4Width:
 	cmp	ch,0			; do standard
@@ -846,7 +814,6 @@ TGO4Width:
 	BuildForward4 7
 	ret
         
-ALIGN_ENTRY
 
 TGO4Ref:
 	BuildReverse4 0
@@ -859,8 +826,8 @@ TGO4Ref:
 	BuildReverse4 7
 	ret
 
-.CEND
-.DATASEGMENT
+.data
+
 TGODiffTab	dw	TGORet		; 0
 		dw	TGO2Close	; 1
 		dw	TGO2Medium	; 2
@@ -869,9 +836,7 @@ TGODiffTab	dw	TGORet		; 0
 		dw	TGO2Width	; 5
 		dw	TGO3Medium	; 6
 		dw	TGO4Width	; 7
-.DEND
-.CODESEGMENT
-
+.code
 
 ;*
 ;* ResmpX register handler
@@ -881,9 +846,9 @@ TRResmpx:
 	cmp	[OldMissile],0		; doing old missile code ?
 	jnz	TRCopy			;   yes, just copy
 
-	mov	bl,TIAReg[bp]		; register copy offset in bx
+	mov	bl,TIAReg[di]		; register copy offset in bx
 					; bh is already zero
-	mov	al,TIAVal[bp]		; value in al
+	mov	al,TIAVal[di]		; value in al
 	mov	TIA[bx],al		; write it
 	test	al,2			; locking missile to player?
 	jz	TRResRet		;   no, done
@@ -902,14 +867,13 @@ TRResRet:
 ;
 ;		       Missile handling code
 ;
-;	On entry	BP Points to the missile record (clock/addr/data/0)
+;	On entry	di Points to the missile record (clock/addr/data/0)
 ;
 ; *****************************************************************************
 
-ALIGN_ENTRY
 
 TRMiss:					; ok , we've found a missile draw....
-	mov	bl,TIAReg[bp]		; bx = 0 if m0,bx = 1 if m1
+	mov	bl,TIAReg[di]		; bx = 0 if m0,bx = 1 if m1
 	and	bx,1
 
 	mov	al,TIA+TIAResmp0[bx]	; if its locked to the player
@@ -930,7 +894,7 @@ TGMCDraw:
 	push	bx
 	push	si
 
-	mov	bl,TIAClock[bp]		; get clock value (bh already 0)
+	mov	bl,TIAClock[di]		; get clock value (bh already 0)
 	add	bx,offset TIADisplay	; bx points to ball start in line
 
 	call	TIAMissileObject	; draw the object .....
@@ -939,15 +903,15 @@ TGMCDraw:
 	pop	bx
 
 TRMNoDraw:
-	mov	al,TIAReg[bp]		; if its a copy draw....
+	mov	al,TIAReg[di]		; if its a copy draw....
 	test	al,64			; (e.g. bit 6 is set)
 	jnz	TRMNoSetRes		; don't set RESP# from the clock
 
-	mov	al,TIAClock[bp]		; update RESm# counter with clock
+	mov	al,TIAClock[di]		; update RESm# counter with clock
 	mov	TIA+TIAResm0[bx],al	; so its drawn on the next line
 
 TRMNoSetRes:
-	mov	al,TIAReg[bp]		; register that was written....
+	mov	al,TIAReg[di]		; register that was written....
 	test	al,128			; if bit 7 is clear (new Res...)
 	jnz	TGret
 	or	al,128
@@ -956,22 +920,21 @@ TGret:	ret
 
 
 
-ALIGN_ENTRY
 
 TIAMissileObject:
 	push	ax
 	call	TIASolidObject		; draw the first missile
-	mov	al,TIAReg[bp]		; if its a copy draw....
+	mov	al,TIAReg[di]		; if its a copy draw....
 	test	al,64			; (e.g. bit 6 is set)
 	pop	ax
 	jnz	TGret			; don't queue up multiples
 
 	push	cx
-	push	bp
+	push	di
 	and	al,7			; isolate size/copies bits
 	movzx	esi,al
 	call	[offset TMODiffTab + esi*2] ; branch to appropriate routine
-	pop	bp
+	pop	di
 	pop	cx
 
 	ret
@@ -981,28 +944,25 @@ TMO2Width:
 TMO4Width:
 	ret
 
-ALIGN_ENTRY
 
 TMO2Close:
-	mov	ax,[bp]			; al = clock, ah = reg
+	mov	ax,[di]			; al = clock, ah = reg
 	add	al,16
 	or	ah,64
 	call	TIAInsert
 	ret
 
-ALIGN_ENTRY
 
 TMO2Medium:
-	mov	ax,[bp]			; al = clock, ah = reg
+	mov	ax,[di]			; al = clock, ah = reg
 	add	al,32
 	or	ah,64
 	call	TIAInsert
 	ret
 
-ALIGN_ENTRY
 
 TMO3Close:
-	mov	ax,[bp]			; al = clock, ah = reg
+	mov	ax,[di]			; al = clock, ah = reg
 	mov	cx,ax
 	add	al,16
 	or	ah,64
@@ -1013,19 +973,17 @@ TMO3Close:
 	call	TIAInsert
 	ret
 
-ALIGN_ENTRY
 
 TMO2Far:
-	mov	ax,[bp]			; al = clock, ah = reg
+	mov	ax,[di]			; al = clock, ah = reg
 	add	al,64
 	or	ah,64
 	call	TIAInsert
 	ret
 
-ALIGN_ENTRY
 
 TMO3Medium:
-	mov	ax,[bp]			; al = clock, ah = reg
+	mov	ax,[di]			; al = clock, ah = reg
 	mov	cx,ax
 	add	al,32
 	or	ah,64
@@ -1038,8 +996,8 @@ TMO3Medium:
 
 
 
-.CEND
-.DATASEGMENT
+.data
+
 TMODiffTab	dw	TMORegular	; 0
 		dw	TMO2Close	; 1
 		dw	TMO2Medium	; 2
@@ -1048,6 +1006,4 @@ TMODiffTab	dw	TMORegular	; 0
 		dw	TMO2Width	; 5
 		dw	TMO3Medium	; 6
 		dw	TMO4Width	; 7
-.DEND
-.CODESEGMENT
-
+.code

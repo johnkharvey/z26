@@ -12,9 +12,7 @@ CRTC_INDEX =	03d4h		; CRT controller index
 MISC_OUTPUT =	03c2h		; miscellaneous output register
 SCREEN_SEG =	0a000h		; segment of display memory in mode X
 
-
-.CEND
-.DATASEGMENT
+.data
 
 ModeXBufferSeg		dw	0	; segment adr of ModeX line buffer
 ModeXBufferPointer	dw	0
@@ -77,8 +75,7 @@ MX8Parms label word
 	dw	00516h	; vblank end
 MX8_PARM_LENGTH = (($-MX8Parms)/2)
 
-.DEND
-.CODESEGMENT
+.code
 
 ;*
 ;* initialize mode x

@@ -152,30 +152,10 @@ _put_hex:
 	ret
 
 ;*
-;* output hex word on stack
-;*
-
-_put_dhex:
-	pop	cx		; return adr
-	pop	eax		; val
-	push	eax
-	shr	eax,16
-	push	cx		; restore stack
-
-	call	ConWord		; output it
-
-	pop	cx
-	pop	eax
-	push	cx
-	call	ConWord
-
-	ret
-
-;*
 ;* output string pointed to by stack
 ;*
 
-_put_str:
+_put_str proc near
 	pop	cx		; return adr
 	pop	bx		; pointer to message
 	push	cx		; restore stack
@@ -195,6 +175,8 @@ psnolf:	call	ConOut
 	jmp	psloop
 
 psret:	ret
+_put_str endp
+
 
 
 ;*

@@ -2,44 +2,6 @@
 ;			      Other stuff
 ; *****************************************************************************
 
-Frame		dd	0		; Frame Counter
-PrevFrame	dd	0		; Previous value frame counter
-
-FrameExit	dd	0		; do this many frames and exit
-OriginalFrameExit dd	0		; save it here for FPS calculation
-StartTicks	dd	0		; ticks at start
-StopTicks	dd	0		; ticks at finish
-
-ScanLine	dw	1		; current scan line
-TopLine		dw	0		; was 36     top line of display
-BottomLine	dw	0		; was 36+200 bottom line of display
-
-OldCFirst	dw	0		; remember original CFirst
-					; (for homing the display)
-
-DefaultCFirst	dw	0ffffh		; recommended start of game
-UserCFirst	dw	0ffffh		; remember what user specified (if anything)
-
-DEFAULT_CFirst = 39
-MEDIUM_Offset = 19			; offset a medium game this much
-					; tune so that game in mode 3 and mode 5
-					; appear at same vertical position
-					; (unless it's a known tall game)
-
-MAX_TallGame = 240			; size of a tall game
-
-CFirst		dw	0ffffh		; <-- gets changed by SetupSpecial
-					; (zero has VBlank trigger a new frame)
-
-InitialMaxLines	dw	204		; for remembering which games are medium and tall					 
-MaxLines	dw	204		; max # of lines to scan
-					; (gets changed by graphics.asm)
-
-DisplayPointer	dw	0		;pointer into display RAM
-
-DisplayTranslate dw offset TIADisplayToColour ;display to color translation table
-
-ALIGN 4
 
 ; *** keep next 4 variables in order !!!!
 ; they are arranged to match the order of the entries in TIAColourTable
@@ -48,127 +10,13 @@ BackgroundColor	dd	0
 PlayfieldColor	dd	0
 Player1Color	dd	0
 Player0Color	dd	0
+Frame		dd	0		; Frame Counter
+PrevFrame	dd	0		; Previous value frame counter
 
-NoRetrace	db	0		; don't wait for retrace (if 0ffh)
-					; moved to vsync.asm
+OriginalFrameExit dd	0		; save it here for FPS calculation
+StartTicks	dd	0		; ticks at start
+StopTicks	dd	0		; ticks at finish
 
-ColumnBlank	db	0		; blank this many columns
-GamePaused	db	0		; game paused
-NoScoreMode	db	0		; set if we don't want PF to take on player colors
-CPUOffset	db	66		; 64 default offset for CPU clock
-CPUClock	db	0
-WrapZero	db	0		; wrap negative player pos to zero
-WrapWsync	db	0		; push late Wsyncs to next line
-OldMissile	db	0		; use old missile code for resmpx
-SoundMode	db	0ffh		; sound mode
-
-ALIGN	2
-
-CtrlFn		dw	 Controls	; Control vector (paddles/sticks)
-
-WByte		db	0		; byte to write
-
-ALIGN 2
-
-TIABuffer	db 256 dup (TIAEnd)	; TIA information buffer
-					; 128 just isn't big enough for some
-					; trashed games.
-
-VDP0Gr		db	0		; Buffer for Player 0 Vert Del Graphic
-VDP1Gr		db	0		; Buffer for Player 1 Vert Del Graphic
-VDBlEn		db	0		; Buffer for Ball Vertical Delay Enable
-
-TIAWritePointer dw	0		; Write to TIA Buffer pointer
-TIACollide	dw	0		; Collision flag word.
-
-; *** stuff that gets shared with "C" program ***
-
-_psp		dw	0		; gets set by calling C program
-psp		dw	0		; gets pointer to PSP 
-					; (if .EXE file or module)
-_Checksum	dd	0		; gets cart checksum
-_dsp		dw	0		; do digital signal processing
-_VideoMode	db	0ffh		; default video mode
-_Joystick	db	1		; do joystick
-_DoChecksum	db	0		; set if we should print out checksum
-_quiet		db	0		; set if we want no sound
-
-ALIGN 2
-
-ModuleReturn	dw	0
-ModuleBP	dw	0
-ModuleSP	dw	0
-
-
-;process these commands immediately
-
-ALIGN 2
-
-WrTiaImmediateVector	dw	WrTiaVSync	; 0
-			dw	WrTiaVBlank	; 1
-			dw	WrTiaWSync	; 2
-			dw	WSret		; 3 -- reset horizontal sync
-						;      for factory testing only !
-		        
-; cycle offset table
-
-;CO=-1	;default cycle offset
-CO=0	; -1 for Oscar
-C1=-2	;(-2) -1 for yars -2 for tron
-C2=0	; 0 for vidcube
-C3=0	; -1
-C4=0	; -1
-
-
-CycleOffset	db	68+CO	;00	VSYNC
-		db	68+CO	;01	VBLANK
-		db	68+CO	;02	WSYNC
-		db	68+CO	;03	RSYNC
-		db	68+CO	;04	NUSIZ0
-		db	68+CO	;05	NUSIZ1
-		db	68+C2	;06	COLUP0
-		db	68+C2	;07	COLUP1
-		db	68+C2	;08	COLUPF
-		db	68+C2	;09	COLUBK
-		db	68+C2	;0a	CTRLPF
-		db	68+CO	;0b	REFP0
-		db	68+CO	;0c	REFP1
-		db	68+C1	;0d	PF0
-		db	68+C1	;0e	PF1
-		db	68+C1	;0f	PF2
-		db	68-5	;10	RESP0	-- tune for Pacman
-		db	68-5	;11	RESP1	-- ditto
-		db	68-4	;12	RESM0	-- ditto 4
-		db	68-4	;13	RESM1	-- ditto 4
-		db	68-4	;14	RESBL	-- ditto 4
-		db	68+CO	;15	AUDC0
-		db	68+CO	;16	AUDC1
-		db	68+CO	;17	AUDF0
-		db	68+CO	;18	AUDF1
-		db	68+CO	;19	AUDV0
-		db	68+CO	;1a	AUDV1
-		db	68+C3	;1b	GRP0
-		db	68+C3	;1c	GRP1
-		db	68+C4	;1d	ENAM0
-		db	68+C4	;1e	ENAM1
-		db	68+C4	;1f	ENABL
-		db	68+CO	;20	HMP0
-		db	68+CO	;21	HMP1
-		db	68+CO	;22	HMM0
-		db	68+CO	;23	HMM1
-		db	68+CO	;24	HMBL
-		db	68+CO	;25	VDELP0
-		db	68+CO	;26	VDEL01
-		db	68+CO	;27	VDELBL
-		db	68+CO	;28	RESMP0
-		db	68+CO	;29	RESMP1
-		db	68+CO	;2a	HMOVE
-		db	68+CO	;2b	HMCLR
-		db	68+CO	;2c	CXCLR
-
-        
-
-ALIGN 4
 
 ;playfield counter to playfield bit table
 
@@ -263,6 +111,187 @@ PFClockToBitForward	dd	1 shl 4		;0	forward
 
 
 PFClockToBitTable	dw	PFClockToBitReversed
+
+
+
+ScanLine	dw	1		; current scan line
+TopLine		dw	0		; was 36     top line of display
+BottomLine	dw	0		; was 36+200 bottom line of display
+
+OldCFirst	dw	0		; remember original CFirst
+					; (for homing the display)
+
+DefaultCFirst	dw	0ffffh		; recommended start of game
+UserCFirst	dw	0ffffh		; remember what user specified (if anything)
+
+DEFAULT_CFirst = 39
+MEDIUM_Offset = 19			; offset a medium game this much
+					; tune so that game in mode 3 and mode 5
+					; appear at same vertical position
+					; (unless it's a known tall game)
+
+MAX_TallGame = 240			; size of a tall game
+
+InitialMaxLines	dw	204		; for remembering which games are medium and tall					 
+MaxLines	dw	204		; max # of lines to scan
+					; (gets changed by graphics.asm)
+
+DisplayPointer	dw	0		;pointer into display RAM
+
+DisplayTranslate dw offset TIADisplayToColour ;display to color translation table
+
+
+ColumnBlank	db	0		; blank this many columns
+GamePaused	db	0		; game paused
+NoScoreMode	db	0		; set if we don't want PF to take on player colors
+CPUOffset	db	66		; 64 default offset for CPU clock
+CPUClock	db	0
+WrapZero	db	0		; wrap negative player pos to zero
+WrapWsync	db	0		; push late Wsyncs to next line
+OldMissile	db	0		; use old missile code for resmpx
+
+ALIGN	2
+
+CtrlFn		dw	 Controls	; Control vector (paddles/sticks)
+
+WByte		db	0		; byte to write
+
+ALIGN 2
+
+TIABuffer	db 256 dup (TIAEnd)	; TIA information buffer
+					; 128 just isn't big enough for some
+					; trashed games.
+
+VDP0Gr		db	0		; Buffer for Player 0 Vert Del Graphic
+VDP1Gr		db	0		; Buffer for Player 1 Vert Del Graphic
+VDBlEn		db	0		; Buffer for Ball Vertical Delay Enable
+
+TIAWritePointer dw	0		; Write to TIA Buffer pointer
+TIAReadPointer	dw	0		; Read from TIA Buffer pointer
+TIACollide	dw	0		; Collision flag word.
+
+psp		dw	0		; gets pointer to PSP 
+					; (if .EXE file or module)
+
+; *** stuff that gets shared with "C" program ***
+
+global _psp
+_psp		dw	0		; gets set by calling C program
+
+global _Checksum
+_Checksum	dd	0		; gets cart checksum
+
+global _dsp
+_dsp		db	0		; do digital signal processing
+
+global _VideoMode
+_VideoMode	db	0ffh		; default video mode
+
+global _CFirst
+_CFirst		dw	0ffffh		; <-- gets changed by SetupSpecial
+					; (zero has VBlank trigger a new frame)
+global _SoundMode
+_SoundMode	db	0ffh		; sound mode
+
+global _IOPortB
+_IOPortB	db	00Bh		; IO Port B (switches)
+IOPortA		db	0FFh		; IO Port A (joystick)
+
+global _DoChecksum
+_DoChecksum	db	0		; set if we should print out checksum
+
+global _NoRetrace
+_NoRetrace	db	0		; don't wait for retrace (if 0ffh) otherwise framerate
+
+global _FrameExit
+_FrameExit	dd	0		; do this many frames and exit
+
+global _Joystick
+_Joystick	db	1		; do joystick
+
+global _quiet
+_quiet		db	0		; set if we want no sound
+
+global _PaletteNumber
+_PaletteNumber	db	0ffh		; gets set by cmdline.asm
+
+global _PaddleGame
+_PaddleGame	dd	0		; this is a paddle game (sensitivity)
+
+global _KeyBase
+_KeyBase	db	0ffh		; which paddle to emulate
+
+global _CartSize
+_CartSize	dw	0		; gets cart size (cmdline.asm)
+
+
+;process these commands immediately
+
+ALIGN 2
+
+WrTiaImmediateVector	dw	WrTiaVSync	; 0
+			dw	WrTiaVBlank	; 1
+			dw	WrTiaWSync	; 2
+			dw	WSret		; 3 -- reset horizontal sync
+						;      for factory testing only !
+		        
+; cycle offset table
+
+;CO=-1	;default cycle offset
+CO=0	; -1 for Oscar
+C1=-2	;(-2) -1 for yars -2 for tron
+C2=0	; 0 for vidcube
+C3=0	; -1
+C4=0	; -1
+
+
+CycleOffset	db	68+CO	;00	VSYNC
+		db	68+CO	;01	VBLANK
+		db	68+CO	;02	WSYNC
+		db	68+CO	;03	RSYNC
+		db	68+CO	;04	NUSIZ0
+		db	68+CO	;05	NUSIZ1
+		db	68+C2	;06	COLUP0
+		db	68+C2	;07	COLUP1
+		db	68+C2	;08	COLUPF
+		db	68+C2	;09	COLUBK
+		db	68+C2	;0a	CTRLPF
+		db	68+CO	;0b	REFP0
+		db	68+CO	;0c	REFP1
+		db	68+C1	;0d	PF0
+		db	68+C1	;0e	PF1
+		db	68+C1	;0f	PF2
+		db	68-5	;10	RESP0	-- tune for Pacman
+		db	68-5	;11	RESP1	-- ditto
+		db	68-4	;12	RESM0	-- ditto 4
+		db	68-4	;13	RESM1	-- ditto 4
+		db	68-4	;14	RESBL	-- ditto 4
+		db	68+CO	;15	AUDC0
+		db	68+CO	;16	AUDC1
+		db	68+CO	;17	AUDF0
+		db	68+CO	;18	AUDF1
+		db	68+CO	;19	AUDV0
+		db	68+CO	;1a	AUDV1
+		db	68+C3	;1b	GRP0
+		db	68+C3	;1c	GRP1
+		db	68+C4	;1d	ENAM0
+		db	68+C4	;1e	ENAM1
+		db	68+C4	;1f	ENABL
+		db	68+CO	;20	HMP0
+		db	68+CO	;21	HMP1
+		db	68+CO	;22	HMM0
+		db	68+CO	;23	HMM1
+		db	68+CO	;24	HMBL
+		db	68+CO	;25	VDELP0
+		db	68+CO	;26	VDEL01
+		db	68+CO	;27	VDELBL
+		db	68+CO	;28	RESMP0
+		db	68+CO	;29	RESMP1
+		db	68+CO	;2a	HMOVE
+		db	68+CO	;2b	HMCLR
+		db	68+CO	;2c	CXCLR
+
+        
 
 
 ;

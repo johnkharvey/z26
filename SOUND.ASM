@@ -5,8 +5,7 @@
 ;
 ; *****************************************************************************
 
-.CEND
-.DATASEGMENT
+.data
 
 Frequency dw 39 ; 30000.00 Hz
  dw 79 ; 15000.00 Hz
@@ -57,9 +56,7 @@ SDMPX	db	2			; 0 = ch1,1 = ch2,2 = both,-1 = quiet
 MinVol	db	8			; minimum volume for PC Speaker
 
 
-.DEND
-.CODESEGMENT
-
+.code
 
 ; *****************************************************************************
 ;

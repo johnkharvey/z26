@@ -35,9 +35,11 @@ FAIL		equ	0
 SUCCESS		equ	1
 SB_EXIT		equ	2
 
+.data?
 
-.CEND
-.DATASEGMENT
+_BaseDMABuf	db	BUF_SIZE*2+2 dup (?)	; Sound Blaster DMA buffer
+
+.data
 
 _Sb_init	db	0	; mark Sound Blaster currently not in use
 _sbBaseIOPort	dw	0
@@ -79,8 +81,7 @@ dma_2	db	81h
 dma_3	db	82h
 
 
-.DEND
-.CODESEGMENT
+.code
 
 sbDataSegSave	dw	0		; gets copy of DS (set by SetISR)
 
@@ -415,10 +416,8 @@ get_blaster:
 	push	ds
 	pop	es			; Make ES=DS
 
-IFNDEF comfile
 	mov	ax,psp
 	mov	ds,ax			; DS points to psp
-ENDIF
 
 	mov	ax,ds:[2Ch]		; my assembler likes this segment override!
 	mov	ds,ax			;Get pointer to environment string
@@ -773,7 +772,7 @@ _SetupSoundBlaster:
 	mov	bx,15700		; assume slowest playback speed
 	cmp	ax,0200h		; DSP == 2.00 ?
 	je	SSB_SetPlayback		;   yes, use slow speed
-	cmp	[SoundMode],2		; forcing slow speed ?
+	cmp	[_SoundMode],2		; forcing slow speed ?
 	je	SSB_SetPlayback		;   yes
 	mov	bx,31400		; assume faster playback freq
 	cmp	ax,0400h		; DSP version >= 4.00?
@@ -799,7 +798,7 @@ SSB_SetPlayback:
 SSB_Slow:
 	mov	[_sbTimeConstant],al	; save
 
-	cmp	[SoundMode],0
+	cmp	[_SoundMode],0
 	jne	SSB_NoMsg
 	call	_ShowBlasterDetected	; if verbose, show message
 
@@ -826,7 +825,7 @@ SSB_Exit:
 	ret
 
 SSB_Err1:
-	cmp	[SoundMode],0
+	cmp	[_SoundMode],0
 	jne	SSB_Done
 	call	_ShowBlasterEnvBad	; if verbose, show message
 	jmp	SSB_Done
@@ -834,13 +833,13 @@ SSB_Err1:
 SSB_Err2:
 	cmp	ax,SB_EXIT		; did user press escape
 	je	SSB_Exit		;   yes
-	cmp	[SoundMode],0
+	cmp	[_SoundMode],0
 	jne	SSB_Done
 	call	_ShowBlasterNotFound	; if verbose, show message
 	jmp	SSB_Done
 
 SSB_Err3:
-	cmp	[SoundMode],0
+	cmp	[_SoundMode],0
 	jne	SSB_Done
 	call	_ShowBlasterTooOld	; if verbose, show message
 	jmp	SSB_Done

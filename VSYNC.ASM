@@ -5,8 +5,7 @@
 
 CRTSTAT=	03dah			; CRT status register
 
-.CEND
-.DATASEGMENT
+.data
 
 LastVsyncTime		dd	0		; when was last Vsync ?
 FrameTime		dd	0
@@ -39,15 +38,14 @@ VideoRateTable		dd	17104		; 0 -- 69.76 fps
 			dd	20165		; 9 -- 59.17 fps (soft scan line -- not implemented yet)
 
 
-.DEND
-.CODESEGMENT
+.code
 
 ;*
 ;* start off on the right foot -- initialize VSYNC time
 ;*
 
 ReSync:
-	cmp	[NoRetrace],0			; did user specify a -r<n> param ?
+	cmp	[_NoRetrace],0			; did user specify a -r<n> param ?
 	jnz	VSRet				;   yes, don't do this
 	pushad
 	cmp	[_VideoMode],8			; video mode in range ?
@@ -74,16 +72,16 @@ ReSyncLoop:
 	sub	eax,[CurrentTime]
 	cmp	eax,[VsyncBrokenTime]
 	jb	ReSyncLoop
-	mov	[NoRetrace],60			; vsync broken, fall back to timed frames
+	mov	[_NoRetrace],60			; vsync broken, fall back to timed frames
 	jmp	PopRet
 
 ;*
 ;* frame synchronizer
 ;*
 
-VSync:	cmp	[NoRetrace],0ffh		; -r no param
+VSync:	cmp	[_NoRetrace],0ffh		; -r no param
 	je	VSRet
-	cmp	[NoRetrace],1
+	cmp	[_NoRetrace],1
 	jae	FrameLimiter			; -r<n>, n >= 1
 
 	pushad					; default code -- look for Vsync pulse with a timeout
@@ -142,7 +140,7 @@ FrameLimiter:
 
 	mov	eax,[TicksPerSecond]
 	xor	edx,edx
-	movzx	ecx,[NoRetrace]		; pick up # of frames per second
+	movzx	ecx,[_NoRetrace]		; pick up # of frames per second
 	div	ecx			; eax = # of ticks per frame
 	add	[FrameTime],eax		; make it next frame time
 

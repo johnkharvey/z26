@@ -32,13 +32,11 @@ _ShiftRegister9	proc	near
 	ret	
 _ShiftRegister9	endp
 
-.CEND
-.DATASEGMENT
+.data
 
 sreg	dw	1		; initialize shift register to non-zero val
 
-.DEND
-.CODESEGMENT
+.code
 
 ;*
 ;* handle the power-up initialization functions
@@ -78,18 +76,14 @@ TSI_1:	call	_ShiftRegister9
 	ret	
 _Tia_sound_init	endp
 
-.CEND
-.DATASEGMENT
+.data
 
 _new_val	dw	0
 
 prev_sample	dw	0
 next_sample	db	0
 
-.DEND
-.CODESEGMENT
-
-ALIGN_ENTRY
+.code
 
 ;*
 ;* update TIA sound registers
@@ -97,8 +91,8 @@ ALIGN_ENTRY
 
 _Update_tia_sound	proc	near
 
-	movzx	bx,byte ptr TIAReg[bp]
-	mov	al,TIAVal[bp]
+	movzx	bx,byte ptr TIAReg[di]
+	mov	al,TIAVal[di]
 
 	sub	bx,21		; offset to AUDC
 	cmp	bx,5
@@ -208,35 +202,35 @@ done:
 ;* Fill the output buffer with the sound output based on the TIA chip parameters.
 ;*
 
-ALIGN_ENTRY
 
 _Tia_process	proc	near
 
 	mov	cx,BUF_SIZE/2		; # of bytes
 
-	mov	di,[_DMABuf]
-	add	di,[_DMABufToLoad]	; address of buffer to fill
+	mov	si,[_DMABuf]
+	add	si,[_DMABufToLoad]	; address of buffer to fill
+	mov	[SoundPointer],si
 
-	mov	dx,[_dsp]		; do digital signal processing flag
+	movzx	dx,[_dsp]		; do digital signal processing flag
 
 TP_ProcessLoop:
 
-	xor	ebp,ebp			; process channel 0 first
+	xor	edi,edi			; process channel 0 first
 
 TP_ProcessChannel:
-	cmp	[Div_n_cnt + bp],1	; if div by N counter can count down ...
+	cmp	[Div_n_cnt + di],1	; if div by N counter can count down ...
 	jb	TP_Ch0done		;   zero is special case, means AUDC==0 -- fast exit
 	je	TP_1
-	dec	[Div_n_cnt + bp]	; ... decrement ...
+	dec	[Div_n_cnt + di]	; ... decrement ...
 	jmp	TP_Ch0done		; ... and do next channel
 
-TP_1:	mov	al,[Div_n_max + bp]	; otherwise reset the counter and process this channel
-	mov	[Div_n_cnt + bp],al
+TP_1:	mov	al,[Div_n_max + di]	; otherwise reset the counter and process this channel
+	mov	[Div_n_cnt + di],al
 
-	movzx	esi,[AUDC + bp]		; AUDC = index into branch table
+	movzx	esi,[AUDC + di]		; AUDC = index into branch table
 
-	inc_mod	P5+bp,31		; P5 channel has multiple uses (Div31 & P5), inc it here
-	movzx	bx,[P5 + bp]
+	inc_mod	P5+di,31		; P5 channel has multiple uses (Div31 & P5), inc it here
+	movzx	bx,[P5 + di]
 
 	jmp	cs:[AUDC_Jumptab + esi*2] ; process sound changes based on AUDC
 
@@ -270,14 +264,14 @@ TP_Poly5_Pure:
 	jz	TP_Ch0done		; ... do pure
 
 TP_Pure:
-	cmp	[Outvol + bp],0		; toggle the output
+	cmp	[Outvol + di],0		; toggle the output
 	je	TP_VolumeOn
 	jmp	TP_VolumeOff
 
 
 TP_Poly9:	
-	inc_mod	P9+2*ebp,511		; inc the P9 counter
-	mov	bx,[P9 + 2*ebp]
+	inc_mod	P9+2*edi,511		; inc the P9 counter
+	mov	bx,[P9 + 2*edi]
 
 	cmp	Bit9[bx],0		; and set the output bit
 	je	TP_VolumeOff
@@ -294,7 +288,7 @@ TP_Poly5_Poly5:
 	jz	TP_Ch0done		; ... do Poly5
 
 TP_Poly5:
-	movzx	bx,[P5 + bp]		; set the output bit
+	movzx	bx,[P5 + di]		; set the output bit
 	cmp	Bit5[bx],0
 	je	TP_VolumeOff
 	jmp	TP_VolumeOn
@@ -310,23 +304,23 @@ TP_Poly5_Poly4:
 	jz	TP_Ch0done		; ... do Poly4
 
 TP_Poly4:
-	inc_mod	P4+bp,15		; inc P4 counter
-	movzx	bx,[P4 + bp]
+	inc_mod	P4+di,15		; inc P4 counter
+	movzx	bx,[P4 + di]
 
 	cmp	Bit4[bx],0		; and set the output bit
 	je	TP_VolumeOff
 
 TP_VolumeOn:
-	mov	al,[AUDV + bp]
-	mov	[Outvol + bp],al
+	mov	al,[AUDV + di]
+	mov	[Outvol + di],al
 	jmp	TP_Ch0done
 
 TP_VolumeOff:
-	mov	[Outvol + bp],0
+	mov	[Outvol + di],0
 
 TP_Ch0done:
-	inc	bp			; to next channel
-	cmp	bp,1			; done ?
+	inc	di			; to next channel
+	cmp	di,1			; done ?
 	jbe	TP_ProcessChannel	;   not yet
 
 	sub	[Samp_n_cnt],256	; decrement sample count
@@ -359,8 +353,9 @@ TP_NoSilence:
 	mov	[prev_sample],si
 
 TP_ProcessDone:
-	mov	[di],al			; put byte in buffer
-	inc	di			; bump buffer pointer
+	mov	si,[SoundPointer]
+	inc	[SoundPointer]
+	mov	[si],al			; put byte in buffer
 
 	dec	cx			; one less byte to do
 	jnz	TP_ProcessLoop
@@ -368,8 +363,7 @@ TP_ProcessDone:
 	ret	
 _Tia_process	endp
 
-.CEND
-.DATASEGMENT
+.data
 
 ; Initialze the bit patterns for the polynomials.
 
@@ -400,6 +394,8 @@ Div31	db	0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0
 Samp_n_cnt	dw	0
 Samp_n_max	dw	0
 
+SoundPointer	dw	0
+
 P4		db	2 dup (0)
 P5		db	2 dup (0)
 P9		dw	2 dup (0)
@@ -414,5 +410,5 @@ _sample_freq	dw	0
 _playback_freq	dw	0
 
 
-.DEND
-.CODESEGMENT
+.code
+

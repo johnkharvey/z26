@@ -5,10 +5,9 @@
 ; 06-27-98 -- new design
 ; 07-17-98 -- simplify
 
-.CEND
-.DATASEGMENT
+.data
 
-reg_pc		dw	0		; program counter (stored in BP)
+reg_pc		dw	0		; program counter (stored in DI)
 
 ; the following two locations must be in this order and next to each other
 
@@ -52,8 +51,7 @@ LastCycle	db	0		; for DoInstructions
 
 jam_msg	db	'Halt ','$'
 
-.DEND
-.CODESEGMENT
+.code
 
 ;*
 ;* memory accessing macros -- get/put data via op2
@@ -106,18 +104,18 @@ write   macro   op1,op2			; write memory
 ;*
 
 fetch   macro   op1
-        read    op1,bp
-        inc     bp
+        read    op1,di
+        inc     di
         endm
 
 fetchsx macro   op1
-        readsx  op1,bp
-        inc     bp
+        readsx  op1,di
+        inc     di
         endm
 
 fetchzx macro   op1
-        readzx  op1,bp
-        inc     bp
+        readzx  op1,di
+        inc     di
         endm
 
 fetch_opcode macro   op1		; special fetchzx for trace logging
@@ -128,8 +126,8 @@ local fo_1
 
 	call	TraceInstruction
 
-fo_1:	readzx  op1,bp
-        inc     bp
+fo_1:	readzx  op1,di
+        inc     di
         endm
 
 ;*
@@ -448,7 +446,7 @@ op_branch macro op1,op2,op3,op4
 _&op1:	relative
 	test	op2,op3
 	op4	DoBranch
-	inc	bp
+	inc	di
 	ret
 	endm
 
@@ -915,10 +913,10 @@ _BRK macro
 	inc_clock 7
 
 	mov	[flag_B],1	; set break flag
-	inc	bp
-	mov	dx,bp		; push return address
+	inc	di
+	mov	dx,di		; push return address
 	zpush	dh
-	mov	dx,bp
+	mov	dx,di
 	zpush	dl
 
 	call	_08		; push PSW
@@ -929,7 +927,7 @@ _BRK macro
 	read	al,bx
 	inc	bx
 	read	ah,bx
-	mov	bp,ax		; and transfer control
+	mov	di,ax		; and transfer control
 	pop	ax
 	endm
 
@@ -940,10 +938,10 @@ _JMPI macro
 	read	dl,bx
 	inc	bl		; stay in current page
 	read	dh,bx
-	mov	bp,dx		; and jump to it
+	mov	di,dx		; and jump to it
 
 IFDEF z64
-	cmp	bp,0ff00h
+	cmp	di,0ff00h
 	jae	KernalHandler
 ENDIF
 	endm
@@ -952,10 +950,10 @@ _JMPW macro
 	inc_clock 3
 
 	absolute		; fetch	the address
-	mov	bp,bx		; jump to it
+	mov	di,bx		; jump to it
 
 IFDEF z64
-	cmp	bp,0ff00h
+	cmp	di,0ff00h
 	jae	KernalHandler
 ENDIF
 	endm
@@ -965,15 +963,15 @@ _JSR macro
 
 	absolute		; call address in bx now
 	push	ax
-	mov	ax,bp		; ax is	the return address
-	mov	bp,bx		; transfer control
+	mov	ax,di		; ax is	the return address
+	mov	di,bx		; transfer control
 	dec	ax		; push return-1
 	zpush	ah
 	zpush	al
 	pop	ax
 
 IFDEF z64
-	cmp	bp,0ff00h
+	cmp	di,0ff00h
 	jae	KernalHandler
 ENDIF
 	endm
@@ -1014,7 +1012,7 @@ _RTI macro
 	push	ax
 	zpop	al
 	zpop	ah		; pull return address
-	mov	bp,ax		; transfer control
+	mov	di,ax		; transfer control
 	pop	ax
 	endm
 
@@ -1024,8 +1022,8 @@ _RTS macro
 	push	ax
 	zpop	al
 	zpop	ah		; pull return address
-	mov	bp,ax		; transfer control
-	inc	bp
+	mov	di,ax		; transfer control
+	inc	di
 	pop	ax
 	endm
 
@@ -1034,14 +1032,14 @@ _RTS macro
 
 LoadRegs macro
 	mov	ax,word ptr [reg_a]	; mov al,[reg_a]; mov ah,[flag_carry]
-	mov	bp,[reg_pc]
+	mov	di,[reg_pc]
 	endm
 
 ; save CPU registers
 
 SaveRegs macro
 	mov	word ptr [reg_a],ax	; mov [reg_a],al; mov [flag_carry],ah
-	mov	[reg_pc],bp
+	mov	[reg_pc],di
 	endm
 
 ;*
@@ -1050,7 +1048,7 @@ SaveRegs macro
 
 DoInstruction macro
 	push	dx
-	push	bp
+	push	di
 	push	si
 	LoadRegs			; load the CPU registers
 
@@ -1060,7 +1058,7 @@ DoInstruction macro
 
 	SaveRegs			; save the CPU registers
 	pop	si
-	pop	bp
+	pop	di
 	pop	dx
 
 	endm
@@ -1079,12 +1077,12 @@ ENDIF
 
 jam:	push	offset jam_msg
 	call	_put_str
-	dec	bp			; point at jam instruction
-	read	al,bp
+	dec	di			; point at jam instruction
+	read	al,di
 	call	ConHex			; display it
 	mov	al,'@'
 	call	ConOut
-	mov	ax,bp
+	mov	ax,di
 	call	ConWord			; display address
 
 IFNDEF z64
@@ -1112,9 +1110,9 @@ Reset:	mov	[reg_sp],0FFh		; SP initialises to 255
 DoBranch:
         fetchsx dx			; sign-extended branch offset into dx
 
-	mov	bx,bp			; bh is	the current page
-	add	dx,bp			; destination address
-	mov	bp,dx			; set the program counter
+	mov	bx,di			; bh is	the current page
+	add	dx,di			; destination address
+	mov	di,dx			; set the program counter
 
 	bumpclock			; branch is taken -- one extra cycle
 	cmp	bh,dh			; page changed ?
@@ -1166,8 +1164,7 @@ PutPSW:	mov	[RNTest],dh	; PSW will do for N
 	setnz	[flag_V]
 	ret
 
-.CEND
-.DATASEGMENT
+.data
 
 ;*
 ;* opcode vector table
@@ -1191,8 +1188,7 @@ vectors label word
     dw _e0,_e1,_e2,_e3,_e4,_e5,_e6,_e7,_e8,_e9,_ea,_e9,_ec,_ed,_ee,_ef ;_eb=_e9
     dw _f0,_f1,jam,_f3,_f4,_f5,_f6,_f7,_f8,_f9,_fa,_fb,_fc,_fd,_fe,_ff
 
-.DEND
-.CODESEGMENT
+.code
 
 ;*
 ;* opcode handlers

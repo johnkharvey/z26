@@ -2,8 +2,7 @@
 ;* paddle.asm -- z26 paddle support
 ;*
 
-.CEND
-.DATASEGMENT
+.data
 
 TRIGMAX =	240			; (guardian)  max val for charge triggers
 TRIGMIN =	22			; (solrstrm)  min val for charge triggers
@@ -15,15 +14,12 @@ ChargeTrigger1	dd	TRIGMAX / 2
 ChargeTrigger2	dd	TRIGMAX / 2
 ChargeTrigger3	dd	TRIGMAX / 2
 
-PaddleGame	dd	0		; this is a paddle game (sensitivity)
 PaddleRepeat	dd	0
 PrevPaddleFrame	dd	0
-KeyBase		db	0ffh		; which paddle to emulate
 
 PaddleBits	db	080h, 040h, 2, 4
 
-.DEND
-.CODESEGMENT
+.code
 
 ;*
 ;* paddle acceleration
@@ -37,7 +33,7 @@ CalcPaddleAcceleration:
 	cmp	edx,1			; key being held down ?
 	jne	NewPaddleRepeat		;   no, fresh hit
 	inc	[PaddleRepeat]		;   yes, increment repeat count
-	mov	edx,[PaddleGame]
+	mov	edx,[_PaddleGame]
 	cmp	edx,[PaddleRepeat]	; repeat count hit max sensitivity ?
 	ja	PaddleInRange		;   yes
 	mov	[PaddleRepeat],edx	;   no, store new value
@@ -57,7 +53,7 @@ PaddleInRange:
 PaddleTriggerDown0:
 	call	CalcPaddleAcceleration
 	push	esi
-	movzx	esi,[KeyBase]		; trigger to modify
+	movzx	esi,[_KeyBase]		; trigger to modify
 	mov	edx,[PaddleRepeat]
 	shr	edx,1
 	cmp	[ChargeTrigger0 + esi*4],TRIGMIN
@@ -73,7 +69,7 @@ PTRet:	pop	esi
 PaddleTriggerUp0:
 	call	CalcPaddleAcceleration
 	push	esi
-	movzx	esi,[KeyBase]		; trigger to modify
+	movzx	esi,[_KeyBase]		; trigger to modify
 	mov	edx,[PaddleRepeat]
 	shr	edx,1
 	cmp	[ChargeTrigger0 + 4*esi],TRIGMAX
@@ -88,7 +84,7 @@ PaddleTriggerUp0:
 
 PaddleButton0:
 	push	esi
-	movzx	esi,[KeyBase]		; which button pressed
+	movzx	esi,[_KeyBase]		; which button pressed
 	mov	dl,PaddleBits[esi]	; convert to proper bit
 	not	dl
 	and	[IOPortA],dl		; clear bit in IOPortA

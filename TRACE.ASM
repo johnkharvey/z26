@@ -1,14 +1,11 @@
 ; trace.asm -- z26 trace stuff
 
 
-.CEND
-.DATASEGMENT
+.data
 
 trace_count	dd	0	; nonzero if tracing
 
-.DEND
-.CODESEGMENT
-
+.code
 
 TraceInstruction:
 

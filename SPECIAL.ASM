@@ -3,6 +3,7 @@
 ;*
 
 SetupSpecial:
+	mov	eax,[_Checksum]
 	jmp	SSFudgeMissile
 
 
@@ -300,7 +301,7 @@ endif
 ;*
 
 SSLINE:
-	mov	dx,[CFirst]
+	mov	dx,[_CFirst]
 	mov	[UserCFirst],dx			; remember...
 
 	push	si
@@ -308,7 +309,7 @@ SSLINE:
 	call	SSLINE_Setup
 	pop	si
 
-	mov	dx,[CFirst]
+	mov	dx,[_CFirst]
 	mov	[DefaultCFirst],dx		; remember again...
 
 	jmp	SSPADDLE
@@ -335,13 +336,12 @@ SSLINE_TestDouble:
 
 SSLINE_SetLine:
 	movzx	dx,byte ptr [si]
-	mov	[CFirst],dx
+	mov	[_CFirst],dx
 
 SSLINE_SearchDone:
 	ret
 
-.CEND
-.DATASEGMENT
+.data
 
 LineTable label byte
 
@@ -391,6 +391,8 @@ LineTable label byte
 	db	32
 	dd	06000h			; burndesr
 	db	32
+	dd	01a765ch		; califgms
+	db	40
 	dd	03d843h			; canyonb
 	db	59
 	dd	07d16h			; carnival
@@ -468,7 +470,7 @@ LineTable label byte
 	dd	02018h			; earthdie
 	db	36
 	dd	06ccd7h			; eggomana
-	db	46
+	db	42
 	dd	066e29h			; encontl5
 	db	42
 	dd	06dd61h			; endro_tw
@@ -490,7 +492,7 @@ LineTable label byte
 	dd	08ab0h			; firebird
 	db	77
 	dd	0729f3h			; firefite
-	db	44
+	db	40
 	dd	0756ach			; firefly
 	db	49
 	dd	03d33ch			; flagcapt
@@ -770,9 +772,7 @@ LineTable label byte
 
 	dd	-1			; end of table
 
-.DEND
-.CODESEGMENT
-
+.code
 
 ;*
 ;* process requests for paddle games
@@ -846,13 +846,13 @@ SPG1:	mov	dx,0601h		; sensitivity 3, paddle 1
 SPG3:	mov	dx,0603h		; sensitivity 3, paddle 3
 	jmp	SPGSet
 
-SPGSet:	cmp	dword ptr [PaddleGame],0
+SPGSet:	cmp	dword ptr [_PaddleGame],0
 	jne	SPGSkipSensitivity
-	mov	byte ptr [PaddleGame],dh
+	mov	byte ptr [_PaddleGame],dh
 SPGSkipSensitivity:
-	cmp	[KeyBase],0ffh
+	cmp	[_KeyBase],0ffh
 	jne	SPGSkipKeyBase
-	mov	[KeyBase],dl
+	mov	[_KeyBase],dl
 SPGSkipKeyBase:
 	jmp	SSP
 
@@ -860,7 +860,7 @@ SPGSkipKeyBase:
 ;* process requests for special palette
 ;*
 
-SSP:	cmp	[PaletteNumber],0ffh	; did user specify a palette number ?
+SSP:	cmp	[_PaletteNumber],0ffh	; did user specify a palette number ?
 	jne	SSAU			;   yes, don't override
 	cmp	eax,07c25eh		; marflegr
 	je	SSPAL
@@ -882,12 +882,14 @@ SSP:	cmp	[PaletteNumber],0ffh	; did user specify a palette number ?
 	je	SSNTSC
 	cmp	eax,0754f5h		; parachut
 	je	SSNTSC
+	cmp	eax,06d58dh		; tomboy
+	je	SSPAL
 	jmp	SSAU
 
-SSPAL:	mov	[PaletteNumber],1
+SSPAL:	mov	[_PaletteNumber],1
 	jmp	SSAU
 
-SSNTSC:	mov	[PaletteNumber],0
+SSNTSC:	mov	[_PaletteNumber],0
 	jmp	SSAU
 
 
@@ -936,8 +938,7 @@ SSCB:	mov	si,offset ColumnBlankTable
 	mov	[ColumnBlank],8		;   found, blank first 8 columns
 	jmp	SetupScoreMode
 
-.CEND
-.DATASEGMENT
+.data
 
 ColumnBlankTable label byte
 
@@ -1013,9 +1014,7 @@ ColumnBlankTable label byte
 
 	dd	-1
 
-.DEND
-.CODESEGMENT
-
+.code
 
 SetupScoreMode:
 	cmp	ax,0359ch
@@ -1040,9 +1039,9 @@ SetP1Hard:
 	jmp	SetupWrapWsync
 
 SP1HARD:
-	mov	dl,[IOPortB]		; p1 hard
+	mov	dl,[_IOPortB]		; p1 hard
 	or	dl,128
-	mov	[IOPortB],dl
+	mov	[_IOPortB],dl
 	jmp	SetupWrapWsync
 
 SetupWrapWsync:

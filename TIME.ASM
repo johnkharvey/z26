@@ -5,8 +5,7 @@
 	TIMER0=		040h
 	TIMER_CTL=	043h
 
-.CEND
-.DATASEGMENT
+.data
 
 DelayTime	dd	0
 DelayStart	dd	0
@@ -14,8 +13,7 @@ DelayStart	dd	0
 hi_time		dd	0
 low_time	dw	0
 
-.DEND
-.CODESEGMENT
+.code
 
 ;*
 ;* GetTime -- return 32-bit hardware time in eax

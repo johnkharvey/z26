@@ -1,28 +1,7 @@
 ; msg.asm -- z26 messages
 
 
-.CEND
-.DATASEGMENT
-
-; ShowCopyright messages (note: only last message is terminated)
-
-msg01	db	10, 10, 'z26 -- An Atari 2600 emulator (1.20)', 10
-msg02	db	'Copyright (C) 1997-1998 by John Saeger', 10
-msg03	db	'Home Page:  http://www.whimsey.com/z26', 10, 10
-msg04	db	'    F1 -- reset      F2 -- select     F3 -- B/W        F4 -- Color', 10
-msg05	db	'    F5 -- P0 easy    F6 -- P0 hard    F7 -- P1 easy    F8 -- P1 hard', 10
-msg05a	db	'     p -- pause   ENTER -- resume    ESC -- quit        = -- PCX screen capture', 10
-msg05b	db	'  PgUp -- scroll screen up          PgDn -- scroll screen down', 10
-msg05d	db	'  Home -- scroll screen to default position', 10, 10
-msg06	db	'Player 0 controls: CTRL -- fire, Use arrow keys to move.', 10
-msg07	db	'Player 1 controls:    n -- fire, s -- left, e -- up, f -- right, d -- down', 10, 10
-msg07a	db	'Pressing the number keys 0 through 7 switches to the corresponding video mode.',10,10
-msg08	db	'Command Line Switches (put before filename)', 10, 10
-msg08a	db	' -0    -- player 0 hard, -1 -- player 1 hard', 10
-msg10	db	' -r    -- run game at maximum speed', 10
-msg10a	db	' -r<n> -- run game at <n> frames per second (<n> = 1 - 254 inclusive)', 10
-msg11	db	' -q    -- quiet (no sound)', 10,10
-msg18	db	'More options and credits may be found in readme.txt.', 10, '$'
+.data
 
 ; ShowBlaster messages
 
@@ -72,19 +51,7 @@ msg1001	db	10, 'File not found.', 10, '$'
 fps		db	' fps',13,10,'$'
 
 
-.DEND
-.CODESEGMENT
-
-_ShowCopyright:
-	push	offset msg01
-	call	_put_str
-	ret
-
-
-_ShowChecksum:
-	push	[_Checksum]
-	call	_put_dhex
-	ret
+.code
 
 _ShowBlaster:
 	push	offset msg201		; aren't you glad I wrote this in asm ?
@@ -198,28 +165,6 @@ _ShowBlasterWaiting:
 	call	_put_str
 	ret
 
-;*
-;* bad command line switch seen (char is in cl)
-;*
-
-BadSwitch:
-	push	cx			; save bad switch
-	push	offset msg901
-	call	_put_str
-	pop	ax			; restore switch
-	call	ConOut			; output it
-	call	_crlf
-	ret
-
-
-;*
-;* file not found
-;*
-
-FileNotFound:
-	push	offset msg1001
-	call	_put_str
-	ret
 
 ;*
 ;* frames per second

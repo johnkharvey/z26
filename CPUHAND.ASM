@@ -2,8 +2,7 @@
 ;* cpu memory and register handlers -- used by the CPU emulator
 ;*
 
-.CEND
-.DATASEGMENT
+.data
 
 VBlanking	dd	-1		; 0 if vblanking, -1 otherwise
 VBlank		db	0		; VBlank flag
@@ -19,9 +18,7 @@ DumpPorts	db	0,0,0,0		; Input ports (inp0..3)
 InputLatch	db	080h		; Input latch (inp4)
 		db	080h		; Input latch (inp5)
 	   
-.DEND
-.CODESEGMENT
-
+.code
 
 ; *****************************************************************************
 ;     Memory Mapping - Read - For non-rom areas, si contains the requested
@@ -84,7 +81,7 @@ RetZero:mov	[RetWd],0
 	ret
 
 TriggerExpired:
-	cmp	dword ptr [PaddleGame],0; if not a paddle game
+	cmp	dword ptr [_PaddleGame],0; if not a paddle game
 	je	RetZero			;   always return zero (astrblst)
 	mov	[RetWd],080h
 	mov	si,offset RetWd
@@ -202,7 +199,7 @@ WrTiaVSync:
 	mov	[ScanLine],1		; back to screen top
 	inc	[Frame]			; new frame.
 VSyncAlreadySet:
-	mov	dx,[CFirst]
+	mov	dx,[_CFirst]
 	cmp	dx,0			; forcing first line ?
 	jz	ZRET			;   no, let vblank take care of it
 	mov	[TopLine],dx
@@ -221,7 +218,7 @@ WrTiaVBlank:
 	mov	[VBlank],dl
 	test	dl,2			; setting or clearing ?
 	jz	WVBClear		;   clearing
-	cmp	[CFirst],0		; VBlank triggering new frame ?
+	cmp	[_CFirst],0		; VBlank triggering new frame ?
 	je	WTB_1			;   yes, don't mess with VBlanking
 	mov	[VBlanking],0
 	jmp	HandleDumpedInputs
@@ -232,16 +229,16 @@ WTB_1:
 	jmp	HandleDumpedInputs
 
 WVBClear:
-	cmp	[CFirst],0		; VBlank triggering new frame ?
+	cmp	[_CFirst],0		; VBlank triggering new frame ?
 	je	WTB_2			;   yes, don't mess with VBlanking
 	mov	[VBlanking],-1
 	jmp	HandleDumpedInputs
 
 WTB_2:
 	mov	dx,[ScanLine]
-	cmp	dx,[CFirst]
+	cmp	dx,[_CFirst]
 	jae	WVBPastMin
-	mov	dx,[CFirst]
+	mov	dx,[_CFirst]
 WVBPastMin:
 	inc	dx
 	mov	[TopLine],dx

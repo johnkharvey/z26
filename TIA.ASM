@@ -1,24 +1,45 @@
-; *****************************************************************************
-;			   MAIN CODE STARTS HERE
-; *****************************************************************************
-
-ALIGN_ENTRY
-
-start:
+;*
+;* module entry point
+;*
 
 IFDEF module
-_emulator:
+
+.data
+
+ModuleReturnAdr	dd	0		; word if small model, dword if medium
+ModuleSP	dw	0
+
+.code
+
+global _emulator
+
+_emulator PROC FAR			; near if small model, far if medium
 
 	push	ds			; because "C" program can blow es ...
 	pop	es			; ... before we get here (getvect)
 
 	mov	ax,_psp
 	mov	psp,ax			; set up PSP for commandline
-	pop	ModuleReturn		; save return adr
-	mov	ModuleBP,bp		; save bp
+	pop	ModuleReturnAdr		; save return adr
 	mov	ax,sp
 	mov	ModuleSP,ax		; save sp (no return adr on stack)
-ENDIF   
+	jmp	start
+
+ModuleReturn:
+	mov	ax,ModuleSP
+	mov	sp,ax
+	push	ModuleReturnAdr
+	ret
+
+_emulator ENDP
+
+ENDIF
+
+;*
+;* main startup
+;*
+
+start:
 
 IFDEF exefile
 	mov	ax,_DATA
@@ -26,31 +47,20 @@ IFDEF exefile
 	mov	bx,es
 	mov	psp,bx			;save pointer to PSP
 	mov	es,ax			;set up extra segment (ES = DS)
-	cli
-	mov	ss,ax			;set up stack segment (SS = DS)
-					; (necessary because we use bp as a general
-					;  purpose index register)
-
-	mov	sp,offset mystack	;  and stack pointer
-	sti
 ENDIF
 
-	mov	bx,offset _CartRom
-	mov	byte ptr[bx+0FFCh],0	; set the default reset address
-	mov	byte ptr[bx+0FFDh],0f0h	; to F000
+	call	SetupSpecial
+	call	SetupBanks
 
 	mov	di,offset StartMemory
 	mov	cx,offset EndMemory
-	sub	cx,bx			; # of bytes to clear
+	sub	cx,di			; # of bytes to clear
 	xor	al,al
 	rep	stosb			; clear memory
 
-
-	call	CommandLine		; Process the command line
-
 	cmp	[_quiet],0
 	jnz	STUP_4
-	cmp	[SoundMode],1		; sound mode 1 (force PC speaker) ?
+	cmp	[_SoundMode],1		; sound mode 1 (force PC speaker) ?
 	je	STUP_4			;   yes
 	call	_SetupSoundBlaster
 	test	ax,ax			; did user press escape ?
@@ -64,7 +74,11 @@ STUP_4:
 	call	SetNewInt9		; Keyboard Handler
 	call	JoyCenter		; set joystick center position
 
-	mov	eax,1000000
+	mov	eax,200000
+	call	_Delay			; let monitor sync
+
+	call	TIAGraphicMode		; flush twice, it's a long way to Broiler Hut
+	mov	eax,800000
 	call	_Delay			; let monitor sync
 
 	call	_ProgramDSP		; start DMA
@@ -74,21 +88,20 @@ STUP_4:
 	call	_GetTime		; start time for frame timer
 	mov	[StartTicks],eax
 
-	mov	eax,[FrameExit]
+	mov	eax,[_FrameExit]
 	mov	[OriginalFrameExit],eax	; remember how many frames for FPS calculation
-	inc	[FrameExit]		; do correct # of loops
+	inc	[_FrameExit]		; do correct # of loops
 
 
 ;*
 ;* the main outer loop
 ;*
 
-ALIGN_ENTRY
 
 xmain:  
 	cmp	[OriginalFrameExit],0	; exiting after <n> frames ?
 	je	xm1			;   no
-	dec	[FrameExit]		;   yes, decrement counter
+	dec	[_FrameExit]		;   yes, decrement counter
 	jz	GoTIME			;     zero, exit now
 
 xm1:
@@ -163,11 +176,7 @@ Empty:	call	_kb_hit			; empty the keyboard buffer
 Quit:
 
 IFDEF module
-	mov	bp,ModuleBP
-	mov	ax,ModuleSP
-	mov	sp,ax
-	push	ModuleReturn
-	ret
+	jmp	ModuleReturn
 ENDIF
 
 ReallyQuit:
@@ -189,7 +198,6 @@ RQ1:
 ;* Do One Frame
 ;*
 
-ALIGN_ENTRY
 
 ScanFrame:
         mov	[DisplayPointer],0	; reset display pointer
@@ -269,7 +277,7 @@ NDret:
 ;* macro to set CPUClock
 ;*
 
-SetCPUClock macro
+xSetCPUClock macro
 	push	dx
 	mov	dl,[RClock]
 	mov	dh,[RClock]
@@ -280,6 +288,17 @@ SetCPUClock macro
 	pop	dx
 
 	endm
+
+SetCPUClock macro
+	mov	bl,[RClock]
+	mov	bh,[RClock]
+	add	bl,bl
+	sub	bh,[CPUOffset]
+	add	bl,bh
+	mov	[CPUClock],bl		; CPUClock = 3 * RClock - CPUOffset
+
+	endm
+
 
 ;*
 ;* macro to see if we should do a CPU instruction
@@ -301,12 +320,11 @@ Done:
 ;* do some instructions until RClock >= al
 ;*
 
-ALIGN_ENTRY
 
 DoInstructions:
 	mov	[LastCycle],al		; last cycle to do
 	push	dx
-	push	bp
+	push	di
 	push	si
 	LoadRegs			; load the CPU registers
 
@@ -323,7 +341,7 @@ InstructionsDone:
 
 	SaveRegs			; save the CPU registers
 	pop	si
-	pop	bp
+	pop	di
 	pop	dx
 
 InsRet:	ret
@@ -356,18 +374,17 @@ local BackgroundPFOnly
 	cmp	bl,2			; looking at background or playfield only?
 	jb	BackgroundPFOnly	;   yes
 	mov	ax,TIAColTab[ebx*2]	; do collision test
-	mov	di,[TIADisplayToColor]	; < preload table pointer
+	movzx	ecx,[TIADisplayToColor]	; < preload table pointer
 	or	[TIACollide],ax
-	mov	bl,[bx + di]		; get high priority color
+	mov	bl,[ebx + ecx]		; get high priority color
 
 BackgroundPFOnly:
 	mov	ax,word ptr BackgroundColor[ebx*4]	; get color value word
-	mov	di,cx
+	mov	bx,[DisplayPointer]
 	and	ax,word ptr [VBlanking]
-	add	cx,2
-	mov	gs:[di],ax
+	add	[DisplayPointer],2
+	mov	gs:[bx],ax
 	endm
-
 
 ;*
 ;* only call this one if playfield clock is a multiple of 4
@@ -376,10 +393,10 @@ BackgroundPFOnly:
 PlayfieldBit macro
 local PFSkip
 	
-	mov	di,[PFClockToBitTable]
-	movzx	bx,dl
+	movzx	ecx,[PFClockToBitTable]
+	movzx	ebx,dl
 	mov	eax,dword ptr [TIA+TIAPf0]
-	test	eax,[di + bx]			; setting a playfield bit ?
+	test	eax,[ebx + ecx]			; setting a playfield bit ?
 	jz	PFSkip
 	or	dword ptr [si],TGPlay*01000000h+TGPlay*010000h+TGPlay*0100h+TGPlay
 PFSkip:
@@ -394,18 +411,18 @@ DoObjects macro
 local ObjectLoop, Skip, Branch, Done
 
 ObjectLoop:
-	cmp	TIAClock[bp],dl		
+	cmp	TIAClock[di],dl		
 	ja	Done			; if next change clock <= next pf write
 Branch:
-	mov	bl,TIAReg[bp]		;   goto register change handler
+	mov	bl,TIAReg[di]		;   goto register change handler
 	and	ebx,03fh		; only 63 options
 	call	[TIARegVector + ebx*2]
         
-Skip:	add	bp,4			; go on to the next change
-	cmp	byte ptr TIAClock[bp],TIAInvalid ; if moved onto an invalid
+Skip:	add	di,4			; go on to the next change
+	cmp	byte ptr TIAClock[di],TIAInvalid ; if moved onto an invalid
 	je	Skip			; skip it.
 
-	cmp	TIAClock[bp],dl		; < another change to handle? (pentium opt)
+	cmp	TIAClock[di],dl		; < another change to handle? (pentium opt)
 	jbe	Branch			;   yes
 Done:
 	endm
@@ -416,10 +433,10 @@ Done:
 ;*
 
 BlankBit macro
-	mov	di,cx
+	mov	bx,[DisplayPointer]
 	xor	ax,ax
-	mov	gs:[di],ax
-	add	cx,2
+	mov	gs:[bx],ax
+	add	[DisplayPointer],2
 endm
 
 ;*
@@ -500,16 +517,16 @@ DoObjectsAL macro
 local ObjectLoop, Skip, Branch, Done
 
 ObjectLoop:
-	mov	al,TIAClock[bp]
+	mov	al,TIAClock[di]
 	cmp	al,dl		
 	ja	Done			; if next change clock <= next pf write
 Branch:
-	mov	bl,TIAReg[bp]		;   goto register change handler
+	mov	bl,TIAReg[di]		;   goto register change handler
 	and	ebx,03fh		; only 63 options
 	call	[TIARegVector + ebx*2]
         
-Skip:	add	bp,4			; go on to the next change
-	mov	al,TIAClock[bp]
+Skip:	add	di,4			; go on to the next change
+	mov	al,TIAClock[di]
 	cmp	al,TIAInvalid 		; if moved onto an invalid
 	je	Skip			; skip it.
 
@@ -524,26 +541,26 @@ Done:
 
 Set4BitsFast macro
 	and	eax,[VBlanking]
-	mov	di,cx			; display pointer
-	add	cx,8
-	mov	gs:[di],eax
-	mov	gs:4[di],eax
+	mov	bx,[DisplayPointer]		; display pointer
+	add	[DisplayPointer],8
+	mov	gs:[bx],eax
+	mov	gs:4[bx],eax
 	endm
 
 
-FastPlayfieldBit macro op1
+xFastPlayfieldBit macro op1
 local PFSkip, SlowLane, SetPFBit, SetBkBit, FastSetPFBit
 
-	mov	di,[PFClockToBitTable]		; < preload table pointer
+	movzx	ecx,[PFClockToBitTable]		; < preload table pointer
 	sub	al,dl				; # of color clocks to next object
-	movzx	bx,dl				; < preload offset
+	movzx	ebx,dl				; < preload offset
 	cmp	al,4				; at least 4 ?
 	mov	eax,[si]			; < pick up next 4 TIA bits
 	jb	SlowLane			;   no
 	test	eax,eax				; anything set in next 4 TIA bits ?
 	jne	SlowLane			;   yes
 
-	mov	ebx,[di + bx]			; playfield bit for this color clock
+	mov	ebx,[ecx + ebx]			; playfield bit for this color clock
 	add	si,4				; bump TIA pointer
 	add	dl,4				; bump color clock
 
@@ -559,7 +576,45 @@ FastSetPFBit:
 	jmp	op1
 	
 SlowLane:
-	mov	ebx,[di + bx]
+	mov	ebx,[ecx + ebx]
+	or	eax,TGPlay*01000000h+TGPlay*010000h+TGPlay*0100h+TGPlay
+	test	ebx,dword ptr [TIA+TIAPf0]
+	jz	PFSkip
+SetPFBit:
+	mov	[si],eax
+PFSkip:
+	endm
+
+
+FastPlayfieldBit macro op1
+local PFSkip, SlowLane, SetPFBit, SetBkBit, FastSetPFBit
+
+	movzx	bx,dl				; < preload offset
+	sub	al,dl				; # of color clocks to next object
+	add	bx,[PFClockToBitTable]
+	cmp	al,4				; at least 4 ?
+	mov	eax,[si]			; < pick up next 4 TIA bits
+	jb	SlowLane			;   no
+	test	eax,eax				; anything set in next 4 TIA bits ?
+	jne	SlowLane			;   yes
+
+	mov	ebx,[bx]			; playfield bit for this color clock
+	add	si,4				; bump TIA pointer
+	add	dl,4				; bump color clock
+
+	test	ebx,dword ptr [TIA+TIAPf0]	; setting a playfield bit ?
+	mov	eax,[BackgroundColor]		; < preload background color
+	jnz	FastSetPFBit			;   yes
+	Set4BitsFast				;   no, do 4 background bits
+	jmp	op1				; FastExit
+
+FastSetPFBit:
+	mov	eax,[PlayfieldColor]
+	Set4BitsFast
+	jmp	op1
+	
+SlowLane:
+	mov	ebx,[bx]			; playfield bit for this color clock
 	or	eax,TGPlay*01000000h+TGPlay*010000h+TGPlay*0100h+TGPlay
 	test	ebx,dword ptr [TIA+TIAPf0]
 	jz	PFSkip
@@ -626,20 +681,20 @@ TIALineTo:
 	cmp	[DisplayPointer],ax	;was 64000
 	jae	TIANoGenerate
 
-ALIGN_ENTRY
 
 TIAGenerate:
 	call	ModeXNewLine
 
 	mov	si,offset TIADisplay	; playfield write pointer
-	mov	bp,offset TIABuffer	; initialise the buffer
-	mov	[TIAWritePointer],bp	
-	mov	byte ptr TIAClock[bp],TIAEnd
 
-	mov	di,si
+	mov	di,offset TIADisplay
 	xor	eax,eax
 	mov	cx,40
 	rep	stosd			; clear the TIA display buffer
+
+	mov	di,offset TIABuffer	; initialise the buffer
+	mov	[TIAWritePointer],di	
+	mov	byte ptr TIAClock[di],TIAEnd
 
 ;	call	TIAInsertObjects	; insert objects from the last line
 
@@ -653,11 +708,11 @@ TIAGenerate:
 	call	TIAInsertObjects	; insert objects from the last line
 
 	xor	dl,dl			; start position
-	mov	cx,[DisplayPointer]
+;	mov	cx,[DisplayPointer]
 	mov	dh,80			; first loop exit at column 80
 
-	mov	di,[TIAPFColorByClock]	; update playfield color
-	mov	al,[di]			; clock position 0
+	mov	bx,[TIAPFColorByClock]	; update playfield color
+	mov	al,[bx]			; clock position 0
 	mov	[TIAColourTable+TCTPF],al
 
 	movzx	bx,al
@@ -690,9 +745,9 @@ TIALoop:
 TIARightBegin:
 	mov	dh,160			; next loop exit at column 160
 
-	mov	di,[TIAPFColorByClock]	; update playfield color
-	movzx	bx,dl
-	mov	al,[di+bx]
+	movzx	ecx,[TIAPFColorByClock]	; update playfield color
+	movzx	ebx,dl
+	mov	al,[ecx + ebx]
 	mov	[TIAColourTable+TCTPF],al
 
 	movzx	bx,al
@@ -717,7 +772,7 @@ TIARB1:
 	jmp	TIALoop
 
 TIAExit:				; we've finished the line scan...
-	mov	[DisplayPointer],cx
+;	mov	[DisplayPointer],cx
 	call	ModeXCopyLine
 
 	ret
@@ -726,12 +781,11 @@ TIAExit:				; we've finished the line scan...
 ;* do a blank line (outside of display area)
 ;*
 
-ALIGN_ENTRY
 
 TIANoGenerate:
-	mov	bp,offset TIABuffer	; initialise the buffer
-	mov	[TIAWritePointer],bp	
-	mov	byte ptr TIAClock[bp],TIAEnd
+	mov	di,offset TIABuffer	; initialise the buffer
+	mov	[TIAWritePointer],di	
+	mov	byte ptr TIAClock[di],TIAEnd
 
 	mov	al,24
 	call	DoInstructions		; do horizontal blank instructions
@@ -750,15 +804,15 @@ TIAFinishNoGenerateLoop:
 ;	SetCPUClock
 
 TIAProcessBuffer:
-	mov	bp,offset TIABuffer	; initialise the buffer
+	mov	di,offset TIABuffer	; initialise the buffer
 TIABLLoop:
-	cmp	byte ptr TIAClock[bp],TIAEnd	; check if finished
+	cmp	byte ptr TIAClock[di],TIAEnd	; check if finished
 	je	TIABLExit
-	mov	bl,TIAReg[bp]		; register to change
+	mov	bl,TIAReg[di]		; register to change
 	and	bx,03fh			; only 63 options !
 	shl	bx,1
 	call	TIARegVector2[bx]
-	add	bp,4
+	add	di,4
 	jmp	TIABLLoop
 TIABLExit:
 	ret

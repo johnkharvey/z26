@@ -6,16 +6,13 @@
 ;
 ; *****************************************************************************
 
-.CEND
-.DATASEGMENT
+.data
 
 OldInt9		dw	0,0	; old vector for int9
 
 CtrlSkipFlag	db	0	; skip this control key test
 
-.DEND
-.CODESEGMENT
-
+.code
 
 ;*
 ;* a keyboard macro
@@ -112,7 +109,7 @@ P1Hard=		KeyF8
 
 
 Controls:
-	mov	ah,[IOPortB]		; turn on Select and Reset bits
+	mov	ah,[_IOPortB]		; turn on Select and Reset bits
 	or	ah,03h
 	test	[KeyTable+ResetKey],128
 	jz	Ctrl1			; F1 pressed (Reset) - drop bit 0 (1)
@@ -139,7 +136,7 @@ Ctrl2a:	test	[KeyTable+ColorKey],128
 	jz	Ctrl2b			; (Color) set bit 3 (8)
 	or	ah,08h
 Ctrl2b: 
-	mov	[IOPortB],ah
+	mov	[_IOPortB],ah
 
 	mov	ah,0FFh			; now do the switches
 
@@ -180,26 +177,26 @@ Ctrl7:	test	[KeyTable+KeyEsc],128
 
 Ctrl8:	test	[KeyTable+KeyPgUp],128	; scroll up ?
 	jz	Ctrl9			;   no
-	cmp	[CFirst],0		;   yes, scrolling disabled ?
+	cmp	[_CFirst],0		;   yes, scrolling disabled ?
 	je	CtrlPCX			;          yes, skip scrolling
 	cmp	[CtrlSkipFlag],0	; skipping this test ?
 	jne	CtrlPCX			;   yes
 	mov	[CtrlSkipFlag],4	; no set skip count
-	cmp	[CFirst],1		; already at top ?
+	cmp	[_CFirst],1		; already at top ?
 	je	CtrlPCX			;   yes
-	dec	[CFirst]		;   no, scroll up
+	dec	[_CFirst]		;   no, scroll up
 
 
 Ctrl9:	test	[KeyTable+KeyPgDn],128	; scroll down ?
 	jz	CtrlPCX			;   no
-	cmp	[CFirst],0		;   yes, scrolling disabled ?
+	cmp	[_CFirst],0		;   yes, scrolling disabled ?
 	je	CtrlPCX			;          yes, skip scrolling
 	cmp	[CtrlSkipFlag],0	; skipping this test ?
 	jne	CtrlPCX			;   yes
 	mov	[CtrlSkipFlag],4	; no set skip count
-	cmp	[CFirst],99		; already at bottom ?
+	cmp	[_CFirst],99		; already at bottom ?
 	jae	CtrlPCX			;   yes
-	inc	[CFirst]		;   no, scroll down
+	inc	[_CFirst]		;   no, scroll down
 
 
 CtrlPCX:cmp	[CtrlSkipFlag],0	; skip flag already zero ?
@@ -211,7 +208,7 @@ CtrlPCX1:
 	cmp	[OldCFirst],0		; is OldCFirst zero ?
 	jz	CtrlPCX3		;   yes, don't home the display
 	mov	dx,[OldCFirst]
-	mov	[CFirst],dx
+	mov	[_CFirst],dx
 CtrlPCX3:
 	test	[KeyTable+KeyEquals],128
         jz      CtrlVid
@@ -314,7 +311,7 @@ CtrlExit:
 	mov	[IOPortA],al
 
 CtrlPaddles:
-	cmp	[KeyBase],0ffh		; emulating a paddle with the keyboard ?
+	cmp	[_KeyBase],0ffh		; emulating a paddle with the keyboard ?
 	je	CtrlRet			;   no
 
 CtrlPad0:

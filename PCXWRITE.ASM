@@ -4,8 +4,7 @@
 ; Writes the 320x200 VGA screen to a .PCX file
 ;
 
-.CEND
-.DATASEGMENT
+.data
 
 PCXHeader   DB 10, 5, 1, 8, 4 DUP (0), 63, 1, 199, 8 DUP (0)
    DB 128, 0, 0, 0, 128, 0, 128, 128, 0, 0, 0, 128, 128
@@ -19,8 +18,7 @@ PCXFileNumber    DW 0
 PCXWriteBuffer   DB 360 DUP (0)
 PCXHexTable      DB '0123456789ABCDEF'
 
-.DEND
-.CODESEGMENT
+.code
 
 PCXWriteFile:
 	pusha

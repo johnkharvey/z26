@@ -3,8 +3,7 @@
 ;*
 
 
-.CEND
-.DATASEGMENT
+.data
 
 Timer		dd	0		; the RIOT Timer
 TimerFudge	dd	0		; fudge timer by this amount (frogpond)
@@ -14,8 +13,6 @@ TimerByte	db	0		; a return value
 TimerIntReg	db	080h		; Timer Interrupt Register
 RetFF		db	0FFh
 
-IOPortB		db	00Bh		; IO Port B (switches)
-IOPortA		db	0FFh		; IO Port A (joystick)
 
 ALIGN 2
 
@@ -40,9 +37,7 @@ WriteRIOTTab label word
 	dw	SetRIOTTimer64		; 296h
 	dw	SetRIOTTimer1024	; 297h
 
-.DEND
-.CODESEGMENT
-
+.code
 
 ;*
 ;* CPU wants to read a RIOT register
@@ -59,7 +54,7 @@ ReadFF:
 	ret
 
 ReadPortB:				; read console switches (port b)
-	mov	si,offset IOPortB
+	mov	si,offset _IOPortB
 	ret
 
 ReadPortA:				; read hand controllers (port b)
