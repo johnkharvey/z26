@@ -2,7 +2,7 @@
 ** z26 -- an Atari 2600 emulator
 */
 
-#define version "z26 (1.23)"
+#define version "z26 (1.24)"
 
 #include <dos.h>		/* _psp */
 #include <ctype.h>

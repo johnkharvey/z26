@@ -121,8 +121,8 @@ xmain:
 
 xm1:
 	call	ModeXFlipPage		; done rendering, flip page display page
-
-	call	VSync
+	call	VS_PreGap		; this is how we ignore false triggers
+	call	VSync			; now look for vblank
 
 	call	ScanFrame
 

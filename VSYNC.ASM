@@ -7,14 +7,14 @@ CRTSTAT=	03dah			; CRT status register
 
 .data
 
-NDIWait			dd	94		; (132,321) ticklets of NDI for a sync
+NDIWait			dd	132		; (94,132,321) ticklets of NDI for a sync
 
 LastVsyncTime		dd	0		; when was last Vsync ?
 FrameTime		dd	0
 TicksPerSecond		dd	1193182		; 14318180/12
 NominalFrameTime	dd	19886		; TicksPerSecond/60
 PreGap			dd	19000		; don't look for vsync before this
-PreFlip			dd	15000		; don't flip mode 8 page before this
+PreFlip			dd	18000		; don't flip mode 8 page before this
 VsyncBrokenTime		dd	20200*16	; 16 bad frames, vsync broken
 CurrentTime		dd	0		; temp store for current time
 ReSyncFlag		db	1		; force re-sync (happens in video mode change)
@@ -46,6 +46,22 @@ ReSyncLoop:
 	jb	ReSyncLoop
 	mov	[_NoRetrace],60			; vsync broken, fall back to timed frames
 	jmp	PopRet
+
+;*
+;* wait until pre-gap time (before calling frame sync)
+;*
+
+VS_PreGap:
+	pushad
+VS_ThrottleLoop:
+	call	_GetTime		; prevent false alarms if running in a fast refresh mode (mode 8)
+	sub	eax,[LastVsyncTime]	; (see vsync.asm for LastVsyncTime and PreGap)
+	cmp	eax,[PreFlip]		; at least 7/8 of a frame or so since last Vsync?
+	jb	VS_ThrottleLoop		;   no, keep waiting
+	popad
+	ret
+
+
 
 ;*
 ;* frame synchronizer
