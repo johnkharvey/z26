@@ -63,7 +63,7 @@ CLASCZ:	mov	al,es:[bx]
 
 	mov	bx,ax			; read the file
 	mov	dx,offset _CartRom
-	mov	cx,16384		; try to read in 16k !!!
+	mov	cx,32768		; try to read in 32K
 	mov	ah,03Fh
 	int	MSDOS
 	mov	[CartSize],ax

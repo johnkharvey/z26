@@ -427,6 +427,8 @@ SSTR:	cmp	ax,0bb3h
 	je	SetTimer1		; radarlok
 	cmp	ax,0c525h
 	je	SetTimer1		; sprfootb
+	cmp	ax,0765ch
+	je	SetTimer1		; califgms
 
 
 	jmp	SSAU			; process audio requests
@@ -559,6 +561,12 @@ SSCB:	cmp	ax,0359ch
 	je	SSCB8			; endro_tw
 	cmp	ax,0f69ah
 	je	SSCB8			; enduro
+	cmp	ax,0ad52h
+	je	SSCB8			; decathln
+	cmp	ax,0f815h
+	je	SSCB8			; robotank
+;	cmp	ax,094a9h
+;	je	SSCB8			; he_man (** it switches! **)
 
 
 
@@ -599,12 +607,25 @@ SetupVBlankFrame:
 	cmp	ax,0779fh
 	je	SetVBlankFrame		; bowlg_tw
 
-	jmp	SetupDone
+	jmp	SetP1Hard
 
 
 SetVBlankFrame:
 	mov	[VBlankFrame],1
+	jmp	SetP1Hard
+
+
+SetP1Hard:
+	cmp	ax,094a9h
+	je	SP1HARD
 	jmp	SetupDone
+
+SP1HARD:
+	mov	al,[IOPortB]		; p1 hard
+	or	al,128
+	mov	[IOPortB],al
+	jmp	SetupDone
+
 	
 
 SetupDone:

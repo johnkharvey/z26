@@ -13,7 +13,7 @@ reg_pc		dw	0		; program counter (stored in BP)
 ; the following two locations must be in this order and next to each other
 
 reg_a		db	0		; accumulator (stored in AL)
-flag_carry	db	0		; carry bit (stored in AH)
+flag_carry	db	0		; carry bit   (stored in AH)
 
 ; the following two locations are padded with an extra byte to allow 16-bit access
 ; (see _index)
@@ -62,19 +62,37 @@ jam_msg	db	'Halt ','$'
 read    macro   op1,op2			; read memory
         mov     si,op2
         call    [ReadBank]
+
+IFDEF z64
+	mov	op1,[RByte]
+ELSE
         mov     op1,byte ptr [si]
+ENDIF
+
         endm
       
 readsx  macro   op1,op2			; sign extended
         mov     si,op2
         call    [ReadBank]
+
+IFDEF z64
+	movsx	op1,[RByte]
+ELSE
         movsx   op1,byte ptr [si]
+ENDIF
+
         endm
 
 readzx  macro   op1,op2			; zero extended
         mov     si,op2
         call    [ReadBank]
+
+IFDEF z64
+	movzx	op1,[RByte]
+ELSE
         movzx   op1,byte ptr [si]
+ENDIF
+
         endm
 
 write   macro   op1,op2			; write memory

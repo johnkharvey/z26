@@ -4,8 +4,6 @@
 ;* Process the timer...
 ;*
 
-ALIGN_ENTRY
-
 Timer1: movzx	dx,[RCycles]		; normal timer, decrements at 1 per
 	sub	[Timer],dx		; processor cycle
 Timer0:
@@ -31,8 +29,6 @@ DecTimer:
 ;* si contains the address on entry. [WByte] is the timer value
 ;*
 
-ALIGN_ENTRY
-
 SetTimer:
 	push	ax			; set the timer
 	movzx	ax,[WByte]		; get the value to write
@@ -57,15 +53,15 @@ SetTimer:
 	pop	ax
 	ret
 
-ALIGN_ENTRY
-
 SetMode1:				; patch code to call the Timer1 routine
 	mov	[TimerVec],offset Timer1
 	ret
 
 
-        
-ALIGN_ENTRY
+; *****************************************************************************
+;     Memory Mapping - Read - For non-rom areas, si contains the requested
+;	address. On exit ds:[si] points to the actual required data
+; *****************************************************************************
 
 ReadHardware:
 	cmp	si,0200h		; is it the RIOT ???
@@ -78,19 +74,13 @@ ReadHardwarePage0:
 	ret
 					        
         
-; *****************************************************************************
-;     Memory Mapping - Read - For non-rom areas, si contains the requested
-;	address. On exit ds:[si] points to the actual required data
-; *****************************************************************************
-
-ALIGN_ENTRY
-
 ReadRIOT:
 	and	si,02FFh		; riot at 2xx 3xx
 	cmp	si,0284h		; is it the RIOT timer ???
 	jne	NotRTimer
 	mov	si,offset Timer		; make si point to the timer
 	ret
+
 NotRTimer:				; all the other RIOT Registers
 	cmp	si,0280h		; is it Port A (Hand Controllers) ?
 	je	ReadPortA
@@ -98,14 +88,15 @@ NotRTimer:				; all the other RIOT Registers
 	je	ReadPortB
 	mov	si,offset RetFF
 	ret
+
 ReadPortB:				; read console switches (port b)
 	mov	si,offset IOPortB
 	ret
+
 ReadPortA:				; read hand controllers (port b)
 	mov	si,offset IOPortA
 	ret
 
-ALIGN_ENTRY
 
 ReadTIA:and	si,0Fh
 	cmp	si,08h			; reading collision registers ???
@@ -115,8 +106,6 @@ ReadTIA:and	si,0Fh
 	mov	si,offset Ret0F		; read the TIA (default)
 	ret
         
-
-ALIGN_ENTRY
 
 ReadCollision:				; read the collision latch
 	push	ax
@@ -135,7 +124,6 @@ ReadCollision:				; read the collision latch
 	mov	si,offset RetWd
 	ret
 
-ALIGN_ENTRY
 
 ReadInputLatches:			; read the input latch
 ;	 call	 CheckPaddleLatches	; check the paddle latches
@@ -149,7 +137,6 @@ ReadInputLatches:			; read the input latch
 ;   the data. WSYNC and VSYNC are handled here as they affect the CPU timing
 ; *****************************************************************************
 
-ALIGN_ENTRY
 
 WriteHardware:
 	cmp	si,0400h		; if > 400h don't write (ROM there)
@@ -164,7 +151,6 @@ WriteHardwarePage0:
 	mov	[RiotRam-128 + si],dl
 WHret:	ret
 
-ALIGN_ENTRY
 
 WriteRIOT:
 	and	si,02FFh		; can be at 2xx or 3xx
@@ -172,8 +158,6 @@ WriteRIOT:
 	jl	WHret			; go to the code that does that !
 	jmp	SetTimer
         
-
-ALIGN_ENTRY
 
 WriteTIA:
 	and	si,03Fh
@@ -207,8 +191,6 @@ XTIAOffRHS:
 XTRet:	ret
 
 
-ALIGN_ENTRY
-
 WrTiaImmediate:
 	shl	si,1
 	jmp	[WrTiaImmediateVector + si]
@@ -219,7 +201,6 @@ WrTiaImmediate:
 ; this code is fixing up the timer by doing [TimerVec] calls for all
 ; the cycles left before VSYNC.
         
-ALIGN_ENTRY
 
 WrTiaWSync:
 ;	push	bx			; *** why does this break push.bin ??? ***
@@ -249,7 +230,6 @@ WSret:
 
 ; VSync -- vertical sync set-clear
 
-ALIGN_ENTRY
 
 WrTiaVSync:
 	push	ax			; lasrgate needs this
@@ -278,7 +258,6 @@ ZRET:	pop	ax
 
 ; VBlank -- vertical blank set-clear
 
-ALIGN_ENTRY
 
 WrTiaVBlank:
 	push	ax

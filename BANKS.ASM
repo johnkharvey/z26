@@ -28,6 +28,8 @@ SetupBanks:
 	je	Set12KMode		; 12K cart
 	cmp	ax,04000h
 	je	Set16kMode		; 16K cart
+	cmp	ax,08000h
+	je	Set32kMode		; 32K cart
 	ret
 
 Set8kMode:
@@ -96,7 +98,7 @@ STV:	mov	[ReadBank], offset RBank8tv
 	mov	[WriteBank], offset WBank8tv
 	ret
 
-; set up FE (JSR/RTS) bank switch scheme
+; set up FE (flat model) bank switch scheme
 
 SFE:	mov	[ReadBank], offset RBank8FE
 	mov	[WriteBank], offset WBank8FE
@@ -125,8 +127,8 @@ Set16kMode:
 	je	SSC			; sprfootb
 	cmp	ax,08037h
 	je	SSC			; sprnmast
-	cmp	ax,07c00h
-	je	SSC			; ofthewal
+	cmp	ax,05f30h
+	je	SSC			; ofthwall
 	cmp	ax,06db1h
 	je	SSC			; secretq
 	cmp	ax,09ffah
@@ -136,8 +138,20 @@ Set16kMode:
 	cmp	ax,04887h
 	je	SSC			; klaxntsc
 
+	cmp	ax,094a9h
+	je	SMN			; he_man
+	cmp	ax,003c8h
+	je	SMN			; bnj
+	cmp	ax,08504h
+	je	SMN			; burgtime
+
 	mov	[ReadBank], offset RBank16
 	mov	[WriteBank], offset WBank16
+	ret
+
+Set32kMode:
+	mov	[ReadBank], offset RBank32sc
+	mov	[WriteBank], offset WBank32sc
 	ret
 
 
@@ -147,7 +161,13 @@ SSC:	mov	[ReadBank], offset RBank16sc
 	mov	[WriteBank], offset WBank16sc
 	ret
 
-; setup 8K super-chip vectors (defendr2, stargate)
+; setup M-Network 16K
+
+SMN:	mov	[ReadBank], offset RBank16mn
+	mov	[WriteBank], offset WBank16mn
+	ret
+
+; setup 8K super-chip vectors
 
 SSC8:	mov	[ReadBank], offset RBank8sc
 	mov	[WriteBank], offset WBank8sc
@@ -169,6 +189,18 @@ test_hw_write macro
 	jb	WriteHardware
 	endm
 
+MapRomBank macro
+	add	si,[RomBank]
+	add	si,offset _CartRom - 1000h
+	endm
+
+WriteRam macro
+	push	ax
+	mov	al,[WByte]
+	mov	[si],al
+	pop	ax
+	endm
+
 ;*
 ;* standard 4K cart
 ;*
@@ -186,153 +218,165 @@ WBank4:	test_hw_write
 ;* standard 8K cart (F8)
 ;*
 
-RBank8:	test_hw_read
-	cmp	si,1FF8h		; if not in switch area...
-	je	F8_RBank0
+SetBank_8 macro
+local NoChange
+
+	cmp	si,1FF8h		; if not in switch area ...
+	jb	NoChange		; ... there's no change
 	cmp	si,1FF9h
-	je	F8_RBank1
-	add	si,[RomBank]
-	add	si,offset _CartRom - 1000h
-	ret
+	ja	NoChange
 
-F8_RBank0:
-	mov	[RomBank],0
-	add	si,[RomBank]
-	add	si,offset _CartRom - 1000h
-	ret
+	push	ax
+	mov	ax,si
+	sub	ax,1FF8h		; bank #
+	shl	ax,12			; bank address
+	mov	[RomBank],ax
+	pop	ax
 
-F8_RBank1:
-	mov	[RomBank],1000h
-	add	si,[RomBank]
-	add	si,offset _CartRom - 1000h
-	ret
+NoChange:
+	endm
 
-FA_RBank2:
-	mov	[RomBank],2000h
-	add	si,[RomBank]
-	add	si,offset _CartRom - 1000h
+RBank8:	test_hw_read
+	SetBank_8
+	MapRomBank
 	ret
 
 
 WBank8:	test_hw_write
-	cmp	si,1FF8h		; if not in switch area...
-	je	F8_WBank0
-	cmp	si,1FF9h
-	je	F8_WBank1
+	SetBank_8
 	ret
-
-F8_WBank0:
-	mov	[RomBank],0
-	ret
-
-F8_WBank1:
-	mov	[RomBank],1000h
-	ret
-
-FA_WBank2:
-	mov	[RomBank],2000h
-	ret
-
 
 ;*
 ;* standard 8K cart with Super-Chip (F8+sc)
 ;*
 
+SCR_TestRam macro
+local NotRam
+
+	cmp	si,10ffh
+	ja	NotRam
+	add	si,offset _Ram - 1000h - 80h
+	ret
+
+NotRam:
+	endm
+
+SCW_TestRam macro
+local NotRam
+
+	cmp	si,10ffh
+	ja	NotRam
+	add	si,offset _Ram - 1000h
+	WriteRam
+	ret
+
+NotRam:
+	endm
+
+
 RBank8sc:
 	test_hw_read
-	cmp	si,1FF8h		; if not in switch area...
-	je	F8_RBank0
-	cmp	si,1FF9h
-	je	F8_RBank1
-	jmp	RBank16scTestRam
-
+	SetBank_8
+	SCR_TestRam
+	MapRomBank
+	ret
 
 WBank8sc:
 	test_hw_write
-	cmp	si,1FF8h		; if not in switch area...
-	je	F8_WBank0
-	cmp	si,1FF9h
-	je	F8_WBank1
-	jmp	WBank16scTestRam
-
+	SetBank_8
+	SCW_TestRam
+	ret
 
 ;*
 ;* 12K Ram Plus cart (FA)
 ;*
 
-RBank12:
-	test_hw_read
-	cmp	si,1FF8h		; if not in switch area...
-	je	F8_RBank0
-	cmp	si,1FF9h
-	je	F8_RBank1
+SetBank_12 macro
+local NoChange
+
+	cmp	si,1FF8h		; if not in switch area ...
+	jb	NoChange		; ... there's no change
 	cmp	si,1FFAh
-	je	FA_RBank2
+	ja	NoChange
+
+	push	ax
+	mov	ax,si
+	sub	ax,1FF8h		; bank #
+	shl	ax,12			; bank address
+	mov	[RomBank],ax
+	pop	ax
+
+NoChange:
+	endm
+
+FAR_TestRam macro
+local NotRam
 
 	cmp	si,11ffh
-	ja	RBank16scNoChange
+	ja	NotRam
 	add	si,offset _Ram - 1000h - 100h
+	ret
+
+NotRam:
+	endm
+
+FAW_TestRam macro
+local NotRam
+
+	cmp	si,11ffh
+	ja	NotRam
+	add	si,offset _Ram - 1000h
+	WriteRam
+
+NotRam:
+	endm
+
+RBank12:
+	test_hw_read
+	SetBank_12
+	FAR_TestRam
+	MapRomBank
 	ret
 
 
 WBank12:
 	test_hw_write
-	cmp	si,1FF8h		; if not in switch area...
-	je	F8_WBank0
-	cmp	si,1FF9h
-	je	F8_WBank1
-	cmp	si,1FFAh
-	je	FA_WBank2
-
-	cmp	si,11ffh
-	ja	WBank16scNoChange
-	add	si,offset _Ram - 1000h
-	push	ax
-	mov	al,[WByte]
-	mov	[si],al
-	pop	ax
+	SetBank_12
+	FAW_TestRam
 	ret
-
 
 ;*
 ;* standard 16K cart (F16)
 ;*
 
-RBank16:
-	test_hw_read
-	cmp	si,1FF6h		; if not in switch area...
-	jb	RBank16NoChange		; theres no change
-	cmp	si,1FF9h
-	ja	RBank16NoChange
+SetBank_16 macro
+local NoChange
 
-	push	ax			; 16k ROM switch
+	cmp	si,1FF6h		; if not in switch area...
+	jb	NoChange		; ... there's no change
+	cmp	si,1FF9h
+	ja	NoChange
+
+	push	ax
 	mov	ax,si
-	sub	ax,1FF6h		; its 0,1,2,3
-	shl	ax,12			; its 0,4k,8k,12k
+	sub	ax,1FF6h		; bank #
+	shl	ax,12			; bank address
 	mov	[RomBank],ax
 	pop	ax
 
-RBank16NoChange:
-	add	si,[RomBank]
-	add	si,offset _CartRom - 1000h
+NoChange:
+	endm
+
+RBank16:
+	test_hw_read
+	SetBank_16
+	MapRomBank
 	ret
 
 
 WBank16:
 	test_hw_write
-	cmp	si,1FF6h		; if not in switch area...
-	jb	WBank16NoChange		; theres no change
-	cmp	si,1FF9h
-	ja	WBank16NoChange
-
-	push	ax			; 16k ROM switch
-	mov	ax,si
-	sub	ax,1FF6h		; its 0,1,2,3
-	shl	ax,12			; its 0,4k,8k,12k
-	mov	[RomBank],ax
-	pop	ax
-
-WBank16NoChange:
+	SetBank_16
 	ret
 
 
@@ -342,55 +386,52 @@ WBank16NoChange:
 
 RBank16sc:
 	test_hw_read
-	cmp	si,1FF6h		; if not in switch area...
-	jb	RBank16scTestRam	; theres no change
-	cmp	si,1FF9h
-	ja	RBank16scNoChange
-
-	push	ax			; 16k ROM switch
-	mov	ax,si
-	sub	ax,1FF6h		; its 0,1,2,3
-	shl	ax,12			; its 0,4k,8k,12k
-	mov	[RomBank],ax
-	pop	ax
-
-RBank16scNoChange:
-	add	si,[RomBank]
-	add	si,offset _CartRom - 1000h
+	SetBank_16
+	SCR_TestRam
+	MapRomBank
 	ret
 
-RBank16scTestRam:
-	cmp	si,10ffh
-	ja	RBank16scNoChange
-	add	si,offset _Ram - 1000h - 80h
-	ret
 
 
 WBank16sc:
 	test_hw_write
-	cmp	si,1FF6h		; if not in switch area...
-	jb	WBank16scTestRam	; theres no change
-	cmp	si,1FF9h
-	ja	WBank16scNoChange
+	SetBank_16
+	SCW_TestRam
+	ret
 
-	push	ax			; 16k ROM switch
+;*
+;* standard 32K cart with Super-Chip (F4+sc)
+;*
+
+SetBank_32 macro
+local NoChange
+
+	cmp	si,1FF4h		; if not in switch area ...
+	jb	NoChange		; ... there's no change
+	cmp	si,1FFbh
+	ja	NoChange
+
+	push	ax
 	mov	ax,si
-	sub	ax,1FF6h		; its 0,1,2,3
-	shl	ax,12			; its 0,4k,8k,12k
+	sub	ax,1FF4h		; bank #
+	shl	ax,12			; bank address
 	mov	[RomBank],ax
 	pop	ax
 
-WBank16scNoChange:
+NoChange:
+	endm
+
+RBank32sc:
+	test_hw_read
+	SetBank_32
+	SCR_TestRam
+	MapRomBank
 	ret
 
-WBank16scTestRam:
-	cmp	si,10ffh
-	ja	WBank16scNoChange
-	add	si,offset _Ram - 1000h
-	push	ax
-	mov	al,[WByte]
-	mov	[si],al
-	pop	ax
+WBank32sc:
+	test_hw_write
+	SetBank_32
+	SCW_TestRam
 	ret
 
 ;*
@@ -413,22 +454,26 @@ PBSlice3	dw	7*400h		; this one doesn't change
 
 
 PB_SetSlice macro
+local NoChange
+
+	cmp	si,1Fe0h		; if not in switch area ...
+	jb	NoChange		; ... there's no change
+	cmp	si,1FF8h
+	ja	NoChange
+
 	push	ax
 	push	bx
-
 	mov	ax,si
 	and	ax,7
 	shl	ax,10			; new bank
-
 	mov	bx,si
 	and	bx,18h
 	shr	bx,2			; slice to set *2			
-
 	mov	[PBSlice0 + bx],ax	
-	
 	pop	bx
 	pop	ax
 
+NoChange:
 	endm
 
 PB_MapSlice macro
@@ -439,6 +484,7 @@ PB_MapSlice macro
 	shl	bx,1			; *2
 	and	si,03ffh		; mask low order bits
 	add	si,[PBSlice0 + bx]	; point to proper ROM slice
+	add	si,offset _CartRom
 	pop	bx
 
 	endm
@@ -446,30 +492,14 @@ PB_MapSlice macro
 
 RBank8pb:
 	test_hw_read
-	cmp	si,1Fe0h		; if not in switch area...
-	jb	RBank8pbNoChange	; theres no change
-	cmp	si,1FF8h
-	ja	RBank8pbNoChange
-
 	PB_SetSlice
-
-RBank8pbNoChange:
 	PB_MapSlice
-
-	add	si,offset _CartRom
 	ret
 
 
 WBank8pb:
 	test_hw_write
-	cmp	si,1Fe0h		; if not in switch area...
-	jb	WBank8pbNoChange	; theres no change
-	cmp	si,1FF8h
-	ja	WBank8pbNoChange
-
 	PB_SetSlice
-
-WBank8pbNoChange:
 	ret
 
 ;*
@@ -489,12 +519,19 @@ TVSlice1	dw	3*800h		; this one doesn't change
 
 
 TV_SetSlice macro
+local NoChange
+
+	cmp	si,03fh
+	ja	NoChange
+
 	push	ax
 	mov	al,[WByte]
 	and	ax,3
 	shl	ax,11			; new bank
 	mov	[TVSlice0],ax
 	pop	ax
+
+NoChange:
 	endm
 
 TV_MapSlice macro
@@ -505,6 +542,7 @@ TV_MapSlice macro
 	shl	bx,1			; *2
 	and	si,07ffh		; mask low order bits
 	add	si,[TVSlice0 + bx]	; point to proper ROM slice
+	add	si,offset _CartRom
 	pop	bx
 	endm
 
@@ -512,41 +550,188 @@ TV_MapSlice macro
 RBank8tv:
 	test_hw_read
 	TV_MapSlice
-	add	si,offset _CartRom
 	ret
 
 WBank8tv:
-	cmp	si,03fh			; in range?
-	ja	NoTiger			;   no
-	TV_SetSlice			; defined in banks.asm
-
-NoTiger:
+	TV_SetSlice
 	test_hw_write
 	ret
 
 
 ;*
-;* FE 8K bankswitch scheme (JSR/RTS) (* doesn't work *)
+;* FE 8K bankswitch scheme -- flat model
 ;*
 
-RBank8FE:
-	cmp	si,0feh
-	jne	RBank8FENoChange
-	mov	[RomBank],0h
+FE_SetBank macro
+	push	bx
+	mov	bx,2000h
+	and	bx,si			; isolate bank bit from address
+	xor	bx,2000h		; invert it
+	shr	bx,1			; position it
+	mov	[RomBank],bx		; this is our bank
+	pop	bx
+	endm
 
-RBank8FENoChange:
+
+RBank8FE:
+	FE_SetBank
 	test_hw_read
-	add	si,[RomBank]
-	add	si,offset _CartRom - 1000h
+	MapRomBank
 	ret
 
 
 WBank8FE:
-	cmp	si,0feh
-	jne	WBank8FENoChange
-	mov	[RomBank],1000h
-
-WBank8FENoChange:
+	FE_SetBank
 	test_hw_write
 	ret
 
+
+;*
+;* M-Network 16K cart
+;*
+
+.CEND
+.DATASEGMENT
+
+; M-Network ROM Slices
+
+MNSlice0	dw	0
+MNSlice1	dw	7*800h		; this one doesn't change
+					; points to 2K bank #3
+
+; M-Network RAM Slices
+
+; small chunks mapped at 0 to 3FF
+;
+; 0 --  00 -  FF
+; 1 -- 100 - 1FF
+; 2 -- 200 - 2FF
+; 3 -- 300 - 3FF
+
+; large chunk mapped at 400 to 7FF
+
+MNRamSlice	dw	0		; which 256 byte ram slice
+
+.DEND
+.CODESEGMENT
+
+MNR_TestRam macro
+local Done, ReadBig
+
+	cmp	si,19ffh
+	ja	Done
+	cmp	si,1400h
+	jb	Done
+	cmp	si,17ffh
+	jbe	ReadBig
+	cmp	si,1900h
+	jb	Done
+	add	si,[MNRamSlice]		; read small, pick up current slice
+	add	si,offset _Ram - 1900h
+	ret
+
+ReadBig:
+	cmp	[MNSlice0],0ffffh	; RAM mapped in ?
+	jne	Done			;   no
+	add	si,offset _Ram - 1400h + 400h
+	ret
+
+Done:
+	endm
+
+MNW_TestRam macro
+local Done, WriteBig
+
+	cmp	si,18ffh
+	ja	Done
+	cmp	si,1000h
+	jb	Done
+	cmp	si,13ffh
+	jbe	WriteBig
+	cmp	si,1800h
+	jb	Done
+	add	si,[MNRamSlice]		; write small, pick up current slice
+	add	si,offset _Ram - 1800h
+	WriteRam
+	ret
+
+WriteBig:
+	cmp	[MNSlice0],0ffffh	; RAM mapped in ?
+	jne	Done			;   no
+	add	si,offset _Ram - 1000h + 400h
+	WriteRam
+	ret
+	
+Done:
+	endm
+
+MN_SetRamSlice macro
+local Done, NotMapLower
+
+	cmp	si,1FE7h
+	jne	NotMapLower
+	mov	[MNSlice0],0ffffh	; map RAM into lower slice
+	jmp	Done
+
+NotMapLower:
+	cmp	si,1fe8h
+	jb	Done
+	cmp	si,1feBh
+	ja	Done
+	push	ax
+	mov	ax,si
+	sub	ax,1fe8h
+	shl	ax,8
+	mov	[MNRamSlice],ax
+	pop	ax
+
+Done:
+	endm
+
+MN_SetSlice macro
+local NoChange
+
+	cmp	si,1FE0h		; if not in switch area...
+	jb	NoChange		; ... there's no change
+	cmp	si,1FE6h
+	ja	NoChange
+
+	push	ax
+	mov	ax,si
+	sub	ax,1FE0h		; bank #
+	shl	ax,11			; bank address
+	mov	[MNSlice0],ax
+	pop	ax
+
+NoChange:
+	endm
+
+MN_MapSlice macro
+
+	push	bx
+	mov	bx,si
+	and	bx,0fffh
+	shr	bx,11			; slice # we're in
+	shl	bx,1			; *2
+	and	si,07ffh		; mask low order bits
+	add	si,[MNSlice0 + bx]	; point to proper ROM slice
+	add	si,offset _CartRom
+	pop	bx
+
+	endm
+
+
+RBank16mn:
+	test_hw_read
+	MN_SetSlice
+	MN_SetRamSlice
+	MNR_TestRam
+	MN_MapSlice
+	ret
+
+WBank16mn:
+	test_hw_write
+	MN_SetSlice
+	MN_SetRamSlice
+	MNW_TestRam
+	ret
