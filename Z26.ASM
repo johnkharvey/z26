@@ -90,7 +90,6 @@ entry:	jmp	start			; jump around our data
 	include graphics.asm		; VGA graphics initialization
 	include vsync.asm		; vertical synchronization
 	include tia.asm			; <-- the main machine -- * start here *
-	include modex.asm		; Erik Mooney's Video routines :)
 	include tiahand.asm		; TIA register handlers
 	include missile.asm		; missile code
 	include tiabuf.asm		; TIA buffer management stuff

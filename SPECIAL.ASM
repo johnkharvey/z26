@@ -339,7 +339,9 @@ SSLINE:
 	cmp	ax,054f5h
 	je	Line62			; parachut
 	cmp	ax,08ed6h
-	je	Line32			; surfsup1
+	je	Line34			; surfsup1
+	cmp	ax,08ed5h
+	je	Line34			; surf_fix
 
 
 	jmp	SSTR			; process Timer1 requests
@@ -638,6 +640,7 @@ SetupCPUOffset:
 	je	CPU69			; tetris26
 	cmp	ax,054f5h
 	je	CPU69			; parachut
+
 	jmp	SetupVBlankFrame
 
 CPU69:	mov	[CPUOffset],69

@@ -61,8 +61,18 @@ ENDIF
 	mov	ax,040h
 	mov	es,ax
 	mov	bx,06ch			; point at time of day
+	xor	cx,cx			; count ticks
+	xor	edx,edx			; for prev tick
+
+StartupDelayLoop:
 	mov	eax,es:[bx]		; get start ticks
 	mov	[StartTicks],eax
+	cmp	eax,edx
+	je	StartupDelayLoop
+	mov	edx,eax			; remember prev
+	inc	cx
+	cmp	cx,18			; been a second?
+	jbe	StartupDelayLoop
 
 RTLoop:
 	mov	eax,es:[bx]
@@ -114,17 +124,8 @@ xmain:
 	je	GoTIME			;   yes, exit now
 
 xm1:
-	cmp	[_VideoMode],0		; X-Mode
-	jne	XVRTest			;   yes
-
 	call	VSync
 	call	ScanFrame
-	jmp	Paused
-
-XVRTest:
-	call	ScanFrame
-	call	VSync
-	call	EriksVideo		; :)
 
 Paused:	call	[CtrlFn]		; check which keys pressed
 	test	[GamePaused],1		; game paused ?
@@ -241,17 +242,8 @@ EXTRN _Sb_init:BYTE
 ALIGN_ENTRY
 
 ScanFrame:
-	cmp	[_VideoMode],0
-	jne	XBuffer			; X-Mode ?
 	mov	ax,0a000h		;   no
 	mov	gs,ax			; point GS to VGA area
-	jmp	XDone
-
-XBuffer:
-	mov	ax,[_VideoBufferSegment]
-	mov	gs,ax			; point gs at video buffer
-
-XDone:
         mov	[DisplayPointer],0	; reset display pointer
 ScanFrameLoop:
 	mov	bx,[ScanLine]		; reset the TIA for a new line
@@ -380,26 +372,6 @@ BackgroundPFOnly:
 	mov	gs:[di],ax
 	endm
 
-; version for X-mode
-
-X_CollisionConvert macro
-local BackgroundPFOnly
-
-	movzx	ebx,byte ptr[si]	; pick up a byte from TIADisplay
-	cmp	bl,2			; looking at background or playfield only?
-	jb	BackgroundPFOnly	;   yes
-	mov	ax,TIAColTab[ebx*2]	; do collision test
-	mov	di,[TIADisplayToColor]	; < preload table pointer
-	or	[TIACollide],ax
-	mov	bl,[bx + di]		; get high priority color
-
-BackgroundPFOnly:
-	mov	di,cx
-	mov	al,byte ptr BackgroundColor[ebx*4]	; get color value word
-        inc	cx
-	mov	gs:[di],al
-	endm
-
 
 ;*
 ;* only call this one if playfield clock is a multiple of 4
@@ -453,15 +425,6 @@ BlankBit macro
 	add	cx,2
 endm
 
-; version for x-mode
-
-X_BlankBit macro
-	mov	di,cx
-	xor	al,al
-	mov	gs:[di],al
-	inc	cx
-endm
-
 ;*
 ;* macro to do 4 blank bits
 ;*
@@ -492,39 +455,6 @@ DoBlank4 macro
 	DoObjects
 	CollisionTest
 	BlankBit
-	inc	dl
-	inc	si
-
-	endm	
-
-; version for X-mode
-
-X_DoBlank4 macro
-
-	TryCPU
-
-	DoObjects
-	PlayfieldBit
-	CollisionTest
-	X_BlankBit
-	inc	dl
-	inc	si
-
-	DoObjects
-	CollisionTest
-	X_BlankBit
-	inc	dl
-	inc	si
-
-	DoObjects
-	CollisionTest
-	X_BlankBit
-	inc	dl
-	inc	si
-
-	DoObjects
-	CollisionTest
-	X_BlankBit
 	inc	dl
 	inc	si
 
@@ -562,34 +492,6 @@ DoReal4 macro
 
 	endm
 
-; version for X-mode
-
-X_DoReal4 macro
-
-	TryCPU
-
-	DoObjects
-	PlayfieldBit
-	X_CollisionConvert
-	inc	dl			; increment color clock
-	inc	si			; increment pf write / collision pointer
-
-	DoObjects
-	X_CollisionConvert
-	inc	dl			; increment color clock
-	inc	si			; increment pf write / collision pointer
-
-	DoObjects
-	X_CollisionConvert
-	inc	dl			; increment color clock
-	inc	si			; increment pf write / collision pointer
-
-	DoObjects
-	X_CollisionConvert
-	inc	dl			; increment color clock
-	inc	si			; increment pf write / collision pointer
-
-	endm
 
 ;*****************************************************************************
 
@@ -628,14 +530,6 @@ Set4BitsFast macro
 	add	cx,8
 	mov	gs:[di],eax
 	mov	gs:4[di],eax
-	endm
-
-;version for X-mode
-
-X_Set4BitsFast macro
-	mov	di,cx			; display pointer
-	add	cx,4
-	mov	gs:[di],eax
 	endm
 
 
@@ -677,45 +571,6 @@ PFSkip:
 	endm
 
 
-; X-mode version
-
-X_FastPlayfieldBit macro op1
-local PFSkip, SlowLane, SetPFBit, SetBkBit, FastSetPFBit
-
-	mov	di,[PFClockToBitTable]		; < preload table pointer
-	sub	al,dl				; # of color clocks to next object
-	movzx	bx,dl				; < preload offset
-	cmp	al,4				; at least 4 ?
-	mov	eax,[si]			; < pick up next 4 TIA bits
-	jb	SlowLane			;   no
-	test	eax,eax				; anything set in next 4 TIA bits ?
-	jne	SlowLane			;   yes
-
-	mov	ebx,[di + bx]			; playfield bit for this color clock
-	add	si,4				; bump TIA pointer
-	add	dl,4				; bump color clock
-
-	test	ebx,dword ptr [TIA+TIAPf0]	; setting a playfield bit ?
-	mov	eax,[BackgroundColor]		; < preload background color
-	jnz	FastSetPFBit			;   yes
-	X_Set4BitsFast				;   no, do 4 background bits
-	jmp	op1				; FastExit
-
-FastSetPFBit:
-	mov	eax,[PlayfieldColor]
-	X_Set4BitsFast
-	jmp	op1
-	
-SlowLane:
-	mov	ebx,[di + bx]
-	or	eax,TGPlay*01000000h+TGPlay*010000h+TGPlay*0100h+TGPlay
-	test	ebx,dword ptr [TIA+TIAPf0]
-	jz	PFSkip
-SetPFBit:
-	mov	[si],eax
-PFSkip:
-	endm
-
 
 ;*
 ;* do 4 real bits
@@ -751,37 +606,6 @@ local FastExit
 FastExit:
 	endm
 
-; X-mode version
-
-X_DoRealFast4 macro
-local FastExit
-
-	TryCPU
-
-	DoObjectsAL
-	X_FastPlayfieldBit FastExit
-
-	X_CollisionConvert
-	inc	dl			; increment color clock
-	inc	si			; increment pf write / collision pointer
-
-	DoObjects
-	X_CollisionConvert
-	inc	dl			; increment color clock
-	inc	si			; increment pf write / collision pointer
-
-	DoObjects
-	X_CollisionConvert
-	inc	dl			; increment color clock
-	inc	si			; increment pf write / collision pointer
-
-	DoObjects
-	X_CollisionConvert
-	inc	dl			; increment color clock
-	inc	si			; increment pf write / collision pointer
-
-FastExit:
-	endm
 
 ;*****************************************************************************
 
@@ -798,6 +622,8 @@ TIALineTo:
 	cmp	bx,[TopLine]		;was 10
 	jb	TIANoGenerate
 	cmp	bx,[BottomLine]		;was 250
+	jae	TIANoGenerate
+	cmp	[DisplayPointer],64000
 	jae	TIANoGenerate
 
 ALIGN_ENTRY
@@ -838,32 +664,14 @@ TIABlankLoop:
 	mov	al,ColumnBlank
 	cmp	dl,al			; doing column blanking ?
 	jae	TIALoop			;   no
-	cmp	[_VideoMode],0		;   yes, do 8 blank columns
-	jne	XBlank			; X-mode ?
 	DoBlank4			;   no, do regular
 	DoBlank4
-	jmp	TIABlankDone
-
-XBlank:
-	X_DoBlank4			; do 8 blank columns in X-mode
-	X_DoBlank4
-
-TIABlankDone:
-;	mov	[ColumnBlank],0
 
 TIALoop:
-	cmp	[_VideoMode],0		; X-mode ?
-	jne	XReal			;   yes
 	
 	DoRealFast4			;   no, do regular
 	DoRealFast4
-	jmp	TIATest
 
-XReal:					; do X-mode pixels
-	X_DoRealFast4
-	X_DoRealFast4
-
-TIATest:
 	cmp	dl,dh
 	jne	TIALoop
 
@@ -903,17 +711,6 @@ TIARB1:
 TIAExit:				; we've finished the line scan...
 	mov	[DisplayPointer],cx
 
-	cmp	[_VideoWidth],180	; in 360 by 240 video mode ?
-	jne	TIARet			;   no
-	mov	di,[DisplayPointer]	;   yes, put out 20 blank pixels
-	xor	eax,eax
-	mov	gs:[di],eax
-	mov	gs:4[di],eax
-	mov	gs:8[di],eax
-	mov	gs:12[di],eax
-	mov	gs:16[di],eax
-	add	[DisplayPointer],20
-	
 TIARet:
 	ret
 

@@ -221,9 +221,6 @@ _Joystick	dw	1		; do joystick
 
 ALIGN 2
 
-global	_VideoBufferSegment
-_VideoBufferSegment	dw	0	; gets segment adr of video buffer
-
 ModuleReturn	dw	0
 ModuleBP	dw	0
 ModuleSP	dw	0

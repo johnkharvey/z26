@@ -64,31 +64,12 @@ RGBLoop:
 	jz	GRRet			;   no
 
 GRV1:	cmp	[_VideoMode],2		; doing Trixter 60Hz (mode 1 or 2) ?
-	ja	GRV1a			;   no
+	ja	GRRet			;   no
 	call	Trixter60Hz		;   yes
 	mov	[_VideoMode],0		; pretend we're mode 13
 	jmp	GRRet
 
-GRV1a:	cmp	[_VideoMode],3
-	ja	GRV1b
-	mov	[_VideoMode],2		; do mode 13 vertical blinds
-	call	Trixter60Hz		; and do 60Hz mode 2
-	jmp	GRRet
-
-GRV1b:	cmp	[_VideoMode],4		; video mode 4 ?
-	ja	GRV1c			;   no
-	mov	[_VideoMode],2		;   yes, do mode 2 init
-	call	Trixter60Hz
-	mov	[_VideoMode],1		; and mode 1 (buffered mode 13) video
-	jmp	GRRet
-
-GRV1c:
-GRV2:	sub	[_VideoMode],3
-	call	ModeXInit		;   yes, call Erik's Init Routine
-	jmp	GRRet
-
-
-GRRet:	
+GRRet:	mov	[_VideoMode],0		; any other mode, pretend mode 0	
 	ret
 
 TIATextMode:
@@ -238,28 +219,32 @@ DefaultPaletteTable db 0,   0,    0	; 0 0 0 0 -- 0 (grey)
 		db   63,   46,   47	; 0 1 0 0 -- 7 
 
 		db   22,    8,   20	; 0 1 0 1 -- 0 (purple)
-		db   63,   40,   63	; 0 1 0 1 -- 7 
+		db   63,   40,   63	; 0 1 0 1 -- 7
 
 		db   20,    8,   24	; 0 1 1 0 -- 0 (purple-blue)
 		db   52,   40,   63	; 0 1 1 0 -- 7
 
+					; atlantis blue blinker
 		db   11,    8,   33	; 0 1 1 1 -- 0 (blue <slightly purplish>)
-		db   55,   48,   63	; 0 1 1 1 -- 7 (was 55,40,63 for atlantis)
+		db   45,   45,   60	; 0 1 1 1 -- 7 (was 40,45,60 for atlantis)
+;		db   55,   40,   63	; 0 1 1 1 -- 7 (was 55,40,63 for atlantis)
 
 		db    8,    8,   35	; 1 0 0 0 -- 0 (blue)
-		db   45,   45,   63	; 1 0 0 0 -- 7
+		db   35,   45,   63	; 1 0 0 0 -- 7 (was 45, 45, 63 for polepos)
 
 		db    6,    6,   25	; 1 0 0 1 -- 0 (light blue)
-		db   50,   50,   63	; 1 0 0 1 -- 7
+		db   40,   50,   63	; 1 0 0 1 -- 7 (was 50, 50, 63 for polepos)
 
-		db    0,    8,   20	; 1 0 1 0 -- 0 (turquoise)
+		db    0,   10,   18	; 1 0 1 0 -- 0 (turquoise)(0,8,20 for atlantis)
 		db   40,   55,   63	; 1 0 1 0 -- 7
 
 		db    0,   12,    8	; 1 0 1 1 -- 0 (green-blue)
 		db   40,   63,   55	; 1 0 1 1 -- 7
 
+					; atlantis light green (2nd from bottom)
 		db    4,   12,    4	; 1 1 0 0 -- 0 (green)
-		db   50,   63,   50	; 1 1 0 0 -- 7 (was 40,60,60 for atlantis)
+		db   30,   63,   30	; 1 1 0 0 -- 7 (was 50,63,50 for atlantis)
+;		db   50,   63,   50	; 1 1 0 0 -- 7 (was 40,60,60 for atlantis)
 
 		db   10,   15,    0	; 1 1 0 1 -- 0 (yellow-green)
 		db   50,   63,   35	; 1 1 0 1 -- 7

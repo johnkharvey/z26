@@ -19,6 +19,13 @@
 ** (0.90)  Jan 24, 1998  mid-line collisions -- freeway and oystron(!)
 ** (0.91)  Feb  2, 1998  60 Hz refresh video modes
 ** (0.91a) Feb  4, 1998  vertical blinds -v3
+** (0.92)  Feb 11, 1998  Joystick support, 60Hz video mode 2 now default
+** (0.93)  Feb 22, 1998  different palette, 
+**			 different Joystick code,
+**                       remove ModeX support 
+**			 simplify sound routines
+**                       added timeout to ResetDSP routine
+**         Feb 27, 1998  added 1 second startup delay to allow monitor sync
 */
 
 #include <stdio.h>		/* puts */
@@ -45,7 +52,6 @@ extern short int DoChecksum;
 extern short int Checksum;
 extern short int verbose;
 extern short int credits;
-extern unsigned short int VideoBufferSegment;  /* gets segment address of video buffer */
 
 
 /*
@@ -68,12 +74,12 @@ PressKeyToContinue()
 
 ShowBlaster()
 {
-    printf("           I/O port: %x (hex)\n",  gBlaster.BaseIOPort);
-    printf("          DMA 8-bit: %d\n",        gBlaster.DMAChan8Bit);
-    printf("         DMA 16-bit: %d\n",        gBlaster.DMAChan16Bit);
-    printf("                IRQ: %d\n",        gBlaster.IRQNumber);
-    printf("        DSP Version: %d.%02d\n",  (gBlaster.DSPVersion >> 8) & 0x00FF,
-				              (gBlaster.DSPVersion & 0x00FF));
+    printf("           I/O port: %x (hex)\n",  gBaseIOPort);
+    printf("          DMA 8-bit: %d\n",        gDMAChan8Bit);
+    printf("         DMA 16-bit: %d\n",        gDMAChan16Bit);
+    printf("                IRQ: %d\n",        gIRQNumber);
+    printf("        DSP Version: %d.%02d\n",  (gDSPVersion >> 8) & 0x00FF,
+				              (gDSPVersion & 0x00FF));
 }
 
 /*
@@ -84,7 +90,7 @@ StartSound()
 {
   if (Sb_init)
   {
-    ProgramDSP(gDMABufSize / 2, &gSoundStyle, AUTO_INIT);	/* turn on DMA */
+    ProgramDSP(gDMABufSize / 2);	/* turn on DMA */
   }
 }
 
@@ -92,7 +98,7 @@ StopSound()
 {
   if (Sb_init)
   {
-    ResetDSP(gBlaster.BaseIOPort);		/* turn off DMA */
+    ResetDSP();		/* turn off DMA */
   }
 }
 
@@ -106,25 +112,15 @@ main()
   }
   RomPtr = CartRom - 0x1000;	/* adjust pointer to rom area within CartRom */
 
-  VideoBufferSegment = DOSalloc(0x1000); 	/* allocate this many paragraphs */
-						/* big enough to contain a wild pointer */
-						/* try THAT on a 32-bit compiler! */
-  if (VideoBufferSegment == NULL)
-  {
-    puts("Couldn't allocate memory for video buffer");
-    free(CartRom);
-    return;
-  }
-
   psp = _psp;			/* for command line processor (cmdline.asm) */
   CommandLine();		/* call command line processor */
 
   if (DoCopyright)
   {
-    puts("\n\nz26 -- An Atari 2600 emulator (0.92)");
+    puts("\n\nz26 -- An Atari 2600 emulator (0.93)");
     puts("Copyright (C) 1997-1998 by John Saeger\n");
 
-    puts("Home Page:  http://www.whimsey.com/z26.html\n");
+    puts("Home Page:  http://www.whimsey.com/z26/z26.html\n");
 
     puts("    F1 -- reset        F2 -- select    F5 -- P0 easy      F6 -- P0 hard");
     puts("    F9 -- B/W         F10 -- color      p -- pause     ENTER -- resume");
@@ -173,7 +169,7 @@ main()
 
   if (quiet) goto no_sound;
 
-  if (GetBlastEnv(&gBlaster) == FAIL)
+  if (GetBlastEnv() == FAIL)
   {
     if (verbose)
     {
@@ -183,7 +179,7 @@ main()
     goto no_sound;
   }
 
-  if (gBlaster.DSPVersion < 0x0200)  /* DSP version < 2.xx */
+  if (gDSPVersion < 0x0200)  /* DSP version < 2.xx */
   {
     if (verbose)
     {
@@ -194,7 +190,7 @@ main()
     goto no_sound;
   }
 
-  if (gBlaster.DSPVersion == 0x200)  /* DSP version = 2.00 */
+  if (gDSPVersion == 0x200)  /* DSP version = 2.00 */
   {
     playback_freq = SAMPLE_FREQ / 2;	/* was 15700 */
   }
@@ -217,12 +213,12 @@ main()
   memset(DMABuf, gDMABufSize, 0);	/* clear out sound buffer */
 					/* to minimize startup noises */
 
-  gSoundStyle.BitsPerSample = 8;	/* 8 bit */
-  gSoundStyle.Channels = 1;		/* mono */
-  gSoundStyle.SoundFormat = 0;		/* 8-bit uncompressed */
-  gSoundStyle.SampPerSec = playback_freq;
-  gSoundStyle.TimeConstant = (unsigned short int) ((256L - 1000000L)
-				   / ((long) gSoundStyle.Channels * gSoundStyle.SampPerSec) & 0x00FF);
+  gBitsPerSample = 8;	/* 8 bit */
+  gChannels = 1;		/* mono */
+  gSoundFormat = 0;		/* 8-bit uncompressed */
+  gSampPerSec = playback_freq;
+  gTimeConstant = (unsigned short int) ((256L - 1000000L)
+					/ ((long) gChannels * gSampPerSec) & 0x00FF);
 
   if (verbose)
   {
@@ -230,21 +226,21 @@ main()
     ShowBlaster();
     printf("        Buffer Size: %d\n",gDMABufSize);
     printf(" Playback Frequency: %d\n",playback_freq);
-    printf("      Time Constant: %d\n",gSoundStyle.TimeConstant);
+    printf("      Time Constant: %d\n",gTimeConstant);
     PressKeyToContinue();
   }
 
-  ResetDSP(gBlaster.BaseIOPort);	/* knock-knock */
+  ResetDSP();	/* knock-knock */
 
   DMABufToLoad = 1;			/* next half buffer to load is top half */
   gDMABufNowPlaying = 0;		/* altered by ISR when buffer done playing */
   gHighSpeed = FALSE;			/* init to NOT hi-speed DMA */
 
-  SetDmaISR(&gBlaster);  		/* setup the interrupt handler */
+  SetDmaISR();		  		/* setup the interrupt handler */
 
-  ProgramDMA(DMABufPhysAddr, &gSoundStyle, gDMABufSize);
+  ProgramDMA(DMABufPhysAddr, gDMABufSize);
 
-/*  ProgramDSP(gDMABufSize / 2, &gSoundStyle, AUTO_INIT); */
+/*  ProgramDSP(gDMABufSize / 2, &gSoundStyle); */
 
   Sb_init = 1;				/* mark Sound Blaster initialized */
 
@@ -254,12 +250,11 @@ no_sound:
 
 free_mem:
   free(CartRom);
-  DOSfree(VideoBufferSegment);
 
   if (Sb_init)
   {
-    ResetDSP(gBlaster.BaseIOPort);	/* stop DMA */
-    RestoreOldISR(&gBlaster); 		/* restore old ISR */
+    ResetDSP();	/* stop DMA */
+    RestoreOldISR(); 			/* restore old ISR */
     free(DMABuf);
   }
 
