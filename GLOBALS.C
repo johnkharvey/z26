@@ -123,6 +123,7 @@ db KidVid;		/* ID byte on tapes for KidVid game *EST* */
 db KidVidTape;		/* tape number to be played *EST* */
 db DisableCompareCopy;  /* dont compare new frame with old frame before copying *EST* */
 db DoInterlace;         /* simulate interlaced display *EST* */
+db MouseRude;		/* warp the mouse when running in a window */
 
 /*
 ** reinitialize the above variables
@@ -166,4 +167,5 @@ void def_LoadDefaults(void)
         MaxLines = 0xffff ;  /* unreasonable default screen height - gets fixed by auto positioning */
         DisableCompareCopy = 0;
         DoInterlace = 0;
+	MouseRude = 1;
 }

@@ -179,6 +179,7 @@ KeyDown =		050h		; Down arrow
 KeyCtrl =		01dh		; Ctrl
 KeyRShift =		036h
 KeySlash =		035h		; /
+KeyBackSlash =		02bh		; \
 
 KeyLShift =		02ah
 KeyAlt =		038h

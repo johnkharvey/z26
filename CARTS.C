@@ -58,6 +58,7 @@ void RecognizeCart(void)
 	if (crc == 0x7b4eb49c) CFirst = 44;	/* pickpile */
 	if (crc == 0xbf0aac36) CFirst = 23;	/* chalenge */
 	if (crc == 0x2bcce2c8) CFirst = 24;	/* immies */
+        if (crc == 0xbfc1da38) CFirst = 23;     /* Dragon Defender (Thomas Jentzsch) (Video Format Conversion).bin */
 	if (crc == 0xcbebf38e) CFirst = 40;	/* Sancho - Nightmare (PAL).bin */
 	if (crc == 0xd8777a3b) CFirst = 40;	/* Starsoft - Gefecht im All (PAL).bin */
 //	if (crc == 0xbf9da2b1) CFirst = 37;	/* Robin Hood (PAL) */
@@ -111,20 +112,11 @@ void RecognizeCart(void)
 
 /* phosphorescent games */
 
-	if (Phosphor <= 100)
-	{
-		if (Lookup(Phosphorescent))
-			Phosphor = 77;
-	}
-	else
+	if (Phosphor > 100)
 		Phosphor = 0;
-
-
-/* games that should be quiet on PC speaker */
-
-	MinVol = 8;
-	if (Lookup(be_quiet)) MinVol = 20;
-
+	else
+		if ((Phosphor == 0) && Lookup(Phosphorescent))
+			Phosphor = 77;
 
 /* games that want Player 1 set to hard */
 
@@ -178,6 +170,7 @@ void RecognizeCart(void)
 	if (Lookup(BS_7)) BSType = 7;		/* M Network 16K */
 /*      if (Lookup(BS_8)) BSType = 8; */        /* Atari 32K */
         if (crc == 0xa01ebff4) BSType = 10;     /* Spectravideo CompuMate PAL */
+	if (Lookup(BS_11)) BSType = 11;		/* 32K Tigervision */
 
         if(BSType==0)
         {

@@ -294,7 +294,8 @@ void cli_InterpretParm(char *p)
 	int ch, parm;
 
 	p++;
-	ch = tolower(*p++);
+//	ch = tolower(*p++);
+	ch = *p++;
 	parm = atol(p);
 
 	switch (ch)
@@ -330,6 +331,8 @@ void cli_InterpretParm(char *p)
                                 MPdirection = 1;  /* set directions for Marble Craze */
                         }
                         break;
+	case 'M':	MouseRude = parm;
+			break;
 	case 't':  	if (parm) TraceCount = parm; else TraceCount = 0xff;
 			TraceEnabled = 1;
 			zlog = fopen("z26.log", "w");

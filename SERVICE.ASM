@@ -85,6 +85,8 @@ _get_mouse_movement:
 _TestEscExit:
 	test	[_KeyTable+KeyEsc],128	; ESC pressed ?
 	jnz	GoDOS			;   yes
+	test	[_KeyTable+KeyBackSlash],128
+	jnz	GoDOS
 	ret
 
 ;*

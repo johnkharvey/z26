@@ -18,14 +18,6 @@
 #include "winsrv.c"
 #endif
 
-extern void FDoLinearCopy();
-extern void DoLinearCopy();
-extern void DoWideLinearCopy();
-
-extern void CFDoLinearCopy();
-extern void CDoLinearCopy();
-extern void CDoWideLinearCopy();
-
 #define NUM_COLORS 256
 
 SDL_Surface *srv_screen;
@@ -38,8 +30,6 @@ dd Real_Horiz;
 dd width, height;
 dd Real_width;
 
-
-
 db *screen_pixels;
 db *emu_pixels;
 db *emu_pixels_prev;
@@ -47,7 +37,6 @@ db *emu_pixels_prev;
 db screen_buffer_count = 0;
 
 db srv_done = 0;
-
 
 srv_print(char *msg)
 {
@@ -66,7 +55,41 @@ dd srv_bypp = 0;
 
 dd srv_average[128][128];
 
+extern void FDoLinearCopy();
+extern void DoLinearCopy();
+extern void DoWideLinearCopy();
+
+extern void CFDoLinearCopy();
+extern void CDoLinearCopy();
+extern void CDoWideLinearCopy();
+
 #include "pixcopy.c"
+
+void (*DrawScanLineLinear[][4])() = {
+/*  1 bpp              2 bpp              3 bpp              4 bpp */
+ FDoLinearCopy,     FDoPixelCopy2,     FDoPixelCopy3,     FDoPixelCopy4,	/* single pixel routines */
+ DoLinearCopy,      DoPixelCopy2,      DoPixelCopy3,      DoPixelCopy4,		/* double pixel routines */
+ DoTrPixelCopy1,    DoTrPixelCopy2,    DoTrPixelCopy3,    DoTrPixelCopy4,	/* triple pixel routines */
+ DoWideLinearCopy,  DoWidePixelCopy2,  DoWidePixelCopy3,  DoWidePixelCopy4	/* quad pixel routines */
+};
+
+void (*DrawScanLineCompare[][4])() = {
+/*  1 bpp              2 bpp              3 bpp              4 bpp */
+ CFDoLinearCopy,    CFDoPixelCopy2,    CFDoPixelCopy3,    CFDoPixelCopy4,	/* single pixel routines */
+ CDoLinearCopy,     CDoPixelCopy2,     CDoPixelCopy3,     CDoPixelCopy4,	/* double pixel routines */
+ CDoTrPixelCopy1,   CDoTrPixelCopy2,   CDoTrPixelCopy3,   CDoTrPixelCopy4,	/* triple pixel routines */
+ CDoWideLinearCopy, CDoWidePixelCopy2, CDoWidePixelCopy3, CDoWidePixelCopy4	/* quad pixel routines */
+};
+
+void (*DrawScanLineAverage[][4])() = {
+/*  1 bpp              2 bpp              3 bpp              4 bpp */
+ FDoLinearCopy,     FDoPixelAv2,       FDoPixelAv3,       FDoPixelAv4,		/* single pixel routines */
+ DoLinearCopy,      DoPixelAv2,        DoPixelAv3,        DoPixelAv4,		/* double pixel routines */
+ DoTrPixelCopy1,    DoTrPixelAv2,      DoTrPixelAv3,      DoTrPixelAv4,		/* triple pixel routines */
+ DoWideLinearCopy,  DoWidePixelAv2,    DoWidePixelAv3,    DoWidePixelAv4	/* quad pixel routines */
+};
+
+
 
 srv_Phosphor(int c1, int c2)
 {
@@ -157,7 +180,7 @@ void CreateScreen(Uint16 w, Uint16 h, Uint8 bpp, Uint32 flags)
 //	SDL_WM_SetCaption(" z26"," z26");
 	SDL_WM_SetCaption(FileName, FileName);
 	
-//	if (srv_screen->flags & SDL_FULLSCREEN)
+	if ((srv_screen->flags & SDL_FULLSCREEN) || MouseRude)
 		SDL_ShowCursor(SDL_DISABLE);
 	srv_SetPalette();
 }
@@ -404,12 +427,9 @@ void srv_CopyDouble( void (*copy)(), int sp_inc)
         }
 }
 
-
 int odd = 0;
 
-void srv_PixelLogic(void (*FDoLinear)(),  void (*DoLinear)(),  void (*DoWideLinear)(),  void (*DoTrLinear)(),
-                    void (*FDoAverage)(), void (*DoAverage)(), void (*DoWideAverage)(), void (*DoTrAverage)(),
-		    void (*CFDoLinear)(), void (*CDoLinear)(), void (*CDoWideLinear)(), void (*CDoTrLinear)())
+void srv_PixelLogic()
 {
 	void (*wide)();
 	void (*medium)();
@@ -420,24 +440,25 @@ void srv_PixelLogic(void (*FDoLinear)(),  void (*DoLinear)(),  void (*DoWideLine
 
 	if (Phosphor && NoRetrace && !DoInterlace)
 	{
-		wide = DoWideAverage;
-		medium = DoAverage;
-		narrow = FDoAverage;
-		triple = DoTrAverage;
+		wide =   DrawScanLineAverage[3][bpp-1];
+		triple = DrawScanLineAverage[2][bpp-1];
+		medium = DrawScanLineAverage[1][bpp-1];
+		narrow = DrawScanLineAverage[0][bpp-1];
+
 	}
         else if ((DisableCompareCopy!=0)||((Flips & 0x7)==0x7))
 	{
-		wide = DoWideLinear;
-		medium = DoLinear;
-		narrow = FDoLinear;
-		triple = DoTrLinear;
+		wide =   DrawScanLineLinear[3][bpp-1];
+		triple = DrawScanLineLinear[2][bpp-1];
+		medium = DrawScanLineLinear[1][bpp-1];
+		narrow = DrawScanLineLinear[0][bpp-1];
 	}
 	else
 	{
-		wide = CDoWideLinear;
-		medium = CDoLinear;
-		narrow = CFDoLinear;
-		triple = CDoTrLinear;
+		wide =   DrawScanLineCompare[3][bpp-1];
+		triple = DrawScanLineCompare[2][bpp-1];
+		medium = DrawScanLineCompare[1][bpp-1];
+		narrow = DrawScanLineCompare[0][bpp-1];
 	}
 
 	screen_pixels = srv_buffer + Horiz*bpp + (Vert)*srv_pitch;
@@ -534,32 +555,7 @@ void srv_CopyScreen()
 	emu_pixels = ScreenBuffer;
         emu_pixels_prev = ScreenBufferPrev;
 
-	switch(bpp)
-	{
-	case 1:
-		srv_PixelLogic(FDoLinearCopy,  DoLinearCopy,  DoWideLinearCopy, DoTrPixelCopy1,
-                    	       FDoLinearCopy,  DoLinearCopy,  DoWideLinearCopy, DoTrPixelCopy1,
-			       CFDoLinearCopy, CDoLinearCopy, CDoWideLinearCopy, CDoTrPixelCopy1);
-		break;
-
-	case 2:
-		srv_PixelLogic(FDoPixelCopy2,  DoPixelCopy2,  DoWidePixelCopy2, DoTrPixelCopy2,
-                    	       FDoPixelAv2,    DoPixelAv2,    DoWidePixelAv2,   DoTrPixelAv2,
-			       CFDoPixelCopy2, CDoPixelCopy2, CDoWidePixelCopy2,CDoTrPixelCopy2);
-		break;
-
-	case 3:
-		srv_PixelLogic(FDoPixelCopy3,  DoPixelCopy3,  DoWidePixelCopy3, DoTrPixelCopy3,
-                    	       FDoPixelAv3,    DoPixelAv3,    DoWidePixelAv3,   DoTrPixelAv3,
-			       CFDoPixelCopy3, CDoPixelCopy3, CDoWidePixelCopy3,CDoTrPixelCopy3);
-		break;
-
-	case 4:
-		srv_PixelLogic(FDoPixelCopy4,  DoPixelCopy4,  DoWidePixelCopy4, DoTrPixelCopy4,
-                    	       FDoPixelAv4,    DoPixelAv4,    DoWidePixelAv4,   DoTrPixelAv4,
-			       CFDoPixelCopy4, CDoPixelCopy4, CDoWidePixelCopy4,CDoTrPixelCopy4);
-		break;
-	}
+	srv_PixelLogic();
 
 	if((NoRetrace == 0) || (DoInterlace && (VideoMode >= 3) && (VideoMode <= 5)))
         {
@@ -703,9 +699,12 @@ srv_get_mouse_button_status()
 srv_get_mouse_movement()
 {
 	srv_mouse_button = SDL_GetRelativeMouseState(&srv_micky_x, &srv_micky_y);
-	SDL_WarpMouse(width/2,height/2);
-	srv_Events();
-	srv_crap_button = SDL_GetRelativeMouseState(&srv_crap_x, &srv_crap_y);
+	if (MouseRude)
+	{
+		SDL_WarpMouse(width/2,height/2);
+		srv_Events();
+		srv_crap_button = SDL_GetRelativeMouseState(&srv_crap_x, &srv_crap_y);
+	}
 }
 
 

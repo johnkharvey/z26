@@ -3,7 +3,7 @@
 */
 
 /*
-** z26 is Copyright 1997-2002 by John Saeger and is a derived work with many
+** z26 is Copyright 1997-2003 by John Saeger and is a derived work with many
 ** contributors.  z26 is released subject to the terms and conditions of the 
 ** GNU General Public License Version 2 (GPL).	z26 comes with no warranty.
 ** Please see COPYING.TXT for details.
@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
 	if (argc == 1)
 	{
 //		cli_CommandLine(4, default_arg);
-		srv_print("version 2.06");
+		srv_print("version 2.07");
 		exit(1);
 	}
 	else

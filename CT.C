@@ -32,6 +32,7 @@ dd	Kool[] = {
 	0x6f721775,	/* Kool Aid Man.bin */
 	0x75020f32,	/* Kool Aid Man-fix.bin */
 	0xd5783d5c,	/* Kool Aid Man-sc.bin */
+        0xb5b061a9,     /* Kool Aid Man (1982) (Mattel - Fabrizio Zavagi) (PAL).bin */
 	-1
 };
 
@@ -82,6 +83,7 @@ dd	Paddle_0[] = {
 	0x1eddbbff,	/* Piece o' Cake.bin */
 	0x22965081,	/* Secret Agent (Prototype).bin */
 	0x922a0836,	/* Solar Storm.bin */
+        0xc4e4ff1a,     /* Solar Storm (1983) (Imagic) (PAL) [!].bin */
 	0xa914ed81,	/* Starpath - Fireball (PAL).bin */
 	0x0ef334f7,	/* Starpath - Fireball (Preview) (PAL).bin */
 	0x5192bfbf,	/* Starpath - Fireball (Preview).bin */
@@ -166,38 +168,6 @@ dd	MPdir_3[] = {
 	-1
 };
 
-dd	be_quiet[] = {
-	0xefe8731d,	/* 3-D Tic-Tac-Toe (1978) (Atari) (PAL) [!].bin */
-	0xb98f339e,	/* 3-D Tic-Tac-Toe (1978) (Atari).bin */
-	0x615c35ce,	/* 3-D Tic-Tac-Toe (1978) [o].bin */
-	0x95cce9d9,	/* 3-D Tic-Tac-Toe (32 in 1) (PAL).bin */
-	0xe5005de9,	/* Boxing (32 in 1) (PAL).bin */
-	0x941609f0,	/* Boxing (Activision) (PAL) [!].bin */
-	0xa52b7e12,	/* Boxing (Activision) [!].bin */
-	0xdebe335c,	/* Boxing (Activision) [o1].bin */
-	0x0a3963d8,	/* Boxing (Activision) [o2].bin */
-	0xbbf361b2,	/* Casino - Poker Plus (1978).bin */
-	0xed6c5505,	/* Casino (Atari) (PAL) [!].bin */
-	0xaebfd482,	/* Dice Puzzle.bin */
-	0xa9257db6,	/* Double Dragon (CCE).bin */
-	0x8fd51b6b,	/* Double Dragon.bin */
-	0x218f7846,	/* Home Run Baseball (1978) [o].bin */
-	0x06e5d652,	/* Home Run Baseball (1978).bin */
-	0x9a312287,	/* Home Run Baseball (32 in 1) (PAL).bin */
-	0xd2ea2084,	/* Slot Machine (32 in 1) (PAL).bin */
-	0x1c66fc86,	/* Slot Machine (AKA Slots) [a].bin */
-	0x71810e32,	/* Slot Machine (AKA Slots).bin */
-	0x7c0356ab,	/* Stampede (32 in 1) (PAL).bin */
-	0xcaed83fd,	/* Stampede (Activision) [!].bin */
-	0xf9f931d0,	/* Stampede [o1].bin */
-	0x901bc1dc,	/* Stampede [o2].bin */
-	0x26e0434c,	/* Video Checkers (1978).bin */
-	0x1d376918,	/* Video Chess (1978).bin */
-	0xbe65f786,	/* Video Chess (Atari) (PAL) [!].bin */
-        0x5e2f0799,     /* Double Dragon (PAL) */
-	-1
-};
-
 dd	joy_rev[] = {
 	0x7b4eb49c,	/* Pick 'n Pile.bin */
 	0xe2134ede,	/* Raiders of the Lost Ark (Atari) (PAL) [!].bin */
@@ -256,6 +226,7 @@ dd      driving_con_3[] = {
 	0x40f4dd41,	/* Indy 500 (1977) [o].bin */
 	0xf6347068,	/* Indy 500 (1977).bin */
 	0x3038f1e5,	/* Indy 500 (Atari) (PAL) [!].bin */
+        0xb7beb2bb,     /* Indy 500 (1978) (Atari) (PAL) [p1][o1][!].bin */
         0x5b9f7df7,     /* Sprint Master DC (Thomas Jentzsch hack) */
 	-1
 };
@@ -309,6 +280,7 @@ dd	BS_3[] = {
 dd	BS_4[] = {
 	0x584f6777,	/* Espial [b].bin */
 	0x8d70fa42,	/* Espial.bin */
+        0x8a7317da,     /* Espial (1983) (Tigervision) [b2].bin */
 	0x8beb03d4,	/* Miner 2049er [b1].bin */
 	0x33f2856f,	/* Miner 2049er [b2].bin */
 	0xf859122e,	/* Miner 2049er Vol. 2 [b1].bin */
@@ -356,6 +328,7 @@ dd	BS_6[] = {
 dd	BS_7[] = {
 	0x8eed6b02,	/* Bump n Jump [b].bin */
 	0xd523e776,	/* Bump n Jump.bin */
+        0x9395c6b7,     /* Breaking News (Ric Pryor).bin */
 	0x24c35820,	/* Burgertime.bin */
 	0x5c161fe4,	/* Masters of the Universe - The Power of He-Man.bin */
 	-1
@@ -367,6 +340,12 @@ dd	BS_8[] = {
 	-1
 };
 */
+
+dd	BS_11[] = {
+	0x2e76744c,	/* beu11.bin */
+	-1
+};
+	
 
 dd	Phosphorescent[] = {
   0xa7890826,  /* alien.bin */
@@ -525,5 +504,111 @@ dd	Phosphorescent[] = {
   0x98f16ea6,  /* ZZZ_UNK_A2600_rom_073.bin */
   0x37cb87d8,  /* Blueprint (CBS Electronics) (PAL) [!].bin */
   0x5c74d64e,  /* Fathom (1983) (Imagic) (PAL) [!].bin */
-  0x8da45a53  /* Hili Ball (Starsoft) (PAL) [!].bin */
+  0x8da45a53,  /* Hili Ball (Starsoft) (PAL) [!].bin */
+  0x4f40a18e,  /* Air Raid.bin */
+  0x80eb88e9,  /* Aster Hawk (Charles Morgan).bin */
+  0x0445fd44,  /* Asteroids (Scott Stilphen) (Hack).bin */
+  0x1a5a782c,  /* Asteroids DC+ (Thomas Jentzsch).bin */
+  0xaa3812af,  /* Attack Of The Mutant Space Urchins (Barry Laws Jr.).bin */
+  0xe5a25575,  /* Boing! (1983) (First Star Software) (PAL) [!].bin */
+  0x5260de42,  /* Cat Trax (Thomas Jentzsch) (PAL) (Video Format Conversion).bin */
+  0x0e5bea23,  /* Cosmic Creeps (1982) (Telesys) (PAL) [p1][!].bin */
+  0xa3b903fd,  /* Cosmic Swarm (1982) (CommaVid) (PAL) [p1][o1][!].bin */
+  0x6d811131,  /* Dancing Plate (PAL) [p1][!].bin */
+  0xd22f87fb,  /* Demolition Herby (1982) (Telesys) (PAL) [p1][!].bin */
+  0xb5a677d1,  /* Dice Puzzle (Panda) (PAL) [p1][!].bin */
+  0xbfc1da38,  /* Dragon Defender (Thomas Jentzsch) (Video Format Conversion).bin */
+  0x6570d0eb,  /* Ghostbusters II (Salu, Thomas Jentzsch).bin */
+  0x117fb266,  /* Ghostbusters II (Version 2).bin */
+  0x9ad328b9,  /* Hili Ball (Starsoft) (PAL) [p1][!].bin */
+  0x49176010,  /* Lord of the Rings-Fellowship of the Ring (Hack) (Improved Engine).bin */
+  0xe52bdc22,  /* Lord of the Rings-Fellowship of the Ring (Hack).bin */
+  0x9a1d148e,  /* Mines of Minos (CommaVid) (PAL) [!].bin */
+  0x4736543c,  /* Mines of Minos (CommaVid) (PAL) [p1][!].bin */
+  0xe4062d87,  /* Missile Command (Amiga Mouse) (Thomas Jentzsch) (PAL).bin */
+  0x8590dabb,  /* Missile Command (Amiga Mouse) (Thomas Jentzsch).bin */
+  0xe69da7c3,  /* Missile Command (Atari) (PAL) [p1][!].bin */
+  0x90215889,  /* Missile Command (CX-22 Trackball) (Thomas Jentzsch) (PAL).bin */
+  0x8f7e1223,  /* Missile Command (CX-22 Trackball) (Thomas Jentzsch).bin */
+  0x094ed116,  /* Missile Command (CX-80 Trackball) (Thomas Jentzsch) (PAL).bin */
+  0x16119bbc,  /* Missile Command (CX-80 Trackball) (Thomas Jentzsch).bin */
+  0x9a650e9c,  /* Misterious Thief, A (CCE).bin */
+  0xcb966e55,  /* Moonsweeper (1983) (Imagic) (PAL) [!].bin */
+  0xd865a8dd,  /* Moonsweeper (1983) (Imagic).bin */
+  0xa7ce1800,  /* Mr. Do! (1983) (CBS Electronics) (PAL) [!].bin */
+  0x1bcbba9e,  /* Pharaoh's Curse (TechnoVision) (PAL) [p1][!].bin */
+  0xb087d2b6,  /* Pharaoh's Curse (TechnoVision, Thomas Jentzsch).bin */
+  0x7b4eb49c,  /* Pick 'n Pile (1990) (Salu) (PAL) [!].bin */
+  0xdc3c5a3f,  /* Qb (2.06) (NTSC).bin */
+  0x9db0c4b8,  /* Qb (2.06) (PAL).bin */
+  0x5e9c5a47,  /* Qb (2.06) (Stella).bin */
+  0x82ea5fa6,  /* Qb (Retroactive) (0.01).bin */
+  0xe588d6c2,  /* Qb (Retroactive) (0.03).bin */
+  0xf6593897,  /* Qb (Retroactive) (0.04).bin */
+  0x9c532304,  /* Qb (Retroactive) (0.05) (Mac).bin */
+  0x822aa525,  /* Qb (Retroactive) (0.05).bin */
+  0x13e60c27,  /* Qb (Retroactive) (0.06).bin */
+  0xa441b48c,  /* Qb (Retroactive) (0.10) (PAL).bin */
+  0x32474fc2,  /* Qb (Retroactive) (0.10) (Stella-compatable).bin */
+  0x90df91ba,  /* Qb (Retroactive) (0.10).bin */
+  0xa55c961a,  /* Qb (Retroactive) (0.11) (PAL).bin */
+  0x8b4d5fb5,  /* Qb (Retroactive) (0.11) (Stella-compatable).bin */
+  0x6be22241,  /* Qb (Retroactive) (0.11).bin */
+  0xa249f484,  /* Qb (Retroactive) (0.12) (PAL).bin */
+  0x39ab5cc5,  /* Qb (Retroactive) (0.12) (Stella-compatable).bin */
+  0xd9042131,  /* Qb (Retroactive) (0.12).bin */
+  0xe6c3f47e,  /* Qb (Retroactive) (1.00) (PAL).bin */
+  0x2b73f9b8,  /* Qb (Retroactive) (1.00) (Stella-compatable).bin */
+  0x8b741fd8,  /* Qb (Retroactive) (1.00).bin */
+  0x9cf0383c,  /* Qb (Retroactive) (1.01).bin */
+  0xb65b8bf4,  /* Qb (Retroactive) (2.00) (PAL).bin */
+  0xacf40dde,  /* Qb (Retroactive) (2.00) (Stella-compatable).bin */
+  0xacd68f7e,  /* Qb (Retroactive) (2.00).bin */
+  0xe8ec3517,  /* Qb (Retroactive) (2.03) (PAL).bin */
+  0x3eba7b70,  /* Qb (Retroactive) (2.03).bin */
+  0x88c4edd4,  /* Qb (Retroactive) (2.04) (PAL).bin */
+  0xd067a5c4,  /* Qb (Retroactive) (2.04) (Stella-compatable).bin */
+  0xa8678746,  /* Qb (Retroactive) (2.04).bin */
+  0xa46a791e,  /* Qb (Retroactive) (2.05) (PAL).bin */
+  0xea3b44dd,  /* Qb (Retroactive) (2.05).bin */
+  0xb1f4996f,  /* Qb (Retroactive) (2.07) (PAL).bin */
+  0x56c8f1f4,  /* Qb (Retroactive) (2.07) (Stella-compatable).bin */
+  0x2ec8d376,  /* Qb (Retroactive) (2.07).bin */
+  0x3b66a5d8,  /* Qb (Retroactive) (2.08) (PAL).bin */
+  0xcbc281ad,  /* Qb (Retroactive) (2.08) (Stella-compatable).bin */
+  0x0bc0a124,  /* Qb (Retroactive) (2.08) (Test Jump).bin */
+  0xb3c2a32f,  /* Qb (Retroactive) (2.08).bin */
+  0x3b49bf6d,  /* Qb (Retroactive) (2.09) (PAL).bin */
+  0xdffbcef9,  /* Qb (Retroactive) (2.09) (Stella-compatable).bin */
+  0x7ffc2899,  /* Qb (Retroactive) (2.09).bin */
+  0x6565e911,  /* Qb (Retroactive) (2.11) (PAL).bin */
+  0x823d2ad7,  /* Qb (Retroactive) (2.11) (Stella-compatable).bin */
+  0xaa9d2d31,  /* Qb (Retroactive) (2.11).bin */
+  0x3c31804e,  /* Qb (Retroactive) (2.12) (PAL).bin */
+  0xde207fa7,  /* Qb (Retroactive) (2.12) (Stella-compatable).bin */
+  0xde399e5f,  /* Qb (Retroactive) (2.12).bin */
+  0x6237167e,  /* Qb (Retroactive) (2.14) (PAL).bin */
+  0xf96b252f,  /* Qb (Retroactive) (2.14) (Stella-compatable).bin */
+  0xf3e3a72f,  /* Qb (Retroactive) (2.14).bin */
+  0x220f406f,  /* Qb (Retroactive) (2.15) (PAL).bin */
+  0x2990c903,  /* Qb (Retroactive) (2.15) (Stella-compatable).bin */
+  0x23184b03,  /* Qb (Retroactive) (2.15).bin */
+  0x488e502f,  /* Qb (Retroactive) (Release Candidate #1) (PAL).bin */
+  0x26923d92,  /* Qb (Retroactive) (Release Candidate #1) (Stella-Compatable).bin */
+  0x26b0bf32,  /* Qb (Retroactive) (Release Candidate #1).bin */
+  0xc477158f,  /* Racquetball (1981) (Apollo) [!].bin */
+  0x549a1b6b,  /* Star Wars - The Arcade Game (1983) (Parker Bros) (PAL) [!].bin */
+  0xed66b6d6,  /* Stell-A-Sketch (PD) [a1].bin */
+  0xf1a0a2bd,  /* Synthcart (Paul Slocum).bin */
+  0xcb368b0a,  /* Tac Scan (1982) (Sega) (PAL) [p1][!].bin */
+  0x1448e3d2,  /* Tape Worm (1982) (Spectravideo).bin */
+  0x9b7b16bd,  /* Teller-Jonglieren! (AKA Tanzende Teller) (Starsoft) (PAL) [!].bin */
+  0x99066a16,  /* Testcart (Paul Slocum).bin */
+  0x8b737fb8,  /* Venture 2 (Tim Snider).bin */
+  0x6dd6cda9,  /* Yahtzee (Hozer Video Games).bin */
+  0xd2dd0149,  /* Yar Vs. Yar (Justin J. Scott).bin */
+  0x84e16d50,  /* Yars' Defeat (Justin J. Scott).bin */
+  0xf78c1ef6,  /* birabira.bin */
+  0xbef9acef,  /* Burning Desire (Mystique).bin */
+  -1
 };
