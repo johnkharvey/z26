@@ -30,10 +30,11 @@ _TEXT ENDS
 ENDIF
 
 ;*
-;* for .exe file use small model
+;* for .exe file or module use small model
 ;*
 
 IFNDEF comfile
+
 .CODESEGMENT macro
 _TEXT SEGMENT USE16 PARA PUBLIC 'CODE'
         ASSUME cs:_TEXT, ds:_DATA, es:_DATA
@@ -46,7 +47,7 @@ _TEXT ENDS
 
 .DATASEGMENT macro
 _DATA SEGMENT USE16 PARA PUBLIC 'DATA'
-        ASSUME cs:_TEXT, ds:_DATA, es:_DATA     ;small model
+        ASSUME cs:_TEXT, ds:_DATA, es:_DATA
 ALIGN 16
         endm
 
@@ -54,7 +55,6 @@ ALIGN 16
 _DATA ENDS
         endm
 ENDIF
-
 
 ;*
 ;* macro to align entry points of code

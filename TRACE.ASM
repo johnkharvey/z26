@@ -1,8 +1,6 @@
 ; trace.asm -- z26 trace buffer stuff
 
 
-EXTRN _TraceBuffer:word
-
 TRACE_BUF_MAX =	8192
 TRACE_LINE_MAX = 1000
 

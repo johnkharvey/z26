@@ -1,10 +1,4 @@
-global	_put_dec
-global	_put_hex
-global	_put_str
-global	_crlf
-
-global	_kb_hit
-global	_get_char
+; console.asm -- z26 console output routines
 
 ;Here's the integer output routine from TECO for a PDP-10 by RC CLEMENTS
 ;This version is dated 1970.

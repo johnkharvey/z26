@@ -156,9 +156,6 @@ TIARegVector2 dw TRNoop		; 00 -- VSYNC
 ;* sound stuff
 ;*
 
-EXTRN _Update_tia_sound:near
-EXTRN _Sb_init:BYTE
-
 ALIGN_ENTRY
 
 TRSond:	cmp	[_quiet],0		; doing sound at all?

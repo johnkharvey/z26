@@ -16,11 +16,9 @@
 ;
 ; *****************************************************************************
 
-global _CommandLine
-
-_CommandLine:
-	mov	ax,_psp
-	mov	psp,ax
+;_CommandLine:
+;	mov	ax,_psp
+;	mov	psp,ax
 CommandLine:
 	pusha
 	push	es
@@ -71,7 +69,7 @@ CLASCZ:	mov	al,es:[bx]
 	int	MSDOS
 	jc	LoadFail
 
-	cmp	ax,0800h		; read in a 2k file ???
+	cmp	[CartSize],0800h	; read in a 2k file ???
 	jne	DoXsum			;   no, we've finished.
 
 	mov	bx,07FEh		; copy lower 2k	into upper 2k
@@ -96,14 +94,27 @@ XLoop:	mov	bl,[si]
 	mov	[_Checksum],ax		; save the checksum for cart recognition
 
 	pop	es
+
 	call	SetupSpecial
 	call	SetupBanks
+
 	popa
+	
+	cmp	[_DoChecksum],0
+	jz	STUP_3
+	call	_ShowChecksum
+	jmp	ReallyQuit
+
+STUP_3:
 	ret
 
 
 LoadFailx:
 	pop	ds
+
+	call	FileNotFound
+	jmp	ReallyQuit
+
 LoadFail:
 	pop	es
 	jmp	CLDoNoFile
@@ -164,6 +175,10 @@ EndInt:					; Command in CL,Value in AL
 	je	CMDsp
 	cmp	cl,'j'
 	je	CMJoy
+
+	call	BadSwitch		; put out a message
+	jmp	ReallyQuit		; and quit
+
 Back:	jmp	CLSkip			; back to the beginning
 
 CMUpper:xor	ah,ah			; set upper scan line
@@ -174,10 +189,11 @@ CMLower:xor	ah,ah			; set lower scan line
 	jmp	CLSkip
 
 CMCredits:				; show credits
-	mov	[_credits],1
-	pop	es
-	popa
-	ret
+;	pop	es
+;	popa
+
+	call	_ShowCredits
+	jmp	ReallyQuit
 
 CMQuiet:				; quiet!
 	mov	[_quiet],1
@@ -203,6 +219,7 @@ CMBW:	mov	al,[IOPortB]		; black	and white
 	jmp	CLSkip
 
 CMXsum:	mov	[_DoChecksum],1		; do checksum
+
 	jmp	CLSkip
 
 CMNoRetrace:
@@ -234,14 +251,11 @@ CMJoy:	mov	[_Joystick],al		; do joystick
 	jmp	CLSkip
 
 ; we didn't see a filename string
+; output a copyright message
 
 CLDoNoFile:
-	pop	es
-	popa
+;	pop	es
+;	popa
 
-	mov	[_DoCopyright],1	; tell "C" program to output copyright message
-
-	ret
-
-	jmp	Empty	
-
+	call	_ShowCopyright
+	jmp	ReallyQuit

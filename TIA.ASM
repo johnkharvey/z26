@@ -4,14 +4,9 @@
 
 ALIGN_ENTRY
 
-
 start:
 
-
 IFDEF module
-
-global _emulator
-
 _emulator:
 
 	push	ds			; because "C" program can blow es ...
@@ -24,7 +19,6 @@ _emulator:
 	mov	ax,sp
 	mov	ModuleSP,ax		; save sp (no return adr on stack)
 ENDIF   
-
 
 IFDEF exefile
 	mov	ax,_DATA
@@ -40,13 +34,27 @@ IFDEF exefile
 	mov	sp,offset mystack	;  and stack pointer
 	sti
 ENDIF
+
 	mov	bx,offset _CartRom
 	mov	byte ptr[bx+0FFCh],0	; set the default reset address
 	mov	byte ptr[bx+0FFDh],0f0h	; to F000
 
+	mov	di,offset StartMemory
+	mov	cx,offset EndMemory
+	sub	cx,bx			; # of bytes to clear
+	xor	al,al
+	rep	stosb			; clear memory
+
 	call	CommandLine		; Process the command line (*** again! ***)
 					; I don't know why we need to call this from here
 					; as well as from the "C" program ...
+	cmp	[_quiet],0
+	jnz	STUP_4
+	call	_SetupSoundBlaster
+	test	ax,ax			; did user press escape ?
+	jnz	ReallyQuit		;   yes
+
+STUP_4:
 
 	call	Reset			; Reset the CPU
 	call	TIAGraphicMode		; Switch into VGA mode
@@ -103,8 +111,6 @@ RTLoop:
 ;*
 
 ALIGN_ENTRY
-
-EXTRN _Sb_init:BYTE
 
 xmain:  
 	cmp	[FrameExit],0		; exiting after <n> frames ?
@@ -210,7 +216,8 @@ Empty:	call	_kb_hit			; empty the keyboard buffer
 	call	_get_char		; read char
 	jmp	Empty
 
-Quit:	
+Quit:	call	_RestoreISR		; restore Sound Blaster ISR (if was on)
+
 IFDEF module
 	mov	bp,ModuleBP
 	mov	ax,ModuleSP
@@ -218,14 +225,13 @@ IFDEF module
 	push	ModuleReturn
 	ret
 ENDIF
+ReallyQuit:
 	mov	ah,04Ch			; and return to MSDOS
 	int	MSDOS
 
 ;*
 ;* Do One Frame
 ;*
-
-EXTRN _Sb_init:BYTE
 
 ALIGN_ENTRY
 

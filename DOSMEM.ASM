@@ -2,9 +2,6 @@
 ;* far memory allocator -- returns a segment address
 ;*
 
-global _DOSalloc
-global _DOSfree
-
 _DOSalloc:
 	pop	cx		; return adr
 	pop	bx		; # of paragraphs to allocate

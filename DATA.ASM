@@ -139,8 +139,6 @@ ALIGN 2
 
 OldInt9		dw	0,0		; old vector for int9
 
-KeyTable	db	128 dup (0)	; Key pressed table
-
 TIABuffer	db 256 dup (TIAEnd)	; TIA information buffer
 					; 128 just isn't big enough for some
 					; trashed games.  I've seen SVector get
@@ -174,40 +172,16 @@ MinVol	db	8			; minimum volume for PC Speaker
 
 ; *** stuff that gets shared with "C" program ***
 
-global _psp
 _psp		dw	0		; gets set by calling C program
 psp		dw	0		; gets pointer to PSP 
 					; (if .EXE file or module)
-global	_Checksum
 _Checksum	dw	0		; gets cart checksum
-
-
-global	_dsp
 _dsp		dw	0		; do digital signal processing
-
-global	_VideoMode
 _VideoMode	db	3		; video mode (default mode 3 60Hz)
-
-global	_Joystick
 _Joystick	db	1		; do joystick
-
-global _DoCopyright
-_DoCopyright	db	0		; set if "C" program should do 
-					; copyright message
-global	_DoChecksum
 _DoChecksum	db	0		; set if we should print out checksum
-
-global	_verbose
 _verbose	db	0		; verbose
-
-global	_quiet
 _quiet		db	0		; set if we want no sound
-
-global	_credits
-_credits	db	0		; show credits
-
-global	_JobDone
-_JobDone	db	0		; cmdline did the job
 
 ALIGN 2
 

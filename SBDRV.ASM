@@ -7,41 +7,6 @@
 ; (0.97)
 
 
-; external functions
-
-EXTRN _ShowBlasterWaiting:near
-EXTRN _ShowBlasterEnvBad:near
-EXTRN _ShowBlasterNotFound:near
-EXTRN _ShowBlasterTooOld:near
-EXTRN _ShowBlasterDetected:near
-EXTRN _Tia_sound_init:near
-EXTRN _Tia_process:near
-
-; publish these functions to the C program
-
-global _RestoreISR
-global _SetupSoundBlaster
-global _Fillbuffer
-
-; external variables
-
-EXTRN _playback_freq:word
-EXTRN _DMABufToLoad:byte
-
-EXTRN _sbBaseIOPort:word
-EXTRN _sbDMAChan8Bit:byte
-EXTRN _sbDSPVersion:word
-EXTRN _sbIRQNumber:byte
-EXTRN _sbTimeConstant:byte
-EXTRN _sbDMAPage:byte
-EXTRN _sbDMAOffset:word
-
-EXTRN _BaseDMABuf:word
-EXTRN _DMABuf:word
-EXTRN _gDMABufNowPlaying:byte
-
-EXTRN _Sb_init:byte
-
 ;-----------------------------------------------------------------------------
 ;DMA equates
 ;-----------------------------------------------------------------------------
@@ -63,6 +28,21 @@ SB_EXIT		equ	2
 
 .CEND
 .DATASEGMENT
+
+_Sb_init	db	0	; mark Sound Blaster currently not in use
+_sbBaseIOPort	dw	0
+_sbDMAChan8Bit	db	0
+_sbDSPVersion	dw	0
+_sbIRQNumber	db	0
+_sbTimeConstant	db	0
+
+_DMABuf		dw	0
+_gDMABufNowPlaying db	0
+
+_DMABufToLoad	db	0
+
+_sbDMAPage	db	0
+_sbDMAOffset	dw	0
 
 HiSpeedDMA	db	0	; use High Speed DMA (DSP 2.0+ & 3.xx)
 
@@ -412,14 +392,17 @@ GetBlastFail:
 ;-----------------------------------------------------------------------------
 
 get_blaster:
+
 	push	ds			;Save
 	push	es			;Save
 
 	push	ds
 	pop	es			; Make ES=DS
 
-	mov	ax,_psp
+IFNDEF comfile
+	mov	ax,psp
 	mov	ds,ax			; DS points to psp
+ENDIF
 
 	mov	ax,ds:[2Ch]		; my assembler likes this segment override!
 	mov	ds,ax			;Get pointer to environment string
@@ -849,7 +832,7 @@ _Fillbuffer:
 	cmp	bl,[_gDMABufNowPlaying]	; buffer ready for filling ?
 	je	FB_Done			;   no
 
-	push	[_dsp]			; digital signal processing
+;	push	[_dsp]			; digital signal processing
 	mov	ax,128
 	push	ax			; # of bytes
 	mov	ax,[_DMABuf]
@@ -858,7 +841,7 @@ _Fillbuffer:
 	add	ax,128			;   no, point at top
 FB1:	push	ax			; buffer address
 	call	_Tia_process		; call sound generator
-	add	sp,6			; fix up stack
+	add	sp,4			; fix up stack
 	xor	[_DMABufToLoad],1	; toggle buffer
 FB_Done:
 	ret	
