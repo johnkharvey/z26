@@ -46,17 +46,28 @@ _emulator ENDP
 ;*
 
 start:
-	call	InitData		; initialize data
-
-	call	SetupSpecial
-	call	SetupBanks
-
 	mov	di,offset StartMemory
 	mov	cx,offset EndMemory
 	sub	cx,di			; # of bytes to clear
 	xor	al,al
 	rep	stosb			; clear memory
 
+	call	InitData		; initialize data
+	call	SetupSpecial
+	call	SetupBanks
+
+; reset must follow SetupBanks...
+
+	call	Reset			; Reset the CPU
+
+; so the Starpath start address must be set up after Reset
+
+	cmp	[Starpath],0
+	jz	NotStarpath
+	mov	bx, word ptr [_CartRom + 02000h]; pick up start adr
+	mov	[reg_pc],bx			; tell CPU where to go
+
+NotStarpath:
 	cmp	[_quiet],0
 	jnz	STUP_4
 	cmp	[_SoundMode],1		; sound mode 1 (force PC speaker) ?
@@ -66,8 +77,6 @@ start:
 	jnz	ReallyQuit		;   yes
 
 STUP_4:
-	call	Reset			; Reset the CPU
-
 	call	_SetupTimer		; put timer in mode 2
 
 	call	TIASaveVideoMode

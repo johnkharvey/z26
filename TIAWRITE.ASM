@@ -135,7 +135,7 @@ IsDeep:
 	cmp	[HMOVE_Cycle],3
 	jne	VeryDeep
 
-	pusha
+	pushad
 	movzx	dx,[RClock]
 	push	dx
 	movzx	dx,[TIA+si]
@@ -150,12 +150,12 @@ IsDeep:
 	pop	dx
 	pop	dx
 	pop	dx
-	popa
+	popad
 
 	jmp	NotDeep
 
 VeryDeep:
-	pusha
+	pushad
 	movzx	dx,[RClock]
 	push	dx
 	movzx	dx,[TIA+si]
@@ -170,7 +170,7 @@ VeryDeep:
 	pop	dx
 	pop	dx
 	pop	dx
-	popa
+	popad
 
 NotDeep:
 ENDIF
@@ -189,17 +189,12 @@ IFDEF showdeep
 	cmp	[RClock],3
 	je	NotWeird
 
-;	cmp	[RClock],55
-;	jb	NotWeird
-;	cmp	[RClock],73
-;	ja	NotWeird
-
-	pusha
+	pushad
 	movzx	dx,[RClock]
 	push	dx
 	call	_ShowWeird
 	pop	dx
-	popa
+	popad
 
 NotWeird:
 ENDIF
@@ -231,16 +226,16 @@ H_WSYNC:
 	ja	SetSkip				;   yes, skip a line (** check this **)
 
 WsyncSimple:
-	mov	dl,CYCLESPERSCANLINE		;   no
+	mov	edx,CYCLESPERSCANLINE
 	sub	dl,[RClock]
-	add	[RCycles],dl			; adjust instruction length
+	sub	dword ptr [Timer],edx		; clock RIOT
 	mov	[RClock],CYCLESPERSCANLINE	; and CPU clock
 	ret
 
 SetSkip:
-	mov	dl,2*CYCLESPERSCANLINE		; skipping a line, bigger adjustment
+	mov	edx,2*CYCLESPERSCANLINE		; skipping a line, bigger adjustment
 	sub	dl,[RClock]
-	add	[RCycles],dl			; adjust instruction length
+	sub	dword ptr [Timer],edx		; clock RIOT
 	mov	[RClock],2*CYCLESPERSCANLINE	; and CPU clock
 	ret
 
@@ -334,7 +329,7 @@ HandleLatchedInputs:
 .code
 
 PositionObject macro %1
-local HBLnowrap, HBLdone, HBLnotweird, HBLinrange
+local HBLnowrap, HBLdone, HBLnotweird, HBLinrange, HBLhandle78
 
 	movzx	ebx,[RClock]
 	sub	ebx,CYCLESPERSCANLINE	; beyond end of scanline?
@@ -348,8 +343,10 @@ HBLnotweird:
 
 HBLnowrap:
 	add	ebx,CYCLESPERSCANLINE
+
 	cmp	[HMOVE_Cycle],3		; HMOVE happening?
 	jne	HBLnotweird		;   no
+
 	cmp	bl,24			; affected by weirdness?
 	ja	HBLnotweird		;   no
 	mov	bx,[WeirdRespCorrection+2*ebx]
@@ -362,6 +359,7 @@ HBLinrange:
 	cmp	bx,228
 	jb	HBLdone
 	sub	bx,160
+
 HBLdone:
 	endm
 
@@ -680,47 +678,7 @@ UpdateM1Table:
 ;* call at beginning of each scanline
 ;*
 
-;wrapsprites = 1
-
 SetupMultiSpriteTrick:
-
-IFDEF wrapsprites
-
-; This lead-in code to force render wrapped sprites is pretty kludgy and
-; I'm not leaving it in.  It replaces one problem with another.  What if 
-; graphics registers or enables are changed in HBLANK area?  This technique
-; doesn't account for it.  We really need a better solution...
-
-	xor	al,al		; see if any wrapped objects to render...
-	GetObjectDelay68 M0
-	cmp	dl,al
-	jbe	SMS1
-	mov	al,dl
-SMS1:	GetObjectDelay68 M1
-	cmp	dl,al
-	jbe	SMS2
-	mov	al,dl
-SMS2:	GetObjectDelay68 P0
-	cmp	dl,al
-	jbe	SMS3
-	mov	al,dl
-SMS3:	GetObjectDelay68 P1
-	cmp	dl,al
-	jbe	SMS4
-	mov	al,dl
-SMS4:	cmp	al,7		; never do more than 9 pixels
-	jbe	SMS5
-	mov	al,7
-SMS5:	test	al,al
-	jz	NoWrappedToRender
-	mov	ch,cl
-	add	ch,al
-	call	RenderPixels
-
-NoWrappedToRender:
-
-ENDIF
-
 	cmp	[M0_TripleFlag],1
 	je	SMS_M1
 	mov	[M0_TripleFlag],1
@@ -1099,6 +1057,34 @@ NoMotion:
 
 H_RESBL:
 	GetObjectDelay BL
+
+;*
+;* mind master cheat
+;*
+
+	cmp	[Starpath],0		; if you don't do this, the cheat breaks keystone.bin
+	jz	RBL_goahead
+	cmp	bl,69			; other than that, you don't want to know...
+	je	RBL_handle69
+	cmp	bl,226
+	jne	RBL_goahead
+
+RBL_handle69:
+	cmp	[HMOVE_Cycle],5
+	je	RBL_isweird
+	cmp	[HMOVE_Cycle],0
+	jne	RBL_goahead
+	cmp	[Last_HMOVE_Cycle],78
+	jne	RBL_goahead
+
+RBL_isweird:
+	mov	bl,74			; if we're cheating, the ball lands here
+
+;*
+;* end of cheat
+;*
+
+RBL_goahead:
 	push	bx			; save object position
 	call	CatchUpPixels
 	pop	bx			; restore object position
@@ -1267,7 +1253,7 @@ H_ENAM1:
 ;*
 
 DoNUSIZ macro %1
-local NoCatchup, CatchupWide, done
+local NoCatchup, CatchupWide, NoCheat, done
 
 	GetObjectDelay M&%1
 	call	CatchUpPixels		; render any missile in progress
@@ -1304,7 +1290,15 @@ NoCatchup:
 	GetObjectDelay P&%1
 	test	dl,dl			; would table switch land us in a sprite?
 	jz	done			;   no
+
+	cmp	[RSBoxing],0		; doing RSBOXING cheat?
+	jz	NoCheat			;   no
+	sub	dl,2			;   yes, don't render completely thru new sprite
+
+NoCheat:
 	call	CatchUpPixels		;   yes, render nothing thru new sprite
+					;        (** messes up rsboxing a little bit -- too far into future **)
+					;        (** if I ever fix this right, it might fix PROWREST too **)
 
 done:
 	pop	dx
@@ -1419,20 +1413,13 @@ H_GRP1:
 ;*
 
 HandleMotion macro %1
-local NormalMotion, MaybeWeird
+local NormalMotion
 
 	push	bx
 
 	cmp	[HMOVE_Cycle],3
 	jne	NormalMotion
 
-;	cmp	[HMOVE_Cycle],0
-;	jnz	MaybeWeird
-;	cmp	[Last_HMOVE_Cycle],55
-;	jb	NormalMotion
-
-
-MaybeWeird:
 	cmp	[RClock],26
 	jae	NormalMotion
 	movzx	bx,[TIA+HM&%1]
@@ -1458,9 +1445,9 @@ MaybeWeird:
 	cmp	[_TraceCount],0
 	jz	NormalMotion
 
-	pusha
+	pushad
 	call	_ShowAdjusted
-	popa
+	popad
 
 NormalMotion:
 	mov	dl,[WByte]
@@ -1511,10 +1498,6 @@ H_HMM0:
 	DoMotion M0
 
 NotConfused:
-;	mov	dl,[WByte]
-;	sar	dl,4			; pre-shift right 4 bits (preserve sign)
-;	mov	[TIA+si],dl
-
 	HandleMotion M0
 	ret
 
@@ -1529,6 +1512,16 @@ H_HMCLR:
 
 	CheckDeep
 
+	cmp	[HMOVE_Cycle],3
+	jne	HMC_NotConfused
+	cmp	[RClock],23
+	jne	HMC_NotConfused
+	cmp	[M0_Motion],7
+	jne	HMC_NotConfused
+	mov	[M0_Confused],1
+	mov	[CosmicScanLine],1
+
+HMC_NotConfused:
 	HandleMotion M0
 	HandleMotion M1
 	HandleMotion P0

@@ -33,9 +33,12 @@ _GetTime:
 
 	xchg	al,ah			; position properly
 	neg	ax			; convert from down counter to up counter
-	cmp	ax,[low_time]		; time run backward ?
-	ja	gt_fwd			;   no
-	inc	[hi_time]		;   yes, inc hi-order time value
+
+	test	[low_time],04000h	; was top bit of lo-order time set?
+	jz	gt_fwd			;   no, can't run backward
+	test	ax,08000h		; top bit of new result set?
+	jnz	gt_fwd			;   yes, counter hasn't flipped yet
+	inc	[hi_time]		;   no, inc hi-order time value
 gt_fwd:	shr	ax,1			; cut rate in half
 	mov	[low_time],ax		; we have a new lo-order time value
 	mov	eax,[hi_time]

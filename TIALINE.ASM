@@ -558,9 +558,6 @@ RenderPixels:
 	cmp	cl,ch
 	ja	RenderDone		; protect rep stosw
 
-	cmp	[VBlanking],0		; doing VBlanking?
-	je	RenderNothing		;   yes, render blackness
-
 	cmp	[HBlanking],-1		; doing HBlanking?
 	je	RenderMiddle		;   no, don't split out HBlank area
 
@@ -607,6 +604,10 @@ DoRender:
 	UpdatePlayfieldColor		; every pixel run with PF active
 
 RenderShortcutBK:
+
+	cmp	[VBlanking],0		; doing VBlanking?
+	je	RenderNothing		;   yes, render blackness
+
 	mov	si,[ActiveObjects]
 	and	esi,63
 	jmp	[RenderingRoutine + esi*2]	; call rendering routine

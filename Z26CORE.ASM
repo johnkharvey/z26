@@ -20,6 +20,7 @@ CHEATS = 1
 	include init.asm		; initialized data
 	include banks.asm		; bank switch code
 	include pitfall2.asm		; Pitfall II bank switch code
+	include starpath.asm		; Starpath Supercharger bank switch code
 
 	include console.asm		; console output
 	include msg.asm			; messages
@@ -32,6 +33,7 @@ CHEATS = 1
 	include	riot.asm		; RIOT emu
 
 	include cpu.asm			; 6502 opcodes, macros and support routines
+	include cpujam.asm		; jam handler
 
 	include tiatab.asm
 	include tiawrite.asm

@@ -66,6 +66,9 @@ _psp		dw	0		; gets set by calling C program
 PUBLIC _Checksum
 _Checksum	dd	0		; gets cart checksum
 
+PUBLIC _XChecksum
+_XChecksum	dd	0		; gets alternative checksum
+
 PUBLIC _dsp
 _dsp		db	0		; do digital signal processing
 
@@ -128,7 +131,7 @@ InitData:
 	call	Init_TIA
 	call	Init_Riot
 	call	Init_P2
-
+	call	Init_Starpath
 
 	mov	[OurBailoutLine],1000
 

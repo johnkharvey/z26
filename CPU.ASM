@@ -4,13 +4,17 @@
 
 ; 06-27-98 -- new design
 ; 07-17-98 -- simplify
+; 06-26-99 -- cycle perfect
 
 ; CPU doesn't use cx, bp, di -- trashes ax, bx, dx, si
 
 .data
 ALIGN 2
 
-reg_pc		dw	0		; program counter (stored in DI)
+reg_pc		dw	0		; program counter
+
+wreg_sp label word			; a word sized alias to the stack pointer
+reg_sp		db	0,1		; stack pointer
 
 ; the following two locations must be in this order and next to each other
 
@@ -25,8 +29,6 @@ reg_x		db	0		; x register
 reg_y		db	0		; y register
 		db	0
 
-reg_sp		db	0		; stack pointer
-
 ; a value is stored in the following vars for later testing
 
 RZTest		db	0		; zero test value (Z set when 0)
@@ -39,18 +41,16 @@ flag_V		db	0		; overflow flag
 flag_I		db	0		; interrupt disable flag
 flag_B		db	0		; break flag
 
+; clock variables
+
+RCycles		db	0		; cycles per instruction
+RClock		db	0		; clock cycles
+
 ; some temporaries for use by decimal arith and ARR
 
 _value		db	0
 _reg_a		db	0
 _flag_carry	db	0
-
-ALIGN 2
-
-RClock		db	0		; clock cycles
-RCycles		db	0		; cycles for this instruction
-
-jam_msg	db	'Halt ','$'
 
 .code
 
@@ -67,10 +67,12 @@ Init_CPU:
 	mov	[flag_V],0
 	mov	[flag_I],0
 	mov	[flag_B],0
-	mov	[RClock],0
 	mov	[RCycles],0
-
 	ret
+
+;*
+;* state saving macros
+;*
 
 SaveCPUState macro
 	push	ax
@@ -86,53 +88,67 @@ RestoreCPUState macro
 	pop	ax
 	endm
 
+
+;*
+;* timing macro
+;*
+
+bumpclock macro
+	inc	[RClock]
+	inc	[RCycles]
+	endm
+
+;*
+;* memory accessing macros -- everything should go through here
+;*
+
+read_bank macro
+	bumpclock
+	call	[ReadBank]
+	endm
+
+write_bank macro
+	bumpclock
+	call	[WriteBank]
+	endm
+
 ;*
 ;* memory accessing macros -- get/put data via op2
 ;*
 
 read	macro	op1,op2		; read memory
 	mov	si,op2
-	call	[ReadBank]
-
-IFDEF z64
-	mov	op1,[RByte]
-ELSE
+	read_bank
 	mov	op1,byte ptr [si]
-ENDIF
-
 	endm
       
-
 readsx	macro	op1,op2		; sign extended
 	mov	si,op2
-	call	[ReadBank]
-
-IFDEF z64
-	movsx	op1,[RByte]
-ELSE
+	read_bank
 	movsx	op1,byte ptr [si]
-ENDIF
-
 	endm
-
 
 readzx	macro	op1,op2		; zero extended
 	mov	si,op2
-	call	[ReadBank]
-
-IFDEF z64
-	movzx	op1,[RByte]
-ELSE
+	read_bank
 	movzx	op1,byte ptr [si]
-ENDIF
-
 	endm
 
+slack_read macro %1		; read and throw away result
+	mov	si,%1
+	read_bank
+	endm
 
 write	macro	op1,op2		; write memory
 	mov	si,op2
 	mov	[WByte],op1
-	call	[WriteBank]
+	write_bank
+	endm
+
+slack_write	macro	op1,op2	; write memory
+	mov	si,op2
+	mov	[WByte],op1
+	write_bank
 	endm
 
 ;*
@@ -156,6 +172,8 @@ fetchzx macro	op1
 
 fetch_opcode macro   op1	; special fetchzx for trace logging
 local fo_1
+
+
 IFDEF TRACE
 	test	[_TraceCount],1
 	jz	fo_1
@@ -164,8 +182,13 @@ IFDEF TRACE
 
 fo_1:	
 ENDIF
+	mov	[RCycles],0
 	readzx	 op1,[reg_pc]
 	inc	[reg_pc]
+	endm
+
+slack_fetch macro		; read and throw away, don't inc PC
+	slack_read [reg_pc]
 	endm
 
 ;*
@@ -173,21 +196,21 @@ ENDIF
 ;*
 
 zpush	macro	op1
-	mov	bl,[reg_sp]
-	mov	bh,1
-	write	op1,bx		; write byte to top of stack
+	write	op1,[wreg_sp]	; write byte to top of stack
 	dec	[reg_sp]	; and decrement stack pointer
 	endm
 
 zpop	macro	op1
 	inc	[reg_sp]	; increment the	stack pointer
-	mov	bl,[reg_sp]	; and read the top byte
-	mov	bh,1
-	read	op1,bx
+	read	op1,[wreg_sp]	; and read the top byte
+	endm
+
+slack_pop macro			; read stack and throw away, don't inc SP
+	slack_read [wreg_sp]
 	endm
 
 ;*
-;* memory addressing helper macros -- get operand address into bx
+;* memory addressing helper macros
 ;*
 
 absolute macro
@@ -199,33 +222,6 @@ zeropage macro
 	fetchzx	bx
 	endm
 
-_index macro	op1
-	add	bx,word ptr[op1]	; this is not a cheat
-	endm
-
-indexx	macro
-	_index	reg_x
-	endm
-        
-indexy	macro
-	_index	reg_y
-	endm
-
-bumpclock macro
-	inc	[RClock]
-	inc	[RCycles]
-	endm
-
-pagechange macro
-	local	M1
-        
-	cmp	dh,bh		; page changed ?
-	jz	M1
-	bumpclock
-M1:
-	endm
-
-
 readaddress macro		; read data in bx -> bx
 	and	bx,0ffh		; must be in page zero
 	read	dl,bx
@@ -234,203 +230,157 @@ readaddress macro		; read data in bx -> bx
 	mov	bx,dx
 	endm
 
-absolutex macro
-	absolute
-	mov	dx,bx		; set up for pagechange test
-	indexx
-	pagechange
-	endm
-
-absolutex_nopc macro
-	absolute
-	indexx
-	endm
-
-absolutey macro
-	absolute
-	mov	dx,bx		; set up for pagechange test
-	indexy
-	pagechange
-	endm
-
-absolutey_nopc macro
-	absolute
-	indexy
-	endm
-
-zeropagex macro
-	zeropage
-	add	bl,[reg_x]
-	endm
-
-zeropagey macro
-	zeropage
-	add	bl,[reg_y]
-	endm
-
-indirectx macro
-	zeropage
-	indexx
-	readaddress
-	endm
-
-indirecty macro
-	zeropage
-	readaddress
-	mov	dx,bx		; set up for pagechange test
-	indexy
-	pagechange
-	endm
-
-indirecty_nopc macro
-	zeropage
-	readaddress
-	indexy
-	endm
-
 ;*
-;* memory addressing macros (and instruction timing)
+;* memory addressing macros
 ;*
 
-inc_clock macro op1
-	mov	[RCycles],op1
-	add	[RClock],op1
-	endm
-
-abs_read macro
-	inc_clock 4
+abs_read macro			; Absolute addressing
 	absolute
 	endm
 
 abs_rmw macro
-	inc_clock 6
 	absolute
 	endm
 
 abs_write macro
-	inc_clock 4
 	absolute
 	endm
 
-abs_x_read macro
-	inc_clock 4
-	absolutex
-	endm	
 
-abs_x_rmw macro
-	inc_clock 7
-	absolutex_nopc
-	endm
-
-abs_x_write macro
-	inc_clock 5
-	absolutex_nopc
-	endm
-
-abs_y_read macro
-	inc_clock 4
-	absolutey
-	endm
-
-abs_y_rmw macro
-	inc_clock 7
-	absolutey_nopc
-	endm
-
-abs_y_write macro
-	inc_clock 5
-	absolutey_nopc
-	endm
-
-immediate macro
-	inc_clock 2
-	endm
-
-implied macro
-	inc_clock 2
-	endm
-
-ind_x_read macro
-	inc_clock 6
-	indirectx
-	endm
-
-ind_x_rmw macro
-	inc_clock 8
-	indirectx
-	endm
-
-ind_x_write macro
-	inc_clock 6
-	indirectx
-	endm
-
-ind_y_read macro
-	inc_clock 5
-	indirecty
-	endm
-
-ind_y_rmw macro
-	inc_clock 8
-	indirecty_nopc
-	endm
-
-ind_y_write macro
-	inc_clock 6
-	indirecty_nopc
-	endm
-
-relative macro
-	inc_clock 2
-	endm
-
-zero_read macro
-	inc_clock 3
+zero_read macro			; Zero page addressing
 	zeropage
 	endm
 
 zero_rmw macro
-	inc_clock 5
 	zeropage
 	endm
 
 zero_write macro
-	inc_clock 3
 	zeropage
 	endm
 
-zero_x_read macro
-	inc_clock 4
-	zeropagex
+
+zero_x_read macro		; Zero page indexed addressing
+	zeropage
+	slack_read bx
+	add	bl,[reg_x]
 	endm
 
 zero_x_rmw macro
-	inc_clock 6
-	zeropagex
+	zero_x_read
 	endm
 
 zero_x_write macro
-	inc_clock 4
-	zeropagex
+	zero_x_read
 	endm
 
 zero_y_read macro
-	inc_clock 4
-	zeropagey
+	zeropage
+	slack_read bx
+	add	bl,[reg_y]
 	endm
 
 zero_y_write macro
-	inc_clock 4
-	zeropagey
+	zero_y_read
 	endm
 
+
+abs_x_read macro		; Absolute indexed addressing
+local done
+
+	absolute
+	add	bl,[reg_x]
+	jnc	done
+	slack_read bx
+	inc	bh
+done:
+	endm	
+
+abs_x_rmw macro
+	absolute
+	slack_read bx
+	add	bx, word ptr [reg_x]
+	endm
+
+abs_x_write macro
+	abs_x_rmw
+	endm
+
+abs_y_read macro
+local done
+
+	absolute
+	add	bl,[reg_y]
+	jnc	done
+	slack_read bx
+	inc	bh
+done:
+	endm
+
+abs_y_rmw macro
+	absolute
+	slack_read bx
+	add	bx, word ptr [reg_y]
+	endm
+
+abs_y_write macro
+	abs_y_rmw
+	endm
+
+
+ind_x_read macro		; Indexed indirect addressing
+	zeropage
+	slack_read bx
+	add	bx, word ptr [reg_x]
+	readaddress
+	endm
+
+ind_x_rmw macro
+	ind_x_read
+	endm
+
+ind_x_write macro
+	ind_x_read
+	endm
+
+
+ind_y_read macro		; Indirect indexed addressing
+local done
+
+	zeropage
+	readaddress
+	add	bl,[reg_y]
+	jnc	done
+	slack_read bx
+	inc	bh
+done:
+	endm
+
+ind_y_rmw macro
+	zeropage
+	readaddress
+	push	bx
+	add	bl,[reg_y]
+	slack_read bx
+	pop	bx
+	add	bx, word ptr [reg_y]
+	endm
+
+ind_y_write macro
+	ind_y_rmw
+	endm
 
 ;*
 ;* opcode definition macros
 ;*
 
+op_align macro
+;ALIGN 4
+	endm
+
 op_register macro op1, op2, op3
-op1:	implied
+op_align
+op1:	slack_fetch
 	mov	dl,op3
 	_&op2
 	mov	op3,dl
@@ -438,14 +388,16 @@ op1:	implied
 	endm
 
 op_transfer macro op1, op2, op3
-op1:	implied
+op_align
+op1:	slack_fetch
 	mov	dl,op3
 	mov	op2,dl
 	ret
 	endm
 
 op_transfertest macro op1, op2, op3
-op1:	implied
+op_align
+op1:	slack_fetch
 	mov	dl,op3
 	mov	op2,dl
 	usetest	dl
@@ -453,13 +405,14 @@ op1:	implied
 	endm
 
 op_immediate macro op1, op2
-op1:	immediate
-	fetch	dl
+op_align
+op1:	fetch	dl
 	_&op2
 	ret
 	endm
 
 op_read macro op1,op2,op3
+op_align
 op1:	op3&_read
 	read	dl,bx
 	_&op2
@@ -467,14 +420,17 @@ op1:	op3&_read
 	endm
 
 op_rmw macro op1,op2,op3
+op_align
 op1:	op3&_rmw
 	read	dl,bx
+	slack_write dl,bx
 	_&op2
 	write	dl,bx
 	ret
 	endm
 
 op_write macro op1,op2,op3
+op_align
 op1:	op3&_write
 	_&op2
 	write	dl,bx
@@ -482,14 +438,15 @@ op1:	op3&_write
 	endm
 
 op_branch macro op1,op2,op3,op4
-op1:	relative
+op_align
+op1:	fetchsx dx		; sign-extended branch offset into dx
 	test	op2,op3
 	op4	DoBranch
-	inc	[reg_pc]
 	ret
 	endm
 
 op_weird macro op1,op2
+op_align
 op1:	_&op2
 	ret
 	endm
@@ -498,15 +455,15 @@ op1:	_&op2
 ;* flag setting macros
 ;*
 
-useztest macro	op1			; use to test Z
+useztest macro	op1		; use to test Z
 	mov	[RZTest],op1
 	endm
 
-usentest macro	op1			; use to test N	     
+usentest macro	op1		; use to test N	     
 	mov	[RNTest],op1
 	endm
 
-usetest macro	op1			; use to test both N and Z (normal)
+usetest macro	op1		; use to test both N and Z (normal)
 	useztest op1
 	usentest op1
 	endm
@@ -515,13 +472,13 @@ usetest macro	op1			; use to test both N and Z (normal)
 ;* compare macros
 ;*
 
-CompDH macro				; compare dh and dl
+CompDH macro			; compare dh and dl
 	sub	dh,dl
 	usetest	dh
 	setnc	ah
 	endm
 
-_CMP macro				; compare al and dl
+_CMP macro			; compare al and dl
 	mov	dh,al
 	CompDH
 	endm
@@ -944,30 +901,21 @@ _STY macro
 	endm
 
 ;*
-;* weird opcodes -- they don't match a pattern
-;*		    they must be timed manually
+;* weird opcodes
 ;*
 
 _BRK macro
-	inc_clock 3
+	slack_fetch
 
 	mov	[flag_B],1	; set break flag
 	inc	[reg_pc]
-	mov	dx,[reg_pc]	; push return address
-	zpush	dh
-	
-	inc_clock 1
-
-	mov	dx,[reg_pc]
-	zpush	dl
-
-	inc_clock 1
+	mov	bx,[reg_pc]	; push return address
+	zpush	bh
+	zpush	bl
 
 	call	GetPSW		; get PSW in DL
 	or	dl,010h		; force break flag
 	zpush	dl
-
-	inc_clock 2
 
 	mov	[flag_I],1	; disable interrupts
 	mov	bx,0FFFEh	; fetch	the vector
@@ -981,81 +929,64 @@ _BRK macro
 	endm
 
 _JMPI macro
-	inc_clock 5
-
-	absolute		; read the address of the the jump
+	fetch	bl		; read the address of the the jump
+	fetch	bh
 	read	dl,bx
 	inc	bl		; stay in current page
 	read	dh,bx
 	mov	[reg_pc],dx	; and jump to it
-
-IFDEF z64
-	cmp	[reg_pc],0ff00h
-	jae	KernalHandler
-ENDIF
 	endm
 
 _JMPW macro
-	inc_clock 3
-
-	absolute		; fetch	the address
+	fetch	bl		; fetch	the address
+	fetch	bh
 	mov	[reg_pc],bx	; jump to it
-
-IFDEF z64
-	cmp	[reg_pc],0ff00h
-	jae	KernalHandler
-ENDIF
 	endm
 
 _JSR macro
-	inc_clock 6
+	fetch	bl		; bottom byte of new PC
 
-	absolute		; call address in bx now
+	slack_pop
+
 	push	ax
 	mov	ax,[reg_pc]	; ax is	the return address
-	mov	[reg_pc],bx	; transfer control
-	dec	ax		; push return-1
-	zpush	ah
+	zpush	ah		; we are automatically pushing return-1
 	zpush	al
 	pop	ax
 
-IFDEF z64
-	cmp	[reg_pc],0ff00h
-	jae	KernalHandler
-ENDIF
+	fetch	bh		; now we fetch the top byte of PC
+	mov	[reg_pc],bx	; transfer control
 	endm
 
 _PHA macro
-	inc_clock 3
-
+	slack_fetch
 	zpush	al
 	endm
 
 _PLA macro
-	inc_clock 4
-
+	slack_fetch
+	slack_pop
 	zpop	al
 	usetest	al
 	endm
 
 _PHP macro
-	inc_clock 3
-
+	slack_fetch
 	call	GetPSW		; get PSW in DL
 	or	dl,010h		; force break flag
 	zpush	dl
 	endm
 
 _PLP macro
-	inc_clock 4
-
+	slack_fetch
+	slack_pop
 	zpop	dh		; pull PSW from stack
 	call	PutPSW
 	endm
 
 _RTI macro
-	inc_clock 6
-
+	slack_fetch
+	slack_pop
 	zpop	dh		; pull PSW from stack
 	call	PutPSW		; and scatter the flags
 	push	ax
@@ -1066,14 +997,15 @@ _RTI macro
 	endm
 
 _RTS macro
-	inc_clock 6
-
+	slack_fetch
+	slack_pop
 	push	ax
 	zpop	al
 	zpop	ah		; pull return address
 	mov	[reg_pc],ax	; transfer control
-	inc	[reg_pc]
 	pop	ax
+	slack_fetch
+	inc	[reg_pc]
 	endm
 
 
@@ -1081,72 +1013,42 @@ _RTS macro
 
 LoadRegs macro
 	mov	ax,word ptr [reg_a]	; mov al,[reg_a]; mov ah,[flag_carry]
-;	mov	di,[reg_pc]
 	endm
 
 ; save CPU registers
 
 SaveRegs macro
 	mov	word ptr [reg_a],ax	; mov [reg_a],al; mov [flag_carry],ah
-;	mov	[reg_pc],di
 	endm
 
 ;*
-;* do a single instruction
+;* do a single instruction (just for show)
 ;*
 
-DoInstruction macro
+do_Instruction:
 
 	LoadRegs			; load the CPU registers
 
 	fetch_opcode	ebx		; (fetchzx) get the opcode
-	call	[vectors + ebx*2]	; --> do the instruction
-	ClockRIOT			; clock the RIOT timer
+	call word ptr [vectors + ebx*2]	; --> do the instruction
+	ClockRIOT
 
 	SaveRegs			; save the CPU registers
 
-	endm
-
-
-IFDEF z64
-
-do_instruction:
-	DoInstruction
 	ret
-ENDIF
-
-
-;*
-;* jam handler 
-;*
-
-jam:	call	TIATextMode
-	push	offset jam_msg
-	call	_put_str
-	dec	[reg_pc]	; point at jam instruction
-	read	al,[reg_pc]
-	call	ConHex		; display it
-	mov	al,'@'
-	call	ConOut
-	mov	ax,[reg_pc]
-	call	ConWord		; display address
-
-IFNDEF z64
-WaitEsc:test	[KeyTable+KeyEsc],128	; wait for ESC to be pressed
-	jz	WaitEsc
-ENDIF
-	jmp	GoDOS
 
 ;*
 ;* Reset the CPU
 ;*
 
-Reset:	mov	[reg_sp],0FFh	; SP initialises to 255
-	mov	bx,0FFFCh	; get reset address
-	read	dl,bx		; from 0fffc,0fffd
+Reset:
+	mov	[reg_sp],0FFh	; SP initialises to 255
+	mov	bx,0fffch	; get reset address
+	read	dl,bx
 	inc	bx
 	read	dh,bx
 	mov	[reg_pc],dx
+	mov	[RClock],0
 	ret
 
 ;*
@@ -1154,17 +1056,20 @@ Reset:	mov	[reg_sp],0FFh	; SP initialises to 255
 ;*
 
 DoBranch:
-	fetchsx dx		; sign-extended branch offset into dx
-
 	mov	bx,[reg_pc]	; bh is	the current page
 	add	dx,[reg_pc]	; destination address
 	mov	[reg_pc],dx	; set the program counter
 
-	bumpclock		; branch is taken -- one extra cycle
 	cmp	bh,dh		; page changed ?
-	je	dbjn
-	bumpclock		;   yes, another cycle
-dbjn:	ret
+	je	dbjn		;   no
+
+	xchg	bh,dh
+	slack_fetch		;   yes, another cycle
+	xchg	bh,dh
+
+dbjn:	slack_fetch		; branch is taken -- one extra cycle
+
+	ret
 
 ;*
 ;* Build the PSW out of the various flags and the last register into DL
@@ -1214,6 +1119,9 @@ PutPSW:	mov	[RNTest],dh	; PSW will do for N
 
 ;*
 ;* opcode vector table
+;*
+;* note:  the jam handler should be defined externally
+;*        (since it is typically environment dependent)
 ;*
 
 vectors label word
@@ -1496,3 +1404,4 @@ op_read		_fc,NOP,abs_x
 op_read		_fd,SBC,abs_x
 op_rmw		_fe,INC,abs_x
 op_rmw		_ff,ISB,abs_x
+

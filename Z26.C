@@ -8,12 +8,12 @@
 */
 
 
-#define version "z26 (1.31)"
+#define version "z26 (1.32)"
 
 #define rom_list "ROM List"
 
 /*
-#define rom_list "Preview version D -- Please don't distribute."
+#define rom_list "Preview version I -- Please don't distribute."
 */
 
 
@@ -29,8 +29,9 @@
 extern short int psp;		/* (data.asm) */
 extern unsigned int CartSize;
 extern long int Checksum;
+extern long int XChecksum;
 
-unsigned char CartRom[32770];
+unsigned char CartRom[34000];
 
 #include "def.c"
 #include "cli.c"
@@ -67,6 +68,7 @@ main(int argc, char *argv[])
 
 		gui_ShowList();
 
-		gui_RestoreVideoMode();
+/*		gui_RestoreVideoMode(); */
+		TextMode();
 	}
 }

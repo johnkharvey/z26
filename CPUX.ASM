@@ -48,9 +48,11 @@ _flag_carry	db	0
 ALIGN 2
 
 RClock		db	0		; clock cycles
-RCycles		db	0		; cycles for this instruction
+;RCycles		db	0		; cycles for this instruction
 
 jam_msg	db	'Halt ','$'
+
+star_msg db	'Starpath call ','$'
 
 .code
 
@@ -68,7 +70,7 @@ Init_CPU:
 	mov	[flag_I],0
 	mov	[flag_B],0
 	mov	[RClock],0
-	mov	[RCycles],0
+;	mov	[RCycles],0
 
 	ret
 
@@ -84,6 +86,20 @@ RestoreCPUState macro
 	pop	dx
 	pop	bx
 	pop	ax
+	endm
+
+;*
+;* timing macros
+;*
+
+inc_clock macro op1
+	add	[RClock],op1		; TIA clock
+	sub	dword ptr [Timer],op1	; RIOT clock
+	endm
+
+bumpclock macro
+	inc	[RClock]		; TIA clock
+	dec	dword ptr [Timer]	; RIOT clock
 	endm
 
 ;*
@@ -211,11 +227,6 @@ indexy	macro
 	_index	reg_y
 	endm
 
-bumpclock macro
-	inc	[RClock]
-	inc	[RCycles]
-	endm
-
 pagechange macro
 	local	M1
         
@@ -289,13 +300,8 @@ indirecty_nopc macro
 	endm
 
 ;*
-;* memory addressing macros (and instruction timing)
+;* memory addressing macros
 ;*
-
-inc_clock macro op1
-	mov	[RCycles],op1
-	add	[RClock],op1
-	endm
 
 abs_read macro
 	inc_clock 4
@@ -956,18 +962,19 @@ _BRK macro
 	mov	dx,[reg_pc]	; push return address
 	zpush	dh
 	
-	inc_clock 1
+	bumpclock
 
 	mov	dx,[reg_pc]
 	zpush	dl
 
-	inc_clock 1
+	bumpclock
 
 	call	GetPSW		; get PSW in DL
 	or	dl,010h		; force break flag
 	zpush	dl
 
-	inc_clock 2
+	bumpclock
+	bumpclock
 
 	mov	[flag_I],1	; disable interrupts
 	mov	bx,0FFFEh	; fetch	the vector
@@ -1017,11 +1024,11 @@ _JSR macro
 	dec	ax		; push return-1
 	zpush	ah
 
-	inc_clock 1
+	bumpclock
 
 	zpush	al
 
-	inc_clock 1
+	bumpclock
 
 	pop	ax
 
@@ -1087,14 +1094,12 @@ _RTS macro
 
 LoadRegs macro
 	mov	ax,word ptr [reg_a]	; mov al,[reg_a]; mov ah,[flag_carry]
-;	mov	di,[reg_pc]
 	endm
 
 ; save CPU registers
 
 SaveRegs macro
 	mov	word ptr [reg_a],ax	; mov [reg_a],al; mov [flag_carry],ah
-;	mov	[reg_pc],di
 	endm
 
 ;*
@@ -1107,7 +1112,6 @@ DoInstruction macro
 
 	fetch_opcode	ebx		; (fetchzx) get the opcode
 	call	[vectors + ebx*2]	; --> do the instruction
-	ClockRIOT			; clock the RIOT timer
 
 	SaveRegs			; save the CPU registers
 
@@ -1140,6 +1144,28 @@ jam:	call	TIATextMode
 IFNDEF z64
 WaitEsc:test	[KeyTable+KeyEsc],128	; wait for ESC to be pressed
 	jz	WaitEsc
+ENDIF
+	jmp	GoDOS
+
+;*
+;* Starpath jam handler
+;*
+
+sjh:	call	TIATextMode
+	push	offset star_msg
+	call	_put_str
+	dec	[reg_pc]	; point at jam instruction
+	read	al,[reg_pc]
+	call	ConHex		; display it
+	mov	al,'@'
+	call	ConOut
+	mov	ax,[reg_pc]
+	call	ConWord		; display address
+
+IFNDEF z64
+StarWaitEsc:
+	test	[KeyTable+KeyEsc],128	; wait for ESC to be pressed
+	jz	StarWaitEsc
 ENDIF
 	jmp	GoDOS
 
@@ -1228,7 +1254,7 @@ vectors label word
     dw _20,_21,jam,_23,_24,_25,_26,_27,_28,_29,_2a,_0b,_2c,_2d,_2e,_2f ;_2b=_0b
     dw _30,_31,jam,_33,_34,_35,_36,_37,_38,_39,_3a,_3b,_3c,_3d,_3e,_3f
     dw _40,_41,jam,_43,_44,_45,_46,_47,_48,_49,_4a,_4b,_4c,_4d,_4e,_4f
-    dw _50,_51,jam,_53,_54,_55,_56,_57,_58,_59,_5a,_5b,_5c,_5d,_5e,_5f
+    dw _50,_51,sjh,_53,_54,_55,_56,_57,_58,_59,_5a,_5b,_5c,_5d,_5e,_5f ; 52=Starpath jam
     dw _60,_61,jam,_63,_64,_65,_66,_67,_68,_69,_6a,_6b,_6c,_6d,_6e,_6f
     dw _70,_71,jam,_73,_74,_75,_76,_77,_78,_79,_7a,_7b,_7c,_7d,_7e,_7f
     dw _80,_81,_82,_83,_84,_85,_86,_87,_88,_89,_8a,_8b,_8c,_8d,_8e,_8f

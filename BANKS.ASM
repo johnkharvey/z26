@@ -37,10 +37,6 @@ MNSlice1	dw	7*800h		; this one doesn't change
 
 MNRamSlice	dw	0		; which 256 byte ram slice
 
-; global Pitfall2 flag 
-
-Pitfall2	db	0		; tell RIOT timer to clock the music
-
 .code
 
 ;*
@@ -63,6 +59,7 @@ SetupBanks:
 	mov	[MNSlice1],7*800h
 	mov	[MNRamSlice],0
 	mov	[Pitfall2],0
+	mov	[Starpath],0
 
 	mov	ax,[_CartSize]
 	cmp	ax,02000h
@@ -75,6 +72,14 @@ SetupBanks:
 	je	Set32kMode		; 32K cart
 	cmp	ax,028ffh
 	je	SetPitfallII		; Pitfall II cart
+	cmp	ax,8448
+	je	SetStarpath1		; Supercharger image
+	cmp	ax,8448*2
+	je	SetStarpath2
+	cmp	ax,8448*3
+	je	SetStarpath3
+	cmp	ax,8448*4
+	je	SetStarpath4
 	ret
 
 Set8kMode:
@@ -220,14 +225,6 @@ SetFatalRun:
 	mov	[ReadBank], offset RBank32sc
 	mov	[WriteBank], offset WBank32sc
 	ret
-
-SetPitfallII:
-	mov	[ReadBank], offset RBank8P2
-	mov	[WriteBank], offset WBank8P2
-	mov	[RomBank],01000h	; don't know if this is needed...
-	mov	[Pitfall2],1		; tell RIOT to clock the music
-	ret
-
 
 ; setup 16K super-chip vectors
 

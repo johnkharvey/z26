@@ -72,17 +72,7 @@ ReadTIAZero:
 	cmp	si,0Eh
 	jb	ReadInputLatches
 
-IFDEF showdeep
-	test	[_TraceCount],08h
-	jz	NoLogUndocTIA
-
-	pusha
-	call	_ShowUndocTIA
-	popa
-ENDIF
-	
-NoLogUndocTIA:
-	mov	si,offset RetWd
+	mov	si,offset RetWd		; return noisy word
 	ret
 
 ;*
@@ -90,16 +80,6 @@ NoLogUndocTIA:
 ;*
 
 ReadCollision:				; read the collision latch
-IFDEF showdeep
-	test	[_TraceCount],08h
-	jz	NoLogCollisions
-
-	pusha
-	call	_ShowCollision
-	popa
-ENDIF
-
-NoLogCollisions:
 	mov	[RT_Reg],si
 	SaveCPUState
 	mov	dl,0

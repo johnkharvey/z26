@@ -316,6 +316,7 @@ WideGap macro
 ;*
 ;* Medium and wide players have an extra leading clock.
 ;* They have the extra triple flag too.
+;*
 
 MediumPlayer macro
 	db	0,		080h

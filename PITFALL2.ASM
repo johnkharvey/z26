@@ -8,7 +8,9 @@
 
 .data
 
-ALIGN 4
+; global Pitfall2 flag 
+
+Pitfall2	db	0		; tell RIOT timer to clock the music
 
 ;P2_Flags	db	8 dup (?)	; \
 ;P2_Counters	db	16 dup (?)	;  \
@@ -172,8 +174,15 @@ P2_Vectors label word
 ;* Pitfall 2 initialization
 ;*
 
-Init_P2:
+Init_P2:				; <-- from init.asm
 	mov	[P2_sreg],1		; random # generator (must be non-zero)
+	ret
+
+SetPitfallII:				; <-- from banks.asm
+	mov	[ReadBank], offset RBank8P2
+	mov	[WriteBank], offset WBank8P2
+	mov	[RomBank],01000h	; don't know if this is needed...
+	mov	[Pitfall2],1		; tell RIOT to clock the music
 	ret
 
 ;*

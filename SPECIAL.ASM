@@ -50,10 +50,30 @@ IFDEF CHEATS
 ;	cmp	eax,071a88h		; kool-fix
 ;	je	SSKOOL_Set
 ENDIF
-	jmp	SSTZ
+	jmp	SSRSBOXING
 
 SSKOOL_Set:
 	mov	[KoolAide],1
+	jmp	SSRSBOXING
+
+;*
+;* process RSBOXING cheat
+;*
+
+.data
+RSBoxing	db	0
+.code
+
+SSRSBOXING:
+	mov	[RSBoxing],0
+IFDEF CHEATS
+	cmp	eax,24c452h		; rsboxing
+	je	SSRSBOXING_Set
+ENDIF
+	jmp	SSTZ
+
+SSRSBOXING_Set:
+	mov	[RSBoxing],1
 	jmp	SSTZ
 
 ;*
@@ -139,6 +159,26 @@ SSTALL:
 	je	SetTall
 	cmp	eax,0393d1h		; 32in1-26
 	je	SetTall
+
+	cmp	eax,0a8a4dh		; frogdemo
+	je	SetMedium
+	cmp	eax,0a654dh		; frogrpal
+	je	SetMedium
+	cmp	eax,0a734dh		; frogrsc
+	je	SetMedium
+	cmp	eax,0b214dh		; killrpal
+	je	SetMedium
+	cmp	eax,07814eh		; partydmo
+	je	SetMedium
+	cmp	eax,0bae4dh		; phasor
+	je	SetMedium
+	cmp	eax,0b994dh		; phasrpal
+	je	SetMedium
+	cmp	eax,0b444dh		; sarospal
+	je	SetMedium
+	cmp	eax,0a504dh		; surv1pal
+	je	SetMedium
+
 
 
 	cmp	eax,1d2f8eh		; aciddrop
@@ -320,10 +360,18 @@ endif
 ;*
 
 SSLINE:
+	cmp	[_XChecksum],0a9fcc60h	; fireball -- regular checksum matches frogrpal
+	jne	SSL1
+	mov	[_CFirst],36
+	jmp	SSPADDLE
+
+SSL1:	cmp	[_XChecksum],0580036eah	; mindmas1 -- matches mindpal1
+	je	SSPADDLE
+
 	mov	[UserCFirst],0ffffh
 	mov	[DefaultCFirst],0ffffh
 	mov	dx,[_CFirst]
-	mov	[UserCFirst],dx			; remember...
+	mov	[UserCFirst],dx		; remember...
 
 	push	si
 	mov	si,offset LineTable
@@ -331,7 +379,7 @@ SSLINE:
 	pop	si
 
 	mov	dx,[_CFirst]
-	mov	[DefaultCFirst],dx		; remember again...
+	mov	[DefaultCFirst],dx	; remember again...
 
 	jmp	SSPADDLE
 
@@ -428,6 +476,69 @@ LineTable label byte
 	db	68
 	dd	03b208h			; 32in1-31
 	db	65
+
+	dd	0bd44dh			; commypal
+	db	69
+	dd	0bb44dh			; compaldm
+	db	69
+	dd	0a724dh			; drag1pal
+	db	62
+	dd	080ef9h			; drag2pal
+	db	68
+	dd	0a114dh			; drag3pal
+	db	69
+	dd	049ba6h			; drdmopal
+	db	69
+	dd	0a4f4dh			; firblpal
+	db	62
+	dd	089ea3h			; firpaldm
+	db	62
+	dd	0a654dh			; frogrpal (and fireball)
+	db	64
+	dd	0b214dh			; killrpal
+	db	74
+	dd	0bac4dh			; mindpall and mindmas1
+	db	60
+	dd	055fa6h			; mindpal2
+	db	60
+	dd	05fbfbh			; mindpal3
+	db	60
+	dd	08744dh			; mindpal4
+	db	60
+	dd	0b5d4dh			; mndmopal
+	db	60
+	dd	07804eh			; mxdmopal
+	db	60
+	dd	0b994dh			; phasrpal
+	db	64
+	dd	09094dh			; pmix1pal
+	db	60
+	dd	08b64dh			; pmix2pal
+	db	60
+	dd	098a4dh			; pmix3pal
+	db	60
+	dd	0ada4dh			; rabtpal
+	db	60
+	dd	0b444dh			; sarospal
+	db	60
+	dd	089c4dh			; sudmopal
+	db	60
+	dd	08a64dh			; suicdpall
+	db	60
+	dd	0a4a4dh			; surv2pal
+	db	57
+	dd	08dc4dh			; surv3pal
+	db	57
+
+
+	dd	08b021h			; excal39
+	db	34
+	dd	0a5dbfh			; 2600demo
+	db	34
+	dd	08634dh			; mindmas4
+	db	34
+	dd	091e4dh			; prtymix1
+	db	34
 
 
 	dd	01d2f8eh		; aciddrop
@@ -999,6 +1110,11 @@ SSP:	cmp	[_PaletteNumber],0ffh	; did user specify a palette number ?
 	je	SSPAL
 	cmp	eax,037dc3h		; 32in1-20
 	je	SSPAL
+
+	cmp	eax,0a504dh		; surv1pal
+	je	SSPAL
+
+
 	cmp	eax,03d843h		; canyonb
 	je	SSNTSC
 	cmp	eax,070828h		; clwndown
@@ -1120,6 +1236,10 @@ BailoutLine	dw	0
 .code
 
 SetupLong:
+	cmp	eax,0b994dh	; phasrpal
+	je	BailoutVeryLong
+
+
 	cmp	eax,1d2f8eh	; *aciddrop
 	je	BailoutVeryLong
 	cmp	eax,06d1d4h	; astrowar

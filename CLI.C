@@ -4,30 +4,98 @@
 
 
 /*
+** load next Starpath Rom
+*/
+
+int cli_LoadNextStarpath(int LoadNum)
+{
+	int i,j;
+	unsigned int pageadr, pagebyte, pagecount;
+	unsigned char *p;
+	unsigned char *q;
+
+	if (LoadNum > 4) return(0);
+
+	pagecount = CartRom[LoadNum*8448 + 0x2003];
+
+	for (i = 0; i < pagecount; i++)
+	{
+		pagebyte = CartRom[LoadNum*8448 + 0x2010 + i];
+		pageadr = ((pagebyte & 3) * 0x800) + ((pagebyte & 0x1f) >> 2) * 256;
+
+		p = CartRom + pageadr;
+		q = CartRom + LoadNum*8448 + i*256;
+
+		for (j = 0; j < 256; j++)
+		{
+			*p++ = *q++;
+		}
+	}
+
+	return(1);
+}
+
+/*
+** reload a Starpath file
+*/
+
+int cli_ReloadStarpath(unsigned char *filename)
+{
+	int i,j;
+	FILE *fp;
+	unsigned int pageadr, pagebyte, pagecount;
+	unsigned char *p;
+
+	fp = fopen(filename, "rb");
+	if (fp == NULL) return(0);
+
+	pagecount = CartRom[0x2003];
+
+	for (i = 0; i < pagecount; i++)
+	{
+		pagebyte = CartRom[0x2010 + i];
+		pageadr = ((pagebyte & 3) * 0x800) + ((pagebyte & 0x1f) >> 2) * 256;
+
+		p = CartRom + pageadr;
+		for (j = 0; j < 256; j++)
+		{
+			*p++ = getc(fp);
+		}
+	}
+
+	fclose(fp);
+	return(1);
+}
+
+/*
 ** load a ROM image
 **
 ** gets called from gui also -- special ROM setup can go here
 */
 
-int cli_LoadROM(unsigned char *p)
+int cli_LoadROM(unsigned char *filename)
 {
 	FILE *fp;
-	int i;
+	int i, j;
 	int ch;
+	unsigned char *p;
 
-	fp = fopen(p, "rb");
+	fp = fopen(filename, "rb");
 	if (fp == NULL)	return(0);
 			
 	p = CartRom;
 	CartSize = 0;
 	Checksum = 0;
+	XChecksum = 0;
 
 	while ( (ch = getc(fp)) != EOF )
 	{
 		*p++ = ch;
 		Checksum += ch;
+		if (XChecksum & 0x8000000) XChecksum |= 1;
+		XChecksum = (XChecksum << 1) ^ ch;
 		++CartSize;
-		if (CartSize > 32768) break;
+		if (CartSize > 33998) break;
 	}
 
 	fclose(fp);
@@ -38,6 +106,16 @@ int cli_LoadROM(unsigned char *p)
 		{
 			CartRom[2048+i] = CartRom[i];
 		}
+	}
+
+	if (CartSize == 8448)	/* Starpath image -- reload according to page table */
+	{
+		for (i = 0; i < 0x2000; i++)	/* fill everything with Starpath halts */
+		{
+			CartRom[i] = 0x52;
+		}
+
+		cli_ReloadStarpath(filename);
 	}
 
 	return(1);
@@ -227,7 +305,7 @@ cli_CommandLine(int argc, char *argv[])
 
 	if (DoChecksum)
 	{
-		printf("%lx checksum\n", Checksum);
+		printf("%lx checksum -- %lx alternative checksum\n", Checksum, XChecksum);
 		printf("%ld bytes", (long int) CartSize);
 		exit(1);
 	}

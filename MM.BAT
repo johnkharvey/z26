@@ -1,7 +1,7 @@
 echo off
 masm /Ml guicore.asm;
 if errorlevel 1 goto fail
-masm /Ml z26core.asm;
+masm /Ml /l z26core.asm;
 if errorlevel 1 goto fail
 tcc -c -v- -ml -O -a -w-par -w-pia z26.c
 if errorlevel 1 goto fail
