@@ -6,7 +6,7 @@
 
 ; ShowCopyright messages (note: only last message is terminated)
 
-msg01	db	10, 10, 'z26 -- An Atari 2600 emulator (1.19)', 10
+msg01	db	10, 10, 'z26 -- An Atari 2600 emulator (1.20)', 10
 msg02	db	'Copyright (C) 1997-1998 by John Saeger', 10
 msg03	db	'Home Page:  http://www.whimsey.com/z26', 10, 10
 msg04	db	'    F1 -- reset      F2 -- select     F3 -- B/W        F4 -- Color', 10
@@ -228,7 +228,7 @@ FileNotFound:
 FramesPerSecond:
 
 	mov	eax,[OriginalFrameExit]
-	mov	ebx,119318200		; ticklets per second (14318180/12) * 100
+	mov	ebx,119318166		;119318200 ticklets per second (14318180/12) * 100
 	mul	ebx
 	mov	ebx,[StopTicks]
 	div	ebx

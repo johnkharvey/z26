@@ -7,6 +7,7 @@
 
 VBlanking	dd	-1		; 0 if vblanking, -1 otherwise
 VBlank		db	0		; VBlank flag
+VSyncFlag	db	0		; VSync flag
 
 Ret0F		db	0Fh
 RetWd		db	0		; byte returned from collision read
@@ -99,13 +100,13 @@ TriggerExpired:
 
 WriteHardware:
 	cmp	si,0400h		; if > 400h don't write (ROM there)
-	jge	WHret
+	jae	WHret
 	cmp	si,0200h		; writing to the RIOT ?
-	jge	WriteRIOT
+	jae	WriteRIOT
 WriteHardwarePage0:
 	and	si,0FFh
 	cmp	si,080h			; writing to the TIA ?
-	jl	WriteTIA		;   yes
+	jb	WriteTIA		;   yes
 	mov	dl,[WByte]		; writing to RAM
 	mov	[RiotRam-128 + si],dl
 WHret:	ret
@@ -114,15 +115,29 @@ WHret:	ret
 WriteTIA:
 	and	si,03Fh
 	cmp	si,04h			; writing to a sync register
-	jl	WrTiaImmediate		;   yes, handle immediately
+	jb	WrTiaImmediate		;   yes, handle immediately
 	cmp	si,02ch			; check range
-	jg	XTRet			;  all other TIA commands are written to a
-
-	push	bx			; 'TIA change' buffer which records
+	ja	XTRet			;  all other TIA commands are written to a
+	push	bx			; 'TIA change' buffer which records them
 	push	ax
+
+;	jmp	TIARegular
+
+	cmp	si,014h			; RESxx ?
+	ja	TIARegular		;   no
+	cmp	si,010h
+	jb	TIARegular		;   no
+
+	cmp	[RClock],22		; cycle 22 or greater ?
+	jae	TIARegular		;   yes
+	mov	al,22*3			;   no, treat as cycle 22
+	jmp	TIAComputeOffset
+
+TIARegular:
 	mov	al,[RClock]
 	add	al,al
 	add	al,[RClock]		; clock * 3
+TIAComputeOffset:
 	sub	al,CycleOffset[si]	; - 68 or so (HBlank position)
 	ja	XTIANotHBlank		; if < 0 its in HBlank area, ret 0
 	xor	al,al			; (needed for nearly everything -- why?)
@@ -182,15 +197,20 @@ WrTiaSetSkip:
 WrTiaVSync:
 	test	[WByte],2		; if d1 is set then ....
 	jz	ZRET
+	test	[VSyncFlag],2		; somebody hitting Vsync more than necessary?
+	jnz	VSyncAlreadySet		;   yep
 	mov	[ScanLine],1		; back to screen top
 	inc	[Frame]			; new frame.
+VSyncAlreadySet:
 	mov	dx,[CFirst]
 	cmp	dx,0			; forcing first line ?
 	jz	ZRET			;   no, let vblank take care of it
 	mov	[TopLine],dx
 	add	dx,[MaxLines]
 	mov	[BottomLine],dx
-ZRET: 	Ret
+ZRET:	mov	dl,[WByte]
+	mov	[VSyncFlag],dl	
+ 	Ret
 
 ;*
 ;* VBlank -- vertical blank set-clear

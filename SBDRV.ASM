@@ -108,6 +108,8 @@ sound_int:
 	je	xFB_Done		;   no
 
 	pushad
+	
+	call	_GetTime		; keep time up to date
 
 	call	_Tia_process		; fill buffer
 	xor	[_DMABufToLoad],BUF_SIZE/2

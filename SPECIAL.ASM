@@ -49,8 +49,30 @@ SSFudgeMissile:
 
 SSFudgeTimer:
 	cmp	ax,0b2d7h
-	jne	SSTR
+	jne	SSCFF
 	mov	[TimerFudge],dword ptr 22	; frogpond
+	jmp	SSCFF
+
+;*
+;* process requests to clear the first few frames
+;*
+;* (kludge, should really have vsync clear to end of frame if it comes before MaxLines)
+;* (but I'm too lazy...)
+;*
+
+SSCFF:	cmp	eax,0e3cfah
+	je	SSCFF_B			; congbong
+	cmp	eax,09b2d7h
+	je	SSCFF_A			; frogpond
+
+	jmp	SSTR
+
+SSCFF_A:
+	mov	[MXDelayedClear],2
+	jmp	SSTR
+
+SSCFF_B:
+	mov	[MXDelayedClear],3
 	jmp	SSTR
 
 
@@ -83,14 +105,7 @@ SetT0:	mov	[TimerVec], offset Timer0
 ;* process requests for wrapping negative player positions to zero
 ;*
 
-SSWRAP:	cmp	ax,0d274h
-	je	WZero			; atlantis
-	cmp	ax,0c90ah
-	je	WZero			; oceancty
-	cmp	ax,0de3ah
-	je	WZero			; skatebrd
-	cmp	ax,0adb9h
-	je	WZero			; sq_earth
+SSWRAP:	
 	cmp	ax,06289h
 	je	WZero			; crackpot
 	cmp	ax,05b2ah
@@ -99,8 +114,16 @@ SSWRAP:	cmp	ax,0d274h
 	je	WZero			; holehunt
 	cmp	ax,0deebh
 	je	WZero			; strwbery
-	cmp	ax,0ecc2h
-	je	WZero			; beamride
+	cmp	eax,0d5653h
+	je	WZero			; qbrtqube
+	cmp	eax,0f56deh
+	je	WZero			; smurf_pl (makes house show up)
+	cmp	eax,0f2462h
+	je	WZero			; smurfres (makes house show up)
+	cmp	eax,0d1cd4h
+	je	WZero			; moonptrl
+	cmp	eax,0cf815h
+	je	WZero			; robotank
 
 	jmp	SSTALL
 
@@ -198,6 +221,8 @@ SSTALL:
 	je	SetTall
 	cmp	eax,0dde3ah		; skatebrd
 	je	SetMedium
+	cmp	eax,070a3eh		; skihunt
+	je	SetTall
 	cmp	eax,072697h		; snalsqrl
 	je	SetTall
 	cmp	eax,075df2h		; snekpeek
@@ -472,8 +497,8 @@ LineTable label byte
 	db	43
 	dd	03d15eh			; football
 	db	41
-	dd	046b6h			; forest
-	db	43
+	dd	046b6h			; forest (extra tall)
+	db	41
 	dd	074a05h			; frankmon
 	db	43
 	dd	0b2d7h			; frogpond (Vblank triggers frame)
@@ -483,7 +508,7 @@ LineTable label byte
 	dd	07325fh			; galaga
 	db	35
 	dd	094b8h			; ghostman
-	db	35
+	db	33
 	dd	07104fh			; gigolo
 	db	41
 	dd	08e4dh			; gijoe
@@ -561,13 +586,13 @@ LineTable label byte
 	dd	09e5a5h			; obelix
 	db	68
 	dd	06c90ah			; oceancity
-	db	42
+	db	41
 	dd	04cebh			; offrockr
 	db	36
 	dd	0613ch			; omegrace
 	db	46
-	dd	06a939h			; opensesm
-	db	45
+	dd	06a939h			; opensesm (extra tall)
+	db	42
 	dd	00fc5h			; packong
 	db	32
 	dd	054f5h			; parachut
@@ -618,8 +643,8 @@ LineTable label byte
 	db	70
 	dd	07200ah			; saveship
 	db	45
-	dd	06fc86h			; seamnstr
-	db	45
+	dd	06fc86h			; seamnstr (extra tall)
+	db	42
 	dd	06badeh			; sharkatk
 	db	37
 	dd	07be3h			; shootin
@@ -650,8 +675,8 @@ LineTable label byte
 	db	40
 	dd	03da9dh			; spacjock
 	db	44
-	dd	06f551h			; spactunl
-	db	44
+	dd	06f551h			; spactunl (extra tall)
+	db	42
 	dd	06f551h			; spcinvad
 	db	44
 	dd	07c896h			; spcrobot
@@ -810,7 +835,7 @@ SSPADDLE:
 	je	SPG0
 
 
-	jmp	SSPAL
+	jmp	SSP
 
 SPG0:	mov	dx,0600h		; sensitivity 3, paddle 0
 	jmp	SPGSet
@@ -829,24 +854,28 @@ SPGSkipSensitivity:
 	jne	SPGSkipKeyBase
 	mov	[KeyBase],dl
 SPGSkipKeyBase:
-	jmp	SSPAL
+	jmp	SSP
 
 ;*
 ;* process requests for special palette
 ;*
 
-SSPAL:	cmp	[PaletteNumber],0ffh	; did user specify a palette number ?
+SSP:	cmp	[PaletteNumber],0ffh	; did user specify a palette number ?
 	jne	SSAU			;   yes, don't override
 	cmp	eax,07c25eh		; marflegr
-	je	SSP
+	je	SSPAL
 	cmp	eax,03d843h		; canyonb
 	je	SSNTSC
 	cmp	eax,072d81h		; dancplat
-	je	SSP
+	je	SSPAL
 	cmp	eax,07f16ch		; defender
 	je	SSNTSC
+	cmp	eax,078dcfh		; fb_pir8
+	je	SSNTSC
 	cmp	eax,0746b6h		; forest
-	je	SSP
+	je	SSPAL
+	cmp	eax,07325fh		; galaga
+	je	SSPAL
 	cmp	eax,0f2462h		; smurfres
 	je	SSNTSC
 	cmp	eax,070bb3h		; starmast
@@ -855,7 +884,7 @@ SSPAL:	cmp	[PaletteNumber],0ffh	; did user specify a palette number ?
 	je	SSNTSC
 	jmp	SSAU
 
-SSP:	mov	[PaletteNumber],1
+SSPAL:	mov	[PaletteNumber],1
 	jmp	SSAU
 
 SSNTSC:	mov	[PaletteNumber],0
@@ -945,7 +974,7 @@ ColumnBlankTable label byte
 	dd	0f608h			; rs_baseb
 	dd	00fdah			; spcshutl
 	dd	07852ah			; suprbase
-	dd	01cd4h			; moonptrl
+	dd	01cd4h			; moonptrl (switches)
 	dd	0b429h			; pressure
 	dd	09538h			; lasrblst
 	dd	046b6h			; forest
@@ -961,6 +990,27 @@ ColumnBlankTable label byte
 	dd	0b491h			; skyjinks
 ;	dd	094a9h			; he_man (** it switches! **)
 
+	dd	0d5653h			; qbrtqube
+	dd	0299233h		; fatalrun
+	dd	0729f3h			; firefite (** only partial! **)
+	dd	072300h			; mash
+	dd	07bfe1h			; oink
+	dd	07444bh			; rsvolley
+	dd	0cdbcch			; rstennis
+	dd	03b491h			; skyjinks
+	dd	01ca757h		; solaris
+	dd	0684b8h			; spacmast
+					; spikpeak (switches!)
+	dd	07554fh			; starfox
+	dd	06cd03h			; supferar
+	dd	06cc64h			; supferri
+	dd	06d1d4h			; astrowar
+	dd	0737ddh			; bermuda
+	dd	076f32h			; boombang
+	dd	07657eh			; crusmisl
+	dd	0e96a5h			; jnglhunt
+	dd	069e43h			; metdef
+
 	dd	-1
 
 .DEND
@@ -974,6 +1024,8 @@ SetupScoreMode:
 	je	NoScore			; starraid
 	cmp	ax,0ffb5h
 	je	NoScore			; alphbeam
+	cmp	eax,042cc1h
+	je	NoScore			; bsktball
 
 	jmp	SetP1Hard
 

@@ -98,11 +98,13 @@ xm1:
 
 	call	ScanFrame
 
-	cmp	[MXDelayedClear],0	; was there a mode change into modex ?
+
+; the following kludge is needed for frogpond and congbong only
+
+	cmp	[MXDelayedClear],0	; doing delayed clear to clean up mess in first couple of frames ?
 	jz	ClearDone		;   no
-	mov	[MXDelayedClear],0	;   yes
+	dec	[MXDelayedClear]	;   yes
 	call	MXClearMem		; clear mem 
-					; (don't know why we need to do it this way)
 
 ClearDone:
 

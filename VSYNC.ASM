@@ -21,8 +21,11 @@ BlindCount		db	0		; # of frames since last real vsync
 
 
 ; Nominal frame times for the various video modes for flying blind.
-; These values are fairly precise.  
-; We hardly ever need to see a real vsync.
+; These values are a little high (frame rate low).
+; They were measured on my S3 Virge.
+; Better high than low though...  It will tend to move the vsync
+; position closer to the middle of the window that we're looking
+; for it in.
 
 VideoRateTable		dd	17104		; 0 -- 69.76 fps
 			dd	19960		; 1 -- 59.78 fps
@@ -47,8 +50,16 @@ ReSync:
 	cmp	[NoRetrace],0			; did user specify a -r<n> param ?
 	jnz	VSRet				;   yes, don't do this
 	pushad
+	cmp	[_VideoMode],8			; video mode in range ?
+	jbe	RSNormal			;   yes
+	mov	eax,[VideoRateTable]		;   no, use mode 0 timing
+	jmp	RSTooHigh
+
+RSNormal:
 	movzx	eax,[_VideoMode]
 	mov	eax,[VideoRateTable + eax*4]
+
+RSTooHigh:
 	mov	[NominalFrameTime],eax		; put in frame time adjusted for video mode
 	call	_GetTime
 	mov	[CurrentTime],eax		; this is for testing for broken vsync...
@@ -84,6 +95,7 @@ VSync:	cmp	[NoRetrace],0ffh		; -r no param
 	jz	RealVsyncLoop			;   no
 	call	ReSync				;   yes
 	mov	[ReSyncFlag],0
+
 RealVsyncLoop:
 	sti
 	mov	dx,CRTSTAT
@@ -105,12 +117,11 @@ VsyncAdjustLoop:
 	mov	eax,[NominalFrameTime]		;   yes, back off by one frame time
 	sub	[LastVsyncTime],eax
 	inc	[BlindCount]
-	cmp	[BlindCount],60			; too many frames without a real vsync?
+	cmp	[BlindCount],10			; too many frames without a real vsync?
 	jb	PopRet				;   no
 	call	ReSync				;   yes, do a resync (should almost never happen)
 
-PopRet:	
-	sti
+PopRet:	sti
 	popad
 VSRet:	ret
 

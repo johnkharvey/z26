@@ -36,6 +36,7 @@ MaxLines	dw	204		; max # of lines to scan
 					; (gets changed by graphics.asm)
 
 DisplayPointer	dw	0		;pointer into display RAM
+
 DisplayTranslate dw offset TIADisplayToColour ;display to color translation table
 
 ALIGN 4

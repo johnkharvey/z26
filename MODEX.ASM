@@ -20,8 +20,11 @@ ModeXBufferSeg		dw	0	; segment adr of ModeX line buffer
 ModeXBufferPointer	dw	0
 ModeXDisplayPointer	dw	0
 ModeX			db	0	; set if in modex
+ModeXPage		db	0	; for telling if even or odd page (Frame not reliable)
 
-MXDelayedClear		db	0	; delayed clear (kludge -- see tia.asm)
+MXDelayedClear		db	0	; 1 for frogpond, 2 for congbong
+					; nobody else should notice
+					; delayed clear (kludge -- see tia.asm)
 
 ALIGN 2
 
@@ -85,7 +88,7 @@ ModeXInit:
 	pusha
 	push	es
 
-	cmp	[_VideoMode],8		; doing mode 7 or less ?
+	cmp	[_VideoMode],8		; doing mode 8 or less ?
 	ja	MXPRet			;   no, ret for now
 
 	mov	[ModeX],1
@@ -116,8 +119,7 @@ ModeXInit:
 	mov	ax,000014h
 	out	dx,ax			; disable doubleword mode
 
-	mov	[MXDelayedClear],1	; have TIA clear mem later
-					; (don't know why clearing now doesn't work)
+	call	MXClearMem		; clear mem now...
 
 	mov	ax,0100h
 	out	dx,ax			; synchronous reset while setting misc output
@@ -240,8 +242,9 @@ FlipThrottleLoop:
 	jb	FlipThrottleLoop	;   no, keep waiting
 
 DoFlipping:
+	inc	[ModeXPage]
 	mov	ah,080h
-	test	[Frame],1
+	test	[ModeXPage],1
 	jz	DoFlip
 	mov	ah,0
 	mov	[ModeXDisplayPointer],08000h

@@ -390,6 +390,10 @@ TIAWrap:cmp	al,240			; went negative ???
 	sub	al,160			;   yes
 	jmp	TWret
 
+
+xTWneg:	add	al,160
+	ret
+
 TWneg:	push	ax
 	mov	al,[WrapZero]
 	cmp	al,0
