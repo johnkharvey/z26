@@ -7,6 +7,7 @@
 ;	-c <n>	Select sound channels
 ;	-q <n>	Set off	volume
 ;	-x	print out checksum of cartridge
+;	-r	don't wait for retrace (full speed)
 ;
 ; *****************************************************************************
 
@@ -28,7 +29,7 @@ CLSkip:	mov	al,es:[bp]		; skip over spaces
 	jmp	CLSkip
 CLSkip2:mov	al,es:[bp]		; see what it is
 	cmp	al,13
-	je	CCret
+	je	CLNoFile		;   no file detected
 	cmp	al,'-'
 	je	Control
 
@@ -78,6 +79,10 @@ CartCopy:
 	sub	bx,2
 	jge	CartCopy
 CCret:	jmp	Conret
+
+CLNoFile:
+	jmp	CLDoNoFile
+
 Set8kMode:
 	mov	[ReadBank], offset RBank8
 	mov	[WriteBank], offset WBank8
@@ -113,7 +118,19 @@ SS1:	cmp	ax,08387h
 	jne	SS2
 	mov	[CFirst],69		; GI Joe Cobra Strike (actionmn)
 	jmp	SetupDone
-SS2:
+
+SS2:	cmp	ax,0bb3h
+	jne	SS3
+SS2a:	mov	[TimerVec],offset Timer1 ; starmaster
+	jmp	SetupDone
+
+SS3:	cmp	ax,0a757h
+	je	SS2a			; solaris
+	cmp	ax,08614h
+	je	SS2a			; demohrby
+	cmp	ax,0c8bah
+	je	SS2a			; immies
+
 SetupDone:
 	ret
 
@@ -163,6 +180,10 @@ EndInt:					; Command in CL,Value in AL
 	je	CMBW
 	cmp	cl,'x'
 	je	CMXsum
+	cmp	cl,'r'
+	je	CMNoRetrace
+	cmp	cl,'t'
+	je	CMTimer1
 Back:	jmp	CLSkip			; back to the beginning
 
 CMUpper:xor	ah,ah			; set upper scan line
@@ -198,3 +219,88 @@ CMBW:	mov	al,[IOPortB]		; black	and white
 CMXsum:	mov	[DoChecksum],1		; do checksum
 	jmp	CLSkip
 
+CMNoRetrace:
+	mov	[NoRetrace],1		; don't wait for retrace (full speed)
+	jmp	CLSkip
+
+CMTimer1:
+	mov	[TimerVec],offset Timer1 ; force Timer1
+	jmp	CLSkip
+	
+
+
+; we didn't see a filename string
+
+CLDoNoFile:
+	pop	es
+	mov	dx,offset CopyRight
+	mov	ah,9
+	int	MSDOS			; output the copyright msg
+	mov	dx,offset Msg0
+	mov	ah,9
+	int	MSDOS			; output a message
+	mov	dx,offset Msg1
+	mov	ah,9
+	int	MSDOS			; output a message
+	mov	dx,offset Msg2
+	mov	ah,9
+	int	MSDOS			; output a message
+	mov	dx,offset Msg3
+	mov	ah,9
+	int	MSDOS			; output a message
+	mov	dx,offset Msg4
+	mov	ah,9
+	int	MSDOS			; output a message
+	mov	dx,offset Msg5
+	mov	ah,9
+	int	MSDOS			; output a message
+	mov	dx,offset Msg6
+	mov	ah,9
+	int	MSDOS			; output a message
+	mov	dx,offset Msg7
+	mov	ah,9
+	int	MSDOS			; output a message
+	mov	dx,offset Msg8
+	mov	ah,9
+	int	MSDOS			; output a message
+	mov	dx,offset Msg9
+	mov	ah,9
+	int	MSDOS			; output a message
+;	mov	dx,offset Msg10
+;	mov	ah,9
+;	int	MSDOS			; output a message
+;	mov	dx,offset Msg11
+;	mov	ah,9
+;	int	MSDOS			; output a message
+	mov	dx,offset Msg12
+	mov	ah,9
+	int	MSDOS			; output a message
+	mov	dx,offset Msg13
+	mov	ah,9
+	int	MSDOS			; output a message
+	jmp	Empty			;   exit
+
+.CEND
+.DATASEGMENT
+
+CopyRight	db	13,10,'z26 -- An Atari 2600 emulator (0.81)',13,10,10,'Copyright (C) 1997 by John Saeger',13,10,10,'Based on A26 version 0.15 by Paul Robson.',13,10,10,'$'
+Msg0		db	'   F1 -- reset',13,10,'$'
+Msg1		db	'   F2 -- select',13,10,'$'
+Msg2		db	'   F9 -- black and white',13,10,'$'
+Msg3		db	'  F10 -- color',13,10,'$'
+Msg4		db	'SPACE -- fire',13,10,'$'
+Msg5		db	'    p -- pause game',13,10,'$'
+Msg6		db	'ENTER -- resume game',13,10,'$'
+Msg7		db	'  ESC -- quit game',13,10,10,'$'
+
+Msg8		db	'Command Line Switches (put before filename)',13,10,10,'$'
+
+Msg9		db	'   -0 -- player 0 hard',13,10,'$'
+;Msg10		db	'   -1 -- player 1 hard',13,10,'$'
+;Msg11		db	'   -b -- black and white',13,10,'$'
+Msg12		db	'   -r -- do not wait for VGA retrace (full speed)',13,10,10,'$'
+
+Msg13		db	'The Atari joystick is emulated with the arrow keys.',13,10,10,'$'
+
+.DEND
+.CODESEGMENT

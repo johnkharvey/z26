@@ -59,6 +59,7 @@ FEnd=$
 ALIGN 2
 
 TimerVec	dw	 Timer0		;timer routine vector -- Timer1 for starmaster
+					;				and solaris
 
 TopLine		dw	0		; was 36     top line of display
 BottomLine	dw	0		; was 36+200 bottom line of display
@@ -74,11 +75,15 @@ MaxLines	dw	200		;max # of lines to scan
 DisplayPointer	dw	0		;pointer into display RAM
 DisplayTranslate dw offset TIADisplayToColour ;display to color translation table
 
-DoChecksum	dw	0		; do a checksum of the cartridge
+DoChecksum	dw	0		; do a checksum of the cartridge (if 1)
 Checksum	dw	0		; checksum goes here
 
+NoRetrace	dw	0		; don't wait for retrace (if 1)
+
+GamePaused	dw	0		; game paused
+
 ReadBank	dw	RBank4		; Bank switching function (Read)
-WriteBank	dw	WBank4
+WriteBank	dw	WBank4		; were RBank4 and WBank4
         
 RomBank		dw	0
 
@@ -113,7 +118,7 @@ WrTiaImmediateVector	dw	WrTiaVSync	; 0
 						;      for factory testing only !
 		        
 
-IOPortB		db	03Fh		; IO Port B (switches)
+IOPortB		db	00Bh		; IO Port B (switches)
 IOPortA		db	0FFh		; IO Port A (joystick)
 
 DumpPorts	db	0,0,0,0		; Input ports (inp0..3)
@@ -221,41 +226,6 @@ CycleOffset	db	68+CO	;00	VSYNC
 		db	68+CO	;2b	HMCLR
 		db	68+CO	;2c	CXCLR
 
-ALIGN 2
-
-TIARegVector dw TRNoop, TRNoop, TRNoop, TRNoop		; registers 00-03
-	dw	TRCopy, TRCopy, TRCopy, TRCopy		; registers 04-07
-	dw	TRCopy, TRCopy, TRCopy, TRCopy		; registers 08-0B
-	dw	TRCopy, TRCopy, TRCopy, TRCopy		; registers 0C-0F
-	dw	TRPlyr, TRPlyr, TRMiss, TRMiss		; registers 10-13
-	dw	TRBall, TRSond, TRSond, TRSond		; registers 14-17
-	dw	TRSond, TRSond, TRSond, TRGrp0		; registers 18-1B
-	dw	TRGrp1, TRCopy, TRCopy, TRCopy		; registers 1C-1F
-	dw	TRCopy, TRCopy, TRCopy, TRCopy		; registers 20-23
-	dw	TRCopy, TRCopy, TRCopy, TRCopy		; registers 24-27
-	dw	TRCopy, TRCopy, TRHMov, TRHClr		; registers 28-2B
-	dw	TRCClr, TRNoop, TRNoop, TRNoop		; registers 2C-2F
-	dw	TRNoop, TRNoop, TRNoop, TRNoop		; registers 30-33
-	dw	TRNoop, TRNoop, TRNoop, TRNoop		; registers 34-37
-	dw	TRNoop, TRNoop, TRNoop, TRNoop		; registers 38-3B
-	dw	TRNoop, TRNoop, TRNoop, TRNoop		; registers 3C-3F
-        
-TIARegVector2 dw TRNoop, TRNoop, TRNoop, TRNoop		; registers 00-03
-	dw	TRCopy, TRCopy, TRCopy, TRCopy		; registers 04-07
-	dw	TRCopy, TRCopy, TRCopy, TRCopy		; registers 08-0B
-	dw	TRCopy, TRCopy, TRCopy, TRCopy		; registers 0C-0F
-	dw	TRSave, TRSave, TRSave, TRSave		; registers 10-13
-	dw	TRSave, TRSond, TRSond, TRSond		; registers 14-17
-	dw	TRSond, TRSond, TRSond, TRGrp0		; registers 18-1B
-	dw	TRGrp1, TRCopy, TRCopy, TRCopy		; registers 1C-1F
-	dw	TRCopy, TRCopy, TRCopy, TRCopy		; registers 20-23
-	dw	TRCopy, TRCopy, TRCopy, TRCopy		; registers 24-27
-	dw	TRCopy, TRCopy, TRHmvB, TRHClr		; registers 28-2B
-	dw	TRCxZr, TRNoop, TRNoop, TRNoop		; registers 2C-2F
-	dw	TRNoop, TRNoop, TRNoop, TRNoop		; registers 30-33
-	dw	TRNoop, TRNoop, TRNoop, TRNoop		; registers 34-37
-	dw	TRNoop, TRNoop, TRNoop, TRNoop		; registers 38-3B
-	dw	TRNoop, TRNoop, TRNoop, TRNoop		; registers 3C-3F
         
 
 ALIGN 4
@@ -639,5 +609,4 @@ TIAVGATable db 7,7,7	; 1c1c1c
       db 63,49,28	; ffc671
       db 63,50,32	; ffcb83	8/8
 
-CopyRight	db	'z26 -- An Atari 2600 emulator',13,10,10,'Copyright (C) 1996 by Paul Robson',13,10,'Copyright (C) 1997 by John Saeger',13,10,'$'
       

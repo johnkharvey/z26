@@ -7,15 +7,22 @@
 ; *****************************************************************************
 
 Controls:
-	mov	ah,[IOPortB]		; set all the switches on IOPort B
-	or	ah,03Fh			; to on.
+	mov	ah,[IOPortB]		; turn on Select and Reset bits
+	or	ah,03h
 	test	[KeyTable+KeyF1],128
-	jz	Ctrl1			; F1 pressed - drop bit	0
+	jz	Ctrl1			; F1 pressed (Reset) - drop bit 0 (1)
 	and	ah,0FEh
 Ctrl1:	test	[KeyTable+KeyF2],128
-	jz	Ctrl2			; F2 pressed - drop bit	1
+	jz	Ctrl2			; F2 pressed (Select) - drop bit 1 (2)
 	and	ah,0FDh
 Ctrl2:  
+	test	[KeyTable+KeyF9],128
+	jz	Ctrl2a			; F9 pressed (Black and white) drop bit 3 (8)
+	and	ah,0F7h
+Ctrl2a:	test	[KeyTable+KeyF10],128
+	jz	Ctrl2b			; F10 pressed (Color) set bit 3 (8)
+	or	ah,08h
+Ctrl2b: 
 	mov	[IOPortB],ah
 
 	mov	ah,0FFh			; now do the switches
@@ -36,14 +43,19 @@ Ctrl5:	mov	[InputLatch],080h
 	mov	[InputLatch+1],080h
 CTLatching:
 
-	test	[KeyTable+KeyRAlt],128
+	test	[KeyTable+KeySpace],128
 	jz	Ctrl3			; handle 'fire'	from p1
 	mov	[InputLatch],0h
 Ctrl3:	test	[KeyTable+KeyG],128
 	jz	Ctrl4			; handle 'fire'	from p2
 	mov	[InputLatch+1],0h
-Ctrl4:
-	test	[KeyTable+KeyEsc],128
+Ctrl4:	test	[KeyTable+KeyP],128
+	jz	Ctrl6
+	mov	[GamePaused],1		; pause game
+Ctrl6:	test	[KeyTable+KeyEnter],128
+	jz	Ctrl7
+	mov	[GamePaused],0		; resume game
+Ctrl7:	test	[KeyTable+KeyEsc],128
 	jz	CtrlExit
 	jmp	GoDOS			; ESC pressed -	exit
 CtrlExit:
