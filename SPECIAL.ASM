@@ -262,6 +262,8 @@ SSLINE:
 	je	Line28			; xevious
 	cmp	ax,062d5h
 	je	Line34			; zoofun
+	cmp	ax,0f5b3h
+	je	Line34			; starempr
 
 
 	jmp	SSTR			; process Timer1 requests

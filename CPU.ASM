@@ -12,6 +12,10 @@
 ;             force break when doing PHP
 ; 05-22-98    move some variables to cpu.asm file
 ;             don't set overflow when doing CMP, CPX, CPY
+; 06-15-98    new decimal arithmetic and ARR instruction (see pmath.asm)
+;             implemented the rest of the undocumented instructions
+; 06-19-97    more fixes to CPU, BRK and maybe others
+
 
 .CEND
 .DATASEGMENT
@@ -161,19 +165,12 @@ readzx  macro   op1,op2                 ; read memory at #2 to #1
         movzx   op1,byte ptr [si]
         endm
 
-read16  macro op1,op2
-        mov     si,op2
-        call    [ReadBank]
-        mov     op1,word ptr [si]
-        endm
-
 zread   macro   op1,op2                 ; zero page read
         mov     si,op2
         call    ReadHardwarePage0
         mov     op1,[si]
         endm
         
-
 
 write   macro   op1,op2                 ; write #1 to memory at #2
         mov     si,op2                  ; set address
@@ -186,11 +183,6 @@ zwrite  macro   op1,op2                 ; zeropage write
         mov     [WByte],op1             ; set data
         call    WriteHardwarePage0      ; and write
         endm
-
-zrewrite macro op1			; page zero rewrite byte in #1
-	mov	byte ptr [si],op1
-	endm
-
 
 
 fetch   macro   op1
@@ -209,30 +201,45 @@ fetchzx macro   op1
         endm
 
 fetch_opcode macro   op1		; special fetchzx for trace logging
-        readzx  op1,bp
+local fo_1
+
+	cmp	[trace_count],0
+	jz	fo_1
+
+	call	TraceInstruction
+
+fo_1:	readzx  op1,bp
         inc     bp
         endm
 
-fetch16 macro   op1
-        read16  op1,bp
-        add     bp,2
-        endm
+;*
+;* local stack macros
+;*
+
+zpush	macro	op1
+	mov	bl,[reg_sp]
+	mov	bh,1
+	write	op1,bx		; write byte to top of stack
+	dec	[reg_sp]	; and decrement stack pointer
+	endm
+
+zpop	macro	op1
+	inc	[reg_sp]	; increment the	stack pointer
+	mov	bl,[reg_sp]	; and read the top byte
+	mov	bh,1
+	read	op1,bx
+	endm
+
 
 
 ;*
 ;* memory addressing macros -- get operand address into bx
 ;*
 
-IFDEF memcheats
-absolute macro
-        fetch16 bx
-        endm
-ELSE
 absolute macro                          ; fetch absolute address to bx
         fetch   bl
         fetch   bh
         endm
-ENDIF   
 
 
 zeropage macro                          ; fetch zero page to bx
@@ -269,12 +276,6 @@ pagechange macro
 M1:
         endm
 
-IFDEF memcheats
-readaddress macro
-	and	bx,0ffh			; must be in page zero
-        read16  bx,bx
-        endm
-ELSE
 readaddress macro                       ; read data in bx -> bx
         and	bx,0ffh			; must be in page zero
         read    dl,bx
@@ -282,8 +283,6 @@ readaddress macro                       ; read data in bx -> bx
         read    dh,bx
         mov     bx,dx
         endm
-ENDIF   
-
 
 absolutex macro                         ; absolute,x EAC
         absolute
@@ -344,15 +343,6 @@ indirecty macro                         ; (indirect),y EAC
         mov     dx,bx			; set up for pagechange macro
         indexy
 	pagechange
-        endm
-
-
-;*
-;* get relative branch address
-;*
-
-relative macro                          ; sign extend fetch byte -> dx
-        fetchsx dx
         endm
 
 
@@ -705,8 +695,7 @@ DoCmp macro
 
 	sub	dh,dl
 	usetest	dh
-	cmc
-	setc	ah
+	setnc	ah
 
 	endm
 
@@ -755,7 +744,7 @@ DoAdc:
 
 ;*
 ;* ADC Decimal  
-;* AL is accumulator,AH is carry bit, dl has data
+;* AL is accumulator, AH is carry bit, dl has data
 ;*
 
 ALIGN_ENTRY
@@ -765,25 +754,14 @@ ADCBCD:
 
         
 ;*
-;* SBC Decimal for quiche eaters.
-;* AL is accumulator,AH is carry bit,BX points to data
-;* this routine is not currently in use (see math.asm)
+;* SBC Decimal
+;* AL is accumulator, AH is carry bit, dl has data
 ;*
 
 ALIGN_ENTRY
 
 SBCBCD:
 	jmp	_SBCdecimal
-
-	shr	ah,1		;set up	carry bit
-	cmc			;6502 needs complement
-	sbb	al,dl
-	usetest	al
-	seto	[flag_overflow]
-	das
-	cmc
-	setc	ah
-	ret
 
 
 ;*
@@ -797,20 +775,23 @@ ALIGN_ENTRY
 
 op00:	
 	mov	[flag_break],1	;+
+	inc	bp		;+
 	mov	dx,bp		; return address in dx
-	mov	bl,[reg_sp]	; bx is	stack address
-	mov	bh,1
-	write	dh,bx		; push return address
-	dec	bl
-	write	dl,bx
-	dec	[reg_sp]
-	dec	[reg_sp]
+	zpush	dh
+	mov	dx,bp
+	zpush	dl
+
 	call	op08		; push PSW
+	mov	[flag_interrupt],1
 	mov	bx,0FFFEh	; fetch	the vector
-	read	dl,bx
+
+	push	ax
+	read	al,bx
 	inc	bx
-	read	dh,bx
-	mov	bp,dx		; and transfer execution to addr there
+	read	ah,bx
+	mov	bp,ax		; and transfer execution to addr there
+	pop	ax
+
 	ret
 
 
@@ -882,13 +863,8 @@ op07:	zeropage
 ALIGN_ENTRY
 
 op08:	call	GetPSW		; get PSW in DL
-
 	or	dl,010h		;+ force break flag
-
-	mov	bl,[reg_sp]	; bx points to stack
-	mov	bh,1
-	write	dl,bx		; save it on the stack
-	dec	[reg_sp]	; decrement Stack pointer
+	zpush	dl
 	ret
 
 
@@ -1126,12 +1102,8 @@ op20:	absolute		; call address in bx now
 	mov	ax,bp		; ax is	the return address
 	mov	bp,bx		; transfer control
 	dec	ax		; push return-1
-	mov	bl,[reg_sp]	; bl is	the stack index
-	mov	bh,1
-	write	ah,bx		; push the return address
-	dec	bl
-	write	al,bx
-	sub	[reg_sp],2	; decrement the	stack pointer
+	zpush	ah
+	zpush	al
 	pop	ax
 
 IFDEF z64
@@ -1217,10 +1189,7 @@ op27:	zeropage
 
 ALIGN_ENTRY
 
-op28:	inc	[reg_sp]	; increment the	stack pointer
-	mov	bl,[reg_sp]	; and read the top byte
-	mov	bh,1		; into dh
-	read	dh,bx
+op28:	zpop	dh		; pull PSW from stack
 	mov	[RNTest],dh	; it will do for use as	the N Flag
 	mov	ah,dh
 	and	ah,1		; bit 0 is the carry flag
@@ -1431,7 +1400,7 @@ op3d:	absolutex
 
 ALIGN_ENTRY
 
-op3e:	absolutex_rmw		; * Perazzoli *
+op3e:	absolutex_rmw
 	read	dl,bx
 	DoROL
 	write	dl,bx
@@ -1439,6 +1408,8 @@ op3e:	absolutex_rmw		; * Perazzoli *
 
 
 ; RLA adr16,X (undoc)
+
+ALIGN_ENTRY
 
 op3f:	absolutex_rmw
 	read	dl,bx
@@ -1452,14 +1423,13 @@ op3f:	absolutex_rmw
 ALIGN_ENTRY
 
 op40:	call	op28		; pull psw
-	inc	[reg_sp]	; same as return but don't inc PCTR
-	mov	bl,[reg_sp]	; bx points to PCL to pop
-	inc	[reg_sp]	; sp gone up 2 now,its ok
-	mov	bh,1
-	read	dl,bx		; read return address in bx
-	inc	bl
-	read	dh,bx
-	mov	bp,dx		; and return
+	push	ax
+
+	zpop	al
+	zpop	ah		; pull return address
+	mov	bp,ax		; transfer control
+
+	pop	ax
 	ret
 
 
@@ -1530,10 +1500,7 @@ op47:	zeropage
 
 ALIGN_ENTRY
 
-op48:	mov	bl,[reg_sp]	; bx ^ stack
-	mov	bh,1
-	write	al,bx
-	dec	[reg_sp]	; decrement stack pointer
+op48:	zpush	al
 	ret
 
 
@@ -1573,12 +1540,8 @@ op4b:	fetch	dl
 ALIGN_ENTRY
 
 op4c:
-IFDEF memcheats
-	read16	bp,bp
-ELSE
 	absolute		; fetch	the address
 	mov	bp,bx		; jump to it
-ENDIF
 
 IFDEF z64
 
@@ -1779,12 +1742,12 @@ op5f:	absolutex
 
 ALIGN_ENTRY
 
-op60:	mov	bl,[reg_sp]
-	mov	bh,1
-	inc	bl
-	add	[reg_sp],2
-	read16	bp,bx		; read return address (and return)
+op60:	push	ax
+	zpop	al
+	zpop	ah		; pull return address
+	mov	bp,ax		; transfer control
 	inc	bp
+	pop	ax
 	ret
 
 
@@ -1853,10 +1816,7 @@ op67:	zeropage
 
 ALIGN_ENTRY
 
-op68:	inc	[reg_sp]	; increment sp
-	mov	bl,[reg_sp]	; build	the read address
-	mov	bh,1
-	read	al,bx
+op68:	zpop	al
 	usetest	al
 	ret
 
@@ -1882,6 +1842,8 @@ op6a:	mov	dl,al
 
 ; ARR data (undoc)
 
+ALIGN_ENTRY
+
 op6b:	fetch	dl
 	jmp	_ARR
 
@@ -1891,14 +1853,11 @@ op6b:	fetch	dl
 ALIGN_ENTRY
 
 op6c:	absolute		; read the address of the the jump
-IFDEF memcheats
-	read16	bp,bx		; and jump to it
-ELSE
 	read	dl,bx
-	inc	bx
+;	inc	bx
+	inc	bl
 	read	dh,bx
 	mov	bp,dx		; and jump to it
-ENDIF
 
 IFDEF z64
 
@@ -2052,6 +2011,8 @@ op7b:	absolutey_rmw
 
 ; NOP adr16,X (undoc)
 
+ALIGN_ENTRY
+
 op7c:	absolutex
 	ret
 
@@ -2174,6 +2135,8 @@ op88:	mov	bl,[reg_y]
 
 
 ; NOP data (undoc)
+
+ALIGN_ENTRY
 
 op89:	inc	bp
 	ret
@@ -2339,6 +2302,8 @@ op9a:	mov	dl,[reg_x]
 
 ; SHS adr16,Y (undoc)
 
+ALIGN_ENTRY
+
 op9b:	absolutey
 	mov	dh,bh
 	inc	dh
@@ -2352,6 +2317,8 @@ op9b:	absolutey
 
 
 ; SHY adr16,X (undoc)
+
+ALIGN_ENTRY
 
 op9c:	absolutex
 	mov	dh,bh
@@ -2372,6 +2339,8 @@ op9d:	absolutex
 
 ; SHX adr16,Y (undoc)
 
+ALIGN_ENTRY
+
 op9e:	absolutey
 	mov	dh,bh
 	inc	dh
@@ -2381,6 +2350,8 @@ op9e:	absolutey
 
 
 ; SHA adr16,Y (undoc)
+
+ALIGN_ENTRY
 
 op9f:	absolutey
 	mov	dh,bh
@@ -2913,6 +2884,8 @@ opd1:	indirecty
 
 ; DCP (adr),Y (undoc)
 
+ALIGN_ENTRY
+
 opd3:	indirecty
 	read	dl,bx
 	dec	dl
@@ -3003,6 +2976,8 @@ opdb:	absolutey
 
 ; NOP adr16,X
 
+ALIGN_ENTRY
+
 opdc:	absolutex
 	ret
 
@@ -3021,7 +2996,7 @@ opdd:	absolutex
 
 ALIGN_ENTRY
 
-opde:	absolutex_rmw		; * Perazzoli *
+opde:	absolutex_rmw
 	read	dl,bx
 	dec	dl
 	write	dl,bx
@@ -3033,7 +3008,7 @@ opde:	absolutex_rmw		; * Perazzoli *
 
 ALIGN_ENTRY
 
-opdf:	absolutex_rmw		; * Perazzoli *
+opdf:	absolutex_rmw
 	read	dl,bx
 	dec	dl
 	DoCmp
@@ -3108,7 +3083,7 @@ ALIGN_ENTRY
 ope6:	zeropage
 	zread	dl,bx
 	inc	dl
-	zrewrite dl		; ***codebrk***
+	zwrite	dl,bx
 	usetest	dl
 	ret
 
@@ -3307,6 +3282,8 @@ opfb:	absolutey_rmw
 
 ; NOP adr16,X (undoc)
 
+ALIGN_ENTRY
+
 opfc:	absolutex
 	ret
 
@@ -3325,7 +3302,7 @@ opfd:	absolutex
 
 ALIGN_ENTRY
 
-opfe:	absolutex_rmw		; * Perazzoli *
+opfe:	absolutex_rmw
 	read	dl,bx
 	inc	dl
 	write	dl,bx
@@ -3348,14 +3325,15 @@ opff:	absolutex_rmw
 ;
 ;			  Handle relative jumps
 ;
-;	assumes	bp = PCTR and relative macro has put jump offset in dx
+;	assumes	bp = PCTR
 ;
 ; *****************************************************************************
 
 ALIGN_ENTRY
 
 DoBranch:
-	relative
+
+        fetchsx dx			; get sign-extended branch offset into dx
 
 	mov	bx,bp			; bh is	the current page
 	add	dx,bp			; work out the return address
@@ -3368,5 +3346,3 @@ DoBranch:
 	inc	[RCycles]
 	inc	[RClock]
 dbjn:	ret
-
-

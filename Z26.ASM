@@ -132,6 +132,10 @@ PAGE 66,132
 ;                       faster sound interrupt handler and sound generation
 ;
 ;                       allow joystick swapping with -j2 parameter
+;
+; (1.04) June 15, 1998  work on CPU
+;
+; (1.05) June 19, 1998  work on CPU
 
 
 ; assembly time definitions
