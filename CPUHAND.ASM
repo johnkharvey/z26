@@ -246,15 +246,12 @@ WSret:	ret				; we're at the end of the line
 
 ; VSync -- vertical sync set-clear
 
-;* this stuff looks wrong
-;* it's the zero state of vsync that should set scanline to zero
-
 ALIGN_ENTRY
 
 WrTiaVSync:
 	push	ax			; lasrgate needs this
 	test	[ReverseSync],1
-	jnz	DoReverseTest
+	jz	DoReverseTest
 
 	test	[WByte],2		; if d1 is set then ....
 	jnz	ZRET			; was jz
@@ -265,6 +262,7 @@ DoReverseTest:
 	jz	ZRET
 
 DoVSync:
+	mov	[VsyncPending],1	; set VsyncPending flag
 	mov	[ScanLine],0		; back to screen top
 	inc	[Frame]			; new frame.
 	mov	ax,[CFirst]
@@ -305,33 +303,6 @@ WVBPastMin:
 WVBRet:
 	pop	ax
 	ret      
-
-;*
-;* blank the remainder of the display each frame
-;*
-
-ALIGN_ENTRY
-
-TIABlank:
-	push	ax
-	push	di
-	xor	ax,ax
-	mov	di,[DisplayPointer]
-	cmp	di,30000
-	jb	TIABRet
-TIABLoop:
-	cmp	di,65280		; (64000) reached end of display area?
-	jae	TIABRet			;    yes, done
-	mov	gs:[di],ax
-	add	di,2
-	jmp	TIABLoop
-
-TIABRet:
-	mov	[DisplayPointer],di
-	pop	di
-	pop	ax
-	ret
-
 
 ;xWrTiaVBlank:
 ;	mov	bl,[WByte]

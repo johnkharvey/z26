@@ -64,15 +64,15 @@ ENDIF
 	xor	cx,cx			; count ticks
 	xor	edx,edx			; for prev tick
 
-StartupDelayLoop:
+tStartupDelayLoop:
 	mov	eax,es:[bx]		; get start ticks
 	mov	[StartTicks],eax
 	cmp	eax,edx
-	je	StartupDelayLoop
+	je	tStartupDelayLoop
 	mov	edx,eax			; remember prev
 	inc	cx
-	cmp	cx,22			; been a second or so?
-	jbe	StartupDelayLoop
+	cmp	cx,10			; been long enough?
+	jbe	tStartupDelayLoop
 
 RTLoop:
 	mov	eax,es:[bx]
@@ -82,7 +82,6 @@ RTLoop:
 	pop	es
 
 	xor	al,al
-
 	cli
 	out	043h,al			; tell timer we wanna read it
 	in	al,040h			; read lo-order byte (discard)
@@ -414,6 +413,7 @@ Skip:	add	bp,4			; go on to the next change
 Done:
 	endm
 
+
 ;*
 ;* macro to put a blank bit into the display
 ;*
@@ -623,12 +623,16 @@ TIALineTo:
 	jb	TIANoGenerate
 	cmp	bx,[BottomLine]		;was 250
 	jae	TIANoGenerate
-	cmp	[DisplayPointer],65280	;was 64000
+	mov	ax,[MaxLines]
+	imul	ax,320
+	cmp	[DisplayPointer],ax	;was 64000
 	jae	TIANoGenerate
 
 ALIGN_ENTRY
 
 TIAGenerate:
+	mov	[VsyncPending],0	; clear Vsync pending flag
+
 	mov	si,offset TIADisplay	; playfield write pointer
 	mov	bp,offset TIABuffer	; initialise the buffer
 	mov	[TIAWritePointer],bp	
@@ -641,6 +645,12 @@ TIAGenerate:
 
 	mov	al,24
 	call	DoInstructions		; do horizontal blank instructions
+
+	cmp	[VsyncPending],0
+	jne	TIAProcessBuffer
+
+	cmp	[TopLine],65535		; did TIA turn off (VBlanking) ?
+	je	TIAFinishNoGenerate	;   yes, stop drawing
 
 	call	TIAInsertObjects	; insert objects from the last line
 
@@ -721,9 +731,29 @@ TIARet:
 ALIGN_ENTRY
 
 TIANoGenerate:
-	mov	al,[CyclesPerLine]
-	call	DoInstructions
+	mov	[VsyncPending],0	; clear Vsync pending flag
 
+	mov	bp,offset TIABuffer	; initialise the buffer
+	mov	[TIAWritePointer],bp	
+	mov	byte ptr TIAClock[bp],TIAEnd
+
+	mov	al,24
+	call	DoInstructions		; do horizontal blank instructions
+	cmp	[VsyncPending],0
+	jne	TIAProcessBuffer
+
+TIAFinishNoGenerate:
+	xor	dl,dl
+TIAFinishNoGenerateLoop:
+	TryCPU
+	add	dl,4
+	cmp	dl,160
+	jne	TIAFinishNoGenerateLoop
+
+;	mov	al,[CyclesPerLine]
+;	call	DoInstructions
+
+TIAProcessBuffer:
 	mov	bp,offset TIABuffer	; initialise the buffer
 TIABLLoop:
 	cmp	byte ptr TIAClock[bp],TIAEnd	; check if finished

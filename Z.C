@@ -34,6 +34,18 @@
 **			   (even leave out timeout from ResetDSP)
 **	   Mar 11, 1998  restore 0.92 joystick routines
 **
+** (0.95)  Mar 17, 1998  fix blinking line in upper left corner that showed up in 0.94
+**                       by responding immediately to vblank turned on
+**
+**                       made some progress on jitter by triggering on the positive going
+**                       edge of vsync
+**
+**                       made some progress on a windows startup problem by delaying
+**                       before going into graphics mode
+**
+**                       fix the joystick games that previously didn't work with 
+**			 the joystick
+**
 */
 
 #include <stdio.h>		/* puts */
@@ -137,7 +149,7 @@ main()
 
   if (DoCopyright)
   {
-    puts("\n\nz26 -- An Atari 2600 emulator (0.94)");
+    puts("\n\nz26 -- An Atari 2600 emulator (0.95)");
     puts("Copyright (C) 1997-1998 by John Saeger\n");
 
     puts("Home Page:  http://www.whimsey.com/z26.html\n");

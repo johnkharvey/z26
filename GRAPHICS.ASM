@@ -58,9 +58,33 @@ RGBLoop:
 	mov	ah,0			; switch to 320x200 VGA	mode
 	mov	al,013h
 	int	010h
-	call	TIAPalette
 
-	cmp	[_VideoMode],0		; doing ModeX ?
+;*
+;* wait for Win95 dos box to go full screen
+;*
+
+	push	es
+	mov	ax,040h
+	mov	es,ax
+	mov	bx,06ch			; point at time of day
+	xor	cx,cx			; count ticks
+	xor	edx,edx			; for prev tick
+
+StartupDelayLoop:
+	mov	eax,es:[bx]		; get start ticks
+	mov	[StartTicks],eax
+	cmp	eax,edx
+	je	StartupDelayLoop
+	mov	edx,eax			; remember prev
+	inc	cx
+	cmp	cx,14			; been a second or so?
+	jbe	StartupDelayLoop
+	pop	es
+
+
+	call	TIAPalette		; set up the palette
+
+	cmp	[_VideoMode],0		; doing offbeat video modes ?
 	jz	GRRet			;   no
 
 GRV1:	cmp	[_VideoMode],3		; doing Trixter 60Hz (mode 1, 2 or 3) ?
@@ -72,6 +96,41 @@ GRV1:	cmp	[_VideoMode],3		; doing Trixter 60Hz (mode 1, 2 or 3) ?
 GRRet:	mov	[_VideoMode],0		; any other mode, pretend mode 0	
 	ret
 
+;*
+;* blank the remainder of the display each frame
+;*
+
+ALIGN_ENTRY
+
+TIABlank:
+	push	ax
+	push	bx
+	push	di
+	xor	eax,eax
+	mov	di,[DisplayPointer]
+	cmp	di,30000
+	jb	TIABRet
+	mov	bx,[MaxLines]
+	imul	bx,320
+TIABLoop:
+	cmp	di,bx		; (64000) reached end of display area?
+	jae	TIABRet		;    yes, done
+	mov	gs:[di],eax
+	add	di,4
+	jmp	TIABLoop
+
+TIABRet:
+	mov	[DisplayPointer],di
+	pop	di
+	pop	bx
+	pop	ax
+	ret
+
+
+;*
+;* return to text mode
+;*
+
 TIATextMode:
 	mov	ah,0			; switch to 80x25 colour mode
 	mov	al,3
@@ -80,6 +139,10 @@ TIATextMode:
 	mov	cx,0B0Ch
 	int	010h
 	ret
+
+;*
+;* macro for programming VGA registers
+;*
 
 VidOut	macro	op1,op2,op3
 	mov	dx,op1
@@ -95,9 +158,10 @@ CRTMISC	equ	03c2h			; misc output
 CRTSEQ	equ	03c4h			; sequencer
 CRTGFX	equ	03ceh			; graphics
 
-
-; setup a 60Hz 320 by 200 chained video mode
-; courtesy of Jim Leonard (Trixter / Hornet)
+;*
+;* setup a 60Hz 320 by 200 chained video mode
+;* courtesy of Jim Leonard (Trixter / Hornet)
+;*
 
 Trixter60Hz:
 
@@ -149,6 +213,7 @@ Tr60d:	cmp	[_VideoMode],3
 Tr60e:					; * mode 3 *
 	VidOut	CRTC,   012h, 097h	; <8f> vertical display enable end
 	VidOut	CRTC,   015h, 098h	; <90> vertical blanking start
+	mov	[MaxLines],204		; set up max scan lines
 
 Tr60f:	VidOut	CRTC,   001h, 04fh	; horizontal display enable end
 	VidOut	CRTC,   002h, 050h	; horizontal blanking start
@@ -163,9 +228,11 @@ Tr60f:	VidOut	CRTC,   001h, 04fh	; horizontal display enable end
 	VidOut	CRTC,   014h, 040h	; underline location
 	VidOut	CRTC,   016h, 008h	; vertical blanking end
 	VidOut	CRTC,   017h, 0a3h	; mode control
+
 	VidOut	CRTSEQ, 001h, 001h	; clocking mode
 	VidOut	CRTSEQ, 003h, 000h	; map select
 	VidOut	CRTSEQ, 004h, 00eh	; memory mode
+
 	VidOut	CRTGFX, 005h, 040h	; graphics mode
 	VidOut	CRTGFX, 006h, 005h	; miscellaneous
 

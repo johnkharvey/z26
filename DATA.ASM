@@ -69,7 +69,7 @@ CFirst		dw	0		; <-- gets changed by SetupSpecial
 					 
 CLast		dw	256		; was 256 last scan line (from CMDLine)
 
-MaxLines	dw	204		;max # of lines to scan
+MaxLines	dw	200		;max # of lines to scan
 					;gets changed if doing shrunk screen
 
 DisplayPointer	dw	0		;pointer into display RAM
@@ -92,7 +92,7 @@ Player0Color	dd	0
 
 
 MicroTick	db	0		; holds a small tick from hardware counter
-NoRetrace	db	0		; don't wait for retrace (if 1)
+NoRetrace	db	0		; don't wait for retrace (if 0ffh)
 ColumnBlank	db	0		; blank this many columns
 GamePaused	db	0		; game paused
 NoScoreMode	db	0		; set if we don't want PF to take on player colors
@@ -104,6 +104,8 @@ LastCycle	db	0		; for DoInstructions
 ReverseSync	db	0		; sync on reverse transition
 WrapZero	db	0		; wrap negative player pos to zero
 					; atlantis and oceancty
+VsyncPending	db	0		; VSYNC pending
+
 ALIGN	2
 
 ReadBank	dw	RBank4		; Bank switching function (Read)

@@ -352,10 +352,14 @@ InstructionLoop:
 	call	[vectors + ebx*2]	; --> do the instruction
 	call	[TimerVec]		; clock the RIOT timer
 
+	cmp	[VsyncPending],0	; was Vsync set this instruction ?
+	jne	InstructionsDone	;    yes, fast exit
+
 	mov	bh,[LastCycle]
 	cmp	[RClock],bh
 	jl	InstructionLoop
 
+InstructionsDone:
 	mov	dl,[RClock]
 	mov	dh,[RClock]
 	add	dl,dl
