@@ -258,7 +258,8 @@ dd	BS_3[] = {
         0x549a1b6b,     /* Star Wars - The Arcade Game (PAL) */
         0x36910e4d,     /* Frogger II - Threedeep! (PAL) */
         0xb8bb2361,     /* Gyruss (PAL) */
-	-1
+        0xd3669372,     /* Star Wars: Ewok Adventure (proto) */
+        -1
 };
 
 dd	BS_4[] = {

@@ -268,6 +268,10 @@ RemapStartLine:
 DontRemapStartLine:
 	shl	si,1
 	mov	si,[StartLineTable + si]
+        cmp     [_Use50Hz],1                    ; 50Hz modes are larger
+        je      DontAdjust60Hz                  ;   so adjust screen postion
+        add     si,7                            ;   for 60Hz modes
+DontAdjust60Hz:
 	mov	[_CFirst],si			; use the standard default
 
 ;*

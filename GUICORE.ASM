@@ -1152,10 +1152,12 @@ db	'`y`UCommand Line Switches`u`d`n`n'
 
 db	'  `o-0`d  -- start with player 0 hard`n'
 db	'  `o-1`d  -- start with player 1 hard`n`n'
+db      '  `o-4`d  -- allow all 4 directions on the joystick to be pressed simultaniously`n`n'
 db	'  `o-5`d  -- enable 50Hz video modes`n`n'
 db	'  `o-b`d  -- start in black and white mode`n`n'
 db	'  `o-c`yN`d -- color palette  (`y0`d = NTSC  `y1`d = PAL  `y2`d = SECAM)`n`n'
 db      '  `o-d`yN`d -- DSP processing level  (`y1`d = low   `y2`d = high)`n`n'
+db      '  `o-e`d  -- enable 32-bit Mode-X and 160 pixel linear video modes`n`n'
 db	'  `o-f`yN`d -- run `yN`d frames and print timing results`n`n'
 db      '  `o-g`yN`d -- override game type  (`y1`d - Commavid extra RAM,`n'
 db      '                              `y2`d - 8K superchip,`n'
@@ -1167,6 +1169,7 @@ db      '                              `y7`d - 16K M-Network,`n'
 db      '                              `y8`d - 32K Atari,`n'
 db      '                              `y9`d - 8K Atari -- banks swapped`n'
 db      '                             `y10`d - Spectravideo CompuMate)`n`n'
+db      '  `o-h`d  -- enable half-sized (alternate scanline) display (video modes 0 - 3 only)`n`n'
 db      '  `o-i`yN`d -- emulate Mindlink controller (`y1`d = right   `y2`d = left)`n`n'
 db      '  `o-j`yN`d -- joystick option     (`y0`d = keyboard only (analog joystick off),`n'
 db      '                              `y2`d = reverse keyboard controls)`n`n'
@@ -1174,10 +1177,7 @@ db      '  `o-k`yN`d -- paddle to emulate with keyboard  (`y0`d - `y3`d)`n'
 db      '  `o-p`yN`d -- paddle sensitivity  (`y1`d - `y15`d -- keyboard only)`n'
 db      '  `o-m`yN`d -- paddle to emulate with mouse  (`y0`d - `y3`d)`n`n'
 db      '  `o-l`yN`d -- enable lightgun emulation and adjust by `yN`d cycles`n'
-db      '  `o-a`yN`d -- adjust lightgun emulation by `yN`d scanlines`n`n'
-db      '  `o-n`d  -- show line number count after end of emulation`n`n'
-db      '  `o-o`d  -- simulate PAL colour loss`n`n'
-db      '  `o-q`d  -- quiet`n'
+db      '  `o-a`yN`d -- adjust lightgun emulation by `yN`d scanlines`n'
 
 db	0
 
@@ -1186,6 +1186,9 @@ public _help_4
 _help_4 label byte
 db      '`y`UCommand Line Switches (continued)`u`d`n`n'
 
+db      '  `o-n`d  -- show line number count after end of emulation`n`n'
+db      '  `o-o`d  -- simulate PAL colour loss`n`n'
+db      '  `o-q`d  -- quiet`n`n'
 db	'  `o-r`d  -- run full speed  (vsync off)`n'
 db      '  `o-r`yN`d -- run at `yN`d frames per second`n`n'
 db	'  `o-s`yN`d -- sound option   (`y0`d = show diagnostic messages,`n'
@@ -1197,10 +1200,7 @@ db	'  `o-v`yN`d -- start in video mode `yN`d`n`n'
 db      '  `o-w`d  -- emulate driving controllers`n`n'
 db      '  `o-x`d  -- print out checksum of cartridge`n`n'
 db      '  `o-y`yN`d -- emulate keyboard controller  (`y1`d = left   `y2`d = right   `y3`d = both)`n`n'
-db      '  `o-4`d  -- allow all 4 directions on the joystick to be pressed simultaniously`n`n'
-db      '  `o-e`d  -- enable 32-bit Mode-X and 160 pixel linear video modes`n`n'
 db      '  `o-z`d  -- rotate screen 90 degrees counter-clockwise (video modes 0 - 3 only)`n`n'
-db	'  `o-h`d  -- enable half-sized (alternate scanline) display (video modes 0 - 3 only)`n'
 
 
 db	0

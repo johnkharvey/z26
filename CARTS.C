@@ -113,6 +113,9 @@ void RecognizeCart(void)
 /* games that want Player 1 set to hard */
 
 	if (crc == 0x5c161fe4) IOPortB |= 0x80;	/* he_man */
+        if (crc == 0x7b7921c3) IOPortB |= 0x80; /* Steeple Chase (Video Gems) */
+        if (crc == 0x02969f95) IOPortB |= 0x80; /* Mission Survive */
+        if (crc == 0xeab1d9d0) IOPortB |= 0x80; /* Treasure Below */
 
 
 /* games that want the joystick controls reversed */

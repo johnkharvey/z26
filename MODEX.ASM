@@ -78,22 +78,22 @@ DoubleScanTable label byte	; if nonzero, mode doesn't do doublescan
 	db	1		; 13
 	db	0		; 14
 
-ScanLineTable label byte	; if nonzero, mode is a simulated scanline mode
-	db	0		; 0
-	db	0		; 1
-	db	0		; 2
-	db	0		; 3
-	db	0		; 4
-	db	0		; 5
-	db	1		; 6
-	db	0		; 7
-	db	0		; 8
-	db	0		; 9
-	db	0		; 10
-	db	0		; 11
-	db	1		; 12
-	db	0		; 13
-	db	0		; 14
+;ScanLineTable label byte        ; if nonzero, mode is a simulated scanline mode
+        db      0               ; 0
+        db      0               ; 1
+        db      0               ; 2
+        db      0               ; 3
+;        db      0               ; 4
+;        db      0               ; 5
+;        db      1               ; 6
+;        db      0               ; 7
+;        db      0               ; 8
+;        db      0               ; 9
+;        db      0               ; 10
+;        db      0               ; 11
+;        db      1               ; 12
+;        db      0               ; 13
+;        db      0               ; 14
 
 FlipTable label byte		; if nonzero, mode can do page flipping
 	db	0		; 0
@@ -166,21 +166,21 @@ FastCopyTable label word
         dw      FDoRegularCopy   ; 14
 
 StartLineTable label word
-	dw	32		; 0
-	dw	32		; 1
-	dw	32		; 2
-	dw	30		; 3
-	dw	20		; 4  (22)
-	dw	20		; 5
-	dw	20		; 6
-	dw	1		; 7
-	dw	20		; 8
-	dw	1		; 9
-	dw	38		; 10 (38)
-	dw	38		; 11
-	dw	38		; 12
-	dw	1		; 13
-	dw	38		; 14
+        dw      32              ; 0
+        dw      32              ; 1
+        dw      32              ; 2
+        dw      30              ; 3
+        dw      20              ; 4  (22)
+        dw      20              ; 5
+        dw      20              ; 6
+        dw      1               ; 7
+        dw      20              ; 8
+        dw      1               ; 9
+        dw      38              ; 10 (38)
+        dw      38              ; 11
+        dw      38              ; 12
+        dw      1               ; 13
+        dw      38              ; 14
 
 MaxLineTable label word
 	dw	200		; 0
