@@ -1,7 +1,7 @@
 ; console.asm -- z26 console output routines
 
-;Here's the integer output routine from TECO for a PDP-10 by RC CLEMENTS
-;This version is dated 1970.
+; Here's the integer output routine from TECO for a PDP-10 by RC CLEMENTS
+; This version is dated 1970.
 
 
 ;ROUTINE TO OUTPUT DECIMAL (OCTAL IF S.OCTL IS ON) INTEGER
@@ -103,12 +103,40 @@ _put_dec:
 	xor	eax,eax
 	pop	cx		; return adr
 	pop	ax		; val
-	push	ax
 	push	cx		; restore stack
 
 	call	DPT		; output it
 
 	ret
+
+;*
+;* output word on stack as (decimal / 10) with decimal point
+;*
+
+_put_point:
+	xor	eax,eax
+	pop	cx		; return adr
+	pop	ax		; val
+	push	cx		; restore stack
+	mov	bx,100
+	xor	dx,dx
+	div	bx
+	push	dx		; save remainder
+	call	DPT		; print quotient
+	mov	al,'.'
+	call	ConOut		; output decimal point
+	xor	eax,eax
+	pop	ax		; get remainder
+	cmp	ax,10
+	jae	pp1
+	push	ax
+	mov	al,'0'
+	call	ConOut
+	pop	ax
+pp1:	call	DPT		; output it
+
+	ret
+
 
 ;*
 ;* output hex word on stack
@@ -117,7 +145,6 @@ _put_dec:
 _put_hex:
 	pop	cx		; return adr
 	pop	ax		; val
-	push	ax
 	push	cx		; restore stack
 
 	call	ConWord		; output it
@@ -132,7 +159,6 @@ _put_hex:
 _put_str:
 	pop	cx		; return adr
 	pop	bx		; pointer to message
-	push	bx
 	push	cx		; restore stack
 
 psloop:	mov	al,[bx]

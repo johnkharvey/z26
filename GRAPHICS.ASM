@@ -9,12 +9,11 @@ TIAGraphicMode:
 ;*
 ;* generate palette
 ;*
-;*     currently we do linear interpolation between
-;*     the bright and dim RGB triples to get the
-;*     other 6 LUM values
+;*     we do non-linear interpolation between the bright and dim
+;*     RGB triples to get the other 6 LUM values
 ;*
-;*     eventually we may want to squeeze towards bright
-;*     (more LUM values at bright end of scale)
+;*     we squeeze towards bright so that there are more LUM values 
+;*     at bright end of scale
 ;*
 
 GeneratePalette:
@@ -22,23 +21,26 @@ GeneratePalette:
 	mov	di,offset PCXPalette
 	mov	[PaletteCount],0	; do 16 colors
 PaletteLoop:				; <-- for each color
-	mov	cx,0			; initialize 8 values of LUM
+	xor	ecx,ecx			; initialize 8 values of LUM
 LUMLoop:
 	mov	dx,3			; do 3 values of RGB
 RGBLoop:
-	mov	al,3[si]		; [RHi]
-	mov	bl,0[si]		; [RLo]
-	sub	al,bl			; al = RHi - RLo
-	mov	bl,7
-	div	bl			; al = (RHi - RLo) / 7
-	mul	cl			; al = cl * (RHi - RLo) / 7
+	movzx	ax,byte ptr 3[si]	; [RHi]
+	movzx	bx,byte ptr 0[si]	; [RLo]
+	sub	ax,bx			; al = RHi - RLo
+
+	mov	bl,[LUMCoeff + ecx*2]
+	mul	bl			; multiply by first coefficient
+	mov	bl,[LUMCoeff + 1 + ecx*2]
+	div	bl			; divide by second coefficient
+
 	mov	bl,0[si]		; [RLo]
 	add	al,bl			; compute color value
 	shl	al,2
 	mov	[di],al			; put it in palette
 	inc	di			; next palette entry
 	inc	si			; next RGB value
-	dec	dx			; done all three RGB values
+	dec	dx			; done all three RGB values ?
 	jnz	RGBLoop			;   not yet
 
 	sub	si,3			; back at beginning of this RGB set
@@ -58,29 +60,6 @@ RGBLoop:
 	mov	ah,0			; switch to 320x200 VGA	mode
 	mov	al,013h
 	int	010h
-
-;*
-;* wait for Win95 dos box to go full screen
-;*
-
-	push	es
-	mov	ax,040h
-	mov	es,ax
-	mov	bx,06ch			; point at time of day
-	xor	cx,cx			; count ticks
-	xor	edx,edx			; for prev tick
-
-StartupDelayLoop:
-	mov	eax,es:[bx]		; get start ticks
-	mov	[StartTicks],eax
-	cmp	eax,edx
-	je	StartupDelayLoop
-	mov	edx,eax			; remember prev
-	inc	cx
-	cmp	cx,14			; been a second or so?
-	jbe	StartupDelayLoop
-	pop	es
-
 
 	call	TIAPalette		; set up the palette
 
@@ -273,60 +252,68 @@ TIAPalLoop:
 .CEND
 .DATASEGMENT
 
-; * variables used in palette generation
+;*
+;* palette coefficients
+;* 
+;* these numbers define relative brightness of the LUM values
+;*
 
-PaletteCount	dw	0
+LUMCoeff db	0,	56	; LUM 0
+	db	16,	56
+	db	25,	56
+	db	33,	56
+	db	40,	56
+	db	46,	56
+	db	51,	56
+	db	56,	56	; LUM 7
 
-PCXPalette db 128*3 dup (0)	; 384 -- generated palette goes here
+
+PaletteCount	db	0
 
 DefaultPaletteTable db 0,   0,    0	; 0 0 0 0 -- 0 (grey)
 		db    63,  63,   63	; 0 0 0 0 -- 7
 
-		db   15,   12,    5	; 0 0 0 1 -- 0 (gold)
-		db   63,   63,   45	; 0 0 0 1 -- 7 (63,63,50)
+		db   15,   15,   10	; 0 0 0 1 -- 0 (adventure gold)
+		db   63,   63,   30	; 0 0 0 1 -- 7 
 
-		db   25,   10,    5	; 0 0 1 0 -- 0 (orange)
-		db   60,   54,   30	; 0 0 1 0 -- 7 (55,55,30)
+		db   25,   10,    5	; 0 0 1 0 -- 0 (chopper command yellow orange)
+		db   63,   50,   20	; 0 0 1 0 -- 7 (60,55,30)
 
-		db   30,    5,    0	; 0 0 1 1 -- 0 (bright orange)
-		db   63,   52,   30	; 0 0 1 1 -- 7
+		db   35,    6,    0	; 0 0 1 1 -- 0 (yars' bright orange)
+		db   63,   45,   30	; 0 0 1 1 -- 7
 
-		db   25,    5,    5	; 0 1 0 0 -- 0 (pink)
-		db   63,   46,   47	; 0 1 0 0 -- 7 
+		db   35,    5,    5 	; 0 1 0 0 -- 0 (pink)
+		db   63,   42,   42	; 0 1 0 0 -- 7
 
-		db   22,    8,   20	; 0 1 0 1 -- 0 (purple)
+		db   24,    8,   20	; 0 1 0 1 -- 0 (purple)
 		db   63,   40,   63	; 0 1 0 1 -- 7
 
 		db   20,    8,   24	; 0 1 1 0 -- 0 (purple-blue)
 		db   52,   40,   63	; 0 1 1 0 -- 7
 
-					; atlantis blue blinker
-		db   11,    8,   33	; 0 1 1 1 -- 0 (blue <slightly purplish>)
-		db   45,   45,   60	; 0 1 1 1 -- 7 (was 40,45,60 for atlantis)
-;		db   55,   40,   63	; 0 1 1 1 -- 7 (was 55,40,63 for atlantis)
+		db   10,   10,   30	; 0 1 1 1 -- 0 (atlantis right blinker blue)
+		db   45,   45,   60	; 0 1 1 1 -- 7 
 
-		db    8,    8,   35	; 1 0 0 0 -- 0 (blue)
-		db   35,   45,   63	; 1 0 0 0 -- 7 (was 45, 45, 63 for polepos)
+		db    8,    8,   35	; 1 0 0 0 -- 0 (pole position blue)
+		db   35,   45,   63	; 1 0 0 0 -- 7 
 
-		db    6,    6,   25	; 1 0 0 1 -- 0 (light blue)
-		db   40,   50,   63	; 1 0 0 1 -- 7 (was 50, 50, 63 for polepos)
+		db    6,    6,   25	; 1 0 0 1 -- 0 (pole position light blue)
+		db   40,   50,   63	; 1 0 0 1 -- 7 
 
-		db    0,   10,   18	; 1 0 1 0 -- 0 (turquoise)(0,8,20 for atlantis)
+		db    0,   10,   20	; 1 0 1 0 -- 0 (atlantis turquoise)
 		db   40,   55,   63	; 1 0 1 0 -- 7
 
 		db    0,   12,    8	; 1 0 1 1 -- 0 (green-blue)
 		db   40,   63,   55	; 1 0 1 1 -- 7
 
-					; atlantis light green (2nd from bottom)
-		db    4,   12,    4	; 1 1 0 0 -- 0 (green)
-		db   30,   63,   30	; 1 1 0 0 -- 7 (was 50,63,50 for atlantis)
-;		db   50,   63,   50	; 1 1 0 0 -- 7 (was 40,60,60 for atlantis)
+		db    6,   12,    6	; 1 1 0 0 -- 0 (atlantis light green)
+		db   35,   63,   35	; 1 1 0 0 -- 7
 
 		db   10,   15,    0	; 1 1 0 1 -- 0 (yellow-green)
 		db   50,   63,   35	; 1 1 0 1 -- 7
 
-		db   15,   25,    0	; 1 1 1 0 -- 0 (orange-green)
-		db   55,   63,   30	; 1 1 1 0 -- 7
+		db   15,   20,    5	; 1 1 1 0 -- 0 (air sea battle orange-green)
+		db   40,   55,   10	; 1 1 1 0 -- 7
 
 		db   20,   10,    0	; 1 1 1 1 -- 0 (light-orange)
 		db   63,   50,   30	; 1 1 1 1 -- 7

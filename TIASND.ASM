@@ -111,6 +111,9 @@ _Update_tia_sound	proc	near
 	cmp	bx,5
 	ja	UTS_Done	; not an audio register
 	shl	bx,1
+
+	cli
+
 	jmp	cs:UTS_Jumptab[bx] ; see which channel has changed
 				   ; and update the register
 
@@ -189,11 +192,24 @@ UTS_rs3:mov	al,byte ptr _new_val
 				 	;     (otherwise complete previous)
 
 UTS_Done:
+
+	sti
+
 	pop	bp
 	ret	
 
 _Update_tia_sound	endp
 
+
+inc_mod macro	op1,op2
+local done
+
+	inc	[op1]
+	cmp	[op1],op2
+	jne	done
+	mov	[op1],0
+done:
+	endm
 
 ;*
 ;* Fill the output buffer with the sound output based on the tia chip parameters.
@@ -208,8 +224,6 @@ _Tia_process	proc	near
 	mov	[buffer],ax
 	mov	ax,[bp+6]
 	mov	[n],ax
-;	mov	[prev_sample],0
-;	mov	[next_sample],0
 
 TP_ProcessLoop:
 
@@ -217,71 +231,96 @@ TP_ProcessLoop:
 
 TP_ProcessChannel:
 
-audc=	cl	; define a register var
-
-	mov	audc,[AUDC + bp]
-
 	cmp	[Div_n_cnt + bp],1	; if div by N counter can count down ...
-	jbe	TP_1
+	jb	TP_Ch0done		;   zero is special case, means AUDC==0 -- fast exit
+	je	TP_1
 	dec	[Div_n_cnt + bp]	; ... decrement ...
 	jmp	TP_Ch0done		; ... and do next channel
 
-TP_1:	cmp	[Div_n_cnt + bp],1	; otherwise if at bottom ...
-	jne	TP_Ch0done
-	mov	al,[Div_n_max + bp]	; ... reset the counter
+TP_1:	mov	al,[Div_n_max + bp]	; otherwise reset the counter and process this channel
 	mov	[Div_n_cnt + bp],al
 
-	inc	[P5 + bp]		; P5 channel has multiple uses ...
-	cmp	[P5 + bp],31		; ... so we inc it here
-	jne	TP_2
-	mov	[P5 + bp],0
+	movzx	ecx,[AUDC + bp]		; AUDC = index into branch table
 
-; check clock modifier for a clock tick
-
-TP_2:	test	audc,2			; if we're using pure tones ...
-	je	TP_4
-	test	audc,1			; ... or we're using Div31 ...
-	jne	TP_3
+	inc_mod	P5+bp,31		; P5 channel has multiple uses (Div31 & P5), inc it here
 	movzx	bx,[P5 + bp]
-	cmp	Div31[bx],0		; ... and the Div31 bit is set ...
-	jne	TP_4
-TP_3:	test	audc,1			; ... or were using poly5 ...
-	je	TP_Ch0done
-	movzx	bx,[P5 + bp]
-	cmp	Bit5[bx],0		; ... and the poly5 bit is set
-	je	TP_Ch0done
 
-TP_4:	test	audc,4			; if pure modified clock selected ...
-	je	TP_6
-	cmp	[Outvol + bp],0		; ... toggle the output
+	jmp	cs:[AUDC_Jumptab + ecx*2] ; process sound changes based on AUDC
+
+AUDC_Jumptab	label	word	; HEX  D3 D2 D1 D0    Clock Source    Clock Modifier    Source Pattern
+				; --- -------------  --------------  ----------------  ----------------
+	dw	TP_Ch0done	;  0    0  0  0  0    3.58 MHz/114 ->  none  (pure)  ->      none
+	dw	TP_Poly4	;  1    0  0  0  1    3.58 MHz/114 ->  none  (pure)  ->   4-bit poly
+	dw	TP_Div31_Poly4	;  2    0  0  1  0    3.58 MHz/114 ->  divide by 31  ->   4-bit poly
+	dw	TP_Poly5_Poly4	;  3    0  0  1  1    3.58 MHz/114 ->   5-bit poly   ->   4-bit poly
+	dw	TP_Pure		;  4    0  1  0  0    3.58 MHz/114 ->  none  (pure)  ->   pure  (~Q)
+	dw	TP_Pure		;  5    0  1  0  1    3.58 MHz/114 ->  none  (pure)  ->   pure  (~Q)
+	dw	TP_Div31_Pure	;  6    0  1  1  0    3.58 MHz/114 ->  divide by 31  ->   pure  (~Q)
+	dw	TP_Poly5_Pure	;  7    0  1  1  1    3.58 MHz/114 ->   5-bit poly   ->   pure  (~Q)
+	dw	TP_Poly9	;  8    1  0  0  0    3.58 MHz/114 ->  none  (pure)  ->   9-bit poly
+	dw	TP_Poly5	;  9    1  0  0  1    3.58 MHz/114 ->  none  (pure)  ->   5-bit poly
+	dw	TP_Div31_Poly5	;  A    1  0  1  0    3.58 MHz/114 ->  divide by 31  ->   5-bit poly
+	dw	TP_Poly5_Poly5	;  B    1  0  1  1    3.58 MHz/114 ->   5-bit poly   ->   5-bit poly
+	dw	TP_Pure		;  C    1  1  0  0    1.19 MHz/114 ->  none  (pure)  ->   pure  (~Q)
+	dw	TP_Pure		;  D    1  1  0  1    1.19 MHz/114 ->  none  (pure)  ->   pure  (~Q)
+	dw	TP_Div31_Pure	;  E    1  1  1  0    1.19 MHz/114 ->  divide by 31  ->   pure  (~Q)
+	dw	TP_Poly5_Pure	;  F    1  1  1  1    1.19 MHz/114 ->   5-bit poly   ->   pure  (~Q)
+
+
+TP_Div31_Pure:
+	cmp	Div31[bx],0		; if div 31 bit set ...
+	jnz	TP_Pure			; ... do pure
+	jmp	TP_Ch0done
+
+TP_Poly5_Pure:
+	cmp	Bit5[bx],0		; if div 5 bit set ...
+	jz	TP_Ch0done		; ... do pure
+
+TP_Pure:
+	cmp	[Outvol + bp],0		; toggle the output
 	je	TP_VolumeOn
 	jmp	TP_VolumeOff
 
-TP_6:	test	audc,8			; check for p5/p9
-	je	TP_11
-	cmp	audc,8			; if p9 ...
-	jne	TP_9
-	inc	[P9 + 2*ebp]		; ... inc the p9 counter ...
-	cmp	[P9 + 2*ebp],511
-	jne	TP_7
-	mov	[P9 + 2*ebp],0
-TP_7:	mov	bx,[P9 + 2*ebp]
-	cmp	Bit9[bx],0		; ... and set the output bit
+
+TP_Poly9:	
+	inc_mod	P9+2*ebp,511		; inc the P9 counter
+	mov	bx,[P9 + 2*ebp]
+
+	cmp	Bit9[bx],0		; and set the output bit
 	je	TP_VolumeOff
 	jmp	TP_VolumeOn
 
-TP_9:	movzx	bx,[P5 + bp]		; not p9, must be p5 ...
-	cmp	Bit5[bx],0		; ... set the output bit
+
+TP_Div31_Poly5:
+	cmp	Div31[bx],0		; if div 31 bit set ...
+	jnz	TP_Poly5		; ... do Poly5
+	jmp	TP_Ch0done
+
+TP_Poly5_Poly5:
+	cmp	Bit5[bx],0		; if Poly5 bit set ...
+	jz	TP_Ch0done		; ... do Poly5
+
+TP_Poly5:
+	movzx	bx,[P5 + bp]		; set the output bit
+	cmp	Bit5[bx],0
 	je	TP_VolumeOff
 	jmp	TP_VolumeOn
 
-TP_11:	inc	[P4 + bp]		; must be p4, inc p4 counter ...
-	cmp	[P4 + bp],15
-	jne	TP_12
-	mov	[P4 + bp],0
-TP_12:
+
+TP_Div31_Poly4:
+	cmp	Div31[bx],0		; if div 31 bit set ...
+	jnz	TP_Poly4		; ... do Poly4
+	jmp	TP_Ch0done
+
+TP_Poly5_Poly4:
+	cmp	Bit5[bx],0		; if Poly5 bit set ...
+	jz	TP_Ch0done		; ... do Poly4
+
+TP_Poly4:
+	inc_mod	P4+bp,15		; inc P4 counter
 	movzx	bx,[P4 + bp]
-	cmp	Bit4[bx],0		; ... and set the output bit
+
+	cmp	Bit4[bx],0		; and set the output bit
 	je	TP_VolumeOff
 
 TP_VolumeOn:
@@ -293,13 +332,9 @@ TP_VolumeOff:
 	mov	[Outvol + bp],0
 
 TP_Ch0done:
-	
-	cmp	bp,1			; done both channels?
-	je	TP_ChannelsDone		;   yes
-	mov	bp,1
-	jmp	TP_ProcessChannel	;   no, do channel 1 now
-
-TP_ChannelsDone:
+	inc	bp			; to next channel
+	cmp	bp,1			; done ?
+	jbe	TP_ProcessChannel	;   not yet
 
 	sub	[Samp_n_cnt],256	; decrement sample count
 					; (256 since lower byte is 
@@ -330,7 +365,6 @@ TP_ProcessDone:
 	inc	[buffer]		; bump buffer pointer
 
 	dec	[n]			; one less byte to do
-;	cmp	[n],0
 	jnz	TP_ProcessLoop
 
 	pop	bp

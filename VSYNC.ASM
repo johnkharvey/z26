@@ -2,129 +2,67 @@
 ;* vertical synchronization code
 ;*
 
-; Mar 18, 1998  (0.96) added timeout code
-
-WaitForDisplayEnable macro
-local	enwait
-
-	xor	bx,bx
-enwait:	in	al,dx			; wait for display enable
-	inc	bx
-	jz	vsync_timeout
-	test	al,1
-	jnz	enwait
-	endm
-
-WaitForDisplayDisable macro
-local	diswait
-
-	xor	bx,bx
-diswait:in	al,dx			; wait for display disable
-	inc	bx
-	jz	vsync_timeout
-	test	al,1
-	jz	diswait
-	endm
-
-LoopUntilDisplayEnable macro
-local	actwait
-
-	xor	bx,bx
-actwait:in	al,dx			; loop until display enable becomes active
-	inc	bx
-	jz	vsync_timeout
-	test	al,1
-	loopnz	actwait
-	endm
-
-;*
-;* if any of the above loops times out, default to old video mode
-;*
-
-vsync_timeout:
-	mov	[NoRetrace],1
-	pop	es
-	ret	
+; Mar 18, 1998  (0.96)  added timeout code
+; Apr 24, 1998  (1.00x) added sync that does VSync with a timeout (currently default mode)
+;                       removed timeout from NDI code (mode 2)
+;
+; Apr 29, 1998          extreme simplification, do timing with hardware clock
 
 
-
-segVDDA		equ	040h		;bios video display data area segment
-addr6845	equ	063h		;CRTC i/o address
-
-ALIGN_ENTRY
-
-VSyncInit:
-	push	es
-	mov	ax,segVDDA
-	mov	es,ax
-	mov	dx,es:[addr6845]
-	add	dx,6			; status register i/o address
-
-vswait:	in	al,dx			; wait for vertical retrace
-	test	al,8
-	jz	vswait
-
-	mov	cx,0ffffh		; init loop counter
-
-	WaitForDisplayEnable
-	cli
-	WaitForDisplayDisable
-	LoopUntilDisplayEnable		; time horizontal retrace
-	sti
-
-	neg	cx			; cx now has # of loops in horizontal retrace
-	imul	cx,2			; multiply by 2 for safety
-	mov	[NDILoops],cx		; save for NDI wait routine
-
-	pop	es
-	ret
+CRTSTAT=	03dah			; CRT status register
 
 
 ALIGN_ENTRY
 
 VSync:
 	cmp	[NoRetrace],1		; -r1
-	jz	OldVSync
+	je	OldVsync
 	cmp	[NoRetrace],0ffh	; -r no param
-	jz	VSRet
-	push	es
-	mov	ax,segVDDA
-	mov	es,ax
-	mov	dx,es:[addr6845]
-	add	dx,6			; status register i/o address
+	je	VSRet
 
-	WaitForDisplayEnable
+;*
+;* the default Vsync code -- look for non-display interval
+;*
 
-VSLoop:	pusha
-	call	_Fillbuffer		; fill sound buffer
-	popa
+	and	[hi_time],07fffh	; clear hi order bit in hi order time word
+					; (so we don't have to worry about overflow...)
+					; this means frame timer won't work beyond ~ 40 minutes
+NDLoop:	sti
+	mov	dx,CRTSTAT		; wait for display disable
+	cli
+	in	al,dx
+	test	al,8
+	jnz	NDRet			; fast exit for Vsync seen
+	test	al,1
+	jz	NDLoop
 
-	mov	cx,[NDILoops]
-	
-	WaitForDisplayDisable
-	LoopUntilDisplayEnable
+	call	_GetTime		; 32-bit hardware time (1.19 MHz)
+	mov	ecx,eax			; start time
+	add	ecx,120			; end time
 
-	jz	VSLoop			; jump if display enable detected
+NDOff:	mov	dx,CRTSTAT		; time the off period
+	in	al,dx
+	test	al,8
+	jnz	NDRet			; fast exit for Vsync seen
+	test	al,1
+	jz	NDLoop			; display enable came on, start over
+	call	_GetTime
+	cmp	eax,ecx			; blank long enough?
+	jb	NDOff			;   no, keep waiting
 
-	pop	es
-	ret
+NDRet:	sti
+	ret				;   yes, we're done
 
-OldVSync:
-	mov	dx,03dah		; wait for vertical retrace
+
+;*
+;* Old vsync -- just wait for vsync pulse
+;*
+
+OldVsync:
+	mov	dx,CRTSTAT		; wait for vertical retrace
 WaitForVSync:
 	in	al,dx
 	test	al,8
-	jnz	VSRet
-	call	_Fillbuffer
-	jmp	WaitForVSync
-VSRet:
-	ret
+	jz	WaitForVSync
+VSRet:	ret
 
-
-.CEND
-.DATASEGMENT
-
-NDILoops	dw	0		; holds length of NDI * 2
-
-.DEND
-.CODESEGMENT

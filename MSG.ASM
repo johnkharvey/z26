@@ -6,7 +6,7 @@
 
 ; ShowCopyright messages (note: only last message is terminated)
 
-msg01	db	10, 10, 'z26 -- An Atari 2600 emulator (1.00)', 10
+msg01	db	10, 10, 'z26 -- An Atari 2600 emulator (1.01)', 10
 msg02	db	'Copyright (C) 1997-1998 by John Saeger', 10
 msg03	db	'Home Page:  http://www.whimsey.com/z26', 10, 10
 msg04	db	'    F1 -- reset      F2 -- select     F3 -- B/W        F4 -- Color', 10
@@ -84,6 +84,10 @@ msg901	db	10, 'Bad command line switch seen: -', '$'
 
 msg1001	db	10, 'File not found.', 10, '$'
 
+; FramesPerSecond messages
+
+fps		db	' fps',13,10,'$'
+
 
 .DEND
 .CODESEGMENT
@@ -91,59 +95,48 @@ msg1001	db	10, 'File not found.', 10, '$'
 _ShowCopyright:
 	push	offset msg01
 	call	_put_str
-	pop	cx
 	ret
 
 
 _ShowCredits:
 	push	offset msg101
 	call	_put_str
-	pop	cx
 	ret
 
 
 _ShowChecksum:
 	push	[_Checksum]
 	call	_put_hex
-	pop	cx
 	ret
 
 _ShowBlaster:
 	push	offset msg201		; aren't you glad I wrote this in asm ?
 	call	_put_str
-	pop	cx
 	push	[_sbBaseIOPort]
 	call	_put_hex
-	pop	cx
 	call	_crlf
 
 	push	offset msg202
 	call	_put_str
-	pop	cx
 	movzx	ax,[_sbDMAChan8Bit]
 	push	ax
 	call	_put_dec
-	pop	cx
 	call	_crlf
 
 	push	offset msg203
 	call	_put_str
-	pop	cx
 	movzx	ax,[_sbIRQNumber]
 	push	ax
 	call	_put_dec
-	pop	cx
 	call	_crlf
 
 	push	offset msg204
 	call	_put_str
-	pop	cx
 	mov	ax,[_sbDSPVersion]
 	shr	ax,8
 	xor	ah,ah
 	push	ax
 	call	_put_dec
-	pop	cx
 
 	mov	al,'.'
 	call	ConOut
@@ -160,7 +153,6 @@ SB1:	mov	ax,[_sbDSPVersion]
 	xor	ah,ah
 	push	ax
 	call	_put_dec
-	pop	cx
 	call	_crlf
 	ret
 
@@ -168,7 +160,6 @@ SB1:	mov	ax,[_sbDSPVersion]
 _PressKeyToContinue:
 	push	offset msg301
 	call	_put_str
-	pop	cx
 	call	_get_char
 	cmp	al,27
 	je	PK_Exit
@@ -182,7 +173,6 @@ PK_Exit:
 _ShowBlasterEnvBad:
 	push	offset msg401
 	call	_put_str
-	pop	cx
 	call	_PressKeyToContinue
 	ret
 
@@ -190,7 +180,6 @@ _ShowBlasterEnvBad:
 _ShowBlasterNotFound:
 	push	offset msg501
 	call	_put_str
-	pop	cx
 	call	_PressKeyToContinue
 	ret
 
@@ -198,7 +187,6 @@ _ShowBlasterNotFound:
 _ShowBlasterTooOld:
 	push	offset msg601
 	call	_put_str
-	pop	cx
 	call	_ShowBlaster
 	call	_PressKeyToContinue
 	ret
@@ -207,29 +195,22 @@ _ShowBlasterTooOld:
 _ShowBlasterDetected:
 	push	offset msg701
 	call	_put_str
-	pop	cx
 	call	_ShowBlaster
 	push	offset msg702
 	call	_put_str
-	pop	cx
-	push	_gDMABufSize		; DMA buffer size
+	push	BUF_SIZE		; DMA buffer size
 	call	_put_dec
-	pop	cx
 	call	_crlf
 	push	offset msg703
 	call	_put_str
-	pop	cx
 	push	[_playback_freq]
 	call	_put_dec
-	pop	cx
 	call	_crlf
 	push	offset msg704
 	call	_put_str
-	pop	cx
 	movzx	ax,[_sbTimeConstant]
 	push	ax
 	call	_put_dec
-	pop	cx
 	call	_crlf
 	call	_PressKeyToContinue
 	ret
@@ -238,7 +219,6 @@ _ShowBlasterDetected:
 _ShowBlasterWaiting:
 	push	offset msg801
 	call	_put_str
-	pop	cx
 	ret
 
 ;*
@@ -249,7 +229,6 @@ BadSwitch:
 	push	cx			; save bad switch
 	push	offset msg901
 	call	_put_str
-	pop	cx
 	pop	ax			; restore switch
 	call	ConOut			; output it
 	call	_crlf
@@ -263,5 +242,23 @@ BadSwitch:
 FileNotFound:
 	push	offset msg1001
 	call	_put_str
-	pop	cx
+	ret
+
+;*
+;* frames per second
+;*
+
+FramesPerSecond:
+
+	mov	eax,[OriginalFrameExit]
+	mov	ebx,119318200		; ticklets per second (14318180/12) * 100
+	mul	ebx
+	mov	ebx,[StopTicks]
+	div	ebx
+	push	ax
+	call	_put_point
+
+	push	offset fps
+	call	_put_str
+
 	ret

@@ -92,7 +92,10 @@ Player0Color	dd	0
 
 
 MicroTick	db	0		; holds a small tick from hardware counter
+
 NoRetrace	db	0		; don't wait for retrace (if 0ffh)
+					; moved to vsync.asm
+
 ColumnBlank	db	0		; blank this many columns
 GamePaused	db	0		; game paused
 NoScoreMode	db	0		; set if we don't want PF to take on player colors

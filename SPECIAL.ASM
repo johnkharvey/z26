@@ -40,6 +40,8 @@ SetupSpecial:
 	je	SSReverse		; walker
 	cmp	ax,096a1h
 	je	SSReverse		; xevious
+;	cmp	ax,0a5d6h
+;	je	SSReverse		; oystr29
 
 	jmp	SSWRAP
 

@@ -48,6 +48,7 @@ ENDIF
 	call	CommandLine		; Process the command line (*** again! ***)
 					; I don't know why we need to call this from here
 					; as well as from the "C" program ...
+
 	cmp	[_quiet],0
 	jnz	STUP_4
 	call	_SetupSoundBlaster
@@ -57,53 +58,23 @@ ENDIF
 STUP_4:
 
 	call	Reset			; Reset the CPU
+
+	call	_SetupTimer		; put timer in mode 2
 	call	TIAGraphicMode		; Switch into VGA mode
-	call	VSyncInit		; init VSync code
 	call	SetNewInt9		; Keyboard Handler
 	call	JoyCenter		; set joystick center position
 
-	push	es
-	mov	ax,040h
-	mov	es,ax
-	mov	bx,06ch			; point at time of day
-	xor	cx,cx			; count ticks
-	xor	edx,edx			; for prev tick
+	mov	eax,1000000
+	call	_Delay			; let monitor sync
 
-tStartupDelayLoop:
-	mov	eax,es:[bx]		; get start ticks
-	mov	[StartTicks],eax
-	cmp	eax,edx
-	je	tStartupDelayLoop
-	mov	edx,eax			; remember prev
-	inc	cx
-	cmp	cx,10			; been long enough?
-	jbe	tStartupDelayLoop
+	call	VSync
 
-RTLoop:
-	mov	eax,es:[bx]
-	cmp	eax,[StartTicks]
-	je	RTLoop			; wait for timer to roll over
-	mov	[StartTicks],eax
-	pop	es
-
-	xor	al,al
-	cli
-	out	043h,al			; tell timer we wanna read it
-	in	al,040h			; read lo-order byte (discard)
-	in	al,040h			; read hi-order byte
-	sti
-
-	neg	al			; it's a down counter
-	mov	[MicroTick],al
-
-	mov	cl,al
-	mov	eax,[StartTicks]
-	shl	eax,8
-	mov	al,cl			; install hi-order micro-tick into tick count
+	call	_GetTime		; start time for frame timer
 	mov	[StartTicks],eax
 
 	mov	eax,[FrameExit]
-	mov	[OriginalFrameExit],eax	; remember how many frames we did for FPS calculation
+	mov	[OriginalFrameExit],eax	; remember how many frames for FPS calculation
+	inc	[FrameExit]		; do correct # of loops
 
 
 ;*
@@ -113,11 +84,10 @@ RTLoop:
 ALIGN_ENTRY
 
 xmain:  
-	cmp	[FrameExit],0		; exiting after <n> frames ?
+	cmp	[OriginalFrameExit],0	; exiting after <n> frames ?
 	je	xm1			;   no
 	dec	[FrameExit]		;   yes, decrement counter
-	cmp	[FrameExit],0		; did it go to zero ?
-	je	GoTIME			;   yes, exit now
+	jz	GoTIME			;     zero, exit now
 
 xm1:
 	call	VSync
@@ -147,76 +117,48 @@ ContinueDMA:
 ;	call	_ContinueDMA		;   yes, continue DMA
 CDRET:	ret
 
+
+;*
+;* shutdown the weird stuff
+;*
+
+sd_weird:
+	call	_sound_clear		; turn sound off (Soundblaster)
+	call	SoundOff		; turn sound off (PC speaker)
+	call	TIATextMode		; back to text mode
+	call	SetOldInt9		; reset the key handler
+	call	_RestoreTimer		; put timer back into mode 3
+	call	_RestoreISR		; restore SoundBlaster ISR (if was on)
+	ret
+
 ;*
 ;* end of program (escape pressed or bad opcode)
 ;*
 
 GoTIME:
-	cli	
+	call	VSync
 
-	xor	al,al
-	out	043h,al			; tell timer we wanna read it
-	in	al,040h			; read lo-order byte (discard)
-	in	al,040h			; read hi-order byte
-	neg	al			; it's a down counter
-	mov	cl,al
+	call	_GetTime
+	sub	eax,[StartTicks]
+	mov	[StopTicks],eax		; how long game took
 
-	push	es
-	mov	ax,040h
-	mov	es,ax
-	mov	bx,06ch			; point at time of day
-	mov	eax,es:[bx]		; get stop ticks
-	pop	es
-	mov	[StopTicks],eax
+	call	sd_weird		; shutdown the weird stuff
 
-	mov	eax,[StopTicks]
-	shl	eax,8
-	mov	al,cl			; install hi-order micro-tick into tick count
-	mov	[StopTicks],eax
-	mov	eax,[StopTicks]
-	sub	eax,[StartTicks]	; get the difference
-	mov	[StopTicks],eax
-
-	sti
-
-	call	_sound_clear		; turn sound off (Soundblaster)
-	call	SoundOff		; turn sound off (PC speaker)
-	call	TIATextMode
-	call	SetOldInt9
-
-	mov	eax,[StopTicks]
-	call	DPT			; print it out (decimal)
-
-	mov	dx,offset ticklets
-	mov	ah,9
-	int	MSDOS			; output a message
-
-	mov	eax,[OriginalFrameExit]
-	imul	eax,4661		; ticklets per second ((14318180/12)/256)
-	mov	ebx,[StopTicks]
-	xor	edx,edx
-	div	ebx
-	call	DPT
-	mov	dx,offset fps
-	mov	ah,9
-	int	MSDOS
+	call	FramesPerSecond		; output frames per second message
 
 	jmp	Empty
 
 	
 
 GoDOS:
-	call	_sound_clear		; turn sound off (Soundblaster)
-	call	SoundOff		; turn sound off (PC speaker)
-	call	TIATextMode		; back to text mode
-	call	SetOldInt9		; reset the key handler
+	call	sd_weird		; shutdown the weird stuff
 
 Empty:	call	_kb_hit			; empty the keyboard buffer
 	jz	Quit			;   buffer empty
 	call	_get_char		; read char
 	jmp	Empty
 
-Quit:	call	_RestoreISR		; restore Sound Blaster ISR (if was on)
+Quit:
 
 IFDEF module
 	mov	bp,ModuleBP
@@ -225,6 +167,7 @@ IFDEF module
 	push	ModuleReturn
 	ret
 ENDIF
+
 ReallyQuit:
 	mov	ah,04Ch			; and return to MSDOS
 	int	MSDOS
@@ -236,6 +179,8 @@ ReallyQuit:
 ALIGN_ENTRY
 
 ScanFrame:
+;	call	_GetTime
+
 	mov	ax,0a000h		;   no
 	mov	gs,ax			; point GS to VGA area
         mov	[DisplayPointer],0	; reset display pointer
@@ -248,9 +193,13 @@ ScanFrameLoop:
 
 	call	TIALineTo		; generate a raster line
 
-	test	[ScanLine],0fh		; time to check sound buffer ?
+;	test	[ScanLine],07h		; time to check sound buffer ?
+;	jnz	ScanNextLine		;   no
+;	call	_Fillbuffer		;   yes, fill sound buffer if necessary
+
+	test	[ScanLine],03fh		; time to read the time ?
 	jnz	ScanNextLine		;   no
-	call	_Fillbuffer		;   yes, fill sound buffer if necessary
+	call	_GetTime
 
 ScanNextLine:
 	inc	[ScanLine]		; Increment the scanline counter
@@ -638,6 +587,8 @@ TIAGenerate:
 	mov	cx,40
 	rep	stosd			; clear the TIA display buffer
 
+;	call	TIAInsertObjects	; insert objects from the last line
+
 	mov	al,24
 	call	DoInstructions		; do horizontal blank instructions
 
@@ -761,13 +712,3 @@ TIABLLoop:
 	jmp	TIABLLoop
 TIABLExit:
 	ret
-
-.CEND
-.DATASEGMENT
-
-ticklets	db	' ticks, ','$'
-fps		db	' fps',13,10,'$'
-
-.DEND
-.CODESEGMENT
-

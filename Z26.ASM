@@ -113,6 +113,11 @@ PAGE 66,132
 ; (1.00)  Apr 17, 1998  fixed a sound bug in DSP (introduced in 0.99)
 ;			turn on hardware low pass filter on version 3.xx DSP
 ;			re-map keyboard and support 2 player joystick games
+;
+; (1.01)  Apr 29, 1998  sound generation is now interrupt driven
+;                       NDI timing done by 8253 hardware timer
+;                       more precise frame timer
+;                       non-linear palette (generally brighter)
 
 
 ; assembly time definitions
@@ -175,6 +180,7 @@ entry:	jmp	start			; jump around our data
 	include missile.asm		; missile code
 	include tiabuf.asm		; TIA buffer management stuff
 	include tiasnd.asm		; asm version of Ron Fries' TIASound
+	include time.asm		; z26 timing functions
 
 	include sbdrv.asm		; sound blaster assembly code
 	include keyboard.asm		; convert keyboard into Atari joystick

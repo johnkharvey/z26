@@ -18,8 +18,16 @@ PIC1		equ	0A1h
 EOI0		equ	020h
 EOI1		equ	0A0h
 
+BUF_SIZE	equ	128	; DMA buffer size  (256 is maximum)
 
-_gDMABufSize	equ	256	; must match definition in z.c
+				;(8   gives an interrupt frequency of 31400/4  = 7850       hz)
+				;(note:  8 is not recommended -- Cyrix 6x86 PR166 clogs here )
+
+				;(16  gives an interrupt frequency of 31400/8   = 3925      hz)
+				;(32  gives an interrupt frequency of 31400/16  = 1962.5    hz)
+				;(64  gives an interrupt frequency of 31400/32  =  981.25   hz)  
+				;(128 gives an interrupt frequency of 31400/64  =  490.625  hz)
+				;(256 gives an interrupt frequency of 31400/128 =  245.3125 hz)
 
 FAIL		equ	0
 SUCCESS		equ	1
@@ -90,6 +98,9 @@ sound_int:
 	add	dx,14
 	in	al,dx			; ACK the Sound Blaster
 	xor	[_gDMABufNowPlaying],1
+
+	call	_xFillbuffer
+
 	mov	al,32			; EOI command
 	cmp	[_sbIRQNumber],7
 	jle	low_int_only
@@ -350,7 +361,7 @@ WriteDSPBusy:
 
 _SilenceBuffer:
 
-	mov	cx,_gDMABufSize		; buffer size
+	mov	cx,BUF_SIZE		; buffer size
 	mov	al,080h			; Silence
 	mov	di,[_DMABuf]
 	rep	stosb			; Fill buffer
@@ -573,7 +584,7 @@ _ProgramDSP:
 
 	mov	ah,48h			;Set buffer size (256 / 2) - 1
 	call	send_dsp		;Send it
-	mov	ah,127			;Low
+	mov	ah,BUF_SIZE/2 - 1	;Low
 	call	send_dsp		;Send it
 	mov	ah,0			;Hi
 	call	send_dsp		;Send it
@@ -602,10 +613,10 @@ _SetupDMABuffer:
 	add	eax,ecx			; physical address of DMA buffer
 	mov	ebx,eax
 	clc
-	add	bx,255			; is end of buffer ...
+	add	bx,BUF_SIZE - 1		; is end of buffer ...
 	jnc	BaseOk			; ... in same page as start ?
-	add	eax,256			;   no, use next half of buffer
-	add	cx,256
+	add	eax,BUF_SIZE		;   no, use next half of buffer
+	add	cx,BUF_SIZE
 BaseOk:	mov	[_sbDMAOffset],ax
 	shr	eax,16
 	mov	[_sbDMAPage],al
@@ -661,7 +672,7 @@ _ProgramDMA:
 	out	dx,al
 
 	mov	dx,[dma_length]		; Point to length port
-	mov	al,255			;Low
+	mov	al,BUF_SIZE - 1		;Low
 	out	dx,al
 	mov	al,0			;Hi    (256 byte buffer)
 	out	dx,al
@@ -832,7 +843,14 @@ SSB_Err3:
 ;* Fillbuffer() -- fill sound buffer with generated sound
 ;*
 
+IFDEF compileoldcode
+
 _Fillbuffer:
+
+	ret
+
+;	call	_GetTime		; make sure clock runs properly
+
 	cmp	[_Sb_init],0		; Sound Blaster running ?
 	je	FB_Done			;   no
 	mov	bl,[_DMABufToLoad]
@@ -840,15 +858,45 @@ _Fillbuffer:
 	je	FB_Done			;   no
 
 ;	push	[_dsp]			; digital signal processing
-	mov	ax,128
+	mov	ax,BUF_SIZE/2
 	push	ax			; # of bytes
 	mov	ax,[_DMABuf]
 	test	bl,bl			; doing bottom half ?
 	jz	FB1			;   yes
-	add	ax,128			;   no, point at top
+	add	ax,BUF_SIZE/2		;   no, point at top
 FB1:	push	ax			; buffer address
 	call	_Tia_process		; call sound generator
 	add	sp,4			; fix up stack
 	xor	[_DMABufToLoad],1	; toggle buffer
 FB_Done:
+	ret	
+
+ENDIF
+
+;*
+;* xFillbuffer() -- fill sound buffer with generated sound
+;*                  call from interrupt handler only
+;*
+
+_xFillbuffer:
+
+;	ret
+
+	pushad
+	mov	bl,[_DMABufToLoad]
+	cmp	bl,[_gDMABufNowPlaying]	; buffer ready for filling ?
+	je	xFB_Done		;   no
+
+	mov	ax,BUF_SIZE/2
+	push	ax			; # of bytes
+	mov	ax,[_DMABuf]
+	test	bl,bl			; doing bottom half ?
+	jz	xFB1			;   yes
+	add	ax,BUF_SIZE/2		;   no, point at top
+xFB1:	push	ax			; buffer address
+	call	_Tia_process		; call sound generator
+	add	sp,4			; fix up stack
+	xor	[_DMABufToLoad],1	; toggle buffer
+xFB_Done:
+	popad
 	ret	

@@ -417,14 +417,11 @@ ALIGN_ENTRY
 jam:
 	push	offset jam_msg
 	call	_put_str
-	pop	cx
-
 	jmp	showinst
 
 fail:
 	push	offset uuo_msg
 	call	_put_str
-	pop	cx
 
 showinst:
 	dec	bp			; backup the instruction pointer

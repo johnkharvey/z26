@@ -78,7 +78,7 @@ Joystick:
 	pushad
 	cmp	[_Joystick],0
 	jz	NoJoy
-	call	_Fillbuffer		; fill sound buffer
+;	call	_Fillbuffer		; fill sound buffer
 	call	JoyRead
 	call	JoyStabilize
 
@@ -124,7 +124,7 @@ JoyTestButtons:
 	mov	[InputLatch],0
 
 JoyDone:	
-	call	_Fillbuffer
+;	call	_Fillbuffer
 	popad
 	ret
 
