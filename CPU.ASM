@@ -139,8 +139,8 @@ readzx	macro	op1,op2		; zero extended
 	movzx	op1,byte ptr [si]
 	endm
 
-slack_read macro %1		; read and throw away result
-	mov	si,%1
+slack_read macro arg1             ; read and throw away result
+        mov     si,arg1
 	read_bank
 	endm
 

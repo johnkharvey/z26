@@ -1056,25 +1056,57 @@ db	'`o  F1        F2        F3        F4        F5        F6        F7        F8
 db	'`d  Reset     Select    B/W       Color     P0 easy   P0 hard   P1 easy   P1 hard`n`n'
 
 db	'`y`UPlayer 0 Joystick or Paddles`u`d`n`n'
-db	'  `oCtrl`d -- fire   Use the arrow keys ( `o', 018h, ' ', 019h, ' ', 01bh, ' ', 01ah, ' `d) to move.`n`n'
+db      '  `oCtrl`d -- fire   Use the arrow keys ( `o', 018h, ' ', 019h, ' ', 01bh, ' ', 01ah, ' `d) to move.`n'
+db      '     `o/`d -- trigger (booster grip)`n'
+db      '`oRShift`d -- booster (booster grip)`n`n'
 
 db	'`y`UPlayer 1 Joystick`u`d`n`n'
-db	'     `on`d -- fire   `os`d -- left   `oe`d -- up   `of`d -- right   `od`d -- down`n`n'
+db      '     `on`d -- fire   `os`d -- left   `oe`d -- up   `of`d -- right   `od`d -- down`n'
+db      '     `ob`d -- trigger (booster grip)`n'
+db      '     `ov`d -- booster (booster grip)`n`n'
+
+db      '`y`UPlayer 0 Driving Controller`u`d`n`n'
+db      '  `oCtrl`d -- accelerate   `o',01ah, '`d -- turn clockwise   `o',01bh, '`d -- turn counter-clockwise`n`n'
+
+db      '`y`UPlayer 1 Driving Controller`u`d`n`n'
+db      '     `on`d -- accelerate   `of`d -- turn clockwise   `os`d -- turn counter-clockwise`n`n'
+
+db      '`y`UKeyboard Controllers`u`d`n`n'
+
+db      '`y  left port         right port`n`n'
+
+db      '`o  7   8   9         1   2   3`n'
+db      '`d  1   2   3         1   2   3`n`n'
+
+db      '`o  u   i   o         q   w   e`n'
+db      '`d  4   5   6         4   5   6`n`n'
+
+db      '`o  j   k   l         a   s   d`n'
+db      '`d  7   8   9         7   8   9`n`n'
+
+db      '`o  m   ,   .         z   x   c`n'
+db      '`d  *   0   #         *   0   #`n`n'
+
+db	0
+
+
+public _help_1
+_help_1 label byte
 
 db	'`y`UPausing a Game`u`n`n'
 db	'     `op`d -- pause`n'
 db	' `oEnter`d -- resume`n`n'
 
 db	'`y`UVideo Modes`u`n`n'
-db	'     `o0 `d-- 320x200 70Hz (standard mode 13)`n'
-db	'     `o1 `d-- 320x200 60Hz`n'
-db	'     `o2 `d-- 320x200 60Hz narrow`n'
-db	'     `o3 `d-- 320x204 60Hz narrow`n'
-db	'     `o4 `d-- 320x240 60Hz (standard Mode-X)`n'
-db	'     `o5 `d-- 320x240 60Hz narrow`n'
-db	'     `o6 `d-- 320x240 60Hz scanline`n'
-db	'     `o7 `d-- 320x480 60Hz very narrow and tall`n'
-db	'     `o8 `d-- 320x240 60Hz intense scanline`n`n'
+db      ' `oAlt 0 `d-- 320x200 70Hz (standard mode 13)`n'
+db      ' `oAlt 1 `d-- 320x200 60Hz`n'
+db      ' `oAlt 2 `d-- 320x200 60Hz narrow`n'
+db      ' `oAlt 3 `d-- 320x204 60Hz narrow`n'
+db      ' `oAlt 4 `d-- 320x240 60Hz (standard Mode-X)`n'
+db      ' `oAlt 5 `d-- 320x240 60Hz narrow`n'
+db      ' `oAlt 6 `d-- 320x240 60Hz scanline`n'
+db      ' `oAlt 7 `d-- 320x480 60Hz very narrow and tall`n'
+db      ' `oAlt 8 `d-- 320x240 60Hz intense scanline`n`n'
 
 db	'`y`UScrolling the Screen`u`d`n`n'
 db	' `oPgUp`d -- scroll screen up.`n'
@@ -1087,8 +1119,8 @@ db	'    `o=`d -- PCX screen capture`n`n'
 db	0
 
 
-public _help_1
-_help_1 label byte
+public _help_2
+_help_2 label byte
 
 db	'`y`UCommand Line Switches`u`d`n`n'
 
@@ -1111,13 +1143,15 @@ db	'                         `y1`d = use PC speaker,`n'
 db	'                         `y2`d = run Soundblaster at 15700 Hz)`n`n'
 db	'  `o-u`yN`d -- start scanning game at line `yN`d`n`n'
 db	'  `o-v`yN`d -- start in video mode `yN`d`n`n'
-db	'  `o-x`d  -- print out checksum of cartridge`n'
+db      '  `o-x`d  -- print out checksum of cartridge`n`n'
+db      '  `o-y`yN`d -- emulate keyboard controller  (`y1`d = left   `y2`d = right   `y3`d = both)`n`n'
+db      '  `o-w`d  -- emulate driving controllers`n'
 
 db	0
 
 
-public _help_2
-_help_2 label byte
+public _help_3
+_help_3 label byte
 
 db	'`y`UCredits`u`d`n`n'
 db	'     `oPaul Robson`d -- Wrote original A26.`n'
@@ -1135,18 +1169,13 @@ db	'       `oDan Boris`d -- Atari 2600 schematics.`n'
 db	'      `oMatt Conte`d -- Helped with digital voice and 50Hz video modes.`n'
 db	'     `oJohn Dullea`d -- Fast, elegant 2600 graphics techniques, and help with Pitfall II.`n'
 db	'   `oBradford Mott`d -- Helped with object positioning (weird HMOVE).`n'
-db	'`oEckhard Stolberg`d -- Helped with object positioning, PAL colors, digital voice,`n                    Cosmic Ark effect, Pitfall II, and Supercharger games.`n'
+db      '`oEckhard Stolberg`d -- Helped with object positioning, PAL colors, digital voice, controllers,`n                    Cosmic Ark effect, Pitfall II, and Supercharger games.`n'
 db	'   `oChris Wilkson`d -- Helped with Pitfall II.`n`n'
 
-db	'`nThanks to one and all!!`n`n'
-
-db	0
-
-public _help_3
-_help_3 label byte
+db      '`nThanks to one and all!!`n`n`n`n`n`n'
 
 db	'`y`UCopyright/License`u`d`n`n'
-db	'z26 is Copyright 1997-1999 by John Saeger and is a derived work with many`n'
+db      'z26 is Copyright 1997-2000 by John Saeger and is a derived work with many`n'
 db	'contributors.  z26 is released subject to the terms and conditions of the`n'
 db	'GNU General Public License Version 2 (GPL).  `oz26 comes with no warranty.`d`n'
 db	'Please see the included COPYING.TXT for details.  Source code for the`n'

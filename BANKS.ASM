@@ -67,6 +67,8 @@ SetupBanks:
 	mov	[Starpath],0
 
 	mov	ax,[_CartSize]
+	cmp	ax,00800h
+	je	Set2KMode		; 2K cart
 	cmp	ax,01000h
 	je	Set4KMode		; 4K cart
 	cmp	ax,02000h
@@ -89,10 +91,18 @@ SetupBanks:
 	je	SetStarpath4
 	ret
 
+Set2KMode:
+	mov	eax,[_Checksum]
+	cmp	eax,03b72bh
+	je	SCV			; vidlife (2K final version)
+	cmp	eax,038191h
+	je	SCV			; magicard
+	ret
+
 Set4KMode:
 	mov	eax,[_Checksum]
 	cmp	eax,08f5eeh
-	je	SCV			; vidlife
+	je	SCV			; vidlife (4K first version)
 	ret
 
 SCV:

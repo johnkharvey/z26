@@ -11,13 +11,13 @@
 
 
 
-#define version "z26 (1.36)"
+#define version "z26 (1.37)"
 
 
 #define rom_list "ROM List"
 
 /*
-#define rom_list "Preview version C -- Please don't distribute."
+#define rom_list "Preview version B (EST/D) -- Please don't distribute."
 */
 
 #include <dos.h>		/* _psp */
@@ -42,7 +42,7 @@ unsigned char CartRom[34000];
 #include "trace.c"
 
 
-main(int argc, char *argv[])
+void main(int argc, char *argv[])
 {
 	def_SaveDefaults();
 	if (argc != 1)

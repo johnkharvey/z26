@@ -1204,14 +1204,65 @@ SSAUQ:
 SetP1Hard:
 	cmp	ax,094a9h
 	je	SP1HARD
-	jmp	SetupLong
+;        jmp     SetupLong
+        jmp     SSKEYPAD
 
 SP1HARD:
 	mov	dl,[_IOPortB]		; p1 hard
 	or	dl,128
 	mov	[_IOPortB],dl
-	jmp	SetupLong
+;        jmp     SetupLong
+        jmp     SSKEYPAD
 
+
+;*
+;* process requestes for keypad games
+;*
+
+SSKEYPAD:
+        cmp     eax,039135h             ; concentr.bin
+        je      SKP3
+        cmp     eax,0fffb5h             ; alphbeam.bin
+        je      SKP3
+        cmp     eax,084398h             ; basic.bin
+        je      SKP3
+        cmp     eax,0d8234h             ; eggcatch.bin
+        je      SKP3
+        cmp     eax,03cccdh             ; braingms.bin
+        je      SKP3
+        cmp     eax,03a688h             ; codebrk.bin
+        je      SKP3
+        cmp     eax,0ddca2h             ; cookmons.bin
+        je      SKP3
+        cmp     eax,0a31dfh             ; grover.bin
+        je      SKP3
+        cmp     eax,038191h             ; magicard.bin
+        je      SKP3
+        cmp     eax,0e2b06h             ; oscar.bin
+        je      SKP3
+        cmp     eax,09fbedh             ; starraid.bin
+        je      SKP2
+        jmp     SSDRIVING
+
+SKP2:
+        mov     [_KeyPad],2
+        jmp     SSDRIVING
+
+SKP3:
+        mov     [_KeyPad],3
+        jmp     SSDRIVING
+
+;*
+;* process requestes for driving controller games
+;*
+
+SSDRIVING:
+        cmp     eax,039318h             ; indy_500.bin
+        je      SDrC
+        jmp     SetupLong
+SDrC:
+        mov     [_Driving],1
+        jmp     SetupLong
 
 ;*
 ;* select how sharp to make the auto-sync test (bailout)
@@ -1313,15 +1364,15 @@ NotLong:
 
 BailoutLong:
 	mov	[BailoutLine],350
-	jmp	SetupDone
+        jmp     SetupDone
 
 BailoutShort:
 	mov	[BailoutLine],270
-	jmp	SetupDone
+        jmp     SetupDone
 
 BailoutVeryLong:
 	mov	[BailoutLine],5000
-	jmp	SetupDone
+        jmp     SetupDone
 
 SetupDone:
 	ret

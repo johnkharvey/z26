@@ -131,6 +131,11 @@ _OldTraceCount	db	0		; for saving trace count if we turn off tracing
 PUBLIC _Use50Hz
 _Use50Hz	db	0		; O.K. to use 50Hz video modes
 
+PUBLIC _KeyPad
+_KeyPad         db      0               ; which keypad to emulate *EST*
+
+PUBLIC _Driving
+_Driving        db      0               ; emulate driving controller *EST
 
 ; *** new stuff ***
 

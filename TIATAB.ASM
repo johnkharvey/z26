@@ -9,7 +9,8 @@
 
 .data
 
-ALIGN 4
+ALIGN 2 ;was ALIGN 4 *EST*
+
 
 ;playfield counter to playfield bit table
 
@@ -467,8 +468,8 @@ WideBlankPlayer macro
 ;* sprite size calculation macro
 ;*
 
-SpriteSize macro %1
-%1&_Size = ($-&%1)/2-1
+SpriteSize macro arg1
+arg1&_Size = ($-&arg1)/2-1
 	endm
 
 ;*
@@ -1006,6 +1007,5 @@ DeepHMOVE label byte
  db 0,0,0,0,0,0, 2, 2, 2, 2, 2, 2,99,99,99,M4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0,0	; d
  db 0,0,0,0,0,0, 1, 1, 1, 1, 1, 1, 1,99,99,M4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0,0	; e
  db 0,0,0,0,0,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0,0	; f
-
 
 

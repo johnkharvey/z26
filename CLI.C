@@ -149,11 +149,13 @@ int cli_LoadROM(unsigned char *filename)
 **      -t      trace instructions
 **  ->	-0      player 0 hard
 **  ->	-1      player 1 hard
+**      -y <n>  emulate none <0>, left <1>, right <2> or both <3> keypads *EST*
+**      -w      emulate driving controllers *EST*
 */
 
 FILE *log;
 
-cli_InterpretParm(char *p)
+void cli_InterpretParm(char *p)
 {
 	int ch, parm;
 
@@ -195,13 +197,14 @@ cli_InterpretParm(char *p)
 			else
 				NoRetrace = parm;
 			break;
-
-	default:   	printf("Bad command line switch seen: -%c", ch);
+        case 'y':       KeyPad = parm & 3;                     break; /* *EST* */
+        case 'w':       Driving = 1;                           break; /* *EST* */ 
+        default:   	printf("Bad command line switch seen: -%c", ch);
 		   	exit(1);
 	}
 }
 
-cli_WriteParms(int argc, char *argv[])
+void cli_WriteParms(int argc, char *argv[])
 {
 	int i, ch;
 	FILE *fp;
@@ -236,7 +239,7 @@ cli_WriteParms(int argc, char *argv[])
 }
 
 
-cli_ReadParms()
+void cli_ReadParms(void)
 {
 	int ch, i;
 	FILE *fp;
@@ -245,7 +248,7 @@ cli_ReadParms()
 
 	fp = fopen("z26.cli", "r");
 	if (fp == NULL)
-		return(0);
+                return; /* was return(0); *EST* */
 	i = 0;
 
 	while ( (( ch = fgetc(fp)) != EOF) && (i <= 1022) )
@@ -266,7 +269,7 @@ cli_ReadParms()
 }
 
 
-cli_CommandLine(int argc, char *argv[])
+void cli_CommandLine(int argc, char *argv[])
 {
 	long int i;
 	long int parm;

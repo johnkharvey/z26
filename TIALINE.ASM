@@ -153,15 +153,15 @@ CosmicGraphicsTable	db	040h,040h,0c0h,0
 ;* sprite related stuff
 ;*
 
-DefineObjectVars macro %1
+DefineObjectVars macro arg1
 ALIGN 2
-%1&_Table	dw	%1&_Sprite
-%1&_Position	dw	0
-%1&_Size	dw	%1&_SpriteSize
-%1&_Motion	dw	0
-%1&_Graphics	db	0
-%1&_Delayed	db	0
-%1&_TripleFlag	db	0
+arg1&_Table       dw      arg1&_Sprite
+arg1&_Position    dw      0
+arg1&_Size        dw      arg1&_SpriteSize
+arg1&_Motion      dw      0
+arg1&_Graphics    db      0
+arg1&_Delayed     db      0
+arg1&_TripleFlag  db      0
 	endm
 
 DefineObjectVars BL
@@ -200,22 +200,22 @@ Init_TIA:
 ;* AX, DL and SI are free registers that these routines can use
 ;*
 
-SetObjectBit macro %1
+SetObjectBit macro arg1
 local done, nowrap
 
 	movzx	si,cl
-	sub	si,[%1&_Position]
+        sub     si,[arg1&_Position]
 	jae	nowrap
 	add	si,160
 nowrap:	
-	cmp	si,[%1&_Size]
+        cmp     si,[arg1&_Size]
 	ja	done
 	add	si,si
-	add	si,[%1&_Table]
-	mov	al,[%1&_Graphics]
+        add     si,[arg1&_Table]
+        mov     al,[arg1&_Graphics]
 	test	al,[si]
 	jz	done
-	or	bl,%1&_BIT
+        or      bl,arg1&_BIT
 done:
 	endm
 
@@ -245,17 +245,17 @@ _P1	macro
 ;* RenderPixel -- render pixel with multiple objects
 ;*
 
-RenderPixel macro %1, %2, %3, %4, %5, %6
+RenderPixel macro arg1, arg2, arg3, arg4, arg5, arg6
 local BKPFonly
 
 	movzx	ebx,dh			; PF bit
 
-	%1
-	%2
-	%3
-	%4
-	%5
-	%6
+        arg1
+        arg2
+        arg3
+        arg4
+        arg5
+        arg6
 
 	cmp	bl,2
 	jb	BKPFonly
@@ -279,7 +279,7 @@ BKPFonly:
 ;* macro for rendering multiple objects against a playfield
 ;*
 
-PF_PixelLoop macro %1, %2, %3, %4, %5, %6
+PF_PixelLoop macro arg1, arg2, arg3, arg4, arg5, arg6
 local PF_loop, PIX_loop, done
 ALIGN 2
 
@@ -295,7 +295,7 @@ PF_loop:
 	add	bp,4
 
 PIX_loop:
-	RenderPixel %1, %2, %3, %4, %5, %6
+        RenderPixel arg1, arg2, arg3, arg4, arg5, arg6
 	ja	done
 	
 	test	di,7
@@ -312,14 +312,14 @@ done:
 ;* macro for rendering multiple objects against a background (no playfield)
 ;*
 
-BK_PixelLoop macro %1, %2, %3, %4, %5, %6
+BK_PixelLoop macro arg1, arg2, arg3, arg4, arg5, arg6
 local BK_Loop, done
 ALIGN 2
 
 	xor	dh,dh
 
 BK_Loop:
-	RenderPixel %1, %2, %3, %4, %5, %6
+        RenderPixel arg1, arg2, arg3, arg4, arg5, arg6
 	jbe	BK_Loop
 
 done:

@@ -162,6 +162,36 @@ JoyTestButtons:
 ; But three seems to be enough too.
 
 	in	al,dx
+        test    al,080h                 ; button four pressed ?
+        jnz     JoyTestB2               ;   no
+
+	in	al,dx
+        test    al,080h                 ; button four pressed ?
+        jnz     JoyTestB2               ;   no
+
+	in	al,dx
+        test    al,080h                 ; button four pressed ?
+        jnz     JoyTestB2               ;   no
+
+        mov     [DumpPorts+1],080h
+
+JoyTestB2:
+	in	al,dx
+        test    al,020h                 ; button two pressed ?
+        jnz     JoyTestB1               ;   no
+
+	in	al,dx
+        test    al,020h                 ; button two pressed ?
+        jnz     JoyTestB1               ;   no
+
+	in	al,dx
+        test    al,020h                 ; button two pressed ?
+        jnz     JoyTestB1               ;   no
+
+        mov     [DumpPorts],080h
+
+JoyTestB1:
+	in	al,dx
 	test	al,010h			; button one pressed ?
 	jnz	JoyDone			;   no
 

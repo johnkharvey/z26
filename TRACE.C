@@ -86,27 +86,27 @@ void ShowVeryDeep(int Now, int Prev, int Cycle)
 	fprintf(log,"<-- very deep (%d, %x, %x)\n", Cycle, Prev, Now);
 }
 
-void ShowAdjusted()
+void ShowAdjusted(void)
 {
 	fprintf(log,"Adjusted\n");
 }
 
-void ShowUndocTIA()
+void ShowUndocTIA(void)
 {
 	fprintf(log,"<-- Undoc TIA\n");
 }
 
-void ShowCollision()
+void ShowCollision(void)
 {
 	fprintf(log,"<-- Collision\n");
 }
 
-void ShowSCWrite()
+void ShowSCWrite(void)
 {
 	fprintf(log,"<-- SC Write\n");
 }
 
-void Showaddress()
+void Showaddress(void)
 {
 	ti_showstr("\n(");
 	ti_showhex16(adr);
@@ -115,17 +115,17 @@ void Showaddress()
 	ti_showstr(")");
 }
 
-int ti_op8()
+int ti_op8(void)
 {
 	return (ReadROM(cpu_pc + 1));
 }
 
-int ti_op16()
+int ti_op16(void)
 {
 	return (ReadROM(cpu_pc + 1) + 256*ReadROM(cpu_pc + 2));
 }
 
-void ti_show_ind()
+void ti_show_ind(void)
 {
 	ti_showstr("(");
 	ti_showhex16(ti_op16());
@@ -133,7 +133,7 @@ void ti_show_ind()
 	ti_showstr("  ");
 }
 
-void ti_show_ind_x()
+void ti_show_ind_x(void)
 {
 	ti_showstr("(");
 	ti_showhex8(ti_op8());
@@ -141,7 +141,7 @@ void ti_show_ind_x()
 	ti_showstr("  ");
 }
 
-void ti_show_ind_y()
+void ti_show_ind_y(void)
 {
 	ti_showstr("(");
 	ti_showhex8(ti_op8());
@@ -149,7 +149,7 @@ void ti_show_ind_y()
 	ti_showstr("  ");
 }
 
-void ti_show_zero_x()
+void ti_show_zero_x(void)
 {
 	ti_showstr(" ");
 	ti_showhex8(ti_op8());
@@ -157,7 +157,7 @@ void ti_show_zero_x()
 	ti_showstr("   ");
 }
 
-void ti_show_zero_y()
+void ti_show_zero_y(void)
 {
 	ti_showstr(" ");
 	ti_showhex8(ti_op8());
@@ -165,7 +165,7 @@ void ti_show_zero_y()
 	ti_showstr("   ");
 }
 
-void ti_show_abs_y()
+void ti_show_abs_y(void)
 {
 	ti_showstr(" ");
 	ti_showhex16(ti_op16());
@@ -173,7 +173,7 @@ void ti_show_abs_y()
 	ti_showstr(" ");
 }
 
-void ti_show_abs_x()
+void ti_show_abs_x(void)
 {
 	ti_showstr(" ");
 	ti_showhex16(ti_op16());
@@ -181,7 +181,7 @@ void ti_show_abs_x()
 	ti_showstr(" ");
 }
 
-void ti_show_zero()
+void ti_show_zero(void)
 {
 unsigned char op;
 
@@ -242,7 +242,7 @@ unsigned char op;
 	ti_showstr("     ");
 }
 
-void ti_show_abs()
+void ti_show_abs(void)
 {
 	unsigned int op;
 
@@ -271,20 +271,20 @@ void ti_show_abs()
 	ti_showstr("   ");
 }
 
-void ti_show_immediate()
+void ti_show_immediate(void)
 {
 	ti_showstr("#");
 	ti_showhex8(ti_op8());
 	ti_showstr("     ");
 }
 
-void ti_show_ac()
+void ti_show_ac(void)
 {
 	ti_showstr(" a");
 	ti_showstr("      ");
 }
 
-void ti_show_relative()
+void ti_show_relative(void)
 {
 	int target;
 
@@ -642,7 +642,7 @@ void ShowInstruction(void)
 
 }
 
-void ShowRegisters()
+void ShowRegisters(void)
 {
 	ti_showstr("\n");
 

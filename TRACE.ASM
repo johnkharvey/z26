@@ -18,7 +18,7 @@ debugflag	db	0
 
 PUBLIC _ReallyReadROM
 
-ALIGN 16
+;ALIGN 16 *EST*
 
 _ReallyReadROM proc far
 
@@ -37,7 +37,7 @@ _ReallyReadROM proc far
 	ret
 _ReallyReadROM endp
 
-ALIGN 16
+;ALIGN 16 *EST*
 
 TraceInstruction:
 

@@ -122,7 +122,10 @@ ReadInputLatches:			; read the input latch
 	ret
 	
 ReadDumped:
-	and	esi,3
+	cmp	dword ptr [_PaddleGame],0	; if not a paddle game
+        je      RetDirect                       ;   get state directly *EST*
+;        je      RetZero                         ;   always return zero (astrblst)
+        and	esi,3
 	mov	edx,dword ptr [ChargeTrigger0 + esi*4]
 	cmp	edx,dword ptr [ChargeCounter]	; this trigger expired ?
 	jbe	TriggerExpired			;   yes
@@ -131,12 +134,22 @@ RetZero:or	[RetWd],0
 	ret
 
 TriggerExpired:
-	cmp	dword ptr [_PaddleGame],0	; if not a paddle game
-	je	RetZero				;   always return zero (astrblst)
 	or	[RetWd],080h
 	mov	si,offset RetWd
 	ret
 	
+RetDirect:
+        and     si,3                            ; return state of dump port
+        add     si,offset DumpPorts             ;   directly (booster grip,
+        push    ax                              ;   keypad etc) *EST*
+	mov	al,[si]
+	
+	or	al,07fh
+
+	or	[RetWd],al
+	pop	ax
+	mov	si,offset RetWd
+	ret
 
 
 ; *****************************************************************************

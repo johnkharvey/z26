@@ -15,7 +15,7 @@ M0_BIT = 32
 DL_BIT = 64
 */
 
-main()
+void main(void)
 {
 
 	int i,n;

@@ -27,7 +27,7 @@ void far gui_Font(int Font);
 
 /* set palette */
 
-gui_SetPalette(int red, int green, int blue)
+void gui_SetPalette(int red, int green, int blue)
 {
 	/* the object of the game is to split brightness across seven values (1 - 7) */
 	/* we assume we are given the triple for value 5 */
@@ -81,7 +81,7 @@ gui_SetPalette(int red, int green, int blue)
 
 /* restore old video mode */
 
-gui_RestoreVideoMode()
+void gui_RestoreVideoMode(void)
 {
 	union REGS inregs, outregs;
 	
@@ -95,7 +95,7 @@ gui_RestoreVideoMode()
 
 /* set gui graphics mode */
 
-gui_GraphicsMode()
+void gui_GraphicsMode(void)
 {
 	union REGS inregs, outregs;
 
@@ -127,7 +127,7 @@ gui_GraphicsMode()
 
 /* check for mouse */
 
-gui_CheckMouse()
+void gui_CheckMouse(void)
 {
 	union REGS inregs, outregs;
 
@@ -148,7 +148,7 @@ gui_CheckMouse()
 
 /* turn on mouse cursor */
 
-gui_ShowMouse()
+void gui_ShowMouse(void)
 {
 	union REGS inregs, outregs;
 	
@@ -162,7 +162,7 @@ gui_ShowMouse()
 
 /* turn off the mouse cursor */
 
-gui_HideMouse()
+void gui_HideMouse(void)
 {
 	union REGS inregs, outregs;
 
@@ -176,7 +176,7 @@ gui_HideMouse()
 
 /* set a pixel */
 
-gui_Pixel(int x1, int y1, int color)
+void gui_Pixel(int x1, int y1, int color)
 {
 	gui_Line(x1, y1, x1, y1, color);
 }
@@ -184,7 +184,7 @@ gui_Pixel(int x1, int y1, int color)
 
 /* draw a rectangle */
 
-gui_Rectangle(int x1, int y1, int x2, int y2, int color)
+void gui_Rectangle(int x1, int y1, int x2, int y2, int color)
 {
 	int temp;
 
@@ -211,7 +211,7 @@ gui_Rectangle(int x1, int y1, int x2, int y2, int color)
 
 /* draw a filled rectangle */
 
-gui_FilledRectangle(int x1, int y1, int x2, int y2, int color)
+void gui_FilledRectangle(int x1, int y1, int x2, int y2, int color)
 {
 	int temp;
 
@@ -240,7 +240,7 @@ gui_FilledRectangle(int x1, int y1, int x2, int y2, int color)
 
 /* set 8 pixels for circle */
 
-gui_Set8Pixels(int xc, int yc, int x, int y, int color)
+void gui_Set8Pixels(int xc, int yc, int x, int y, int color)
 {
 	gui_Pixel(xc+x, yc+y, color);
 	gui_Pixel(xc-x, yc+y, color);
@@ -256,7 +256,7 @@ gui_Set8Pixels(int xc, int yc, int x, int y, int color)
 
 /* draw a circle */
 
-gui_Circle(int xc, int yc, int r, int color)
+void gui_Circle(int xc, int yc, int r, int color)
 {
 	int x=0;
 	int y=r;
@@ -282,7 +282,7 @@ gui_Circle(int xc, int yc, int r, int color)
 
 /* draw 4 lines for disk */
 
-gui_Draw4Lines(int xc, int yc, int x, int y, int color)
+void gui_Draw4Lines(int xc, int yc, int x, int y, int color)
 {
 	gui_Line(xc-x, yc+y, xc+x, yc+y, color);
 	gui_Line(xc-x, yc-y, xc+x, yc-y, color);
@@ -294,7 +294,7 @@ gui_Draw4Lines(int xc, int yc, int x, int y, int color)
 
 /* draw a disk */
 
-gui_Disk(int xc, int yc, int r, int color)
+void gui_Disk(int xc, int yc, int r, int color)
 {
 	int x=0;
 	int y=r;
@@ -320,7 +320,7 @@ gui_Disk(int xc, int yc, int r, int color)
 
 /* draw a panel */
 
-gui_Panel(int x1, int y1, int x2, int y2, int color, int hilite, int lolite)
+void gui_Panel(int x1, int y1, int x2, int y2, int color, int hilite, int lolite)
 {
 	gui_FilledRectangle(x1, y1, x2, y2, color);
 
@@ -335,7 +335,7 @@ gui_Panel(int x1, int y1, int x2, int y2, int color, int hilite, int lolite)
 
 /* ` sets color to following ASCII palette value */
 
-gui_DrawString(int col, int row, int color, char *text)
+void gui_DrawString(int col, int row, int color, char *text)
 {
 	int ch;
 	static int ul = 0;
@@ -387,7 +387,7 @@ gui_DrawString(int col, int row, int color, char *text)
 
 extern int GUIFont;
 
-gui_puts(char *text)
+void gui_puts(char *text)
 {
 	gui_DrawString(gui_textX, gui_textY, gui_textColor, text);
 	if (GUIFont == 0)
@@ -399,7 +399,7 @@ gui_puts(char *text)
 
 /* draw a button on the main panel */
 
-gui_MainPanelButton(int y1, int color, char *Text)
+void gui_MainPanelButton(int y1, int color, char *Text)
 {
 	gui_Panel(10, y1, 110, y1+20, color, 1, 1);
 	gui_DrawString(24, y1+7, 0, Text);
@@ -408,7 +408,7 @@ gui_MainPanelButton(int y1, int color, char *Text)
 
 /* show the prototype main screen */
 
-gui_ShowPrototype()
+void gui_ShowPrototype(void)
 {
 	int vpos;
 
@@ -442,7 +442,7 @@ gui_ShowPrototype()
 
 /* show main panel */
 
-gui_ShowMainPanel()
+void gui_ShowMainPanel(void)
 {
 	gui_Panel(0,0,639,479, 3,4,2);
 	gui_DrawString(8, 470, 1, "\x0f");
@@ -451,14 +451,14 @@ gui_ShowMainPanel()
 
 /* show main inset */
 
-gui_ShowMainInset()
+void gui_ShowMainInset(void)
 {
 	gui_FilledRectangle(6,25,633,467, 1);
 }
 
 /* show the help screen title */
 
-gui_ShowTitleBar(char *text)
+void gui_ShowTitleBar(char *text)
 {
 	gui_FilledRectangle(92,5,633,19,2);
 	gui_DrawString(102,9,10,text);
@@ -469,7 +469,7 @@ gui_ShowTitleBar(char *text)
 
 #define hl 583
 
-gui_ShowHelpButton()
+void gui_ShowHelpButton(void)
 {
 	gui_FilledRectangle(hl-17,5,hl-11,19,3);
 	gui_DrawString(hl,9,10,"`oF1`y Help`d");
@@ -477,7 +477,7 @@ gui_ShowHelpButton()
 
 /* show z26 */
 
-gui_ShowZ26()
+void gui_ShowZ26(void)
 {
 	gui_FilledRectangle(6,5,84,19,2);
 	gui_DrawString(16,9,10,version);
@@ -485,7 +485,7 @@ gui_ShowZ26()
 
 /* show the close box */
 
-gui_ShowCloseBox()
+void gui_ShowCloseBox(void)
 {
 /*
 	gui_FilledRectangle(610,10,630,30,2);
@@ -507,7 +507,7 @@ gui_ShowCloseBox()
 
 /* show the scrollbar */
 
-gui_ShowScrollBar(int i, int j)
+void gui_ShowScrollBar(int i, int j)
 {
 	int barsize, bartop;
 
@@ -520,11 +520,12 @@ gui_ShowScrollBar(int i, int j)
 
 /* show the help screen */
 
-gui_ShowHelpPage(int screen)
+void gui_ShowHelpPage(int screen)
 {
 	extern char far help_0[];
 	extern char far help_1[];
 	extern char far help_2[];
+        extern char far help_3[];       /* *EST* */
 
 	gui_FilledRectangle(6,25,609,467, 1);
 
@@ -545,9 +546,12 @@ gui_ShowHelpPage(int screen)
 	case 2: 
 		gui_puts(help_2); 
 		break;
-	}
+        case 3:
+                gui_puts(help_3);
+                break;                  /* *EST* */
+        }
 
-	gui_ShowScrollBar(screen+1, 3);
+        gui_ShowScrollBar(screen+1, 4); /* changed to 4 help screens *EST* */
 }
 
 
@@ -566,7 +570,7 @@ gui_ShowHelpPage(int screen)
 #define BackSlash  0x2b
 
 
-gui_GetScanCode()
+gui_GetScanCode(void)
 {
 	union REGS inregs, outregs;
 	inregs.h.ah = 0;
@@ -579,9 +583,9 @@ gui_GetScanCode()
 /* show help screens */
 
 #define pgmin 0
-#define pgmax 2
+#define pgmax 3
 
-gui_ShowHelp()
+void gui_ShowHelp(void)
 {
 	int ch, page;
 
@@ -630,9 +634,9 @@ gui_ShowHelp()
 
 		if (ch == End)
 		{
-			if (page != 2)
+                        if (page != pgmax)
 			{
-				page = 2;
+                                page = pgmax;
 				gui_ShowHelpPage(page);
 			}
 		}
@@ -645,7 +649,7 @@ gui_ShowHelp()
 #define rows 63   /* 63 */
 #define maxfiles rows*cols
 
-gui_ShowFile(int FileNum, char *text)
+void gui_ShowFile(int FileNum, char *text)
 {
 	int rowpix, colpix, ch;
 
@@ -663,7 +667,7 @@ gui_ShowFile(int FileNum, char *text)
 }
 
 
-gui_HiLiteFile(int FileNum, char *text)
+void gui_HiLiteFile(int FileNum, char *text)
 {
 	int rowpix, colpix, ch;
 
@@ -682,7 +686,7 @@ gui_HiLiteFile(int FileNum, char *text)
 	}
 }
 
-gui_HiLiteChar(int FileNum, char *text, int charnum)
+void gui_HiLiteChar(int FileNum, char *text, int charnum)
 {
 	int rowpix, colpix, ch;
 
@@ -698,7 +702,7 @@ gui_HiLiteChar(int FileNum, char *text, int charnum)
 }
 
 
-gui_LowLiteFile(int FileNum, char *text)
+void gui_LowLiteFile(int FileNum, char *text)
 {
 	int rowpix, colpix, ch;
 
@@ -720,7 +724,7 @@ gui_LowLiteFile(int FileNum, char *text)
 
 /* swap file ptrs (for gui_Qsort) */
 
-gui_swap(char *v[], int i, int j)
+void gui_swap(char *v[], int i, int j)
 {
 	char *temp;
 
@@ -732,7 +736,7 @@ gui_swap(char *v[], int i, int j)
 
 /* sort files -- Quicksort -- C.A.R. Hoare (1962) -- via K&R p. 110 */
 
-gui_Qsort(char *v[], int left, int right)
+void gui_Qsort(char *v[], int left, int right)
 {
 	int i, last;
 
@@ -748,7 +752,7 @@ gui_Qsort(char *v[], int left, int right)
 	gui_Qsort(v, last+1, right);
 }
 
-gui_ShowTotal(int tot)
+void gui_ShowTotal(int tot)
 {
 	char tempstr[100];
 
@@ -768,7 +772,7 @@ gui_ShowTotal(int tot)
 	gui_Font(1);
 }
 
-gui_ShowTooMany()
+void gui_ShowTooMany(void)
 {
 	int top = 470;
 	int left = 275;
@@ -779,7 +783,7 @@ gui_ShowTooMany()
 	gui_Font(1);
 }
 
-gui_ShowList()
+void gui_ShowList(void)
 {
 	int i, ch;
 	int ach = 0;

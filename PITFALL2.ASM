@@ -439,24 +439,24 @@ P2_Read_Sound:
 ;* clock a music channel
 ;*
 
-Clock_Channel macro %1
+Clock_Channel macro arg1
 local MusicZero, ChannelDone
 
-	test	[P2_Enable + %1],010h		; channel enabled?
+        test    [P2_Enable + arg1],010h           ; channel enabled?
 	jz	ChannelDone			;   no
-	mov	dx,[P2_Music_Count + %1*2]	; use old counter value for flag test
-	dec	word ptr [P2_Music_Count + %1*2]; decrement for current fetch
-	cmp	dx,[P2_Music_Bottom + %1*2]	; equal to bottom value?
+        mov     dx,[P2_Music_Count + arg1*2]      ; use old counter value for flag test
+        dec     word ptr [P2_Music_Count + arg1*2]; decrement for current fetch
+        cmp     dx,[P2_Music_Bottom + arg1*2]     ; equal to bottom value?
 	je	MusicZero			;   yes, clear flag
 	cmp	dx,-1				; time to reset?
 	jnz	ChannelDone			;   no
-	mov	dx,[P2_Music_Top + %1*2]	;   yes, reset counter
-	mov	word ptr [P2_Music_Count + %1*2],dx
-	mov	[P2_Flags + %1],0ffh		; set flag
+        mov     dx,[P2_Music_Top + arg1*2]        ;   yes, reset counter
+        mov     word ptr [P2_Music_Count + arg1*2],dx
+        mov     [P2_Flags + arg1],0ffh            ; set flag
 	jmp	ChannelDone
 
 MusicZero:
-	mov	[P2_Flags + %1],0		; clear flag
+        mov     [P2_Flags + arg1],0               ; clear flag
 
 ChannelDone:
 	endm

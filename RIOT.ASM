@@ -20,15 +20,18 @@ Timer		dd	START_TIME	; the RIOT Timer
 TimerReadVec	dw	ReadTimer1024	; timer read vector
 TimerByte	db	0		; a return value
 TimerIntReg	db	0		; Timer Interrupt Register
-RetFF		db	0FFh
+
+; *EST* variables
+DDR_A           db      0
+DDR_B           db      0
 
 ALIGN 2
 
 ReadRIOTTab label word
 	dw	ReadPortA		; 280h PA Data
-	dw	ReadFF			; 281h PA Direction
+        dw      ReadDDR_A               ; 281h PA Direction
 	dw	ReadPortB		; 282h PB Data
-	dw	ReadFF			; 283h PB Direction
+        dw      ReadDDR_B               ; 283h PB Direction
 	dw	ReadTimer		; 284h Read Timer
 	dw	ReadTimerIntReg		; 285h Read Timer Interrupt Register
 	dw	ReadTimer		; 286h Read Timer
@@ -39,6 +42,13 @@ WriteRIOTTab label word
 	dw	SetRIOTTimer8		; 295h
 	dw	SetRIOTTimer64		; 296h
 	dw	SetRIOTTimer1024	; 297h
+
+; *EST* table
+WriteRIOTTab2 label word
+        dw      WritePortA              ; 280h
+        dw      WriteDDR_A              ; 281h
+        dw      WriteNothing            ; 282h
+        dw      WriteDDR_B              ; 283h
 
 .code
 
@@ -59,33 +69,78 @@ ReadRIOT:
 	and	esi,07h
 	jmp	[ReadRIOTTab + esi*2]
 
-ReadFF:
-	mov	si,offset RetFF
+ReadDDR_A:                              ; read data direction register A
+        mov     si,offset DDR_A
+	ret
+
+ReadDDR_B:                              ; read data direction rigister B
+        mov     si,offset DDR_B
 	ret
 
 ReadPortB:				; read console switches (port b)
-	mov	si,offset _IOPortB
+        mov     si,offset _IOPortB
 	ret
 
-ReadPortA:				; read hand controllers (port b)
-	mov	si,offset _IOPortA
-	ret
-
+ReadPortA:                              ; read hand controllers (port a)
+        mov     si,offset _IOPortA       
+        ret
 
 ;*
 ;* CPU wants to write to a RIOT register
+;* On entry, si contains the address and [WByte] contains the value
 ;*
 
 WriteRIOT:
-	test	si,014h
-	jz	WriteNothing
+;        test    si,014h                ; removed by *EST*
+;        jz      WriteNothing
 
-	and	esi,03h			; was 3
+        test    si,010h
+        jnz     WR_EST2
+        test    si,004h
+        jnz     WriteNothing
+
+        and     esi,03h
+        jmp     [WriteRIOTTab2 + esi*2]
+WR_EST2:
+        test    si,004h
+        jz      WriteNothing
+
+        and	esi,03h			; was 3
 	jmp	[WriteRIOTTab + esi*2]
 	
 
 WriteNothing:
 	ret
+
+
+WritePortA:
+        push    ax
+        mov     al,[WByte]
+        cmp     [_KeyPad],2             ; *EST* cheat for Star Raiders
+        jne     WPAapply                ;   wouldn'd read Joystick
+        and     al,00Fh                 ;   without it
+        mov     ah,[_IOPortA]           ;
+        and     ah,0F0h                 ;
+        or      al,ah                   ;
+WPAapply:
+        mov     [_IOPortA],al
+        pop     ax
+        call    HandleKeyPad
+        ret
+
+WriteDDR_A:
+        push    ax
+        mov     al,[WByte]
+        mov     [DDR_A],al
+        pop     ax
+        ret
+
+WriteDDR_B:
+        push    ax
+        mov     al,[WByte]
+        mov     [DDR_B],al
+        pop     ax
+        ret
 
 ;*
 ;* CPU wants to set the timer by writing to one of the RIOT timer regs:

@@ -22,6 +22,8 @@ extern char TraceCount;
 extern char TraceEnabled;
 extern char OldTraceCount;
 extern char Use50Hz;
+extern char KeyPad;             /* *EST* */
+extern char Driving;            /* *EST */
 
 char def_VideoMode;
 short int def_CFirst;
@@ -38,8 +40,10 @@ long int def_PaddleGame;
 char def_KeyBase;
 long int def_TraceCount;
 char def_Use50Hz;
+char def_KeyPad;                /* *EST* */
+char def_Driving;               /* *EST* */
 
-def_SaveDefaults()
+void def_SaveDefaults(void)
 {
 	def_VideoMode = VideoMode;
 	def_CFirst = CFirst;
@@ -56,9 +60,11 @@ def_SaveDefaults()
 	def_TraceCount = TraceCount;
 	def_NoRetrace = NoRetrace;
 	def_Use50Hz = Use50Hz;
+        def_KeyPad = KeyPad;    /* *EST* */
+        def_Driving = Driving;  /* *EST* */
 }
 
-def_LoadDefaults()
+void def_LoadDefaults(void)
 {
 	VideoMode = def_VideoMode;
 	CFirst = def_CFirst;
@@ -75,5 +81,7 @@ def_LoadDefaults()
 	TraceCount = def_TraceCount;
 	NoRetrace = def_NoRetrace;
 	Use50Hz = def_Use50Hz;
+        KeyPad = def_KeyPad;    /* *EST* */
+        Driving = def_Driving;  /* *EST* */
 }
 
