@@ -169,7 +169,6 @@ TIAGraphicMode:
 	int	010h
 
 	mov	[ReSyncFlag],1		; need to re-sync
-
 	mov	[ModeX],0		; assume we're not in modex
 
 ;*
@@ -178,46 +177,22 @@ TIAGraphicMode:
 
 	mov	dx,[UserCFirst]
 	mov	[_CFirst],dx
-	cmp	[UserCFirst],0ffffh		; did user specify a line number ?
-	jne	SSLINE_Done			;   yes, don't override
+	cmp	[UserCFirst],0ffffh		; did user specify a line number?
+	jne	SSLINE_TestMedium		;   yes, don't override
 	mov	dx,[DefaultCFirst]
 	mov	[_CFirst],dx
+	cmp	[DefaultCFirst],0ffffh		; does game have a recommended starting line?
+	jne	SSLINE_TestMedium		;   yes, use it
+	mov	[_CFirst],DEFAULT_CFirst	;   no, use the standard default
 
-	cmp	[InitialMaxLines],MAX_TallGame	; is this a known tall game ?
-	je	SSLINE_Normal			;   yes
-
-	cmp	[InitialMaxLines],220		; is this a known medium game ?
-	je	SSLINE_Medium
-
-	cmp	[_VideoMode],0ffh		; has video mode been set ?
-	je	SSLINE_Normal			;   no, short in short -- "normal"
-	cmp	[_VideoMode],3			; short game in tall video mode ?
-	jbe	SSLINE_Normal			;   no, short in short -- "normal"
-
-TryMove:
-	cmp	[_CFirst],0ffffh			;   yes, line set ?
-	jne	MoveUp				;          yes, move up 
-	mov	[_CFirst],DEFAULT_CFirst-MEDIUM_Offset ;          no, use a smaller default
-	jmp	SSLINE_Done
-
-SSLINE_Normal:
-	cmp	[_CFirst],0ffffh			; start line set up ?
-	jne	SSLINE_Done			;   yes, done
-Set_Normal:
-	mov	[_CFirst],DEFAULT_CFirst		;   no, use default
-	jmp	SSLINE_Done
-
-SSLINE_Medium:
-	cmp	[_VideoMode],0ffh		; video mode set ?
-	je	TryMove				;    no
-	cmp	[_VideoMode],3			;    yes, short one ?
-	ja	TryMove				;            no
-	jmp	SSLINE_Normal			;            yes, "normal"
-
-MoveUp:	cmp	[_CFirst],MEDIUM_Offset+1	; short game already too high ?
-	jb	SSLINE_Done			;    yes, unlikely -- leave it alone
-	sub	[_CFirst],MEDIUM_Offset
-	jmp	SSLINE_Done
+SSLINE_TestMedium:
+	cmp	[InitialMaxLines],MAX_TallGame	; is this a known tall game?
+	je	SSLINE_Done			;   yes, done
+	cmp	[InitialMaxLines],220		; is this a known medium game?
+	jne	SSLINE_Done			;   no, done
+	cmp	[_CFirst],MEDIUM_Offset+1	; medium game, enough room to subtract the offset?
+	jbe	SSLINE_Done			;   no, done
+	sub	[_CFirst],MEDIUM_Offset		;   yes, move it down a bit
 
 SSLINE_Done:
 	mov	dx,[_CFirst]
@@ -225,7 +200,7 @@ SSLINE_Done:
 
 
 	cmp	[_VideoMode],0ffh	; did user specify a video mode?
-	jne	SetMaxLines		;   yes, don't use defaults
+	jne	GeneratePalette		;   yes, don't use defaults
 	cmp	[MaxLines],204		; is MaxLines above what mode 3 can handle?
 	ja	SetMX5			;   yes, use mode 5
 	mov	[_VideoMode],3		;   no,  use mode 3
@@ -234,47 +209,6 @@ SSLINE_Done:
 SetMX5:	mov	[_VideoMode],5
 	jmp	GeneratePalette
 
-SetMaxLines:
-	cmp	[_VideoMode],2		; user specified a video mode
-	ja	SML1
-Set200:
-	mov	[MaxLines],200		; modes 0, 1 and 2 gets 200 lines
-	jmp	GeneratePalette
-
-SML1:	cmp	[_VideoMode],3
-	ja	SML2
-	mov	[MaxLines],204		; mode 3 gets 204 lines
-	jmp	GeneratePalette
-
-SML2:	cmp	[_VideoMode],9		; anything above 9 ?
-	ja	Set200			;   yes, 200 lines
-	je	SetMode7
-	cmp	[_VideoMode],8
-	je	SetMode8		;   no, if mode 8 handle special
-	cmp	[_VideoMode],7		; mode 7 ?
-	je	SetMode7		;   yes, handle special
-	mov	[MaxLines],MAX_TallGame	;   no, X modes get 240 lines
-	jmp	GeneratePalette
-	
-	cmp	[_VideoMode],7		; mode 7 (tiny)
-	jne	MXPRet			;   no
-
-SetMode7:
-	cmp	[_CFirst],0		; frogpond or pharhcrs ?
-	jz	JustDoMaxLines		;   yes
-
-	mov	[_CFirst],1		; this is ultimate reality mode
-	mov	[OldCFirst],1
-
-JustDoMaxLines:
-	mov	[MaxLines],480
-	jmp	GeneratePalette
-
-SetMode8:
-	mov	[MaxLines],252
-	jmp	GeneratePalette
-
-	
 
 ;*
 ;* generate palette
@@ -299,6 +233,7 @@ GeneratePalette:
 
 GPUsePAL:
 	mov	si,offset PALPaletteTable
+	mov	[_PaletteNumber],1	; mark PAL mode
 GPUseNTSC:
 	mov	di,offset PCXPalette
 	mov	[PaletteCount],0	; do 16 colors
@@ -361,6 +296,36 @@ LUMDone:
 	ret
 
 OffBeat:
+	cmp	[_PaletteNumber],1	; PAL mode ?
+	jne	RegularOffBeat		;   no
+
+;*********************************
+;*** test if PAL modes allowed ***
+;*********************************
+
+	cmp	[_Use50Hz],0
+	jz	No50Hz
+
+	movzx	si,[_VideoMode]
+	mov	al,[Remap50Hz + si]
+	mov	[_VideoMode],al	
+
+No50Hz:
+	movzx	si,[_VideoMode]
+	shl	si,1
+	mov	si,[MaxLineTable + si]	; (*** in modex.asm ***)
+	mov	[MaxLines],si
+
+	cmp	[MaxLines],480
+	jb	RegularOffBeat
+	cmp	[_CFirst],0		; frogpond or pharhcrs ?
+	jz	RegularOffBeat		;   yes
+
+	mov	[_CFirst],1		; this is ultimate reality mode
+	mov	[OldCFirst],1
+
+
+RegularOffBeat:
 	cmp	[_VideoMode],3		; doing Trixter 60Hz (mode 1, 2 or 3) ?
 	jbe	DoTrixter60Hz		;   yes
 	call	ModeXInit		;   no, do modex
@@ -415,16 +380,6 @@ TBRet:	ret
 ;*
 ;* return to text mode
 ;*
-
-public _TextMode
-_TextMode proc far
-	mov	eax,100000
-	call	_Delay			; there's something about Windows ...
-	call	TIATextMode
-	mov	eax,100000
-	call	_Delay			; ... it just *likes* a delay ...
-	ret
-_TextMode endp
 
 TIATextMode:
 	cmp	[InTextMode],0

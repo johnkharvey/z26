@@ -972,12 +972,10 @@ gui_ShowList()
 			def_LoadDefaults();
 			cli_ReadParms();
 			cli_LoadROM(FileNamePtrs[curfile]);
-/*			gui_RestoreVideoMode(); */
 
 			psp = _psp;		/* for environment scanner  (sbdrv.asm) */
 			emulator();		/* call emulator              (tia.asm) */
 			
-/*			gui_GraphicsMode(); */
 			gui_SetPalette(35, 40, 45);	/* 31, 34, 41 */
 
 		}

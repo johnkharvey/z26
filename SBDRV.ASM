@@ -244,9 +244,13 @@ LowSpeedClear:
 	call	send_dsp
 
 FinishClear:
+
+	popf
+
 	call	_ResetDSP		;restore DSP to default state
 
-	popf				;restore INTs
+;	popf				;restore INTs
+
 	ret
 
 

@@ -155,10 +155,19 @@ PausedLoop:
 ;* shutdown the weird stuff
 ;*
 
-sd_weird:
+xsd_weird:
 	call	_sound_clear		; turn sound off (Soundblaster)
 	call	SoundOff		; turn sound off (PC speaker)
 ;	call	TIATextMode		; back to text mode
+	call	TIARestoreVideoMode
+	call	SetOldInt9		; reset the key handler
+	call	_RestoreTimer		; put timer back into mode 3
+	call	_RestoreISR		; restore SoundBlaster ISR (if was on)
+	ret
+
+sd_weird:
+	call	_sound_clear		; turn sound off (Soundblaster)
+	call	SoundOff		; turn sound off (PC speaker)
 	call	TIARestoreVideoMode
 	call	SetOldInt9		; reset the key handler
 	call	_RestoreTimer		; put timer back into mode 3

@@ -12,6 +12,7 @@ extern char PaletteNumber;
 extern long int PaddleGame;
 extern char KeyBase;
 extern long int TraceCount;
+extern char Use50Hz;
 
 char def_VideoMode;
 short int def_CFirst;
@@ -27,6 +28,7 @@ char def_PaletteNumber;
 long int def_PaddleGame;
 char def_KeyBase;
 long int def_TraceCount;
+char def_Use50Hz;
 
 def_SaveDefaults()
 {
@@ -44,6 +46,7 @@ def_SaveDefaults()
 	def_KeyBase = KeyBase;
 	def_TraceCount = TraceCount;
 	def_NoRetrace = NoRetrace;
+	def_Use50Hz = Use50Hz;
 }
 
 def_LoadDefaults()
@@ -62,5 +65,6 @@ def_LoadDefaults()
 	KeyBase = def_KeyBase;
 	TraceCount = def_TraceCount;
 	NoRetrace = def_NoRetrace;
+	Use50Hz = def_Use50Hz;
 }
 

@@ -8,14 +8,13 @@
 */
 
 
-#define version "z26 (1.32)"
+#define version "z26 (1.33)"
 
 #define rom_list "ROM List"
 
 /*
-#define rom_list "Preview version I -- Please don't distribute."
+#define rom_list "Preview version A -- Please don't distribute."
 */
-
 
 #include <dos.h>		/* _psp */
 #include <ctype.h>
@@ -37,6 +36,7 @@ unsigned char CartRom[34000];
 #include "cli.c"
 #include "gui.c"
 #include "trace.c"
+
 
 main(int argc, char *argv[])
 {
@@ -63,12 +63,8 @@ main(int argc, char *argv[])
 		gui_GraphicsMode();
 		gui_SetPalette(35, 40, 45);	/* 31, 34, 41 */
 
-/*		gui_ShowPrototype(); */
-/*		gui_ShowHelp(); */
-
 		gui_ShowList();
 
-/*		gui_RestoreVideoMode(); */
-		TextMode();
+		gui_RestoreVideoMode();
 	}
 }

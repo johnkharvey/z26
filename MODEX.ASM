@@ -24,7 +24,145 @@ MXDelayedClear		db	0	; 1 for frogpond, 2 for congbong
 					; nobody else should notice
 					; delayed clear (kludge -- see tia.asm)
 
+Remap50Hz label byte		; remap 60Hz mode to 50Hz mode if PAL game
+	db	10		; 0
+	db	10		; 1
+	db	11		; 2
+	db	11		; 3
+	db	10		; 4
+	db	11		; 5
+	db	12		; 6
+	db	13		; 7
+	db	14		; 8
+	db	13		; 9
+	db	10		; 10
+	db	11		; 11
+	db	12		; 12
+	db	13		; 13
+	db	14		; 14
+
+
+MiscOutputTable label byte	; value of misc output register
+	db	0		; 0  (mode 0-3 handled elsewhere)
+	db	0		; 1
+	db	0		; 2
+	db	0		; 3
+	db	0e3h		; 4
+	db	0e7h		; 5
+	db	0e7h		; 6
+	db	0e7h		; 7
+	db	0a7h		; 8
+	db	0e7h		; 9
+	db	0e3h		; 10
+	db	0e7h		; 11
+	db	0e7h		; 12
+	db	0e7h		; 13
+	db	0a7h		; 14
+
+DoubleScanTable label byte	; if nonzero, mode doesn't do doublescan
+	db	0		; 0
+	db	0		; 1
+	db	0		; 2
+	db	0		; 3
+	db	0		; 4
+	db	0		; 5
+	db	1		; 6
+	db	1		; 7
+	db	0		; 8
+	db	1		; 9
+	db	0		; 10
+	db	0		; 11
+	db	1		; 12
+	db	1		; 13
+	db	0		; 14
+
+ScanLineTable label byte	; if nonzero, mode is a simulated scanline mode
+	db	0		; 0
+	db	0		; 1
+	db	0		; 2
+	db	0		; 3
+	db	0		; 4
+	db	0		; 5
+	db	1		; 6
+	db	0		; 7
+	db	0		; 8
+	db	0		; 9
+	db	0		; 10
+	db	0		; 11
+	db	1		; 12
+	db	0		; 13
+	db	0		; 14
+
+FlipTable label byte		; if nonzero, mode can do page flipping
+	db	0		; 0
+	db	0		; 1
+	db	0		; 2
+	db	0		; 3
+	db	1		; 4
+	db	1		; 5
+	db	0		; 6
+	db	0		; 7
+	db	1		; 8
+	db	0		; 9
+	db	1		; 10
+	db	1		; 11
+	db	0		; 12
+	db	0		; 13
+	db	1		; 14
+
 ALIGN 2
+
+ParmTable label word
+	dw	0		; 0
+	dw	0		; 1
+	dw	0		; 2
+	dw	0		; 3
+	dw	CRTParms	; 4
+	dw	MX5Parms	; 5
+	dw	MX5Parms	; 6
+	dw	MX5Parms	; 7
+	dw	MX8Parms	; 8
+	dw	MX9Parms	; 9
+	dw	MX10Parms	; 10
+	dw	MX11Parms	; 11
+	dw	MX11Parms	; 12
+	dw	MX11Parms	; 13
+	dw	MX14Parms	; 14
+
+CopyTable label word
+	dw	DoRegularCopy	; 0
+	dw	DoRegularCopy	; 1
+	dw	DoRegularCopy	; 2
+	dw	DoRegularCopy	; 3
+	dw	DoRegularCopy	; 4
+	dw	DoRegularCopy	; 5
+	dw	DoRegularCopy	; 6
+	dw	MX7CopyLine	; 7
+	dw	DoRegularCopy	; 8
+	dw	MX7CopyLine	; 9
+	dw	DoRegularCopy	; 10
+	dw	DoRegularCopy	; 11
+	dw	DoRegularCopy	; 12
+	dw	MX7CopyLine	; 13
+	dw	DoRegularCopy	; 14
+
+MaxLineTable label word
+	dw	200		; 0
+	dw	200		; 1
+	dw	200		; 2
+	dw	204		; 3
+	dw	240		; 4
+	dw	240		; 5
+	dw	240		; 6
+	dw	480		; 7
+	dw	240		; 8
+	dw	480		; 9
+	dw	256		; 10
+	dw	256		; 11
+	dw	256		; 12
+	dw	512		; 13
+	dw	256		; 14
+
 
 ; index data pairs for CRT controller registers that differ between mode 13 and mode X
 
@@ -37,7 +175,8 @@ CRTParms label word
 	dw	0df12h	; vertical displayed
 	dw	0e715h	; vblank start
 	dw	00616h	; vblank end
-CRT_PARM_LENGTH = (($-CRTParms)/2)
+	dw	-1
+
 
 MX5Parms label word
 	dw	06c00h	; horizontal total
@@ -55,7 +194,8 @@ MX5Parms label word
 	dw	0df12h	; vertical displayed
 	dw	0e715h	; vblank start
 	dw	00616h	; vblank end
-MX5_PARM_LENGTH = (($-MX5Parms)/2)
+	dw	-1
+
 
 MX8Parms label word
 	dw	06c00h	; horizontal total
@@ -73,7 +213,7 @@ MX8Parms label word
 	dw	0ef12h	; vertical displayed
 	dw	0f015h	; vblank start
 	dw	00516h	; vblank end
-MX8_PARM_LENGTH = (($-MX8Parms)/2)
+	dw	-1
 
 
 MX9Parms label word	; 360x480
@@ -95,7 +235,75 @@ MX9Parms label word	; 360x480
 	dw	0e715h	; vblank start
 	dw	00616h	; vblank end
 	dw	0e317h	;* turn on byte mode
-MX9_PARM_LENGTH = (($-MX9Parms)/2)
+	dw	-1
+
+
+MX10Parms label word	; 320x240 50Hz
+	dw	05f00h
+	dw	04f01h
+	dw	05002h
+	dw	08203h
+	dw	05404h
+	dw	08005h
+
+	dw	06f06h
+	dw	0ba07h
+	dw	00008h
+	dw	04109h
+
+	dw	02710h
+	dw	00911h
+	dw	0fe12h
+	dw	02813h
+	dw	00014h
+	dw	0ff15h
+	dw	01016h
+	dw	0e317h
+	dw	-1
+
+
+MX11Parms label word	; 320x240 50Hz (squished)
+	dw	06c00h	; horizontal total
+	dw	04f01h	; horizontal display enable end
+	dw	05002h	; horizontal blanking start
+	dw	08203h	; horizontal blanking end
+	dw	05b04h	; horizontal retrace start
+	dw	08705h	; horizontal retrace end
+
+	dw	06f06h
+	dw	0ba07h
+	dw	00008h
+	dw	04109h
+
+	dw	02710h
+	dw	00911h
+	dw	0fe12h
+	dw	02813h
+	dw	00014h
+	dw	0ff15h
+	dw	01016h
+	dw	0e317h
+	dw	-1
+
+MX14Parms label word
+	dw	06c00h	; horizontal total
+	dw	04f01h	; horizontal display enable end
+	dw	05002h	; horizontal blanking start
+	dw	08203h	; horizontal blanking end
+	dw	05b04h	; horizontal retrace start
+	dw	08705h	; horizontal retrace end
+
+	dw	03506h	; vertical total
+	dw	01d07h	; overflow (bit 8 of vertical counts)
+	dw	04009h	; cell height (2 to double scan)
+	dw	01310h	; v sync start
+	dw	0a511h	; (ac) v sync end and protect cr0-cr7
+	dw	0ff12h	; vertical displayed
+	dw	00015h	; vblank start
+	dw	00516h	; vblank end
+	dw	-1
+
+
 
 .code
 
@@ -107,7 +315,7 @@ ModeXInit:
 	pusha
 	push	es
 
-	cmp	[_VideoMode],9		; doing mode 9 or less ?
+	cmp	[_VideoMode],14		; doing a valid mode ?
 	ja	MXPRet			;   no, ret for now
 
 	mov	[ModeX],1
@@ -138,24 +346,13 @@ ModeXInit:
 	mov	ax,000014h
 	out	dx,ax			; disable doubleword mode
 
-	call	MXClearMem		; clear mem now...
-
 	mov	ax,0100h
 	out	dx,ax			; synchronous reset while setting misc output
-					; for safety, even though clock unchanged
 
-	cmp	[_VideoMode],4		; doing tweaked ModeX ?
-	jne	MX5a			;   yes
-	mov	al,0e3h			;   no,  select 25MHz dot clock & 60Hz scanning rate
-	jmp	MX4a
+	movzx	si,[_VideoMode]
+	mov	al,[MiscOutputTable + si]
 
-MX5a:	cmp	[_VideoMode],8		; mode 8 ?
-	jne	MX6a			;   no
-	mov	al,0a7h			;   yes, misc output for mode 8 (28 Mhz clock)
-	jmp	MX4a
-
-MX6a:	mov	al,0e7h			; select 28MHz dot clock & 60Hz scanning rate
-MX4a:	mov	dx,MISC_OUTPUT
+	mov	dx,MISC_OUTPUT
 	out	dx,al
 
 	mov	dx,SC_INDEX
@@ -172,44 +369,22 @@ MX4a:	mov	dx,MISC_OUTPUT
 	dec	dx			; CRT controller index
 	cld
 
-	cmp	[_VideoMode],4		; doing tweaked ModeX ?
-	jne	MX5b
-
-	mov	si,offset CRTParms	;   no, point to CRT parameter table
-	mov	cx,CRT_PARM_LENGTH	;       # of table entries
-	jmp	MX4b
-
-MX5b:	
-	cmp	[_VideoMode],9
-	je	MXMode9
-	cmp	[_VideoMode],8
-	jb	MX6b
-	mov	si,offset MX8Parms
-	mov	cx,MX8_PARM_LENGTH
-	jmp	MX4b
-
-MXMode9:
-	mov	si,offset MX9Parms
-	mov	cx,MX9_PARM_LENGTH
-	jmp	MX4b
-	
-MX6b:	mov	si,offset MX5Parms	;   yes, point to tweaked CRT parameter table
-	mov	cx,MX5_PARM_LENGTH
-MX4b:
+	movzx	si,[_VideoMode]
+	shl	si,1
+	mov	si,[ParmTable + si]
 
 SetCRTParmsLoop:
 	lodsw				; get the next CRT index/data pair
+	cmp	ax,-1
+	je	SetCRTParmsDone
 	out	dx,ax			; set the next CRT index/data pair
-	loop	SetCRTParmsLoop
+	jmp	SetCRTParmsLoop
 
-	sti
-
-	cmp	[_VideoMode],9
-	je	MXPRet
-	cmp	[_VideoMode],6		; doing mode 6 or 7 (scanline) ?
-	jb	MXPRet			;   no
-
-	mov	dx,CRTC_INDEX		;   yes, turn off doublescan mode
+SetCRTParmsDone:
+	movzx	si,[_VideoMode]
+	cmp	[DoubleScanTable + si],0 ; doing doublescan?
+	jz	MXPRet			;   yes
+	mov	dx,CRTC_INDEX		;   no, turn off doublescan mode
 	mov	al,9			; cell height
 	out	dx,al
 	inc	dx
@@ -217,7 +392,11 @@ SetCRTParmsLoop:
 	and	al, not 1fh
 	out	dx,al			; turn off doublescan mode
 
-MXPRet:	pop	es
+MXPRet:
+	sti
+	call	MXClearMem		; clear mem now...
+
+	pop	es
 	popa
 	ret
 
@@ -252,17 +431,17 @@ MXRet:	ret
 ;* Flip ModeX page
 ;*
 
+
 ModeXFlipPage:
 	cmp	[ModeX],0		; in ModeX ?
 	jz	MXRet			;   no, ignore call
 	mov	[ModeXDisplayPointer],0	; assume even frame or no flipping
-	cmp	[_VideoMode],4		; modes 4, 5 and 8 can do page flipping
-	je	DoFlipping
-	cmp	[_VideoMode],5
-	je	DoFlipping
-	cmp	[_VideoMode],8
-	jne	NoFlipping
 
+	push	si
+	movzx	si,[_VideoMode]
+	cmp	[FlipTable + si],0
+	pop	si
+	jz	NoFlipping
 
 FlipThrottleLoop:
 	call	_GetTime		; prevent false alarms if running in a fast refresh mode (mode 8)
@@ -340,10 +519,13 @@ ModeXCopyLine:
 	mov	ax,0a000h
 	mov	es,ax			; dest segment is VGA area
 
-	cmp	[_VideoMode],8		; doing mode 8
-	je	DoRegularCopy		;   yes, regular
-	cmp	[_VideoMode],6		; doing video mode 4, 5 or 6
-	ja	MX7CopyLine		;   no
+	movzx	si,[_VideoMode]
+	shl	si,1
+	jmp	[CopyTable + si]
+
+;*
+;* normal copy line
+;*
 
 DoRegularCopy:
 	mov	cx,20
@@ -371,8 +553,12 @@ MXOddLoop:
 	jnz	MXOddLoop
 	
 	add	[ModeXDisplayPointer],80
-	cmp	[_VideoMode],6		; doing scanline mode?
-	jne	MXCRet			;   no
+
+	push	si
+	movzx	si,[_VideoMode]
+	cmp	[ScanLineTable + si],0	; a scanline mode?
+	pop	si
+	jz	MXCRet			;  no
 
 	add	[ModeXDisplayPointer],80 ;  yes, skip a line
 	
@@ -382,7 +568,7 @@ MXCRet:	pop	es
 
 
 ;*
-;* mode 7 line copy
+;* mode 7 and 9 line copy
 ;*
 
 MX7Move4 macro op1
@@ -401,8 +587,8 @@ MX7Move4 macro op1
 	endm
 
 MX7CopyLine:
-	cmp	[_VideoMode],7
-	jne	MX7CopyContinue
+	cmp	[_VideoMode],9
+	je	MX7CopyContinue
 
 	add	[ModeXDisplayPointer],20	; move mode 7 toward middle
 
@@ -460,8 +646,8 @@ MX7Loop3:
 	jnz	MX7Loop3
 
 	add	[ModeXDisplayPointer],60
-	cmp	[_VideoMode],7
-	je	MXCRet			; if mode 7 we've added enough offset
+	cmp	[_VideoMode],9
+	jne	MXCRet			; if mode 7 we've added enough offset
 	add	[ModeXDisplayPointer],20
 	add	[ModeXDisplayPointer],10
 

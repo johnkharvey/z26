@@ -325,36 +325,6 @@ SetTall:
 	mov	[InitialMaxLines],MAX_TallGame
 	jmp	SSLINE
 
-ifdef compileoldcode
-
-SetMedium:
-	mov	[MaxLines],240
-	mov	[InitialMaxLines],220	; mark this a medium game
-	jmp	SSLINE
-
-SetTall:
-	mov	[MaxLines],240
-	mov	[InitialMaxLines],240
-	jmp	SSLINE
-
-SetUltraMedium:
-	mov	[MaxLines],240
-	mov	[InitialMaxLines],220
-	cmp	[_VideoMode],0ffh	; did user specify a video mode ?
-	jne	SSLINE			;   yes, don't override
-	mov	[_VideoMode],7		;   otherwise force mode 7
-	jmp	SSLINE
-
-SetUltraTall:
-	mov	[MaxLines],240
-	mov	[InitialMaxLines],240
-	cmp	[_VideoMode],0ffh	; did user specify a video mode ?
-	jne	SSLINE			;   yes, don't override
-	mov	[_VideoMode],7		;   otherwise force mode 7
-	jmp	SSLINE
-
-endif
-
 ;*
 ;* process requests for special starting lines
 ;*
@@ -542,7 +512,7 @@ LineTable label byte
 
 
 	dd	01d2f8eh		; aciddrop
-	db	69
+	db	58
 	dd	08387h			; actionmn
 	db	68
 	dd	078a61h			; air_raid
@@ -570,7 +540,7 @@ LineTable label byte
 	dd	0737ddh			; bermuda
 	db	32
 	dd	016beh			; bibi
-	db	50
+	db	46
 	dd	075cafh			; birabira
 	db	32
 	dd	0bf6fh			; bobby
@@ -702,7 +672,7 @@ LineTable label byte
 	dd	03d15eh			; football
 	db	41
 	dd	046b6h			; forest (extra tall)
-	db	41
+	db	40
 	dd	074a05h			; frankmon
 	db	43
 ;	dd	0b2d7h			; frogpond (Vblank triggers frame)
@@ -1115,6 +1085,8 @@ SSP:	cmp	[_PaletteNumber],0ffh	; did user specify a palette number ?
 	je	SSPAL
 
 
+	cmp	eax,0716beh		; bibi
+	je	SSPAL
 	cmp	eax,03d843h		; canyonb
 	je	SSNTSC
 	cmp	eax,070828h		; clwndown
@@ -1148,6 +1120,8 @@ SSP:	cmp	[_PaletteNumber],0ffh	; did user specify a palette number ?
 	cmp	eax,0754f5h		; parachut
 	je	SSNTSC
 	cmp	eax,1e3898h		; pickpile
+	je	SSPAL
+	cmp	eax,06fc86h		; seamnstr
 	je	SSPAL
 	cmp	eax,070a3eh		; skihunt
 	je	SSPAL

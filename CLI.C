@@ -156,18 +156,19 @@ cli_InterpretParm(char *p)
 	switch (ch)
 	{
 	case 'v':  	VideoMode = parm;			break;
-	case 'u':  	CFirst = parm;			break;
+	case 'u':  	CFirst = parm;				break;
 	case 'q':  	quiet = 1;				break;
 	case 's':  	SoundMode = parm;			break;
-	case '0':  	IOPortB |= 64;			break;
-	case '1':  	IOPortB |= 128;			break;
+	case '0':  	IOPortB |= 64;				break;
+	case '1':  	IOPortB |= 128;				break;
+	case '5':	Use50Hz = 1;				break;
 	case 'b':  	IOPortB &= 0xc3;			break;
-	case 'x':  	DoChecksum = 1;			break;
+	case 'x':  	DoChecksum = 1;				break;
 	case 'f':  	FrameExit = parm;			break;
 	case 'd':  	dsp = parm;				break;
 	case 'j':  	Joystick = parm;			break;
-	case 'c':  	PaletteNumber = parm;		break;
-	case 'p':  	PaddleGame = (parm & 0xf) << 1;	break;
+	case 'c':  	PaletteNumber = parm;			break;
+	case 'p':  	PaddleGame = (parm & 0xf) << 1;		break;
 	case 'k':  	KeyBase = parm & 3;			break;
 	case 't':  	if (parm) TraceCount = parm; else TraceCount = 0xff;
 			log = fopen("z26.log", "w");
