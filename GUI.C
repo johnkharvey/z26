@@ -927,7 +927,7 @@ int findsof(char* main)
 
 /* get long filename into filename buffer */
 
-gui_GetLFN(char* Shortname)
+void gui_GetLFN(char* Shortname)
 {
 int i;
 
@@ -995,7 +995,7 @@ SeeAlso: AH=60h,AX=7160h/CL=00h,AX=7160h/CL=01h
 
 /* display a long filename */
 
-gui_ShowLFN(char* Shortname)
+void gui_ShowLFN(char* Shortname)
 {
 	gui_Font(0);
 
@@ -1027,7 +1027,7 @@ void gui_SetRowCol(int FileNum)
 
 /* show a short filename */
 
-gui_ShowShort(char *text, int color, int hideflag) /* ###############< MW <##################### */
+void gui_ShowShort(char *text, int color, int hideflag) /* ###############< MW <##################### */
 {
 	int ch;
 

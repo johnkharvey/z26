@@ -279,6 +279,7 @@ int cli_LoadROM(unsigned char *filename)
 **	-l <n>	emulate lightgun and adjust horizontally *EST*
 **	-a <n>	adjust lightgun vertically *EST*
 **	-n	show line number count *EST*
+**      -i      emulate Mindlink controller, <1> right, <2> left *EST*
 */
 
 FILE *log;
@@ -335,6 +336,7 @@ void cli_InterpretParm(char *p)
 	case 'l':	Lightgun = parm;		       break; /* *EST* */
 	case 'a':	LGadjust = parm;		       break; /* *EST* */
 	case 'n':	ShowLineCount = 1;		       break; /* *EST* */
+        case 'i':       Mindlink = parm & 3;                   break; /* *EST* */
         default:   	printf("Bad command line switch seen: -%c", ch);
 		   	exit(1);
 	}

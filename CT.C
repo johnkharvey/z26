@@ -13,6 +13,7 @@ dd	Kool[] = {
 dd	Boxing[] = {
 	0x19d692a0,	/* RealSports Boxing.bin */
 	0xb43413a5,	/* RealSports Boxing_(eks).bin */
+        0xe514f499,     /* Realsports Boxing (PAL) */
 	-1
 };
 
@@ -103,6 +104,7 @@ dd	Paddle_0[] = {
 	0x235e3b9c,	/* Breakout_(eks).bin */
 	0x545dba81,	/* Night Driver_(eks).bin */
 	0x450650d5,	/* Super Breakout_(eks).bin */
+        0x9ded5a9c,     /* Blackjack (PAL) */
 	-1
 };
 
@@ -140,6 +142,7 @@ dd	MPdir_1[] = {
 	0x5ef85036,	/* Starpath - Party Mix (3 of 3).bin */
 	0xa6c4a5fd,	/* Steeplechase (Sears) [o].bin */
 	0x0d6f4f89,	/* Steeplechase (Sears).bin */
+        0x9ded5a9c,     /* Blackjack (PAL) */
 	-1
 };
 
@@ -185,6 +188,7 @@ dd	be_quiet[] = {
 	0x26e0434c,	/* Video Checkers (1978).bin */
 	0x1d376918,	/* Video Chess (1978).bin */
 	0xbe65f786,	/* Video Chess (Atari) (PAL) [!].bin */
+        0x5e2f0799,     /* Double Dragon (PAL) */
 	-1
 };
 
@@ -267,6 +271,9 @@ dd	BS_3[] = {
 	0x84a101d4,	/* Star Wars - Death Star Battle_(eks).bin */
 	0x2fc06cb0,	/* Tutankham_(eks).bin */
 	0xab50bf11,	/* Star Wars - The Arcade Game (proto).BIN */
+        0x549a1b6b,     /* Star Wars - The Arcade Game (PAL) */
+        0x36910e4d,     /* Frogger II - Threedeep! (PAL) */
+        0xb8bb2361,     /* Gyruss (PAL) */
 	-1
 };
 
@@ -289,6 +296,9 @@ dd	BS_4[] = {
 dd	BS_5[] = {
 	0x7d23e780,	/* Decathlon.bin */
 	0xa51c0236,	/* Robot Tank.bin */
+        0xd8ecf576,     /* Decathlon (PAL) */
+        0x0e8757b0,     /* Robot Tank (PAL) */
+        0x94e8df6b,     /* Space Shuttle (PAL) */
 	-1
 };
 

@@ -155,13 +155,13 @@ StartLineTable label word
 	dw	32		; 1
 	dw	32		; 2
 	dw	30		; 3
-	dw	22		; 4
-	dw	22		; 5
-	dw	22		; 6
+	dw	20		; 4  (22)
+	dw	20		; 5
+	dw	20		; 6
 	dw	1		; 7
-	dw	22		; 8
+	dw	20		; 8
 	dw	1		; 9
-	dw	38		; 10
+	dw	38		; 10 (38)
 	dw	38		; 11
 	dw	38		; 12
 	dw	1		; 13

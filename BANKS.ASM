@@ -42,6 +42,10 @@ MNSlice1	dw	7*800h		; this one doesn't change
 
 MNRamSlice	dw	0		; which 256 byte ram slice
 
+; CompuMate RAM state
+
+CMRamState      dw      10h             ; RAM enabled - read/write state
+
 .code
 
 ;*
@@ -87,6 +91,8 @@ SetupBanks:
 	je	SetFatalRun		; Atari 32K
 	cmp	al,9
 	je	F8Backwards		; 8K with banks backwards
+        cmp     al,10
+        je      SCM                     ; CompuMate computer module
 
 DetectBySize:
 	mov	ax,[_CartSize]
@@ -113,6 +119,18 @@ DetectBySize:
         cmp	ax,33999
 	je	SMB			; Megaboy 64K cart *EST*
 	ret
+
+; Setup CompuMate
+
+SCM:
+        mov     [ReadBank], offset RBankCM
+        mov     [WriteBank], offset WBankCM
+        mov     [RomBank],03000h
+        call    InitCompuMate           ; init Compumate keyboard
+                                        ; see keyboard.asm
+        ret
+
+; Setup Commavid RAM module
 
 SCV:
 	mov	bx,2047			; copy ROM to RAM for MagiCard
@@ -470,6 +488,71 @@ WBank16sc:
 	ret
 
 ;*
+;* CompuMate computer module
+;*
+
+ChangeState_CM macro
+local NoChange
+local NoResetKeyCount
+local NoIncreaseKeyCount
+
+        cmp     si,0280h
+        jne     NoChange
+        test    [WByte],20h
+        jz      NoResetKeyCount
+        mov     [CM_Collumn],0
+NoResetKeyCount:
+        test    [WByte],40h
+        jz      NoIncreaseKeyCount
+        inc     [CM_Collumn]
+        cmp     [CM_Collumn],10
+        jne     NoIncreaseKeyCount
+        mov     [CM_Collumn],0
+NoIncreaseKeyCount:
+        push    ax
+        mov     al,[WByte]
+        mov     [CMRamState],ax
+        and     ax,03h
+        shl     ax,12
+        mov     [RomBank],ax
+        pop     ax
+
+NoChange:
+        endm
+
+
+TestRam_CM macro
+local NoRAM
+local NoWrite
+
+        cmp     si,1800h
+        jb      NoRAM
+        test    [CMRamState],10h        ; RAM enabled?
+        jnz     NoRAM
+        add     si,offset _Ram - 1000h - 800h
+        test    [CMRamState],20h        ; write enabled?
+        jz      NoWrite
+        WriteRam
+NoWrite:
+        ret
+NoRAM:
+        endm
+
+
+RBankCM:
+	test_hw_read
+        TestRam_CM
+	MapRomBank
+	ret
+
+
+WBankCM:
+        ChangeState_CM
+	test_hw_write
+        TestRam_CM
+        ret
+
+;*
 ;* standard 32K cart with Super-Chip (F4+sc)
 ;*
 
@@ -514,7 +597,7 @@ local NoChange
 
 	cmp	si,1Fe0h		; if not in switch area ...
 	jb	NoChange		; ... there's no change
-	cmp	si,1FF8h
+        cmp     si,1FF7h
 	ja	NoChange
 
 	push	ax

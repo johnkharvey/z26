@@ -1093,8 +1093,14 @@ db	0
 public _help_1
 _help_1 label byte
 
+db      '`y`UCompuMate Keyboard`u`d`n`n'
+db      '`d Use PC keyboard collumns `o1 `d- `o0   `d(`oCtrl`d -- FUNC   `oLShift`d -- SHIFT)`n`n'
+
+db      '`y`UMindlink Controller`u`d`n`n'
+db      '`d Use the mouse to move horizontally and press the `obutton`d to start the game`n`n'
+
 db	'`y`UPausing a Game`u`n`n'
-db      '    `op`d -- pause`n'
+db      '`oBackS`d -- pause`n'
 db      '`oEnter`d -- resume`n`n'
 
 db	'`y`UVideo Modes`u`n`n'
@@ -1113,7 +1119,7 @@ db      ' `oPgUp`d -- scroll screen up.`n'
 db      ' `oPgDn`d -- scroll screen down.`n'
 db      ' `oHome`d -- return to default screen position or top of file.`n`n'
 
-db	'`y`UScreen Capture`u`d`n`n'
+db      '`y`UScreen Capture`u`d`n`n'
 db      '    `o=`d -- PCX screen capture`n`n'
 
 db      '`y`UMouse Handling in Paddle Emulation`u`d`n`n'
@@ -1146,7 +1152,9 @@ db      '                              `y5`d - 8K Decathlon & Robot Tank,`n'
 db      '                              `y6`d - 16K superchip,`n'
 db      '                              `y7`d - 16K M-Network,`n'
 db      '                              `y8`d - 32K Atari,`n'
-db      '                              `y9`d - 8K Atari -- banks swapped)`n`n'
+db      '                              `y9`d - 8K Atari -- banks swapped`n'
+db      '                             `y10`d - Spectravideo CompuMate)`n`n'
+db      '  `o-i`yN`d -- emulate Mindlink controller (`y1`d = right   `y2`d = left)`n`n'
 db      '  `o-j`yN`d -- joystick option     (`y0`d = keyboard only (analog joystick off),`n'
 db      '                              `y2`d = reverse keyboard controls)`n`n'
 db      '  `o-k`yN`d -- paddle to emulate with keyboard  (`y0`d - `y3`d)`n'
@@ -1156,9 +1164,7 @@ db      '  `o-l`yN`d -- enable lightgun emulation and adjust by `yN`d cycles`n'
 db      '  `o-a`yN`d -- adjust lightgun emulation by `yN`d scanlines`n`n'
 db      '  `o-n`d  -- show line number count after end of emulation`n`n'
 db      '  `o-o`d  -- simulate PAL colour loss`n`n'
-db      '  `o-q`d  -- quiet`n`n'
-db	'  `o-r`d  -- run full speed  (vsync off)`n'
-db      '  `o-r`yN`d -- run at `yN`d frames per second`n'
+db      '  `o-q`d  -- quiet`n'
 
 db	0
 
@@ -1167,6 +1173,8 @@ public _help_3
 _help_3 label byte
 db      '`y`UCommand Line Switches (continued)`u`d`n`n'
 
+db	'  `o-r`d  -- run full speed  (vsync off)`n'
+db      '  `o-r`yN`d -- run at `yN`d frames per second`n`n'
 db	'  `o-s`yN`d -- sound option   (`y0`d = show diagnostic messages,`n'
 db	'                         `y1`d = use PC speaker,`n'
 db	'                         `y2`d = run Soundblaster at 15700 Hz)`n`n'
@@ -1204,9 +1212,11 @@ db	'      `oJohn Dullea`d -- Fast, elegant 2600 graphics techniques, and help wi
 db	'    `oBradford Mott`d -- Helped with object positioning (weird HMOVE).`n'
 db      '    `oChris Wilkson`d -- Helped with Pitfall II.`n'
 db	'      `oLee Krueger`d -- Helped with rare carts and documentation.`n'
-db      ' `oEckhard Stolberg`d -- Helped with object positioning, PAL colors, digital voice, controllers,`n                     Cosmic Ark effect, Pitfall II, and Supercharger games.`n'
+db      ' `oEckhard Stolberg`d -- Helped with object positioning, PAL colors, digital voice, controllers,`n'
+db	'                     Cosmic Ark effect, Pitfall II, CompuMate and Supercharger games.`n'
 db      '  `oThomas Jentzsch`d -- Helped with trace mode.`n'
-db	'`oMichael Walden Jr`d -- Helped with GUI.`n`n'
+db      '`oMichael Walden Jr`d -- Helped with GUI.`n'
+db      '`o  Henning Mueller`d -- Helped with CompuMate.`n`n'
 
 db      '`nThanks to one and all!!`n`n`n`n`n`n'
 

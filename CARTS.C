@@ -55,8 +55,13 @@ void RecognizeCart(void)
 
 	if (crc == 0xe5314b6c) CFirst = 56;	/* aciddrop */
 	if (crc == 0xb17b62db) CFirst = 1;	/* Balthazar */
-	if (crc == 0xb17b62db) CFirst = 0;	/* pharhcrs -- vblank triggers frame */
+	if (crc == 0xfa07aa39) CFirst = 0;	/* pharhcrs -- vblank triggers frame */
 	if (crc == 0xbcb42d2b) CFirst = 0;	/* traffic  -- vblank triggers frame */
+
+	if (crc == 0x4f40a18e) CFirst = 30;	/* air_raid */
+	if (crc == 0x6f62a864) CFirst = 30;	/* grescape */
+
+/*        if (crc == 0xa01ebff4) CFirst = 54; */    /* CompuMate */
 
 	DefaultCFirst = CFirst;
 
@@ -89,7 +94,7 @@ void RecognizeCart(void)
 	{
 
 		if (
-			(crc == 0xb17b62db) ||	/* pharhcrs (prevent auto-switch) */
+			(crc == 0xfa07aa39) ||	/* pharhcrs (prevent auto-switch) */
 			(crc == 0x4f40a18e)	/* air_raid (too large) */
 		   )
 		{
@@ -139,6 +144,12 @@ void RecognizeCart(void)
 	if (crc == 0xdde8600b) { Lightgun = 9; LGadjust = 5;  LG_WrapLine = 75; } /* guntest4 */
 
 
+/* Mindlink games */
+
+        if (crc == 0x81187400) Mindlink = 1;    /* Telepathy */
+        if (crc == 0x3183c019) Mindlink = 2;    /* Bionic Breakthrough */
+
+
 /* bankswitching */
 
 	if (Lookup(BS_1)) BSType = 1;		/* CommaVid */
@@ -148,7 +159,8 @@ void RecognizeCart(void)
 	if (Lookup(BS_9)) BSType = 9;		/* 8K banks reversed */
 	if (Lookup(BS_6)) BSType = 6;		/* 16K Superchip that can't be recognized automatically */
 	if (Lookup(BS_7)) BSType = 7;		/* M Network 16K */
-	if (Lookup(BS_8)) BSType = 8;		/* Atari 32K */
+/*      if (Lookup(BS_8)) BSType = 8; */        /* Atari 32K */
+        if (crc == 0xa01ebff4) BSType = 10;     /* Spectravideo CompuMate PAL */
 
         if(BSType==0)
         {
@@ -167,6 +179,16 @@ void RecognizeCart(void)
            case 0x4000:
               BSType=6;                         /* 16K superchip */
               for(i=0; i<4; i++)
+              {
+                 for(j=0; j<256; j++)
+                 {
+                    if(CartRom[0]!=CartRom[i*0x1000+j]) BSType=0;
+                 }
+              }
+           break;
+           case 0x8000:
+              BSType=8;                         /* 32K superchip (Fatal Run) */
+              for(i=0; i<8; i++)
               {
                  for(j=0; j<256; j++)
                  {

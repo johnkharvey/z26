@@ -31,6 +31,13 @@ MLG_ShotLine		dw	0	;   checked in cpuhand.asm
 ;LG_WrapLine		db	78	; for sentinel & shooting arcade
 					;   75 for guntest4
 
+MindlinkPos             dw      02800h  ; position value in Mindlink controller
+                                        ; gets transferred bitwise (16 bits)
+MindlinkShift           dw      1       ; which bit to transfer next
+MindlinkAND             db      03fh    ; clear Mindlink-connected bit
+MindlinkOR              db      080h    ; set data bit
+MindlinkTEST            db      010h    ; test next out-bit signal
+
 .code
 
 ;*
@@ -44,6 +51,11 @@ MouseInit:
 	jne	MIend			;   no
 	mov	[MouseAvail],1		;   yes, mark it as available	  
 	mov	[MJ_Cnt],0		; clear the repeat counter
+        test    [_Mindlink],1           ; Mindlink in right port
+        jz      MIend                   ;   no, manipulate different bits
+        mov     [MindlinkAND],0f3h
+        mov     [MindlinkOR],008h
+        mov     [MindlinkTEST],001h
 MIend:
 	ret
 
@@ -336,3 +348,52 @@ ShowLightgun1:
 
 	pop	di
 	ret
+
+MouseAsMindlink:
+	test	[MouseAvail],1
+        jz      MMret
+
+	mov	ax,0bH			; # of mickeys since last call
+	int	33H
+
+        mov     bx,[MindlinkPos]
+        and     bx,03fffh
+        shl     cx,3
+        add     bx,cx
+
+        cmp     bx,00800h
+        ja      MM1a
+        mov     bx,00800h
+MM1a:
+        cmp     bx,03f00h
+        jb      MM1b
+        mov     bx,03f00h
+MM1b:
+        mov     [MindlinkPos],bx
+        mov     [MindlinkShift],1
+        call    NextMindlinkBit
+        mov	ax,03H
+	int	33H
+	test	bx,7
+        jz      MMret
+        or      [MindlinkPos],04000h    ; this bit starts a game
+MMret:
+        ret
+
+; <-- from riot.asm
+
+NextMindlinkBit:
+        push    ax
+        push    bx
+        mov     bl,[_IOPortA]
+        and     bl,[MindlinkAND]        ; clear the Mindlink-connected bit
+        mov     ax,[MindlinkShift]      ; find current bit
+        test    [MindlinkPos],ax        ; is it set?
+        jz      NMB1
+        or      bl,[MindlinkOR]         ;   yes, set out-bit
+NMB1:
+        mov     [_IOPortA],bl
+        pop     bx
+        pop     ax
+        shl     [MindlinkShift],1       ; use a different bit on next call
+        ret

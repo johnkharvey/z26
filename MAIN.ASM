@@ -113,6 +113,7 @@ STUP_4:
 	add	dx,[_MaxLines]
 	mov	[BottomLine],dx
 
+        call    Controls                ; check controls before emulation starts
 
 ;*
 ;* the main outer loop

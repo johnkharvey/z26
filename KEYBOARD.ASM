@@ -25,6 +25,8 @@ DCCRight	db	0	; driving controller counter right
 
 DCTable		db	00Fh,00Dh,0,00Eh ; 2bit quadrature counter
 
+CM_Collumn      db      0       ; collumn to check on CompuMate keyboard
+
 .code
 
 ;*
@@ -83,6 +85,14 @@ KeyM =			032h
 KeyComma =		033h		; ,
 KeyDot =		034h		; .
 
+KeyG =                  022h
+KeyH =                  023h
+KeyP =                  019h
+KeyR =                  013h
+KeyT =                  014h
+KeyY =                  015h
+KeyColon =              027h            ; :
+
 KeyLeft	=		04Bh		; Left arrow
 KeyRight =		04Dh		; Right	arrow
 KeyUp =			048h		; Up arrow
@@ -109,7 +119,8 @@ KeyN =			031h		; N (P2 fire)
 KeyB =			030h		; B (P2 booster grip - trigger)
 KeyV =			02Fh		; V (P2 booster grip - booster)
 
-KeyP =			019H		; P (pause game)
+;KeyP =                  019H            ; P (pause game)
+KeyBackSpace =          00EH            ; Back Space (pause game)
 KeyEnter =		01CH		; Enter (resume game)
 
 KeyEquals =		00Dh		; = (do a screen dump)
@@ -206,6 +217,13 @@ Ctrl2a:	test	[KeyTable+ColorKey],128
 Ctrl2b: 
 	mov	[_IOPortB],ah
 
+
+        cmp     [_BSType],10            ; Compumate keyboard?
+        je      Ctrl4                   ; ... skip other controllers *EST*
+
+        test    [_Mindlink],2           ; Mindlink on left port?
+        jnz     Ctrl4                   ; ... no joysticks *EST*
+
 ;	 mov	 ah,0FFh		 ; now do the switches
 	mov	ah,[_IOPortA]
 StickL:
@@ -230,6 +248,9 @@ Ctrl3:
 Ctrl3a: test	[KeyTable+P1BoosterBG],128
 	jz	StickR			; check for booster grip *EST*
 	mov	[DumpPorts+1],080h
+
+        test    [_Mindlink],1           ; Mindlink on right port?
+        jnz     StickEnd                ; ... only check left joystick *EST*
 
 StickR:
 	test	[_KeyPad],2		; no stick if keypad right *EST*
@@ -257,7 +278,7 @@ StickEnd:
 	mov	[_IOPortA],ah		; save the Port	A Switches
 
 ;CTLNoJoy:
-Ctrl4:	test	[KeyTable+KeyP],128
+Ctrl4:  test    [KeyTable+KeyBackSpace],128
 	jz	Ctrl6
 	mov	[GamePaused],1		; pause game
 Ctrl6:	test	[KeyTable+KeyEnter],128
@@ -435,7 +456,13 @@ CtrlTraceOff:
 
 CtrlTraceDone:
 
+        cmp     [_BSType],10            ; Compumate keyboard?
+        je      CtrlRet                 ; ... skip other controllers *EST*
 	
+        test    [_Mindlink],3           ; Mindlink connected?
+        jz      CtrlExit
+        call    MouseAsMindlink         ; ... update position *EST*
+        ret
 
 CtrlExit:
 	test	[GamePaused],1		; game paused ?
@@ -546,6 +573,246 @@ CtrlRet:
 	ret
 
 Controls endp
+
+; *****************************************************************************
+;
+;  this function initiates the CompuMate keyboard controller
+;  it gets called from banks.asm
+;  *EST*
+;
+; *****************************************************************************
+
+InitCompuMate:
+        mov     [DumpPorts+0],0
+        mov     [DumpPorts+1],080h
+        mov     [DumpPorts+2],080h
+        mov     [DumpPorts+3],0
+        ret
+
+; *****************************************************************************
+;
+;  this function handles the CompuMate keyboard controller
+;  it gets called every time something gets written to SWCHA
+;  *EST*
+;
+; *****************************************************************************
+
+HandleCompuMate:
+        push    ax
+        mov     [DumpPorts+1],080h
+        mov     [DumpPorts+2],080h
+
+        mov     [InputLatch],080h
+        mov     [InputLatch+1],080h
+        mov     [DumpPorts],0
+        mov     [DumpPorts+3],0
+        mov     al,[_IOPortA]
+        or      al,0ch
+
+        and     al,07fh         ;????
+
+        test    [KeyTable+KeyLShift],128
+        jz      CMnoShift
+        mov     [DumpPorts+3],080h
+CMnoShift:
+        test    [KeyTable+KeyCtrl],128
+        jz      CMnoFunc
+        mov     [DumpPorts],080h
+CMnoFunc:
+CM00:
+        cmp     [CM_Collumn],0
+        jne     CM10
+        test    [KeyTable+Key7],128
+        jz      CM01
+        mov     [InputLatch],0
+CM01:
+        test    [KeyTable+KeyU],128
+        jz      CM02
+        and     al,0fbh
+CM02:
+        test    [KeyTable+KeyJ],128
+        jz      CM03
+        mov     [InputLatch+1],0
+CM03:
+        test    [KeyTable+KeyM],128
+        jz      CM10
+        and     al,0f7h
+        jmp     CMend
+CM10:
+        cmp     [CM_Collumn],1
+        jne     CM20
+        test    [KeyTable+Key6],128
+        jz      CM11
+        mov     [InputLatch],0
+CM11:
+        test    [KeyTable+KeyY],128
+        jz      CM12
+        and     al,0fbh
+CM12:
+        test    [KeyTable+KeyH],128
+        jz      CM13
+        mov     [InputLatch+1],0
+CM13:
+        test    [KeyTable+KeyN],128
+        jz      CM20
+        and     al,0f7h
+        jmp     CMend
+CM20:
+        cmp     [CM_Collumn],2
+        jne     CM30
+        test    [KeyTable+Key8],128
+        jz      CM21
+        mov     [InputLatch],0
+CM21:
+        test    [KeyTable+KeyI],128
+        jz      CM22
+        and     al,0fbh
+CM22:
+        test    [KeyTable+KeyK],128
+        jz      CM23
+        mov     [InputLatch+1],0
+CM23:
+        test    [KeyTable+KeyComma],128
+        jz      CM30
+        and     al,0f7h
+        jmp     CMend
+CM30:
+        cmp     [CM_Collumn],3
+        jne     CM40
+        test    [KeyTable+Key2],128
+        jz      CM31
+        mov     [InputLatch],0
+CM31:
+        test    [KeyTable+KeyW],128
+        jz      CM32
+        and     al,0fbh
+CM32:
+        test    [KeyTable+KeyS],128
+        jz      CM33
+        mov     [InputLatch+1],0
+CM33:
+        test    [KeyTable+KeyX],128
+        jz      CM40
+        and     al,0f7h
+        jmp     CMend
+CM40:
+        cmp     [CM_Collumn],4
+        jne     CM50
+        test    [KeyTable+Key3],128
+        jz      CM41
+        mov     [InputLatch],0
+CM41:
+        test    [KeyTable+KeyE],128
+        jz      CM42
+        and     al,0fbh
+CM42:
+        test    [KeyTable+KeyD],128
+        jz      CM43
+        mov     [InputLatch+1],0
+CM43:
+        test    [KeyTable+KeyC],128
+        jz      CM50
+        and     al,0f7h
+        jmp     CMend
+CM50:
+        cmp     [CM_Collumn],5
+        jne     CM60
+        test    [KeyTable+Key0],128
+        jz      CM51
+        mov     [InputLatch],0
+CM51:
+        test    [KeyTable+KeyP],128
+        jz      CM52
+        and     al,0fbh
+CM52:
+        test    [KeyTable+KeyColon],128
+        jz      CM53
+        mov     [InputLatch+1],0
+CM53:
+        test    [KeyTable+KeySlash],128
+        jz      CM60
+        and     al,0f7h
+        jmp     CMend
+CM60:
+        cmp     [CM_Collumn],6
+        jne     CM70
+        test    [KeyTable+Key9],128
+        jz      CM61
+        mov     [InputLatch],0
+CM61:
+        test    [KeyTable+KeyO],128
+        jz      CM62
+        and     al,0fbh
+CM62:
+        test    [KeyTable+KeyL],128
+        jz      CM63
+        mov     [InputLatch+1],0
+CM63:
+        test    [KeyTable+KeyDot],128
+        jz      CM70
+        and     al,0f7h
+        jmp     CMend
+CM70:
+        cmp     [CM_Collumn],7
+        jne     CM80
+        test    [KeyTable+Key5],128
+        jz      CM71
+        mov     [InputLatch],0
+CM71:
+        test    [KeyTable+KeyT],128
+        jz      CM72
+        and     al,0fbh
+CM72:
+        test    [KeyTable+KeyG],128
+        jz      CM73
+        mov     [InputLatch+1],0
+CM73:
+        test    [KeyTable+KeyB],128
+        jz      CM80
+        and     al,0f7h
+        jmp     CMend
+CM80:
+        cmp     [CM_Collumn],8
+        jne     CM90
+        test    [KeyTable+Key1],128
+        jz      CM81
+        mov     [InputLatch],0
+CM81:
+        test    [KeyTable+KeyQ],128
+        jz      CM82
+        and     al,0fbh
+CM82:
+        test    [KeyTable+KeyA],128
+        jz      CM83
+        mov     [InputLatch+1],0
+CM83:
+        test    [KeyTable+KeyZ],128
+        jz      CM90
+        and     al,0f7h
+        jmp     CMend
+CM90:
+        cmp     [CM_Collumn],9
+        jne     CMend
+        test    [KeyTable+Key4],128
+        jz      CM91
+        mov     [InputLatch],0
+CM91:
+        test    [KeyTable+KeyR],128
+        jz      CM92
+        and     al,0fbh
+CM92:
+        test    [KeyTable+KeyF],128
+        jz      CM93
+        mov     [InputLatch+1],0
+CM93:
+        test    [KeyTable+KeyV],128
+        jz      CMend
+        and     al,0f7h
+        
+CMend:
+        mov     [_IOPortA],al
+        pop     ax
+        ret
 
 ; *****************************************************************************
 ;

@@ -40,6 +40,7 @@ EXTRN _MouseBase:byte
 EXTRN _SimColourLoss:byte
 EXTRN _Lightgun:byte
 EXTRN _LGadjust:word
+EXTRN _Mindlink:byte
 
 EXTRN _LinesInFrame:word	; *EST*
 EXTRN _PrevLinesInFrame:word

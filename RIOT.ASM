@@ -82,7 +82,7 @@ ReadPortB:				; read console switches (port b)
 	ret
 
 ReadPortA:				; read hand controllers (port a)
-	mov	si,offset _IOPortA	 
+        mov	si,offset _IOPortA
 	ret
 
 ;*
@@ -124,9 +124,24 @@ WritePortA:
 	or	al,ah			;
 WPAapply:
 	mov	[_IOPortA],al
-	pop	ax
-	call	HandleKeyPad
+        test    [_Mindlink],3           ; Mindlink game?
+        jnz     [WPAhandleML]
+        pop     ax
+        cmp     [_BSType],10            ; CompuMate?
+        je      WPAhandleCM
+        call	HandleKeyPad
 	ret
+WPAhandleCM:
+        call    HandleCompuMate
+        ret
+WPAhandleML:
+        test    al,[MindlinkTEST]       ; ready to receive next bit?
+        jz      WPAhML1
+        call    NextMindlinkBit         ; in mouse.asm
+WPAhML1:
+        pop     ax
+        ret
+
 
 WriteDDR_A:
 	push	ax

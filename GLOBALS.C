@@ -93,7 +93,7 @@ db SimColourLoss;	/* simulate PAL colour loss *EST* */
 db Lightgun;		/* emulate lightgun and adjust horizontally *EST* */
 dw LGadjust;		/* adjust lightgun vertically *EST* */
 dw ShowLineCount;	/* display stats on game exit */
-
+db Mindlink;            /* emulate Mindlink controller in which port *EST* */
 
 /*
 ** reinitialize the above variables
@@ -128,5 +128,5 @@ void def_LoadDefaults(void)
 	Lightgun = 0;
 	LGadjust = 5;
 	ShowLineCount = 0;
-
+        Mindlink = 0;
 }

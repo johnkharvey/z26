@@ -30,8 +30,6 @@
 
 .data
 
-MagicNoise	db 0,1,0,13h,1,1,1,1,8,0,0,0,0,0,0fh,0fh	; do what PCAE does most of the time
-
 RT_Reg	dw	0			; TIA reg to read (ReadCollision)
 
 RetWd		db	0		; byte returned from hardware read
@@ -62,15 +60,17 @@ ReadRiotMaybe:
 
 ReadTIA:
 	push	ax
-	and	si,0fh
+        and     si,3fh
 	xor	al,al
 	cmp	[_TIAZero],0		; berzerk or qbrtqube?
 	jnz	ReadTIAZero		;   yes, start with zero
 
-	mov	al,[MagicNoise+si]	; start out with the undocumented magical noise
+        mov     ax,si                   ; set undefined bits depending
+                                        ;   on the address read
 
 ReadTIAZero:
-	mov	[RetWd],al		; results get OR'd into this
+        and     si,0fh
+        mov	[RetWd],al		; results get OR'd into this
 	pop	ax
 	cmp	si,08h			; reading collision registers ???
 	jb	ReadCollision
