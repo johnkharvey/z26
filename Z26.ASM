@@ -61,6 +61,7 @@ entry:	jmp	start			; jump around our data
 	include time.asm		; z26 timing functions
 
 	include sbdrv.asm		; sound blaster assembly code
+	include paddle.asm		; paddle support code
 	include keyboard.asm		; convert keyboard into Atari joystick
 	include joy.asm			; joystick routines
 	include sound.asm		; PC speaker support

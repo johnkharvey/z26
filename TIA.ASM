@@ -45,6 +45,7 @@ ENDIF
 	xor	al,al
 	rep	stosb			; clear memory
 
+
 	call	CommandLine		; Process the command line
 
 	mov	dx,[CFirst]
@@ -197,21 +198,27 @@ ScanFrameLoop:
 
 ScanNextLine:
 	inc	[ScanLine]		; Increment the scanline counter
-	sub	[RClock],CyclesPerScanLine ; adjust RClock for next line
+	sub  [RClock],CyclesPerScanLine ; adjust RClock for next line
 
-; do emergency bail-out test
+	test	[VBlank],080h		; discharging capacitors ?
+	jnz	ScanBailOut		;   yes
+					;   no, put some charge on the capacitors
+	test [ChargeCounter],080000000h ; already fully charged ?
+	jnz	ScanBailOut		;   yes, don't increment
+	inc	dword ptr [ChargeCounter] ;   no, add some charge
 
-	mov	ax,[ScanLine]		; 
+ScanBailOut:
+	mov	ax,[ScanLine]		; do emergency bail-out test
 	cmp	ax,1000			; have we done way too many scan lines yet?
 	jl	NDret			;   not yet
 	inc	[Frame]			;   yes, to the next frame (allow escape to work)
 	mov	[ScanLine],0
 
 NDret:  
-	mov	ax,[Frame]
-	cmp	ax,[PrevFrame]		; have we gone to a new frame ?
+	mov	eax,[Frame]
+	cmp	eax,[PrevFrame]		; have we gone to a new frame ?
 	je	ScanFrameLoop		;   not yet
-	mov	[PrevFrame],ax		;   yes, mark it as current
+	mov	[PrevFrame],eax		;   yes, mark it as current
 	ret				;	 and return
 
 ; *****************************************************************************

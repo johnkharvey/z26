@@ -3,9 +3,8 @@
 ; *****************************************************************************
 
 ScanLine	dw	0		; current scan line
-Frame		dw	0		; Frame Counter
-PrevFrame	dw	0		; Previous value frame counter
-VBlank		db	0		; VBlank flag
+Frame		dd	0		; Frame Counter
+PrevFrame	dd	0		; Previous value frame counter
 
 FEnd=$
 
@@ -17,7 +16,9 @@ BottomLine	dw	0		; was 36+200 bottom line of display
 OldCFirst	dw	0		; remember original CFirst
 					; (for homing the display)
 
-CFirst		dw	39		; <-- gets changed by SetupSpecial
+DEFAULT_CFirst = 39
+
+CFirst		dw	0ffffh		; <-- gets changed by SetupSpecial
 					; (zero has VBlank trigger a new frame)
 					 
 MaxLines	dw	200		; max # of lines to scan
@@ -32,8 +33,6 @@ FrameExit	dd	0		; do this many frames and exit
 OriginalFrameExit dd	0		; save it here for FPS calculation
 StartTicks	dd	0		; ticks at start
 StopTicks	dd	0		; ticks at finish
-
-VBlanking	dd	-1		; 0 if vblanking, -1 otherwise
 
 ; *** keep next 4 variables in order !!!!
 ; they are arranged to match the order of the entries in TIAColourTable
@@ -52,7 +51,6 @@ NoRetrace	db	0		; don't wait for retrace (if 0ffh)
 ColumnBlank	db	0		; blank this many columns
 GamePaused	db	0		; game paused
 NoScoreMode	db	0		; set if we don't want PF to take on player colors
-CyclesPerLine	db	CyclesPerScanLine-2 ; # of cycles to execute instructions for each line
 CPUOffset	db	66		; 64 default offset for CPU clock
 CPUClock	db	0
 WrapZero	db	0		; wrap negative player pos to zero
@@ -63,26 +61,8 @@ ALIGN	2
 
 CtrlFn		dw	 Controls	; Control vector (paddles/sticks)
 
-Ret00		db	0
-Ret0F		db	0Fh
-Ret80		db	80h
-;RetFF		db	0FFh
-
-RetWd		db	0		; byte returned from collision read
-
 WByte		db	0		; byte to write
 
-
-
-
-IOPortB		db	00Bh		; IO Port B (switches)
-IOPortA		db	0FFh		; IO Port A (joystick)
-
-DumpPorts	db	0,0,0,0		; Input ports (inp0..3)
-
-InputLatch	db	080h		; Input latch (inp4)
-		db	080h		; Input latch (inp5)
-	   
 ALIGN 2
 
 OldInt9		dw	0,0		; old vector for int9

@@ -4,6 +4,7 @@
 ;
 ;	-u <n>	upper scan line
 ;       -b      black and white
+;	-c <n>  choose color palette <n>
 ;	-q	quiet
 ;       -v <n>  select video mode
 ;       -s      display sound diagnostic messages
@@ -12,6 +13,8 @@
 ;	-f <n>  do <n> frames and exit
 ;       -d <n>  do digital signal processing
 ;	-j <n>	do joystick
+;	-p <n>  do paddle game with sensitivity <n>
+;	-k <n>  set keyboard player base
 ;       -0      player 0 hard
 ;       -1      player 1 hard
 ;
@@ -21,6 +24,7 @@
 ;	mov	ax,_psp
 ;	mov	psp,ax
 CommandLine:
+
 	pusha
 	push	es
 
@@ -170,6 +174,12 @@ EndInt:					; Command in CL,Value in AL
 	je	CMDsp
 	cmp	cl,'j'
 	je	CMJoy
+	cmp	cl,'c'
+	je	CMPalette
+	cmp	cl,'p'
+	je	CMPaddle
+	cmp	cl,'k'
+	je	CMKeyBase
 
 	call	BadSwitch		; put out a message
 	jmp	ReallyQuit		; and quit
@@ -228,6 +238,21 @@ CMVideoMode:
 	jmp	CLSkip
 
 CMJoy:	mov	[_Joystick],al		; do joystick
+	jmp	CLSkip
+
+CMPalette:
+	mov	[PaletteNumber],al
+	jmp	CLSkip
+
+CMPaddle:
+	and	eax,0fh			; max sensitivity is 15
+	shl	eax,1			; because we shift it right later
+	mov	[PaddleGame],eax
+	jmp	CLSkip
+
+CMKeyBase:
+	and	al,3			; max is 3
+	mov	[KeyBase],al
 	jmp	CLSkip
 
 ; we didn't see a filename string

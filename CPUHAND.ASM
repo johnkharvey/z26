@@ -1,4 +1,26 @@
-; cpu memory and register handlers -- used by the CPU emulator
+;*
+;* cpu memory and register handlers -- used by the CPU emulator
+;*
+
+.CEND
+.DATASEGMENT
+
+VBlanking	dd	-1		; 0 if vblanking, -1 otherwise
+VBlank		db	0		; VBlank flag
+
+Ret0F		db	0Fh
+RetWd		db	0		; byte returned from collision read
+
+;*** keep these in order ***
+
+DumpPorts	db	0,0,0,0		; Input ports (inp0..3)
+
+InputLatch	db	080h		; Input latch (inp4)
+		db	080h		; Input latch (inp5)
+	   
+.DEND
+.CODESEGMENT
+
 
 ; *****************************************************************************
 ;     Memory Mapping - Read - For non-rom areas, si contains the requested
@@ -16,7 +38,8 @@ ReadHardwarePage0:
 	ret
 					        
 
-ReadTIA:and	si,0Fh
+ReadTIA:
+	and	si,0Fh
 	cmp	si,08h			; reading collision registers ???
 	jl	ReadCollision
 	cmp	si,0Eh
@@ -44,10 +67,28 @@ ReadCollision:				; read the collision latch
 
 
 ReadInputLatches:			; read the input latch
-;	 call	 CheckPaddleLatches	; check the paddle latches
-	add	si,offset DumpPorts-8
+	cmp	si,0ch
+	jb	ReadDumped
+	and	si,1
+	add	si,offset InputLatch
 	ret
-        
+	
+ReadDumped:
+	and	esi,3
+	mov	edx,[ChargeTrigger0 + esi*4]
+	cmp	edx,[ChargeCounter]	; this trigger expired ?
+	jbe	TriggerExpired		;   yes
+RetZero:mov	[RetWd],0
+	mov	si,offset RetWd
+	ret
+
+TriggerExpired:
+	cmp	dword ptr [PaddleGame],0; if not a paddle game
+	je	RetZero			;   always return zero (astrblst)
+	mov	[RetWd],080h
+	mov	si,offset RetWd
+	ret
+	
 
 
 ; *****************************************************************************
@@ -151,8 +192,9 @@ WrTiaVSync:
 	mov	[BottomLine],dx
 ZRET: 	Ret
 
-
-; VBlank -- vertical blank set-clear
+;*
+;* VBlank -- vertical blank set-clear
+;*
 
 WrTiaVBlank:
 	mov	dl,[WByte]
@@ -162,18 +204,18 @@ WrTiaVBlank:
 	cmp	[CFirst],0		; VBlank triggering new frame ?
 	je	WTB_1			;   yes, don't mess with VBlanking
 	mov	[VBlanking],0
-	ret
+	jmp	HandleDumpedInputs
 
 WTB_1:
 	mov	[TopLine],65535		;   setting -- turn off Tia
 	call	TIABlank		; clear rest of screen
-	jmp	WVBRet
+	jmp	HandleDumpedInputs
 
 WVBClear:
 	cmp	[CFirst],0		; VBlank triggering new frame ?
 	je	WTB_2			;   yes, don't mess with VBlanking
 	mov	[VBlanking],-1
-	ret
+	jmp	HandleDumpedInputs
 
 WTB_2:
 	mov	dx,[ScanLine]
@@ -185,5 +227,14 @@ WVBPastMin:
 	mov	[TopLine],dx
 	add	dx,[MaxLines]
 	mov	[BottomLine],dx
-WVBRet:	ret      
+	jmp	HandleDumpedInputs  
+
+
+HandleDumpedInputs:
+	test	[VBlank],080h		; discharging capacitors ?
+	jz	HandleLatchedInputs	;   no
+	mov	dword ptr [ChargeCounter],0 ;   yes, zero the line counter
+
+HandleLatchedInputs:
+	ret
 

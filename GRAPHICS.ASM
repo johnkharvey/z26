@@ -18,6 +18,16 @@ TIAGraphicMode:
 
 GeneratePalette:
 	mov	si,offset DefaultPaletteTable
+	cmp	[PaletteNumber],0
+	je	GPUseDefault
+	cmp	[PaletteNumber],1
+	je	GPUsePAL
+	cmp	[CFirst],54
+	jb	GPUseDefault
+
+GPUsePAL:
+	mov	si,offset PALPaletteTable
+GPUseDefault:
 	mov	di,offset PCXPalette
 	mov	[PaletteCount],0	; do 16 colors
 PaletteLoop:				; <-- for each color
@@ -252,6 +262,10 @@ TIAPalLoop:
 .CEND
 .DATASEGMENT
 
+PaletteNumber	db	0ffh	; gets set by cmdline.asm
+
+PaletteCount	db	0
+
 ;*
 ;* palette coefficients
 ;* 
@@ -259,64 +273,179 @@ TIAPalLoop:
 ;*
 
 LUMCoeff db	0,	56	; LUM 0
+	db	8,	56
 	db	16,	56
-	db	25,	56
-	db	33,	56
+	db	24,	56
+	db	32,	56
 	db	40,	56
-	db	46,	56
-	db	51,	56
+	db	48,	56
 	db	56,	56	; LUM 7
 
+;*
+;* definitions for unsaturated colors
+;*
 
-PaletteCount	db	0
+R = 36		; main RGB values
+G = 18
+B = 38
 
-DefaultPaletteTable db 0,   0,    0	; 0 0 0 0 -- 0 (grey)
-		db    63,  63,   63	; 0 0 0 0 -- 7
+MIX1 = 98	; mixing coefficients (*100)
+MIX2 = 94
+MIX3 = 86
+MIX4 = 70
+MIX5 = 50
+MIX6 = 30
+MIX7 = 15
 
-		db   15,   15,   10	; 0 0 0 1 -- 0 (adventure gold)
-		db   63,   63,   30	; 0 0 0 1 -- 7 
+VG = R*MIX5/MIX2	; virtual green (force gold)
+VR = G*MIX5/MIX5	; virtual red (force orange-green)
 
-		db   25,   10,    5	; 0 0 1 0 -- 0 (chopper command yellow orange)
-		db   63,   50,   20	; 0 0 1 0 -- 7 (60,55,30)
+;*
+;* definitions for saturated colors
+;*
 
-		db   35,    6,    0	; 0 0 1 1 -- 0 (yars' bright orange)
-		db   63,   45,   30	; 0 0 1 1 -- 7
+H  = 63		; Hi levels
+H2 = H*59/63
+H3 = H*54/63
 
-		db   35,    5,    5 	; 0 1 0 0 -- 0 (pink)
-		db   63,   42,   42	; 0 1 0 0 -- 7
+L  = H*42/63	; Lo levels
+L0 = L*106/100	; extra fading for pure colors
+L1 = L*95/100	; less fading for yellow-green
+L2 = L*90/100	; less fading for orange-green
+L3 = L*80/100	; less fading for light-orange
+L4 = L*60/100	; less fading for bright orange
+L5 = L*40/100	; less fading for yellow orange
+L6 = L*20/100	; least fading for gold
 
-		db   24,    8,   20	; 0 1 0 1 -- 0 (purple)
-		db   63,   40,   63	; 0 1 0 1 -- 7
+DefaultPaletteTable db	0,		0,		0		; 00 -- (grey)
+		db	H2,		H2,		H2		; 0E
 
-		db   20,    8,   24	; 0 1 1 0 -- 0 (purple-blue)
-		db   52,   40,   63	; 0 1 1 0 -- 7
+		db	R*MIX5/100,	VG*MIX2/100,	0		; 10 -- (gold)
+		db	H,		H,		L6		; 1E
 
-		db   10,   10,   30	; 0 1 1 1 -- 0 (atlantis right blinker blue)
-		db   45,   45,   60	; 0 1 1 1 -- 7 
+		db	R*MIX3/100,	VG*MIX5/100,	0		; 20 -- (yellow orange)
+		db	H,		H2,		L5		; 2E
 
-		db    8,    8,   35	; 1 0 0 0 -- 0 (pole position blue)
-		db   35,   45,   63	; 1 0 0 0 -- 7 
+		db	R*MIX1/100,	VG*MIX6/100,	0		; 30 -- (yars' bright orange)
+		db	H,		H3,		L4		; 3E
 
-		db    6,    6,   25	; 1 0 0 1 -- 0 (pole position light blue)
-		db   40,   50,   63	; 1 0 0 1 -- 7 
+		db	R,		0,		0 		; 40 -- *(pink)
+		db	H,		L0,		L0		; 4E
 
-		db    0,   10,   20	; 1 0 1 0 -- 0 (atlantis turquoise)
-		db   40,   55,   63	; 1 0 1 0 -- 7
+		db	R*MIX2/100,	0,		B*MIX5/100	; 50 -- (purple)
+		db	H,		L,		H2		; 5E
 
-		db    0,   12,    8	; 1 0 1 1 -- 0 (green-blue)
-		db   40,   63,   55	; 1 0 1 1 -- 7
+		db	R*MIX4/100,	0,		B*MIX3/100	; 60 -- (purple-blue)
+		db	H2,		L,		H		; 6E
 
-		db    6,   12,    6	; 1 1 0 0 -- 0 (atlantis light green)
-		db   35,   63,   35	; 1 1 0 0 -- 7
+		db	R*MIX6/100,	0,		B*MIX1/100	; 70 -- (atlantis right blinker blue)
+		db	H3,		L,		H		; 7E
 
-		db   10,   15,    0	; 1 1 0 1 -- 0 (yellow-green)
-		db   50,   63,   35	; 1 1 0 1 -- 7
+		db	0,		0,		B		; 80 -- *(blue)
+		db	L0,		L0,		H		; 8E
 
-		db   15,   20,    5	; 1 1 1 0 -- 0 (air sea battle orange-green)
-		db   40,   55,   10	; 1 1 1 0 -- 7
+		db	0,		G*MIX7/100,	B*MIX2/100	; 90 -- (light blue)
+		db	L1,		H3,		H		; 9E
 
-		db   20,   10,    0	; 1 1 1 1 -- 0 (light-orange)
-		db   63,   50,   30	; 1 1 1 1 -- 7
+		db	0,		G*MIX5/100,	B*MIX4/100	; A0 -- (atlantis turquoise)
+		db	L1,		H2,		H		; AE
+
+		db	0,		G*MIX2/100,	B*MIX6/100	; B0 -- (green-blue)
+		db	L1,		H,		H2		; BE
+
+		db	0,		G,		0		; C0 -- *(light green)
+		db	L0,		H,		L0		; CE
+
+		db	VR*MIX6/100,	G*MIX2/100,	0		; D0 -- (yellow-green)
+		db	H3,		H,		L1		; DE
+
+		db	VR*MIX5/100,	G*MIX5/100,	0		; E0 -- (orange-green)
+		db	H,		H,		L2		; EE
+
+		db	VR*MIX2/100,	G*MIX5/100,	0		; F0 -- (light-orange)
+		db	H,		H2,		L3		; FE
+
+
+;   Eckhard Stolberg describes the PAL palette as follows...
+
+;   This is not in the programmer's guide. PAL systems use a different form
+;   of colour encoding than NTSC ones do. The TIA chip seems to be the same
+;   on both systems, which leads to two totally different palettes. Based
+;   on Ed's SoundX source code for NTSC and on my own observation for PAL
+;   they are:
+
+;   NTSC                 PAL
+
+;   grey                 grey
+;   gold                 grey
+;   orange               gold
+;   red orange           yellow green
+;   pink                 orange brown
+;   purple               green
+;   blue purple          pink - red
+;   blue                 blue green
+;   blue2                purple
+;   light blue           turquoise
+;   turquoise            lilac 
+;   green blue           light blue
+;   green                purple blue  
+;   yellow green         blue
+;   orange green         grey
+;   light orange         grey
+
+
+; We do what we can ;-)
+
+PG = (R+G)/2	; make PAL green brighter
+
+
+PALPaletteTable db	0,		0,		0		; 00 -- (grey)
+		db	H2,		H2,		H2		; 0E
+
+		db	0,		0,		0		; 10 -- (grey)
+		db	H2,		H2,		H2		; 1E
+
+		db	R*MIX2/100,	PG*MIX2/100,	0		; 20 -- (gold)
+		db	H,		H,		L4		; 2E
+
+		db	R*MIX5/100,	PG*MIX2/100,	0		; 30 -- (yellow green)
+		db	H3,		H,		L3		; 3E
+
+		db	R*MIX5/100,	PG*MIX5/100,	0		; 40 -- (orange brown)
+		db	H,		H,		L2		; 4E
+
+		db	0,		PG,		0		; 50 -- (light green)
+		db	L0,		H,		L0		; 5E
+
+		db	R,		0,		0 		; 60 -- (pink)
+		db	H,		L0,		L0		; 6E
+
+		db	0,		PG*MIX2/100,	B*MIX4/100	; 70 -- (blue green)
+		db	L,		H2,		H3		; 7E
+
+		db	R*MIX2/100,	0,		B*MIX4/100	; 80 -- (purple)
+		db	H,		L,		H2		; 8E
+
+		db	0,		PG*MIX5/100,	B*MIX3/100	; 90 -- (turquoise)
+		db	L1,		H2,		H		; 9E
+
+		db	R*MIX4/100,	0,		B*MIX3/100	; A0 -- (lilac)
+		db	H2,		L,		H		; AE
+
+		db	0,		PG*MIX7/100,	B*MIX3/100	; B0 -- (light blue)
+		db	L1,		H3,		H		; BE
+
+		db	R*MIX5/100,	0,		B*MIX2/100	; C0 -- (purple-blue)
+		db	H3,		L,		H		; CE
+
+		db	0,		0,		B		; D0 -- *(blue)
+		db	L0,		L0,		H		; DE
+
+		db	0,		0,		0		; E0 -- (grey)
+		db	H2,		H2,		H2		; EE
+
+		db	0,		0,		0		; F0 -- (grey)
+		db	H2,		H2,		H2		; FE
 
 
 .DEND

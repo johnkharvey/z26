@@ -140,6 +140,7 @@ Ctrl2b:
 
 	mov	[IOPortA],ah		; save the Port	A Switches
 
+
 Ctrl5:	mov	[InputLatch],080h
 	mov	[InputLatch+1],080h
 CTLatching:
@@ -150,6 +151,8 @@ CTLatching:
 Ctrl3:	test	[KeyTable+P2Fire],128
 	jz	Ctrl4			; handle 'fire'	from p2
 	mov	[InputLatch+1],0h
+
+;CTLNoJoy:
 Ctrl4:	test	[KeyTable+KeyP],128
 	jz	Ctrl6
 	mov	[GamePaused],1		; pause game
@@ -205,12 +208,12 @@ CtrlPCX3:
 
 CtrlExit:
 	test	[GamePaused],1		; game paused ?
-	jnz	CtrlRet			;   yes, don't check joystick (sound off)	
+	jnz	CtrlPaddles		;   yes, don't check joystick (sound off)	
 	call	Joystick		; peaceful coesistance between
 					; keyboard and joystick
 
 	cmp	[_Joystick],2		; reversing joystick controls?
-	jne	CtrlRet			;   no
+	jne	CtrlPaddles		;   no
 	mov	al,[InputLatch]		;   yes
 	mov	ah,[InputLatch+1]	; reverse buttons
 	mov	[InputLatch+1],al
@@ -222,7 +225,37 @@ CtrlExit:
 	shr	al,4
 	shl	bl,4			; swap nibbles
 	add	al,bl			; combine
-	mov	[IOPortA],al		
+	mov	[IOPortA],al
+
+CtrlPaddles:
+	cmp	[KeyBase],0ffh		; emulating a paddle with the keyboard ?
+	je	CtrlRet			;   no
+
+CtrlPad0:
+	test	[IOPortA],080h		; P1 right ?
+	jnz	CtrlPad1		;   no
+	call	PaddleTriggerDown0	;   yes
+CtrlPad1:
+	test	[IOPortA],040h		; P1 left ?
+	jnz	CtrlPad2		;   no
+	call	PaddleTriggerUp0	;   yes
+CtrlPad2:
+	test	[IOPortA],020h		; P1 down ?
+	jnz	CtrlPad3		;   no
+	call	PaddleTriggerUp0	;   yes
+CtrlPad3:
+	test	[IOPortA],010h		; P1 up ?
+	jnz	CtrlPad4		;   no
+	call	PaddleTriggerDown0	;   yes
+CtrlPad4:
+
+	mov	[IOPortA],0ffh		
+	cmp	[InputLatch],0		; P1 fire pressed ?
+	jne	CtrlPad9		;   no
+	call	PaddleButton0
+	mov	[InputLatch],080h
+CtrlPad9:
+
 CtrlRet:
 	ret
 	

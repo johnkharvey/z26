@@ -112,6 +112,9 @@ WZero:	mov	[WrapZero],1
 ;*
 
 SSLINE:
+	cmp	[CFirst],0ffffh		; did user specify a line number ?
+	jne	SSPADDLE		;   yes, don't override
+	mov	[CFirst],DEFAULT_CFirst	;   no, set up default
 	push	si
 	mov	si,offset LineTable
 
@@ -139,6 +142,104 @@ SSLINE_SetLine:
 
 SSLINE_Done:
 	pop	si
+	jmp	SSPADDLE
+
+;*
+;* process requests for paddle games
+;*
+
+SSPADDLE:
+	cmp	eax,054e06h		; bachelor
+	je	SPG0
+	cmp	eax,055706h		; bachlrtt
+	je	SPG0
+	cmp	eax,03b06fh		; blakjack
+	je	SPG0
+	cmp	eax,03d708h		; breakout
+	je	SPG0
+	cmp	eax,07e271h		; casino
+	je	SPG0
+	cmp	eax,05485dh		; circatri
+	je	SPG0
+	cmp	eax,06ee82h		; dem2dmds
+	je	SPG1
+	cmp	eax,06ccd7h		; eggomana
+	je	SPG0
+	cmp	eax,066e29h		; encontl5
+	je	SPG0
+	cmp	eax,070434h		; guardian
+	je	SPG0
+	cmp	eax,036c7ch		; kaboom
+	je	SPG0
+;	cmp	eax,079f28h		; mangia
+;	je	SPG0
+	cmp	eax,06d7fch		; muscmach
+	je	SPG0
+	cmp	eax,03c030h		; nightdrv
+	je	SPG0
+	cmp	eax,06ae62h		; piececke
+	je	SPG0
+	cmp	eax,06eaa5h		; solrstrm
+	je	SPG0
+	cmp	eax,03978ch		; stplchse
+	je	SPG0
+	cmp	eax,03bee2h		; strtracr
+	je	SPG1
+	cmp	eax,081aefh		; superbrk
+	je	SPG0
+	cmp	eax,07cbe1h		; tacscan
+	je	SPG3
+	cmp	eax,035e7eh		; vidolymp
+	je	SPG1
+	cmp	eax,07b217h		; warlords
+	je	SPG0
+	cmp	eax,07e2eah		; warplock
+	je	SPG0
+
+
+	jmp	SSPAL
+
+SPG0:	mov	dx,0600h		; sensitivity 3, paddle 0
+	jmp	SPGSet
+
+SPG1:	mov	dx,0601h		; sensitivity 3, paddle 1
+	jmp	SPGSet
+
+SPG3:	mov	dx,0603h		; sensitivity 3, paddle 3
+	jmp	SPGSet
+
+SPGSet:	cmp	dword ptr [PaddleGame],0
+	jne	SPGSkipSensitivity
+	mov	byte ptr [PaddleGame],dh
+SPGSkipSensitivity:
+	cmp	[KeyBase],0ffh
+	jne	SPGSkipKeyBase
+	mov	[KeyBase],dl
+SPGSkipKeyBase:
+	jmp	SSPAL
+
+;*
+;* process requests for special palette
+;*
+
+SSPAL:	cmp	[PaletteNumber],0ffh	; did user specify a palette number ?
+	jne	SSAU			;   yes, don't override
+	cmp	eax,07c25eh		; marflegr
+	je	SSP
+	cmp	eax,06bf6fh		; bobby
+	je	SSP
+	cmp	eax,07b6b1h		; cx2616pl
+	je	SSP
+	cmp	eax,03d843h		; canyonb
+	je	SSNTSC
+	cmp	eax,0754f5h		; parachut
+	je	SSNTSC
+	jmp	SSAU
+
+SSP:	mov	[PaletteNumber],1
+	jmp	SSAU
+
+SSNTSC:	mov	[PaletteNumber],0
 	jmp	SSAU
 
 
@@ -190,7 +291,7 @@ LineTable label byte
 	dd	06000h			; burndesr
 	db	32
 	dd	03d843h			; canyonb
-	db	61
+	db	59
 	dd	07d16h			; carnival
 	db	31
 	dd	034dch			; cathouse

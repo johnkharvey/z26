@@ -6,7 +6,7 @@
 
 ; ShowCopyright messages (note: only last message is terminated)
 
-msg01	db	10, 10, 'z26 -- An Atari 2600 emulator (1.13)', 10
+msg01	db	10, 10, 'z26 -- An Atari 2600 emulator (1.14)', 10
 msg02	db	'Copyright (C) 1997-1998 by John Saeger', 10
 msg03	db	'Home Page:  http://www.whimsey.com/z26', 10, 10
 msg04	db	'    F1 -- reset      F2 -- select     F3 -- B/W        F4 -- Color', 10
@@ -21,8 +21,7 @@ msg08a	db	' -0    -- player 0 hard, -1 -- player 1 hard', 10
 msg10	db	' -r    -- run game at maximum speed', 10
 msg10a	db	' -r<n> -- run game at <n> frames per second (<n> = 1 - 254 inclusive)', 10
 msg11	db	' -q    -- quiet (no sound)', 10
-msg15	db	' -v<n> -- video mode (0=70Hz, 1=60Hz, 2=60Hz narrow, 3=60Hz 204 scan lines)', 10
-msg16	db	' -j<n> -- joystick (0=joystick off, 1=normal, 2=players reversed)', 10,10
+msg15	db	' -v<n> -- video mode (0=70Hz, 1=60Hz, 2=60Hz narrow, 3=60Hz 204 scan lines)', 10,10
 msg18	db	'More options and credits may be found in readme.txt.', 10, '$'
 
 ; ShowBlaster messages

@@ -14,6 +14,9 @@ TimerByte	db	0		; a return value
 TimerIntReg	db	080h		; Timer Interrupt Register
 RetFF		db	0FFh
 
+IOPortB		db	00Bh		; IO Port B (switches)
+IOPortA		db	0FFh		; IO Port A (joystick)
+
 ALIGN 2
 
 ReadRIOTTab label word
