@@ -874,6 +874,9 @@ TGODiffTab	dw	TGORet		; 0
 ;*
 
 TRResmpx:
+	cmp	[OldMissile],0		; doing old missile code ?
+	jnz	TRCopy			;   yes, just copy
+
 	mov	bl,TIAReg[bp]		; register copy offset in bx
 					; bh is already zero
 	mov	al,TIAVal[bp]		; value in al

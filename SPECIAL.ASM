@@ -3,7 +3,7 @@
 ;*
 
 SetupSpecial:
-	jmp	SSFudgeTimer
+	jmp	SSFudgeMissile
 
 
 ;*
@@ -20,17 +20,26 @@ SSFIND_Loop:
 	jnz	SSFIND_TestDouble	;   yes, do full dword test
 	cmp	ax,dx			;   no, test words
 	je	SSFIND_Done		; match
-	inc	si
 	jmp	SSFIND_Loop
 
 SSFIND_TestDouble:
 	cmp	eax,edx
 	je	SSFIND_Done
-	inc	si			; no match, skip line #
 	jmp	SSFIND_Loop
 
 SSFIND_Done:
 	ret
+
+
+;*
+;* fudge missile for icehocky
+;*
+
+SSFudgeMissile:
+	cmp	eax,07df74h		; icehocky
+	jne	SSFudgeTimer
+	mov	[OldMissile],1
+	jmp	SSFudgeTimer
 
 
 
@@ -433,7 +442,7 @@ LineTable label byte
 	dd	07be3h			; shootin
 	db	35
 	dd	0dde3ah			; skatebrd
-	db	38
+	db	37
 	dd	070a3eh			; skihunt
 	db	43
 	dd	0398afh			; skydiver

@@ -56,9 +56,8 @@ CyclesPerLine	db	CyclesPerScanLine-2 ; # of cycles to execute instructions for e
 CPUOffset	db	66		; 64 default offset for CPU clock
 CPUClock	db	0
 WrapZero	db	0		; wrap negative player pos to zero
-					; atlantis and oceancty
-
 WrapWsync	db	0		; push late Wsyncs to next line
+OldMissile	db	0		; use old missile code for resmpx
 
 ALIGN	2
 
