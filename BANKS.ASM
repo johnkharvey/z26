@@ -95,6 +95,8 @@ SetupBanks:
         je      SCM                     ; CompuMate computer module
         cmp     al,11
         je      STV32                   ; 32K Tigervision
+        cmp     al,12
+        je      SUA                     ; 8K UA Ltd.
 
 DetectBySize:
 	mov	ax,[_CartSize]
@@ -158,6 +160,14 @@ SetF8:
 F8Backwards:
 	mov	[ReadBank], offset RBank8
 	mov	[WriteBank], offset WBank8
+	ret
+
+
+; set up UA Ltd's 8K bank switch scheme
+
+SUA:
+        mov     [ReadBank], offset RBank8ua
+        mov     [WriteBank], offset WBank8ua
 	ret
 
 
@@ -757,14 +767,21 @@ WBank32tv:
 ;*
 
 FE_SetBank macro
-	push	bx
-	mov	bx,2000h
-	and	bx,si			; isolate bank bit from address
-	xor	bx,2000h		; invert it
-	shr	bx,1			; position it
-	mov	[RomBank],bx		; this is our bank
-	pop	bx
-	endm
+local Trace
+
+        cmp     debugflag,1             ; no BS if trace code reads the memory
+        je      Trace
+        cmp     si,1000h
+        jb      Trace
+        push    ax
+        mov     ax,2000h
+        and     ax,si                   ; isolate bank bit from address
+        xor     ax,2000h                ; invert it
+        shr     ax,1                    ; position it
+        mov     [RomBank],ax            ; this is our bank
+        pop     ax
+Trace:
+        endm
 
 
 RBank8FE:
@@ -966,4 +983,40 @@ WBankMB:
 	test_hw_write
 	SetBank_MB
 	ret
+
+;*
+;* UA Ltd. 8K cart (24)
+;*
+
+SetBank_8ua macro
+local DoChange
+local NoChange
+
+        cmp     si,220h                 ; bank 0 hotspot?
+        je      DoChange                
+        cmp     si,240h                 ; bank 1 hotspot?
+        jne     NoChange
+
+DoChange:
+	push	ax
+	mov	ax,si
+        and     ax,40h                  ; high or low bank
+        shl     ax,6                    ; bank address
+	mov	[RomBank],ax
+	pop	ax
+
+NoChange:
+	endm
+
+RBank8ua:
+        SetBank_8ua
+        test_hw_read
+	MapRomBank
+	ret
+
+
+WBank8ua:
+        SetBank_8ua
+        test_hw_write
+        ret
 

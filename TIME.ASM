@@ -49,6 +49,9 @@ gt_fwd:	shr	ax,1			; cut rate in half
 	mov	eax,[hi_time]
 	shl	eax,15
 	or	ax,[low_time]
+
+;        add     eax,eax                 ; XP kludge
+
 ;	popf
 	ret
 

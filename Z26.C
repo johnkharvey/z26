@@ -11,11 +11,11 @@
 
 
 
-#define version "z26 (1.57)"
+#define version "z26 (1.58)"
 
 
 /*
-#define version "Pre 1.57-I"
+#define version "Pre 1.58-B"
 */
 
 /*

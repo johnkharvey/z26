@@ -235,6 +235,7 @@ dd	keypad_3[] = {
         0x30c54700,     /* Magicard (example program 2) */
         0x5e7a5ac4,     /* Magicard (example program 3) */
         0x27e4a094,     /* Magicard (example program 4) */
+        0xf1a0a2bd,     /* Paul Slocum's Synthcart */
 	-1
 };
 
@@ -358,6 +359,13 @@ dd	BS_7[] = {
 	0x24c35820,	/* Burgertime.bin */
 	0x5c161fe4,	/* Masters of the Universe - The Power of He-Man.bin */
 	-1
+};
+
+dd      BS_12[] = {
+        0x39c892c7,     /* Pleiades prototype */
+        0xbc5527e7,     /* Pleiades prototype (fixed) */
+        0x2c19c728,     /* Funky Fish prototype */
+        -1              /* UA Ltd. prototypes go here */
 };
 
 /*

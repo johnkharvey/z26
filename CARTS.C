@@ -167,6 +167,7 @@ void RecognizeCart(void)
 	if (Lookup(BS_7)) BSType = 7;		/* M Network 16K */
 /*      if (Lookup(BS_8)) BSType = 8; */        /* Atari 32K */
         if (crc == 0xa01ebff4) BSType = 10;     /* Spectravideo CompuMate PAL */
+        if (Lookup(BS_12)) BSType = 12;         /* UA Ltd. prototypes */
 
         if(BSType==0)
         {
