@@ -125,6 +125,7 @@ db DisableCompareCopy;  /* dont compare new frame with old frame before copying 
 db DoInterlace;         /* simulate interlaced display *EST* */
 db MouseRude;		/* warp the mouse when running in a window */
 db UseBMP;              /* save screen shot from VGA buffer to BMP (no PCX from render buffer *EST* */
+db SyncToSoundBuffer;   /* spend idle time with creating new sound bytes *EST* */
 
 /*
 ** reinitialize the above variables
@@ -170,4 +171,5 @@ void def_LoadDefaults(void)
         DoInterlace = 0;
 	MouseRude = 1;
         UseBMP = 0;
+        SyncToSoundBuffer=0;
 }

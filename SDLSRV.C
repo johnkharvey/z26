@@ -20,6 +20,107 @@
 
 #define NUM_COLORS 256
 
+SDL_Surface *z26Icon;
+SDL_Color z26IconColours[4];
+db z26IconShape[1024]={
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,4,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,4,
+        0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,3,3,
+        0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,3,3,
+        0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,3,3,
+        0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,3,3,
+        0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,3,3,
+        0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,3,3,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,3,3,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,3,3,
+        4,4,3,3,3,3,3,3,3,3,3,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,3,3,4,
+        4,4,3,3,3,3,3,3,3,3,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,3,3,4,4,
+        4,4,4,4,4,4,4,4,4,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,3,3,4,4,4,
+        4,4,4,4,4,4,4,4,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,3,3,4,4,4,4,
+        4,4,4,4,4,4,4,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,3,3,4,4,4,4,4,
+        4,4,4,4,4,4,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,3,3,4,4,4,4,4,4,
+        4,4,4,4,4,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,3,3,4,4,4,4,4,4,4,
+        4,4,4,4,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,3,3,4,4,4,4,4,4,4,4,
+        4,4,4,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,3,3,4,4,4,4,4,4,4,4,4,
+        4,4,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,3,3,4,4,4,4,4,4,4,4,4,4,
+        4,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,3,
+        0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,3,
+        0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,3,3,
+        0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,3,3,
+        0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,3,3,
+        0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,3,3,
+        0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,3,3,
+        0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,3,3,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,3,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,3,
+        4,4,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,
+        4,4,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3
+};
+
+db z26IconMask[128]={
+        0xff,0xff,0xff,0xfc,
+        0xff,0xff,0xff,0xfc,
+        0xff,0xff,0xff,0xff,
+        0xff,0xff,0xff,0xff,
+        0xff,0xff,0xff,0xff,
+        0xff,0xff,0xff,0xff,
+        0xff,0xff,0xff,0xff,
+        0xff,0xff,0xff,0xff,
+        0xff,0xff,0xff,0xff,
+        0xff,0xff,0xff,0xff,
+        0x3f,0xff,0xff,0xfe,
+        0x3f,0xff,0xff,0xfc,
+        0x00,0x7f,0xff,0xf8,
+        0x00,0xff,0xff,0xf0,
+        0x01,0xff,0xff,0xe0,
+        0x03,0xff,0xff,0xc0,
+        0x07,0xff,0xff,0x80,
+        0x0f,0xff,0xff,0x00,
+        0x1f,0xff,0xfe,0x00,
+        0x3f,0xff,0xfc,0x00,
+        0x7f,0xff,0xff,0xff,
+        0xff,0xff,0xff,0xff,
+        0xff,0xff,0xff,0xff,
+        0xff,0xff,0xff,0xff,
+        0xff,0xff,0xff,0xff,
+        0xff,0xff,0xff,0xff,
+        0xff,0xff,0xff,0xff,
+        0xff,0xff,0xff,0xff,
+        0xff,0xff,0xff,0xff,
+        0xff,0xff,0xff,0xff,
+        0x3f,0xff,0xff,0xff,
+        0x3f,0xff,0xff,0xff,
+};
+
+void srv_CreateIcon()
+{
+/*
+        z26IconColours[0].r=96;         //turquise
+        z26IconColours[0].g=192;
+        z26IconColours[0].b=192;
+        z26IconColours[1].r=0;          //blue
+        z26IconColours[1].g=96;         
+        z26IconColours[1].b=192;
+*/
+        z26IconColours[0].r=00;         //turquise
+        z26IconColours[0].g=255;
+        z26IconColours[0].b=255;
+        z26IconColours[1].r=0;          //blue
+        z26IconColours[1].g=0;         
+        z26IconColours[1].b=255;
+        z26IconColours[2].r=0;          //black
+        z26IconColours[2].g=0;
+        z26IconColours[2].b=0;
+        z26IconColours[2].r=255;        //yellow (gets masked out)
+        z26IconColours[2].g=255;
+        z26IconColours[2].b=0;
+
+        z26Icon = SDL_CreateRGBSurfaceFrom
+                (z26IconShape, 32, 32, 8, 32, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
+        SDL_SetColors(z26Icon, z26IconColours, 0, 4);
+//        SDL_SetColorKey(z26Icon, SDL_SRCCOLORKEY, 3);
+}
+
 SDL_Joystick *joy0, *joy1;
 
 SDL_Surface *srv_screen;
@@ -204,7 +305,9 @@ void srv_CreateScreen(void)
 		exit(1);
 	}
 
-	SDL_WM_SetIcon(SDL_LoadBMP("z26win.bmp"), NULL);
+;        SDL_WM_SetIcon(SDL_LoadBMP("z26win.bmp"), NULL);
+        srv_CreateIcon();
+        SDL_WM_SetIcon(z26Icon, z26IconMask);
 
         if (Joystick)   //joystick support not disabled with -j0
         {
@@ -394,6 +497,10 @@ void srv_Flip()
                         if ((PaletteNumber==1)||(PaletteNumber==2)) /* PAL/SECAM */
                                 Rate = LinesInFrame*1000/15556;
                         else    Rate = LinesInFrame*1000/15700;
+
+// make rate a little fast to force sync with audio stream
+
+                if (SyncToSoundBuffer) Rate = LinesInFrame*1000/16000;
 
 		NextTick = Ticks+Rate;
 		Now = SDL_GetTicks();
@@ -666,7 +773,9 @@ srv_sound_on()
 		}
 
 		spec.callback = fillerup;
-		spec.freq = 31400;
+                if((PaletteNumber==1)||(PaletteNumber==2)) spec.freq = 31113;
+                                                /* PAL or SECAM */
+                else spec.freq = 31400;         /* NTSC */
 		spec.format = AUDIO_U8;
 		spec.channels = 1;
 		spec.samples = SQ_Max/3;	/* 1536 */

@@ -164,8 +164,18 @@ SoundBufferBail:
 QueueSoundByte:
 	call	SQ_Test
 	cmp	eax,-1			; sound queue already full?
-	je	SoundQueueFull		;   yes, don't queue anything
+	jne	QSB_room		;   no, there's room
 
+;        cmp     [_NoRetrace],-1         ; synchronizing to monitor?
+        cmp     [_SyncToSoundBuffer],1  ; syncronizing to sound buffer?
+        jne     SoundQueueFull          ;   no, don't queue anything
+
+	pushad				;   no, wait for room
+	call	_srv_Events
+	popad
+	jmp	QueueSoundByte
+
+QSB_room:
 	call	KidVid_Sound_Byte	;   no, get kidvid sample
 	push	eax
 	call	TIA_Sound_Byte		; get TIA sample

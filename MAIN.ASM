@@ -98,6 +98,13 @@ ScanBailOut:
 	jl	NDret			;   not yet
 	mov	eax,[_BailoutLine]	;   yes, sharpen (or loosen) the test
 	mov	[OurBailoutLine],eax	
+
+	mov	edx,[_LinesInFrame]
+	mov	[_PrevLinesInFrame],edx
+        mov     edx,[ScanLine]          ; LinesInFrame is important for
+        mov     [_LinesInFrame],edx     ;   calculating the video frame delay
+        dec     [_LinesInFrame]         ;   So, we need to do it here too!
+
 DontSharpen:
 	inc	[Frame]			; to the next frame
 	mov	[ScanLine],1

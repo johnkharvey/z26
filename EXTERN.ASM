@@ -158,3 +158,7 @@ EXTRN _srv_unlock_audio:near
 
 EXTRN _ClearScreenBuffers:near
 
+EXTRN _NoRetrace:dword
+
+EXTRN _SyncToSoundBuffer:byte
+

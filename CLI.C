@@ -287,6 +287,7 @@ unsigned char SCBIOS[188] = {
 **      -z      don't compare new frame buffer with old FB before copying
 **      -!      simulate interlaced display in some video modes
 **      -B      save high-bpp screen shots as BMP file *EST*
+**      -R      sync to sound buffer
 */
 
 FILE *zlog;
@@ -353,7 +354,11 @@ void cli_InterpretParm(char *p)
 				NoRetrace = 0;
 			else
 				NoRetrace = parm;
-			break;
+                        SyncToSoundBuffer = 0;
+                        break;
+        case 'R':       SyncToSoundBuffer = 1;
+                        NoRetrace = -1;
+                        break;
 	case 'y':	KeyPad = parm & 3;		       break; /* *EST* */
         case 'w':       Driving = parm & 3;                    break; /* *EST* */ 
         case 'g':       BSType = parm & 0x0f;                  break; /* *EST* */
