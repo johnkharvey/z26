@@ -281,10 +281,10 @@ CtrlVid7:
 CtrlVid8:
 	test	[KeyTable+Key8],128	; video mode 8 ?
 	jz	CtrlVidDone
-	test	[KeyTable+KeyLShift],128
-	jnz	DoMode8Change
-	test	[KeyTable+KeyRShift],128
-	jz	CtrlVidDone
+;	test	[KeyTable+KeyLShift],128
+;	jnz	DoMode8Change
+;	test	[KeyTable+KeyRShift],128
+;	jz	CtrlVidDone
 
 DoMode8Change:
 	mov	[_VideoMode],8

@@ -337,7 +337,7 @@ LineTable label byte
 	dd	06c060h			; astrblst
 	db	30
 	dd	06d274h			; atlantis
-	db	42
+	db	41
 	dd	04e06h			; bachelor
 	db	29
 	dd	05706h			; bachlrtt
@@ -425,7 +425,7 @@ LineTable label byte
 	dd	07f16ch			; defender
 	db	50
 	dd	06f6b1h			; demonatk
-	db	42
+	db	41
 	dd	0ce26h			; dethtrap
 	db	41
 	dd	07c814h			; dicepuzl
