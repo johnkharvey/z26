@@ -17,6 +17,7 @@ START_TIME = 07fffh			; 03ffffh
 .data
 
 Timer		dd	START_TIME	; the RIOT Timer
+                                        ; (gets initialized in INIT.ASM now)
 TimerReadVec	dw	ReadTimer1024	; timer read vector
 TimerByte	db	0		; a return value
 TimerIntReg	db	0		; Timer Interrupt Register
@@ -116,6 +117,12 @@ WriteNothing:
 WritePortA:
 	push	ax
 	mov	al,[WByte]
+        and     al,[DDR_A]              ; make sure that only output bits
+        mov     ah,[DDR_A]              ;   get written to SWCHA *EST*
+        xor     ah,0FFh                 ;
+        and     ah,[_IOPortA]           ;
+        or      al,ah                   ;
+
 	cmp	[_KeyPad],2		; *EST* cheat for Star Raiders
 	jne	WPAapply		;   wouldn'd read Joystick
 	and	al,00Fh			;   without it
@@ -124,6 +131,12 @@ WritePortA:
 	or	al,ah			;
 WPAapply:
 	mov	[_IOPortA],al
+        cmp     [_KidVid],0             ; Kid Vid game?
+        je      WPAtestML
+        call    KidVidWrite             ; in keyboard.asm
+        pop     ax
+        ret
+WPAtestML:
         test    [_Mindlink],3           ; Mindlink game?
         jnz     [WPAhandleML]
         pop     ax

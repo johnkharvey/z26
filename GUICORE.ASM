@@ -1094,7 +1094,7 @@ public _help_1
 _help_1 label byte
 
 db      '`y`UCompuMate Keyboard`u`d`n`n'
-db      '`d Use PC keyboard collumns `o1 `d- `o0`n'
+db      '`d Use PC keyboard columns `o1 `d- `o0`n'
 db      '   `oCtrl`d -- FUNC`n'
 db      ' `oLShift`d -- SHIFT`n`n'
 
@@ -1104,7 +1104,11 @@ db      ' `obutton`d -- start the game`n'
 db      '    `oTab`d -- switch between player 1 and player 2`n`n'
 
 db      '`y`UMouse Handling in Paddle Emulation`u`d`n`n'
-db      '    `oTab`d -- switch between horiz. normal, vert. normal, horiz. reversed and vert. reversed`n'
+db      '    `oTab`d -- switch between horiz. normal, vert. normal, horiz. reversed and vert. reversed`n`n'
+
+db      '`y`UKid Vid Controller`u`d`n`n'
+db      '`d Use keys `o1 2 3 `dto start the corresponding tape.`n'
+db      ' `oF1 `dalso stops and rewinds the tape. `n'
 
 db	0
 
@@ -1141,7 +1145,7 @@ db      '  `oF11`d -- resume tracing`n'
 db      '  `oF12`d -- interrupt tracing`n`n'
 
 db      '`y`UPalette Change`u`d`n`n'
-db      '    `o-`d -- switch between NTSC -> SECAM -> PAL palettes (set B/W switch manually for SECAM)`n`n'
+db      '    `o-`d -- switch between NTSC -> PAL -> SECAM palettes (set B/W switch manually for SECAM)`n`n'
 
 db	0
 
@@ -1198,7 +1202,7 @@ db	'                         `y2`d = run Soundblaster at 15700 Hz)`n`n'
 db      '  `o-t`d  -- write code-trace to file Z26.LOG`n`n'
 db	'  `o-u`yN`d -- start scanning game at line `yN`d`n`n'
 db	'  `o-v`yN`d -- start in video mode `yN`d`n`n'
-db      '  `o-w`d  -- emulate driving controllers`n`n'
+db      '  `o-w`yN`d -- emulate driving controllers  (`y1`d = left   `y2`d = right   `y3`d = both)`n`n'
 db      '  `o-x`d  -- print out checksum of cartridge`n`n'
 db      '  `o-y`yN`d -- emulate keyboard controller  (`y1`d = left   `y2`d = right   `y3`d = both)`n`n'
 db      '  `o-z`d  -- rotate screen 90 degrees counter-clockwise (video modes 0 - 3 only)`n`n'
@@ -1229,11 +1233,11 @@ db	'       `oMatt Conte`d -- Helped with digital voice and 50Hz video modes.`n'
 db	'      `oJohn Dullea`d -- Fast, elegant 2600 graphics techniques, and help with Pitfall II.`n'
 db	'    `oBradford Mott`d -- Helped with object positioning (weird HMOVE).`n'
 db      '    `oChris Wilkson`d -- Helped with Pitfall II.`n'
-db	'      `oLee Krueger`d -- Helped with rare carts and documentation.`n'
+db      '      `oLee Krueger`d -- Helped with Kid Vid support, rare carts and documentation.`n'
 db      ' `oEckhard Stolberg`d -- Helped with object positioning, PAL/SECAM colors, digital voice, controllers,`n'
 db	'                     Cosmic Ark effect, Pitfall II, CompuMate, Supercharger games, fast video`n'
-db      '                     modes, and the new PCX screen capture code.`n'
-db      '  `oThomas Jentzsch`d -- Helped with trace mode.`n'
+db      '                     modes, Kid Vid support and the new PCX screen capture code.`n'
+db      '  `oThomas Jentzsch`d -- Helped with trace mode and Kid Vid support.`n'
 db      '`oMichael Walden Jr`d -- Helped with GUI.`n'
 db      '`o  Henning Mueller`d -- Helped with CompuMate.`n'
 db	'  `oChristian Bogey`d -- Helped with SECAM colors. `n`n'
@@ -1241,7 +1245,7 @@ db	'  `oChristian Bogey`d -- Helped with SECAM colors. `n`n'
 db      '`nThanks to one and all!!`n`n`n`n`n`n'
 
 db	'`y`UCopyright/License`u`d`n`n'
-db      'z26 is Copyright 1997-2001 by John Saeger and is a derived work with many`n'
+db      'z26 is Copyright 1997-2002 by John Saeger and is a derived work with many`n'
 db	'contributors.  z26 is released subject to the terms and conditions of the`n'
 db	'GNU General Public License Version 2 (GPL).  `oz26 comes with no warranty.`d`n'
 db	'Please see the included COPYING.TXT for details.  Source code for the`n'

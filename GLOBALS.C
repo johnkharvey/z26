@@ -106,6 +106,9 @@ db AllowAll4;           /* allow all 4 directions on the joystick simultaniously
 db EnableFastCopy;      /* use 32 bit mode X copy routines */
 db TurnScreen;          /* rotate screen 90ø counter-clockwise in linear modes *EST* */
 db HalfScreen;		/* copy alternate scanlines to screen */
+db KidVid;              /* ID byte on tapes for KidVid game *EST* */
+db KidVidTape;          /* tape number to be played *EST* */
+
 /*
 ** reinitialize the above variables
 */
@@ -144,4 +147,6 @@ void def_LoadDefaults(void)
         EnableFastCopy = 0;
         TurnScreen = 0;
         HalfScreen = 0;
+        KidVid = 0;
+        KidVidTape = 0;
 }

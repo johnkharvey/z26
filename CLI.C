@@ -288,7 +288,7 @@ unsigned char SCBIOS[188] = {
 **  ->	-0      player 0 hard
 **  ->	-1      player 1 hard
 **	-y <n>	emulate none <0>, left <1>, right <2> or both <3> keypads *EST*
-**	-w	emulate driving controllers *EST*
+**      -w <n>  emulate driving which controllers *EST*
 **	-g	overrride bankswitching type detection *EST*
 **	-m <n>	paddle to emulate with mouse; 0xff=joystick *EST*
 **	-o	simulate PAL colour loss *EST*
@@ -354,7 +354,7 @@ void cli_InterpretParm(char *p)
 				NoRetrace = parm;
 			break;
 	case 'y':	KeyPad = parm & 3;		       break; /* *EST* */
-	case 'w':	Driving = 1;			       break; /* *EST* */ 
+        case 'w':       Driving = parm & 3;                    break; /* *EST* */ 
         case 'g':       BSType = parm & 0x0f;                  break; /* *EST* */
 	case 'o':	SimColourLoss = 1;		       break; /* *EST* */
 	case 'l':	Lightgun = parm;		       break; /* *EST* */

@@ -37,6 +37,9 @@ void RecognizeCart(void)
 	db paddle;
         dw i,j;
 
+        if (crc == 0x9927a7ae) KidVid = 0x44;   /* Smurfs Save the Day */
+        if (crc == 0x0b63f9e3) KidVid = 0x48;   /* The Berenstain Bears */
+
         if (crc == 0x7a0d162d) AllowAll4 = 1;   /* Bumper Bash NTSC */
         if (crc == 0x4af43194) AllowAll4 = 1;   /* Bumper Bash PAL */
 
@@ -92,15 +95,17 @@ void RecognizeCart(void)
 
 	if (PaletteNumber == 0xff)		/* if user didn't specify a palette */
 	{
-
-		if (
-			(crc == 0xfa07aa39) ||	/* pharhcrs (prevent auto-switch) */
-			(crc == 0x4f40a18e)	/* air_raid (too large) */
-		   )
+                if (Lookup(NTSC_colours)) 
 		{
 			PaletteNumber = 0;	/* NTSC Palette */
 			UserPaletteNumber = 0;
 		}
+
+                if (Lookup(PAL_colours)) 
+                {
+                        PaletteNumber = 1;      /* PAL Palette */
+                        UserPaletteNumber = 0;
+                }
 	}
 
 
@@ -112,10 +117,7 @@ void RecognizeCart(void)
 
 /* games that want Player 1 set to hard */
 
-	if (crc == 0x5c161fe4) IOPortB |= 0x80;	/* he_man */
-        if (crc == 0x7b7921c3) IOPortB |= 0x80; /* Steeple Chase (Video Gems) */
-        if (crc == 0x02969f95) IOPortB |= 0x80; /* Mission Survive */
-        if (crc == 0xeab1d9d0) IOPortB |= 0x80; /* Treasure Below */
+        if (Lookup(Player_1_hard)) IOPortB |= 0x80;
 
 
 /* games that want the joystick controls reversed */
@@ -135,7 +137,8 @@ void RecognizeCart(void)
 
 /* driving controller games */
 
-	if (Lookup(driving_con)) Driving = 1;
+        if (Lookup(driving_con_2)) Driving = 2;
+        if (Lookup(driving_con_3)) Driving = 3;
 
 
 /* lightgun games */

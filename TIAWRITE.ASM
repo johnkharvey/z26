@@ -425,6 +425,11 @@ HandleDumpedInputs:
 	jz	HandleLatchedInputs	;   no
 	mov	dword ptr [ChargeCounter],0 ;   yes, zero the line counter
 
+        mov     [DumpPorts],0h          ; reset booster grip buttons
+        mov     [DumpPorts+1],0h        ;
+        mov     [DumpPorts+2],0h        ;
+        mov     [DumpPorts+3],0h        ;
+
 HandleLatchedInputs:
 	ret
 

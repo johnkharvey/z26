@@ -357,7 +357,7 @@ _Tia_process endp
 ;*
 
 QueueSoundByte macro
-local SoundQueueFull, SoundQueueLoop
+local SoundQueueFull, SoundQueueLoop, NoSamplePlay
 
 	cmp	[SQ_Count],SQ_MAX	; sound queue already full?
 	jae	SoundQueueFull		;   yes, don't queue anything
@@ -366,7 +366,18 @@ SoundQueueLoop:
 	mov	cx,1
 	mov	[SoundPointer],offset SoundByte
 	call	_FillSoundBuffer	;   no, generate a single sound byte
-	mov	al,[SoundByte]
+        mov     al,[SoundByte]
+
+        test    _KidVid,0ffH
+        jz      NoSamplePlay
+        push    es
+        call    _kv_GetNextSampleByte
+        pop     es
+        movzx   ax,SoundByte
+        movzx   bx,_SampleByte
+        add     ax,bx
+        shr     ax,1
+NoSamplePlay:
 	SQ_Store			; put it in the sound queue
 	cmp	[SQ_Count],SQ_MAX/2	; keep sound queue at least 1/2 full
 	jbe	SoundQueueLoop
@@ -396,10 +407,28 @@ _QueueSoundBytes proc near
 
 	QueueSoundByte
 
+        popf
+        ret
+
 SoundDone:
+        cmp     [_KidVid],0             ; if half speed sound output, ...
+        je      SoundDoneRet
+        push    es      
+        call    _kv_GetNextSampleByte   ; ... decrease counter for KidVid games
+        pop     es                      ; *EST*
+
+SoundDoneRet:
 	popf
+        ret
 
 DontQueueSound:
+        cmp     [_KidVid],0             ; if no sound output, ...
+        je      DontQueueSoundRet
+        push    es      
+        call    _kv_GetNextSampleByte   ; ... decrease counter for KidVid games
+        call    _kv_GetNextSampleByte   ; *EST*
+        pop     es
+DontQueueSoundRet:
 	ret
 
 _QueueSoundBytes endp

@@ -49,6 +49,10 @@ EXTRN _AllowAll4:byte
 EXTRN _EnableFastCopy:byte
 EXTRN _TurnScreen:byte
 EXTRN _HalfScreen:byte
+EXTRN _KidVid:byte
+EXTRN _KidVidTape:byte
+EXTRN _SampleByte:byte
+EXTRN _kv_TapeBusy:word
 
 EXTRN _LinesInFrame:word	; *EST*
 EXTRN _PrevLinesInFrame:word
@@ -126,3 +130,9 @@ EXTRN _LG_WrapLine:byte
 EXTRN _RecognizeCart:far
 
 EXTRN _PCXWriteFile:far
+
+EXTRN _kv_OpenSampleFile:far
+EXTRN _kv_CloseSampleFile:far
+EXTRN _kv_GetNextSampleByte:far
+EXTRN _kv_SetNextSong:far
+

@@ -3,6 +3,31 @@
 ** These days we modify it manually.
 */
 
+dd      Player_1_hard[] = {
+        0x5c161fe4,     /* he_man */
+        0x7b7921c3,     /* Steeple Chase (Video Gems) */
+        0x02969f95,     /* Mission Survive */
+        0xeab1d9d0,     /* Treasure Below */
+        0x1f0bb3e0,     /* Eckhard's color test */
+        0xe8e9b3c7,     /* Steeple Chase (Video Gems) NTSC (Thomas Jentzsch hack)*/
+        0x7babc61b,     /* Mission Survive NTSC (Thomas Jentzsch hack)*/
+        0x89a7cc41,     /* Treasure Below NTSC (Thomas Jentzsch hack)*/
+        -1
+};
+
+dd      NTSC_colours[] = {
+        0xfa07aa39,     /* pharhcrs (prevent auto-switch) */
+        0x4f40a18e,     /* air_raid (too large) */
+        -1
+};
+
+dd      PAL_colours[] = {
+        0x361c9ac1,     /* Montezuma's Revenge PAL60 (Thomas Jentzsch hack) */
+        0xf85c2f45,     /* Cosmic Commuter PAL60 (Thomas Jentzsch hack) */
+        0x5260de42,     /* Cat Trax PAL60 (Thomas Jentzsch hack) */
+        -1
+};
+
 dd	Kool[] = {
 	0x6f721775,	/* Kool Aid Man.bin */
 	0x75020f32,	/* Kool Aid Man-fix.bin */
@@ -205,6 +230,7 @@ dd	keypad_3[] = {
 	0x751a433a,	/* Game of Concentration_(eks).bin */
 	0x9afa761f,	/* Magicard (Life).bin */
         0xf777a07d,     /* Holey Moley (Prototype) */
+        0xc3e91b95,     /* Peek-A-Boo (Prototype) */
 	-1
 };
 
@@ -215,11 +241,17 @@ dd	keypad_2[] = {
 	-1
 };
 
-dd	driving_con[] = {
+dd      driving_con_2[] = {
+        0x1a5a782c,     /* Asteroids DC+ (Thomas Jentzsch hack) */
+	-1
+};
+
+dd      driving_con_3[] = {
 	0x8a5cdc67,	/* Indy 500 (1977) (Atari) [h].bin */
 	0x40f4dd41,	/* Indy 500 (1977) [o].bin */
 	0xf6347068,	/* Indy 500 (1977).bin */
 	0x3038f1e5,	/* Indy 500 (Atari) (PAL) [!].bin */
+        0x5b9f7df7,     /* Sprint Master DC (Thomas Jentzsch hack) */
 	-1
 };
 
@@ -260,6 +292,8 @@ dd	BS_3[] = {
         0xb8bb2361,     /* Gyruss (PAL) */
         0xd3669372,     /* Star Wars: Ewok Adventure (proto) */
         0x6400d110,     /* Lord of the Rings: Journey to Rivendell (proto) */
+        0x70db5cca,     /* Ewok Adventure NTSC (Thomas Jentzsch hack) */
+        0x361c9ac1,     /* Montezuma's Revenge PAL60 (Thomas Jentzsch hack) */
         -1
 };
 
@@ -278,6 +312,8 @@ dd	BS_4[] = {
 	0x2c34898f,	/* Springer.bin */
         0x09a71583,     /* Miner 2049er PAL */
         0xd5645294,     /* Miner Volume 2 NTSC */
+        0x3310b79e,     /* Polaris NTSC ? */
+        0x52630ec9,     /* Polaris NTSC (Thomas Jentzsch hack) */
 	-1
 };
 
@@ -288,6 +324,8 @@ dd	BS_5[] = {
         0x0e8757b0,     /* Robot Tank (PAL) */
         0x94e8df6b,     /* Space Shuttle (PAL) */
         0xf3a4363c,     /* Thwocker prototype */
+        0x0a4d0768,     /* Robot Tank TC (Thomas Jentzsch hack) */
+        0xc343187b,     /* Space Shuttle (NTSC) */
 	-1
 };
 

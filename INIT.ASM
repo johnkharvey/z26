@@ -107,5 +107,11 @@ InitData:
         mov     ax,[_ScreenOfs]
         mov     [DisplayPointer],ax
 
+        mov     ah,0            ; read PC-Timer to initialize the RIOT timer
+        int     1aH             ;    with a random value
+        and     dx,0ffH
+        shl     edx,10          ; 10-bit shift, because T1024T is default
+        mov     dword ptr [Timer],edx     ;    see RIOT.ASM for details
+
 	ret
 

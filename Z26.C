@@ -11,10 +11,10 @@
 
 
 
-#define version "z26 (1.53)"
+#define version "z26 (1.54)"
 
 /*
-#define version "Pre 1.52-A"
+#define version "Pre 1.54-F"
 */
 
 /*
@@ -48,6 +48,7 @@
 
 #include "pcx.c"
 
+#include "kidvid.c"
 
 extern unsigned _stklen = 16384U;       /* set stack size to 16K */ 
 

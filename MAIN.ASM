@@ -13,6 +13,7 @@
 ModuleReturnAdr	dd	?		; word if small model, dword if medium
 ModuleSP	dw	?
 
+
 .code
 
 PUBLIC _emulator
@@ -181,7 +182,10 @@ GoTIME:
 	
 
 GoDOS:
-	call	sd_weird		; shutdown the weird stuff
+        push    es
+        call    _kv_CloseSampleFile      ; close file if opened
+        pop     es
+        call	sd_weird		; shutdown the weird stuff
 
 Empty:	call	_kb_hit			; empty the keyboard buffer
 	jz	Quit			;   buffer empty
