@@ -22,6 +22,50 @@
 sreg	dd	1		 ;  initialize shift register to non-zero val
 */
 
+extern db Pitfall2;
+extern db WByte;
+
+/* CONSTANT DEFINITIONS */
+
+/* definitions for AUDCx (15, 16) */
+#define SET_TO_1     0x00      /* 0000 */
+#define POLY4        0x01      /* 0001 */
+#define DIV31_POLY4  0x02      /* 0010 */
+#define POLY5_POLY4  0x03      /* 0011 */
+#define PURE         0x04      /* 0100 */
+#define PURE2        0x05      /* 0101 */
+#define DIV31_PURE   0x06      /* 0110 */
+#define POLY5_2      0x07      /* 0111 */
+#define POLY9        0x08      /* 1000 */
+#define POLY5        0x09      /* 1001 */
+#define DIV31_POLY5  0x0a      /* 1010 */
+#define POLY5_POLY5  0x0b      /* 1011 */
+#define DIV3_PURE    0x0c      /* 1100 */
+#define DIV3_PURE2   0x0d      /* 1101 */
+#define DIV93_PURE   0x0e      /* 1110 */
+#define DIV3_POLY5   0x0f      /* 1111 */
+                 
+#define DIV3_MASK    0x0c                 
+                 
+#define AUDC0        0x15
+#define AUDC1        0x16
+#define AUDF0        0x17
+#define AUDF1        0x18
+#define AUDV0        0x19
+#define AUDV1        0x1a
+
+/* the size (in entries) of the 4 polynomial tables */
+#define POLY4_SIZE  0x000f
+#define POLY5_SIZE  0x001f
+#define POLY9_SIZE  0x01ff
+
+/* channel definitions */
+#define CHAN1       0
+#define CHAN2       1
+
+#define FALSE       0
+#define TRUE        1
+
 dd sreg = 1;
 
 /*
@@ -46,7 +90,7 @@ db Bit5[] = { 0,0,0,0,0,1,1,1,0,0,1,0,0,0,1,0,1,0,1,1,1,1,0,1,1,0,1,0,0,1,1 };
 Bit5T   db      1,0,0,0,0,1,0,0,1,0,1,1,0,0,1,1,1,1,1,0,0,0,1,1,0,1,1,1,0,1,0
 */
 
-db Bit5T[] { 1,0,0,0,0,1,0,0,1,0,1,1,0,0,1,1,1,1,1,0,0,0,1,1,0,1,1,1,0,1,0 };
+db Bit5T[] = { 1,0,0,0,0,1,0,0,1,0,1,1,0,0,1,1,1,1,1,0,0,0,1,1,0,1,1,1,0,1,0 };
 
 /*
 ; The 'Div by 31' counter is treated as another polynomial because of
@@ -94,6 +138,7 @@ db D6[] = { 0, 0 };
 db P4[] = { 0, 0 };
 db P5[] = { 0, 0 };
 db AUDC[] = { 0, 0 };
+db AUDF[] = { 0, 0 };
 db AUDV[] = { 0, 0 };
 db Outvol[] = { 0, 0 };
 db Div_n_cnt[] = { 0, 0 };
@@ -141,6 +186,7 @@ AUDC_Jumptab:  ; dword	; HEX  D3 D2 D1 D0    Clock Source    Clock Modifier    S
 /* That's `array of pointers to functions which take no args and return void',
 	in case you can't read it (I can't, and I *wrote* it!)
 */
+/*
 void (*AUDC_Jumptab[])() = {
 	TSB_Ch0done,
 	TSB_Poly4,
@@ -159,6 +205,7 @@ void (*AUDC_Jumptab[])() = {
 	TSB_Div31_Div6,
 	TSB_Poly5_Div6
 };
+*/
 
 /*
 
@@ -189,9 +236,26 @@ Init_Tiasnd:
 	*/
 
 void Init_Tiasnd() {
-	/* Er. This doesn't *do* anything, the first time it gets
-		called... and I don't think it gets called twice.
-	*/
+	int chan;
+	
+	Samp_n_max = (31400 << 8) / 31400;
+	Samp_n_cnt = 0;
+
+	for (chan = CHAN1; chan <= CHAN2; chan++)
+	{
+		Outvol[chan]		=		0;
+		Div_n_cnt[chan]	=		0;
+		Div_n_max[chan]	=		0;
+		AUDC[chan]			=		0;
+		AUDF[chan]			=		0;
+		AUDV[chan]			=		0;
+		P4[chan]				=		0;
+		P5[chan]				=		0;
+		//	P9[chan]				=		0;
+
+		P9_sreg[chan]		=		1;
+	}
+
 }
 
 /*
@@ -217,14 +281,15 @@ NoSamplePlay:
 
 	*/
 
+
 db KidVid_Sound_Byte() {
+	return 0;
 	/*
 	if(KidVid != 0xff)
 		return kv_GetNextSampleByte();
 	else
 		return 0;
 		*/
-	return 0; /* for now */
 }
 
 /*
@@ -280,6 +345,7 @@ H_AUDC0:
  	mov	byte [AUDC],al
 	jmp	UTS_Chan0
 	*/
+
 
 void H_AUDC0() {
 	AUDC[0] = WByte & 0x0f;
@@ -370,6 +436,7 @@ UTS_Chan1:
 */
 
 void UTS_Chan(int chan) {
+	dd new_val;
 	/*
 	db AUDC = AUDC[chan];
 	db AUDF = AUDF[chan];
@@ -410,7 +477,7 @@ UTS_rs2: movzx	eax,byte [Div_n_max+ebx] ; only reset channels that have changed
 	je near UTS_Done
 	*/
 
-	if( ! (new_val == Div_n_max[chan]) ) {
+	if( new_val != Div_n_max[chan] ) {
 
 	/*
  	mov	al,byte [new_val]
@@ -425,8 +492,8 @@ UTS_rs3: mov	al,byte [new_val]
 				 	 ;      (otherwise complete previous)
 	 */
 
-		new_val = Div_n_max[chan] & 0xff;
-		if( Div_n_cnt[chan] != 0 && new_val != 0 )
+		Div_n_max[chan] = new_val & 0xff;
+		if( Div_n_cnt[chan] == 0 || new_val == 0 )
 			Div_n_cnt[chan] = new_val & 0xff;
 		/*
 
@@ -434,6 +501,7 @@ UTS_Done:
 	ret	
 */
 	}
+}
 
 /*
 	
@@ -458,10 +526,18 @@ UTS_Done:
 TIA_Sound_Byte:
 */
 
-	dd TIA_Sound_Byte() {
+int TSB_result;
+
+dd TIA_Sound_Byte() {
+	TSB_result = -1;
+
+	while(TSB_result==-1) {
 		if(!Pitfall2) TSB_ProcessChannel(0);
 		TSB_ProcessChannel(1);
+		TSB_Ch0done(); /* sets TSB_result for us */
 	}
+	return TSB_result;
+}
 
 	/*
 
@@ -480,6 +556,91 @@ TSB_ProcessChannel:
  	dec	byte [Div_n_cnt + edi] ; ... decrement ...
 	jmp	TSB_Ch0done		 ;  ... and do next channel
 	*/
+
+void TSB_ProcessChannel(int chan) {
+	if(Div_n_cnt[chan] < 1) return;
+	if(Div_n_cnt[chan] > 1) {
+		Div_n_cnt[chan]--;
+	} else {
+		/* reset the counter */
+		Div_n_cnt[chan] = Div_n_max[chan];
+
+		/* the P5 counter has multiple uses, so we inc it here */
+		P5[chan]++;
+		if (P5[chan] == POLY5_SIZE)
+			P5[chan] = 0;
+
+		/* check clock modifier for clock tick */
+
+		/* if we're using pure tones OR
+			we're using DIV31 and the DIV31 bit is set OR
+			we're using POLY5 and the POLY5 bit is set */
+		if  (((AUDC[chan] & 0x02) == 0) ||
+				(((AUDC[chan] & 0x01) == 0) && Div31[P5[chan]]) ||
+				(((AUDC[chan] & 0x01) == 1) &&  Bit5[P5[chan]]))
+		{
+			if (AUDC[chan] & 0x04)       /* pure modified clock selected */
+			{
+				if (Outvol[chan])         /* if the output was set */
+					Outvol[chan] = 0;      /* turn it off */
+				else
+					Outvol[chan] = AUDV[chan];   /* else turn it on */
+			}
+			else if (AUDC[chan] & 0x08)  /* check for p5/p9 */
+			{
+				if (AUDC[chan] == POLY9)  /* check for poly9 */
+				{
+					/* inc the poly9 counter */
+//					P9[chan]++;
+//					if (P9[chan] == POLY9_SIZE)
+//						P9[chan] = 0;
+//
+//					if (Bit9[P9[chan]])    /* if poly9 bit is set */
+//						Outvol[chan] = AUDV[chan];
+//					else
+//						Outvol[chan] = 0;
+				}
+				else                      /* must be poly5 */
+				{
+					if (Bit5[P5[chan]])
+						Outvol[chan] = AUDV[chan];
+					else
+						Outvol[chan] = 0;
+				}
+			}
+			else  /* poly4 is the only remaining option */
+			{
+				/* inc the poly4 counter */
+				P4[chan]++;
+				if (P4[chan] == POLY4_SIZE)
+					P4[chan] = 0;
+
+				if (Bit4[P4[chan]])
+					Outvol[chan] = AUDV[chan];
+				else
+					Outvol[chan] = 0;
+			}
+		}
+	}
+
+}
+
+void TSB_Ch0done() {
+	/* decrement the sample counter - value is 256 since the lower
+		byte contains the fractional part */
+	Samp_n_cnt -= 256;
+
+	/* if the count down has reached zero */
+	if (Samp_n_cnt < 256)
+	{
+		/* adjust the sample counter */
+		Samp_n_cnt += Samp_n_max;
+
+		/* calculate the latest output value and set our result */
+		TSB_result = Outvol[0] + Outvol[1];
+		/* TODO: Pitfall2, kidvid, silence during pause, DPS effects */
+	}
+}
 
 	/*
 
@@ -629,3 +790,44 @@ TSB_ProcessDone:
 	and	eax,0ffh		 ;  return 32-bit sample
 	ret	
 	*/
+
+
+/*
+ * $Log: tiasnd.c,v $
+ * Revision 1.6  2004/05/15 17:00:46  urchlay
+ *
+ * Initial incomplete implementation of TIA sound code in C. This isn't
+ * done yet, but at least compiles, and you can play Pitfall with it (but
+ * not Pitfall II).
+ *
+ * Revision 1.5  2004/05/15 15:36:13  urchlay
+ *
+ * The rest of the graphics can be disabled/enabled:
+ *
+ * Alt+key   Graphic
+ * Z         P0
+ * X         P1
+ * C         M0
+ * V         M1
+ * B         Ball
+ * N         Playfield (whole thing)
+ * /         Turns all of the above ON
+ *
+ * Revision 1.4  2004/05/12 22:16:27  urchlay
+ *
+ * added -V option (version).
+ *
+ * Revision 1.3  2004/05/09 00:38:29  urchlay
+ *
+ * Ported a few more functions to C. Tia_process() is still acting weird.
+ *
+ * Moved the C core defines to conf/c_core.mak, so we only have one place
+ * to modify them, no matter which target we're building for. Used
+ * `sinclude' to include it, which won't give an error if the file is
+ * missing entirely. It'll just not define any of the C core stuff.
+ *
+ * Revision 1.2  2004/05/08 18:06:58  urchlay
+ *
+ * Added Log tag to all C and asm source files.
+ *
+ */

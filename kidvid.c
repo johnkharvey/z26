@@ -11,7 +11,7 @@
 */
 
 FILE *SampleFile, *SharedSampleFile;
-char SampleByte;
+db SampleByte;
 int FileOpened=0;
 dd kv_TapeBusy;
 int kv_FilePointer, kv_SharedData, kv_Beep;
@@ -562,3 +562,15 @@ static int oddeven = 0;
    }
 }
 
+
+
+/*
+ * $Log: kidvid.c,v $
+ * Revision 1.3  2004/05/09 05:01:12  tazenda
+ * make SampleByte unsigned (for C version of QueueSoundByte)
+ *
+ * Revision 1.2  2004/05/08 18:06:57  urchlay
+ *
+ * Added Log tag to all C and asm source files.
+ *
+ */

@@ -146,3 +146,12 @@ void GeneratePalette()
 	default: NTSC_Palette();  break;
 	}
 }
+
+
+/*
+ * $Log: palette.c,v $
+ * Revision 1.2  2004/05/08 18:06:57  urchlay
+ *
+ * Added Log tag to all C and asm source files.
+ *
+ */

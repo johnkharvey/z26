@@ -705,3 +705,12 @@ void main(int argc, char *argv[])
 	do_BS_7();
 	do_BS_8();
 }
+
+
+/*
+ * $Log: mt.c,v $
+ * Revision 1.2  2004/05/08 18:06:57  urchlay
+ *
+ * Added Log tag to all C and asm source files.
+ *
+ */
