@@ -165,17 +165,17 @@ z26-static: z26.o z26core.o
 
 
 z26.o:	z26.c z26.h \
-	2600core.c         c_cpujam.c     guigame.c       palette.c     sdlvideo.c \
-	c_banks.c          		  guiinterface.c  pcx.c         c_soundq.c \
-	bintoasm.c       		  gui_sort.c      c_pitfall2.c  c_starpath.c \
-	carts.c            ct.c           guisound.c      position.c    text.c \
-	c_catchuppixels.c  c_trace.c      guitiming.c     c_riot.c      c_tialine.c \
-	                   genclr.c       guitweaks.c     sdlflip.c     c_tiasnd.c \
-	                   globals.c      guiutil.c       sdlicon.c     c_tiawrite.c \
-	cli.c              guiabout.c     guivideo.c      sdlmouse.c    trace.c \
-	controls.c         gui.c          c_init.c        sdlpixcopy.c  tracex.c \
-	c_cpu.c            guidebug.c     kidvid.c        sdlsound.c \
-	c_cpuhand.c        guifilelist.c  mt.c            sdlsrv.c \
+	2600core.c         c_cpujam.c		guigame.c		palette.c     sdlvideo.c \
+	c_banks.c          guiinterface.c	pcx.c			c_soundq.c \
+	bintoasm.c		   gui_sort.c		c_pitfall2.c	c_starpath.c \
+	carts.c            ct.c				guisound.c      position.c    text.c \
+	c_catchuppixels.c  c_trace.c		guitiming.c     c_riot.c      c_tialine.c \
+	genclr.c           guitweaks.c		sdlflip.c		c_tiasnd.c \
+	globals.c          guiutil.c		sdlicon.c		c_tiawrite.c \
+	cli.c              guiabout.c		guivideo.c      sdlmouse.c    trace.c \
+	controls.c         gui.c			c_init.c        sdlpixcopy.c  tracex.c \
+	c_cpu.c            guidebug.c		kidvid.c        sdlsound.c \
+	c_cpuhand.c        guifilelist.c	mt.c            sdlsrv.c \
 	conf/c_core.mak
 	$(CC) -Wall $(Z26OPTS) $(C_CORE) $(CFLAGS) $(SDLCFLAGS) -c z26.c
 
@@ -194,9 +194,6 @@ c_catchuppixels.c: catchuppixels.m4
 
 c_cpu.c: cpu.m4
 	m4 cpu.m4 > c_cpu.c
-	
-tiatab.c: tiatab.m4
-	m4 tiatab.m4 > tiatab.c
 
 
 # INSTALL_TARGET is either install.unix or install.null
@@ -217,12 +214,3 @@ clean:
 
 realclean: clean
 	rm -f z26.cli z26.gui config.mak z26.log
-
-tarball: realclean
-	rm -f config.mak && \
-	cd .. && \
-	cp -a z26 z26_snapshot-`date +%Y%m%d` && \
-	tar cvfz z26_snapshot-`date +%Y%m%d`.tar.gz z26_snapshot-`date +%Y%m%d`
-
-upload: tarball
-	scp ../z26_snapshot-`date +%Y%m%d`.tar.gz hardcoders.org:public_html/hardcoders/z26/

@@ -176,6 +176,7 @@ void RecognizeCart(void)
 
 /* CompuMate keyboard */
         if (crc == 0xa01ebff4) { RightSuggestion = CM; LeftSuggestion = CM; }	/* Spectravideo CompuMate PAL */
+		if (crc == 0xdfa1388d) { RightSuggestion = CM; LeftSuggestion = CM; }	/* Spectravideo CompuMate NTSC */
 
 
 /* TrakBalls */
@@ -205,6 +206,7 @@ void RecognizeCart(void)
 	if (Lookup(BS_7)) BSType = 7;		/* M Network 16K */
         if (Lookup(BS_8)) BSType = 8;           /* Atari 32K */
         if (crc == 0xa01ebff4) BSType = 10;     /* Spectravideo CompuMate PAL */
+		if (crc == 0xdfa1388d) BSType = 10;		/* Spectravideo CompuMate NTSC */
 	if (Lookup(BS_11)) BSType = 11;		/* 32K Tigervision */
         if (Lookup(BS_12)) BSType = 12;         /* 8K UA Ltd. */
 

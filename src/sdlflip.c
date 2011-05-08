@@ -14,7 +14,8 @@ dd	FPSflips = 0;
 
 int PageFlipping()
 {
-	return(!Phosphor && FullScreen && !InDesktop && SyncToMonitor);
+	return(!Phosphor && FullScreen && SyncToMonitor);
+//	return(!Phosphor && FullScreen && !InDesktop && SyncToMonitor);
 }
 
 double srv_get_microseconds()

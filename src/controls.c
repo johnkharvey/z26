@@ -945,6 +945,7 @@ void DoLightgun_L()
 	ScreenBuffer[MLG_Ypos * 160 + MLG_Xpos + 160] = MLG_Colour;
 	if (MLG_Ypos * 160 + MLG_Xpos > 160)
 		ScreenBuffer[MLG_Ypos * 160 + MLG_Xpos - 160] = MLG_Colour;
+
 }
 
 void DoLightgun_R()
