@@ -29,7 +29,7 @@ void about_gui() {
 	while( !exit_about ) {
 		status_timer = 0;
 
-		sprintf(msg, "Version 2.15.00 -- http://www.whimsey.com/z26");
+		sprintf(msg, "Version 2.16.00 -- http://www.whimsey.com/z26");
 		draw_gui(about_gui_items, about_current);
 
 		SDL_WaitEvent(&ev);	/* TODO: respond to SDL_QUIT events */

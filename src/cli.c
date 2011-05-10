@@ -411,7 +411,7 @@ void cli_InterpretParm(char *p)
 	case '(':	UserRightController = 0xff;			// set right controller
 			for (i=0; i<12; i++)
 			{
-				if (strcmp(p, cli_controllers[i]) == 0)
+				if (strncmp(p, cli_controllers[i],2) == 0)
 					UserRightController=i;
 			}
 			if (UserRightController == 0xff)
