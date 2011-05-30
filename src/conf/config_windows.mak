@@ -4,6 +4,7 @@ CONFIG=windows
 # C compiler, flags
 CC=gcc
 CFLAGS=-O2
+#CFLAGS=-g
 
 # NASM
 NASM=nasm
@@ -24,7 +25,7 @@ SDLLIBS=`$(SDLCONFIG) --libs`
 SDLCFLAGS=`$(SDLCONFIG) --cflags`
 
 # What z26-specific options shall we use for this platform?
-Z26OPTS=-DWINDOWS
+Z26OPTS=-DWINDOWS -DC_ENGINE
 
 # C core options.
 sinclude conf/c_core.mak

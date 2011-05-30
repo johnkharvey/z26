@@ -7,36 +7,12 @@ dd BottomLine = 0; /* bottom line of display */
 
 void position_game() {
 	CFirst = DefaultCFirst;
-//	CFirst = UserCFirst;
 	if(DefaultCFirst == 0xffff) 	// if no default first line to render
 	{
 		if(PaletteNumber > 2)	PaletteNumber = 0;
 			
-		if (MaxLines <= 200)
-		{
-			if (PaletteNumber == 0) CFirst = 31;	// NTSC
-			else 			CFirst = 64;	// PAL or SECAM
-		}
-		else if (MaxLines <= 225)
-		{
-			if (PaletteNumber == 0) CFirst = 23;	// NTSC 	(chalange)
-			else 			CFirst = 44;	// PAL or SECAM (41 challang, 42 drgndfnd, 44 Vg_treas)
-		}
-		else if (MaxLines <= 240)
-		{
-			if (PaletteNumber == 0) CFirst = 20;	// 24 NTSC
-			else 			CFirst = 43;	// 55 PAL or SECAM
-		}
-		else if (MaxLines <= 266) 
-		{
-			if (PaletteNumber == 0) CFirst = 18;	// NTSC
-			else 			CFirst = 38;	// 39 PAL or SECAM
-		}
-		else
-		{
-			if (PaletteNumber == 0) CFirst = 1;	// 8  NTSC
-			else 			CFirst = 38;	// 41 PAL or SECAM
-		}
+		if (PaletteNumber == 0) CFirst = 18;	// NTSC
+		else 			CFirst = 38;	// 39 PAL or SECAM
 	}
 	
 	CFirst += GameOffset;	/* add in game specific offset */

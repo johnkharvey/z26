@@ -1,33 +1,54 @@
 /*
-** z26 -- an Atari 2600 emulator
+	z26 -- an Atari 2600 emulator
 */
 
-// #define C_ENGINE
+#define Z26_RELEASE "z26 -- An Atari 2600 Emulator"
+
+void QueueSoundBytes();
+void position_game();
+void srv_print();
+void srv_Events();
+void show_scanlines();
+void show_transient_status();
+void set_status(char *status);
+void gui();
+
 
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <dirent.h>
+#include <dirent.h>		// not in vc++ -- must be supplied 
 #include <sys/stat.h>
 #include <time.h>
 
+#ifdef LINUX
+#include <unistd.h>		// for chdir
+#endif
+
+
+// needed for vc++ -- works on gcc
+
+int strcasecmp(const char *s1, const char *s2)
+{
+	while(tolower(*s1) == tolower(*s2++))
+	{
+		if(*s1++ == '\0') return 0;
+	}
+	
+	return *(unsigned char *)s1 - *(unsigned char *)(s2 - 1);
+}
+
 FILE *parmfp = NULL;	// parameter file pointer
 
-/* moved these here from sdlsrv.c */
-
-#include "SDL.h"
+#include "SDL.h"		// not in vc++ or gcc -- must be supplied
 #include "SDL_audio.h"
+#include "SDL_opengl.h"
 
-/* moved these here from globals.c */
+typedef unsigned int			dd;		/* define double */
+typedef unsigned short int		dw;		/* define word */
+typedef unsigned char			db;		/* define byte */
 
-typedef unsigned long long int	dq;
-typedef unsigned int		dd;
-typedef unsigned short int	dw;
-typedef unsigned char		db;
-
-#include "z26.h"
 #include "globals.c"
 #include "ct.c"
 #include "carts.c"
@@ -40,26 +61,14 @@ typedef unsigned char		db;
 #include "controls.c"
 #include "position.c"
 #include "gui.c"
-
-//#include "c_tiasnd.c"
-//#include "c_soundq.c"
-
-
-extern void z_emulator();
-
-#ifdef C_ENGINE
 #include "2600core.c"
-#else
-#include "trace.c"
-#endif
 
-Uint32 total_ticks;
+int total_ticks;
 double seconds;
 
-int main(int argc, char *argv[])
+int main(int argc, char *argv[]) 
 {
-	Init_SDL();
-        srand(time(0));
+	srand(time(0));
 	def_LoadDefaults();
 	LaunchedFromCommandline = 0;
 
@@ -74,39 +83,13 @@ int main(int argc, char *argv[])
 		LaunchedFromCommandline = 1;
 		cli_CommandLine(argc, argv);
 	}
-
-#ifdef C_ENGINE
-	c_emulator();		   /* call emulator -- (main.asm) */
-#else
-	z_emulator();
-#endif
+	
+	Init_SDL();
+	
+	c_emulator();		   /* call emulator */
 
 	if(GrabInput)
 		SDL_WM_GrabInput(SDL_GRAB_OFF);
-
-#ifndef C_ENGINE
-	switch(MessageCode) {
-		case 1:
-			clrscr();
-			sprintf(msg, "Unable to find load %02x\n", SC_ControlByte);
-			srv_print(msg);
-			break;
-		case 2:
-			clrscr();
-			sprintf(msg, "Starpath call @ %04x\n", cpu_pc);
-			srv_print(msg);
-			break;
-		case 3:
-			clrscr();
-			sprintf(msg, "JAM %02x @ %04x\n", cpu_a, cpu_pc);
-			srv_print(msg);
-			break;
-       		}
-#endif
-
-#ifdef LINUX
-	printf("Total frames: %d, avg FPS: %f\n", Flips, CurrentFPS);
-#endif
 
 	if(TraceEnabled && (zlog != NULL)) {
 		fprintf(zlog, "Exiting emulator with status %d\n", MessageCode);
@@ -125,8 +108,9 @@ int main(int argc, char *argv[])
 
 
 /**
-** z26 is Copyright 1997-2011 by John Saeger and contributors.  
-** z26 is released subject to the terms and conditions of the 
-** GNU General Public License Version 2 (GPL).	z26 comes with no warranty.
-** Please see COPYING.TXT for details.
+	z26 is Copyright 1997-2011 by John Saeger and contributors.
+	z26 is released subject to the terms and conditions of the 
+	GNU General Public License Version 2 (GPL).
+	z26 comes with no warranty.
+	Please see COPYING.TXT for details.
 */

@@ -1,108 +1,122 @@
 /*
-** guivideo.c -- video menu
+	guivideo.c -- video menu
 */
 
 int video_current = 0;	/* currently selected GUI option */
-int exit_video = 0;	/* exit video menu */
+int exit_video = 0;		/* exit video menu */
 
 char startline_data[26];
 char screen_data[26];
 char line_data[26];
 char narrow_data[26];
+char Tall_data[26];
 char vid_mode_data[26];
-char phosphor_data[26];
+char Depth_data[26];
 char colourloss_data[26];
 char eight_bit_data[26];
 char width_data[26];
 
+
 void set_screen_string() {
-	if (InDesktop && FullScreen)	sprintf(screen_data, "Desktop");
-	else if (FullScreen)		sprintf(screen_data, "Full Screen");
+	if (FullScreen)		sprintf(screen_data, "Full Screen");
 	else				sprintf(screen_data, "Window");
 }
 
 void set_line_string() {
 	if (DoInterlace) 		sprintf(line_data, "Interlaced");
-	else if (DoScanline)		sprintf(line_data, "Scanline");
-	else 				sprintf(line_data, "Normal");
+	else if (DoScanline)	sprintf(line_data, "Scanline");
+	else 					sprintf(line_data, "Normal");
 }
 
 void set_width_string() {
-//	if (Narrow == -1)		sprintf(width_data, "Wide");
-	if (Narrow == 0)		sprintf(width_data, "Normal");
-	if (Narrow == 1)		sprintf(width_data, "Narrow");
+	sprintf(width_data, "%d", Narrow);
 }
 
-void set_startline_string() {
-	if (UserCFirst < 0) sprintf(startline_data, "Auto");
-	else
-	{
-		switch (UserCFirst)
-		{
-		case 0xffff:	sprintf(startline_data, "Auto");		break;
-		default: 	sprintf(startline_data, "%d", UserCFirst);	break;
-		}
-	}
+void set_height_string() {
+	sprintf(Tall_data, "%d", Tall);
 }
 
 void set_videomode_string() {
 	switch (VideoMode)
 	{
-	case 0:	 sprintf(vid_mode_data, "%d-320x200", VideoMode);	break;
-	case 1:	 sprintf(vid_mode_data, "%d-320x240", VideoMode);	break;
-	case 2:	 sprintf(vid_mode_data, "%d-640x480", VideoMode);	break;
-	case 3:	 sprintf(vid_mode_data, "%d-800x600", VideoMode);	break;
-	case 4:	 sprintf(vid_mode_data, "%d-1024x600", VideoMode);	break;
-	case 5:	 sprintf(vid_mode_data, "%d-1024x768", VideoMode);	break;
-	case 6:	 sprintf(vid_mode_data, "%d-1200x800", VideoMode);	break;
-	case 7:	 sprintf(vid_mode_data, "%d-1200x900", VideoMode);	break;
-	case 8:	 sprintf(vid_mode_data, "%d-1280x1024", VideoMode);	break;
-	default: sprintf(vid_mode_data, "whoops");			break;
+	case 0:	 sprintf(vid_mode_data, "Sharp");		break;
+	case 1:	 sprintf(vid_mode_data, "Blurry");		break;
+	case 2:  sprintf(vid_mode_data, "HD Sharp");	break;
+	case 3:  sprintf(vid_mode_data, "HD Blurry");	break;
+	case 4:  sprintf(vid_mode_data, "Fast Sharp");	break;
+	case 5:  sprintf(vid_mode_data, "Fast Blurry");	break;
+	default: sprintf(vid_mode_data, "whoops");		break;
 	}
 }
 
-void set_phosphor_string() {
-	if (UserPhosphor == 0) sprintf(phosphor_data, "Off");
-	else sprintf(phosphor_data, "%d", UserPhosphor);
+void set_Depth_string() {
+	sprintf(Depth_data, "%d", UserDepth);
 }
 
 void hand_screen_inc() {
-	if (InDesktop && FullScreen) InDesktop = 0;			// desktop -> fullscreen
-	else if (FullScreen)	     FullScreen = 0;			// fullscreen -> window
-	else 			     { InDesktop = 1; FullScreen = 1; }	// window -> desktop
+	if (FullScreen) FullScreen = 0; else FullScreen = 1;
+
+	sprintf(msg, " Restart z26 for change to take effect.");
+	srv_print(msg);
+
 	set_screen_string();
-	srv_SetVideoMode();
 }
 
 void hand_screen_dec() {
-	if (InDesktop && FullScreen) { FullScreen = 0; InDesktop = 0; }	// desktop -> window
-	else if (FullScreen)	     { FullScreen = 1; InDesktop = 1; }	// fullscreen -> desktop
-	else 			     { InDesktop = 0; FullScreen = 1; }	// window -> fullscreen
+	if (FullScreen) FullScreen = 0; else FullScreen = 1;
+	
+	sprintf(msg, " Restart z26 for change to take effect.");
+	srv_print(msg);
+
 	set_screen_string();
-	srv_SetVideoMode();
 }
 
 void hand_line_inc() {
-	if (DoInterlace)	{ DoInterlace = 0; DoScanline = 0; }	// interlace -> normal
+	if (DoInterlace)		{ DoInterlace = 0; DoScanline = 0; }	// interlace -> normal
 	else if (DoScanline)	{ DoScanline = 0; DoInterlace = 1; }	// scanline -> interlace
-	else 			{ DoScanline = 1; }			// normal -> scanline
+	else					{ DoScanline = 1; }						// normal -> scanline
 	set_line_string();
-	srv_SetVideoMode();
+	gui_SetVideoMode();
 }
 
 void hand_line_dec() {
-	if (DoInterlace)	{ DoInterlace = 0; DoScanline = 1; }	// interlace -> scanline
+	if (DoInterlace)		{ DoInterlace = 0; DoScanline = 1; }	// interlace -> scanline
 	else if (DoScanline)	{ DoScanline = 0; DoInterlace = 0; }	// scanline -> normal
-	else 			{ DoInterlace = 1; }			// normal -> interlace
+	else 					{ DoInterlace = 1; }					// normal -> interlace
 	set_line_string();
-	srv_SetVideoMode();
+	gui_SetVideoMode();
 }
 
-void hand_narrow() {
-	if (Narrow == 1) Narrow = 0;
-	else		 ++Narrow;
+void hand_narrow_inc() {
+int	maxstretch = (screen_width * 3) / 40;
+
+	if (++Narrow > maxstretch) --Narrow;
+	
 	set_width_string();
-	srv_SetVideoMode();
+	gui_SetVideoMode();
+}
+
+void hand_narrow_dec() {
+	if (Narrow == -200) return;
+	else		 --Narrow;
+	set_width_string();
+	gui_SetVideoMode();
+}
+
+void hand_height_inc() {
+int	vsize = (screen_height/MaxLines)*MaxLines;
+
+	if ((vsize + ++Tall*4) > screen_height) --Tall;
+	
+	set_height_string();
+	gui_SetVideoMode();
+}
+
+void hand_height_dec() {
+	if (Tall == -200) return;
+	else		 --Tall;
+	set_height_string();
+	gui_SetVideoMode();
 }
 
 void hand_colourloss() {
@@ -110,46 +124,37 @@ void hand_colourloss() {
 	set_yesno_string(colourloss_data, SimColourLoss);
 }
 
-void hand_startline_inc() {
-	if (UserCFirst == 0xffff) UserCFirst = 10;
-	else if (UserCFirst >= 100) UserCFirst = 0xffff;
-	else ++UserCFirst;
-	set_startline_string();
+void hand_Depth_inc() {
+	if (UserDepth >= 100) UserDepth = 0;
+	else ++UserDepth;
+	set_Depth_string();
+	Depth = UserDepth;
+	srv_SetPalette();
 }
 
-void hand_startline_dec() {
-	if (UserCFirst <= 10) UserCFirst = 0xffff;
-	else if (UserCFirst == 0xffff) UserCFirst = 100;
-	else --UserCFirst;
-	set_startline_string();
+void hand_Depth_dec() {
+	if (UserDepth == 0) UserDepth = 100;
+	else --UserDepth;
+	set_Depth_string();
+	Depth = UserDepth;
+	srv_SetPalette();
 }
 
-void hand_phosphor_inc() {
-	if (UserPhosphor >= 100) UserPhosphor = 0;
-	else ++UserPhosphor;
-	set_phosphor_string();
-}
-
-void hand_phosphor_dec() {
-	if (UserPhosphor == 0) UserPhosphor = 100;
-	else --UserPhosphor;
-	set_phosphor_string();
-}
 void hand_vid_inc()
 {
-	VideoMode += 1;
-	if (VideoMode > 8) VideoMode = 0;
-	srv_SetVideoMode();
+	if (++VideoMode > 5) VideoMode = 0;
+	gui_SetVideoMode();
 	set_videomode_string();
 }
 
 void hand_vid_dec()
 {
 	if (VideoMode == 0) 
-		VideoMode = 8;
+		VideoMode = 5;
 	else
 		VideoMode -= 1;
-	srv_SetVideoMode();
+
+	gui_SetVideoMode();
 	set_videomode_string();
 }
 
@@ -158,13 +163,13 @@ void hand_video_exit() {
 }
 
 gui_entry video_gui_items[] = {
-	{ " Start Line.: %s", startline_data, 0, hand_startline_inc, hand_startline_dec },
-	{ " Video Mode.: %s", vid_mode_data, 0, hand_vid_inc, hand_vid_dec },
-	{ " Width......: %s ", width_data, 0, hand_narrow, hand_narrow },
-	{ " Display....: %s", screen_data, 0, hand_screen_inc, hand_screen_dec },
-	{ " Line Mode..: %s", line_data, 0, hand_line_inc, hand_line_dec },
-	{ " Phosphor...: %s ", phosphor_data, 0, hand_phosphor_inc, hand_phosphor_dec },
-	{ " Colour Loss: %s ", colourloss_data, 0, hand_colourloss, hand_colourloss },
+	{ " Display........: %s", screen_data, 0, hand_screen_inc, hand_screen_dec },
+	{ " Texture........: %s", vid_mode_data, 0, hand_vid_inc, hand_vid_dec },
+	{ " Width..........: %s ", width_data, 0, hand_narrow_inc, hand_narrow_dec },
+	{ " Height.........: %s ", Tall_data, 0, hand_height_inc, hand_height_dec },
+	{ " Line Mode......: %s", line_data, 0, hand_line_inc, hand_line_dec },
+	{ " Scanline Depth.: %s ", Depth_data, 0, hand_Depth_inc, hand_Depth_dec },
+	{ " Colour Loss....: %s ", colourloss_data, 0, hand_colourloss, hand_colourloss },
 	{ " ", NULL, 0, NULL, NULL },
 	{ " Exit ", NULL, 0, hand_video_exit, NULL },
 	{ NULL, NULL, 0, NULL, NULL } // last element must always be this
@@ -182,8 +187,8 @@ void video_gui() {
 	set_line_string();
 	set_videomode_string();
 	set_width_string();
-	set_phosphor_string();
-	set_startline_string();
+	set_height_string();
+	set_Depth_string();
 	
 	exit_video = 0;
 	while( !exit_video ) {
@@ -201,8 +206,9 @@ void video_gui() {
 }
 
 /**
-** z26 is Copyright 1997-2011 by John Saeger and contributors.  
-** z26 is released subject to the terms and conditions of the
-** GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
-** Please see COPYING.TXT for details.
+	z26 is Copyright 1997-2011 by John Saeger and contributors.  
+	z26 is released subject to the terms and conditions of the
+	GNU General Public License Version 2 (GPL).  
+	z26 comes with no warranty.
+	Please see COPYING.TXT for details.
 */

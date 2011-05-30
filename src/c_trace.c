@@ -154,7 +154,7 @@ unsigned char ReadROM(unsigned int adr)
     AddressBus = (adr & 0xffff);
     dummy = DataBus;
     debugflag = 1;
-	(* ReadROMAccess)();
+//	(* ReadROMAccess)();		// <--- *** poison *** ---
 	debugflag = 0;
 	cpu_Rbyte = DataBus;
 	DataBus = dummy;

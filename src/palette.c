@@ -15,7 +15,7 @@
 
 /* note: RGB values are for the $x6 color */
 
-unsigned char NTSC_RGB_table[] = 
+db NTSC_RGB_table[] = 
 {
  120, 120, 120,		/* (00) <120,120,120> grey */
  128, 144,   0,		/* (10) <128,144,2>   gold */
@@ -35,7 +35,7 @@ unsigned char NTSC_RGB_table[] =
  130, 122,  45		/* (f0) <130,122,45>  light orange */
 };
 
-unsigned char set_luma(int luma, int val)
+db set_luma(int luma, int val)
 {
 	val += luma*20 - 60;
 	if (val<0) return 0;
@@ -61,7 +61,7 @@ void NTSC_Palette()
 /* note: RGB values are for the $x6 color */
 /* PAL colors from Oliver Achten screen capture */
 
-unsigned char PAL_RGB_table[] = 
+db PAL_RGB_table[] = 
 {
  116, 116, 116,		/* (00) <116,116,116> grey */
  116, 116, 116,		/* (10) <116,116,116> grey */
@@ -104,7 +104,7 @@ void PAL_Palette()
 ** SECAM stuff
 */
 
-unsigned char SECAM_RGB_table[] = 
+db SECAM_RGB_table[] = 
 {
    0,   0,   0,		/* black */
   33,  33, 255,		/* blue */

@@ -5,6 +5,10 @@
 SDL_Joystick *JoystickTable[16];
 
 SDL_Surface *srv_screen = NULL;
+SDL_Surface *small_screen = NULL;
+SDL_Surface *large_screen = NULL;
+SDL_Surface *tiny_screen = NULL;
+
 db *srv_buffer;
 dd srv_pitch;
 
@@ -21,12 +25,12 @@ db screen_buffer_count = 0;
 db srv_done = 0;
 dd odd = 0;		/* is the frame number odd? -- for interlaced modes */
 
-dd srv_colortab[128];		/* for mapping atari 8-bit colors to 32-bit colors */
-dd srv_colorsoft[128];		/* for soft scanlines */
-dd srv_average[128][128];	/* for phosphor mode */
-dd srv_averagesoft[128][128];	/* for phosphor soft scanlines */
+dd srv_colortab_hi[128];		/* for mapping atari 8-bit colors to 32-bit colors */
+dd srv_colortab_med[128];		/* for soft scanlines */
+dd srv_colortab_low[128];
 
 #include "sdlicon.c"
+#include "sdlopengl.c"
 #include "sdlflip.c"
 #include "sdlvideo.c"
 #include "sdlsound.c"
@@ -44,25 +48,23 @@ void Init_SDL()
 	
 	screen_info = SDL_GetVideoInfo();
 	screen_bpp = screen_info->vfmt->BitsPerPixel;
-		
-	FullScreen = 1;
-	screen_surface = SDL_SetVideoMode(0, 0, screen_bpp, SDL_SWSURFACE|SDL_FULLSCREEN);
-	if (screen_surface == NULL)
-	{
-		printf("Couldn't determine screen resolution\n");
-		SDL_Quit();
-		exit(1);
-	}
+	
+	gl_InitOpenGL();
+	
+	small_screen = SDL_CreateRGBSurfaceFrom(&texture_buffer, 512, 512, 32, 4*512, 0, 0, 0, 0);
+	large_screen = SDL_CreateRGBSurfaceFrom(&texture_buffer, 1024, 1024, 32, 4*1024, 0, 0, 0, 0);
+	tiny_screen =  SDL_CreateRGBSurfaceFrom(&texture_buffer, 256, 256, 32, 4*256, 0, 0, 0, 0);
+	
+	srv_screen = small_screen;
 
-	screen_width = screen_surface->w;
-	screen_height = screen_surface->h;
-	srv_screen = screen_surface;
+	screen_buffer_count = 0;
 	
 	ScreenBuffer = RealScreenBuffer1;
 	ScreenBufferPrev = RealScreenBuffer2;
         PrevScreenBuffer = RealScreenBuffer3;
         PrevScreenBufferPrev = RealScreenBuffer4;
 	
+	ClearScreenBuffers();
 }
 
 
@@ -123,7 +125,7 @@ void Init_Service() {
 
 void srv_Cleanup() {
 	kv_CloseSampleFile();
-;	srv_sound_off();
+	srv_sound_off();
 }
 
 /**

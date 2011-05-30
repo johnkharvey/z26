@@ -80,8 +80,8 @@ void ScanFrame() {
 
 	} while (Frame == PrevFrame); /* Frame gets updated by tiawrite.asm */
 
-	/* Done with frame. Blank rest of screen buffer, update PrevFrame,
-		and return to caller. */
+	/* Done with frame. Blank rest of screen buffer, update PrevFrame, and return to caller. */
+
 	BlankBufferEnd();
 	PrevFrame = Frame;
 }
@@ -116,10 +116,8 @@ void c_emulator(void) {
 		if(srv_done) break;	/* SDL got a 'close window' message */
 
 		ScanFrame();
-		srv_CopyScreen();
-		srv_Flip();
 		Controls();
-
+		srv_CopyScreen();
 		while(GamePaused) Controls();
 	}
 	
@@ -129,7 +127,8 @@ void c_emulator(void) {
 
 /**
  z26 is Copyright 1997-2011 by John Saeger and contributors.  
- contributors.	 z26 is released subject to the terms and conditions of the 
- GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
+ z26 is released subject to the terms and conditions of the 
+ GNU General Public License Version 2 (GPL).  
+ z26 comes with no warranty.
  Please see COPYING.TXT for details.
 */

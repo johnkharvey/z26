@@ -139,7 +139,7 @@ void hand_palette_inc() {
 	if (UserPaletteNumber == 0xff) PaletteNumber = 0;
 	else PaletteNumber = UserPaletteNumber;
 	
-	srv_SetVideoMode();
+	gui_SetVideoMode();
 	set_palette_string();
 }
 
@@ -151,7 +151,7 @@ void hand_palette_dec() {
 	if (UserPaletteNumber == 0xff) PaletteNumber = 0;
 	else PaletteNumber = UserPaletteNumber;
 
-	srv_SetVideoMode();
+	gui_SetVideoMode();
 	set_palette_string();
 }
 
@@ -333,10 +333,10 @@ void game_gui() {
 	while( !exit_game ) {
 		status_timer = 0;
 
-		if (crc != 0)
-			sprintf(msg, "Game Options: 0x%X", crc);
+		if (!cli_calc_CRC(file_list[curfile]))
+			sprintf(msg, "Game Options: couldn't get CRC");
 		else
-			sprintf(msg, "Game Options: game not loaded");
+			sprintf(msg, "Game Options:  %d  0x%x", CartSize, crc);
 			
 		draw_gui(game_gui_items, game_current);
 		

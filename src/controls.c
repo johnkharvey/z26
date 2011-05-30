@@ -1,5 +1,5 @@
 /*
-** controls.c -- handle 2600 controllers
+	controls.c -- handle 2600 controllers
 */
 
 /* control key definitions */
@@ -266,14 +266,14 @@ void DoJoystick_L()
 		if (KeyTable[P1Up]) IOPortA = IOPortA & 0xef;
 		if (KeyTable[P1Fire]) InputLatch[0] = 0x00;
 
-// for OLPC XO-1
+/* for OLPC XO-1
 
 		if (KeyTable[SDLK_KP6]) IOPortA = IOPortA & 0x7f;
 		if (KeyTable[SDLK_KP4]) IOPortA = IOPortA & 0xbf;
 		if (KeyTable[SDLK_KP2]) IOPortA = IOPortA & 0xdf;
 		if (KeyTable[SDLK_KP8]) IOPortA = IOPortA & 0xef;
 		if (KeyTable[SDLK_KP3]) InputLatch[0] = 0x00;
-		
+*/		
 	}
 
 	if (JoystickEnabled)
@@ -925,27 +925,35 @@ void DoLightgun_L()
 	InputLatch[0] = 0x80;
 
 	MLG_mouseY = MLG_mouseY + srv_micky_y;
-	if (MLG_mouseY < 0) MLG_mouseY = 0;
-	if (MLG_mouseY >= 560) MLG_mouseY = 559;
+//	if (MLG_mouseY < 0) MLG_mouseY = 0;
+	if (MLG_mouseY < 2) MLG_mouseY = 2;
+//	if (MLG_mouseY >= 560) MLG_mouseY = 559;
+	if (MLG_mouseY >= 510) MLG_mouseY = 509;
 	MLG_Ypos = MLG_mouseY >> 1;	
 	MLG_ShotLine = MLG_Ypos + CFirst + 4 - LGadjust;
 	MLG_mouseX = MLG_mouseX + srv_micky_x;
-	if (MLG_mouseX < 0) MLG_mouseX = 0;
-	if (MLG_mouseX >= 637) MLG_mouseX = 636;
+//	if (MLG_mouseX < 0) MLG_mouseX = 0;
+	if (MLG_mouseX < 4) MLG_mouseX = 4;
+//	if (MLG_mouseX >= 637) MLG_mouseX = 636;
+	if (MLG_mouseX >= 1276) MLG_mouseX = 1275;
 	MLG_Xpos = MLG_mouseX >> 2;
-	MLG_ShotCycle = MLG_Xpos / 3 + 23 + Lightgun;
+
+//	MLG_ShotCycle = MLG_Xpos / 3 + 23 + Lightgun;
+	MLG_ShotCycle = MLG_Xpos / 6 + 23 + Lightgun;
+
 	if (MLG_ShotCycle >= 76) MLG_ShotLine++;	
 
 	if (srv_mouse_button) IOPortA = IOPortA & 0xef;
 	else IOPortA = IOPortA | 0x10;	
 	MLG_Colour = (MLG_Colour + 1) & 0x07;
+	
+//	MLG_Xpos  += 60;
 
-	ScreenBuffer[MLG_Ypos * 160 + MLG_Xpos + 1] = MLG_Colour;
-	ScreenBuffer[MLG_Ypos * 160 + MLG_Xpos - 1] = MLG_Colour;
-	ScreenBuffer[MLG_Ypos * 160 + MLG_Xpos + 160] = MLG_Colour;
-	if (MLG_Ypos * 160 + MLG_Xpos > 160)
-		ScreenBuffer[MLG_Ypos * 160 + MLG_Xpos - 160] = MLG_Colour;
-
+	ScreenBuffer[MLG_Ypos * 320 + MLG_Xpos + 1] = MLG_Colour;
+	ScreenBuffer[MLG_Ypos * 320 + MLG_Xpos - 1] = MLG_Colour;
+	ScreenBuffer[MLG_Ypos * 320 + MLG_Xpos + 320] = MLG_Colour;
+	if (MLG_Ypos * 320 + MLG_Xpos > 320)
+		ScreenBuffer[MLG_Ypos * 320 + MLG_Xpos - 320] = MLG_Colour;
 }
 
 void DoLightgun_R()
@@ -1524,7 +1532,6 @@ void Controls()
 			srv_CopyScreen();
 			StartInGUI = 0;
 		}
-		CreateScreen();		// clear the screen before going into the GUI
 		gui();
 		return;
 	}
@@ -1642,54 +1649,54 @@ void Controls()
 // One less thing to worry about if you ask me.
 
 
-//		if (KeyTable[Key0])
-//		{
-//			VideoMode = 0;
-//			srv_SetVideoMode();	/* set new video mode */
-//			KeyTable[Key0] = 0;	/* make sure this happens only once ... */
-//			KeyTable[KeyAlt] = 0;	/* ... by marking key as unpressed */
-//			set_status("320x200");
-//		}
-//		if (KeyTable[Key1])
-//		{
-//			VideoMode = 1;
-//			srv_SetVideoMode();
-//			KeyTable[Key1] = 0;
-//			KeyTable[KeyAlt] = 0;
-//			set_status("320x240");
-//		}
-//		if (KeyTable[Key2])
-//		{
-//			VideoMode = 2;
-//			srv_SetVideoMode();
-//			KeyTable[Key2] = 0;
-//			KeyTable[KeyAlt] = 0;
-//			set_status("640x480");
-//		}
-//		if (KeyTable[Key3])
-//		{
-//			VideoMode = 3;
-//			srv_SetVideoMode();
-//			KeyTable[Key3] = 0;
-//			KeyTable[KeyAlt] = 0;
-//			set_status("800x600");
-//		}
-//		if (KeyTable[Key4])
-//		{
-//			VideoMode = 4;
-//			srv_SetVideoMode();
-//			KeyTable[Key4] = 0;
-//			KeyTable[KeyAlt] = 0;
-//			set_status("1024x600");
-//		}
-//		if (KeyTable[Key5])
-//		{
-//			VideoMode = 5;
-//			srv_SetVideoMode();
-//			KeyTable[Key5] = 0;
-//			KeyTable[KeyAlt] = 0;
-//			set_status("1024x768");
-//		}
+		if (KeyTable[Key0])
+		{
+			VideoMode = 0;
+			srv_SetVideoMode();	/* set new video mode */
+			KeyTable[Key0] = 0;	/* make sure this happens only once ... */
+			KeyTable[KeyAlt] = 0;	/* ... by marking key as unpressed */
+			set_status("Sharp");
+		}
+		if (KeyTable[Key1])
+		{
+			VideoMode = 1;
+			srv_SetVideoMode();
+			KeyTable[Key1] = 0;
+			KeyTable[KeyAlt] = 0;
+			set_status("Blurry");
+		}
+		if (KeyTable[Key2])
+		{
+			VideoMode = 2;
+			srv_SetVideoMode();
+			KeyTable[Key2] = 0;
+			KeyTable[KeyAlt] = 0;
+			set_status("HD Sharp");
+		}
+		if (KeyTable[Key3])
+		{
+			VideoMode = 3;
+			srv_SetVideoMode();
+			KeyTable[Key3] = 0;
+			KeyTable[KeyAlt] = 0;
+			set_status("HD Blurry");
+		}
+		if (KeyTable[Key4])
+		{
+			VideoMode = 4;
+			srv_SetVideoMode();
+			KeyTable[Key4] = 0;
+			KeyTable[KeyAlt] = 0;
+			set_status("Fast Sharp");
+		}
+		if (KeyTable[Key5])
+		{
+			VideoMode = 5;
+			srv_SetVideoMode();
+			KeyTable[Key5] = 0;
+			KeyTable[KeyAlt] = 0;
+			set_status("Fast Blurry");
+		}
 //		if (KeyTable[Key6])
 //		{
 //			VideoMode = 6;
@@ -1717,75 +1724,76 @@ void Controls()
 //			set_status("1280x1024");
 //		}
 //
-//		if (KeyTable[KeyE])
-//		{
-//			Narrow = !Narrow;
-//			srv_SetVideoMode();
-//			KeyTable[KeyE] = 0;
-//			KeyTable[KeyAlt] = 0;
-//			set_status("Toggle Narrow Video");
-//		}
-//
-//		if (KeyTable[KeyMinus])	/* cycle through palettes - NTSC, PAL, SECAM */
-//		{
-//			PaletteNumber++;
-//			/* make sure autodetected (0xff) palette gets changed too*/
-//			if (PaletteNumber == 0) PaletteNumber++;
-//			/* there are only 3 palettes, so start over at 0 */
-//			if (PaletteNumber > 2) PaletteNumber = 0;
-//			
-//			if (PaletteNumber == 0) set_status("NTSC colors");
-//			if (PaletteNumber == 1) set_status("PAL colors");
-//			if (PaletteNumber == 2) set_status("SECAM colors");
-//			
-//			srv_SetVideoMode();
-//			KeyTable[KeyMinus] = 0;
-//		}
+		if (KeyTable[KeyS])
+		{
+			DoScanline = !DoScanline;
+			srv_SetVideoMode();
+			KeyTable[KeyE] = 0;
+			KeyTable[KeyAlt] = 0;
+			set_status("Toggle Scanline Mode");
+		}
 
-		/* ALT + bottom row (ZXCVBNM) disables/enables graphics */
-		/* These keys' normal functions shouldn't happen when Alt pressed */
-		if (KeyTable[KeyZ])
+		if (KeyTable[KeyMinus])	/* cycle through palettes - NTSC, PAL, SECAM */
 		{
-			p0_mask = ~p0_mask;
-			KeyTable[KeyZ] = 0;
-			KeyTable[KeyAlt] = 0;
-			set_status("toggle P0 display");
+			PaletteNumber++;
+			/* make sure autodetected (0xff) palette gets changed too*/
+			if (PaletteNumber == 0) PaletteNumber++;
+			/* there are only 3 palettes, so start over at 0 */
+			if (PaletteNumber > 2) PaletteNumber = 0;
+			
+			if (PaletteNumber == 0) set_status("NTSC colors");
+			if (PaletteNumber == 1) set_status("PAL colors");
+			if (PaletteNumber == 2) set_status("SECAM colors");
+			
+			srv_SetVideoMode();
+			KeyTable[KeyMinus] = 0;
 		}
-		if (KeyTable[KeyX])
-		{
-			p1_mask = ~p1_mask;
-			KeyTable[KeyX] = 0;
-			KeyTable[KeyAlt] = 0;
-			set_status("toggle P1 display");
-		}
-		if (KeyTable[KeyC])
-		{
-			m0_mask ^= 0x02;
-			KeyTable[KeyC] = 0;
-			KeyTable[KeyAlt] = 0;
-			set_status("toggle M0 display");
-		}
-		if (KeyTable[KeyV])
-		{
-			m1_mask ^= 0x02;
-			KeyTable[KeyV] = 0;
-			KeyTable[KeyAlt] = 0;
-			set_status("toggle M1 display");
-		}
-		if (KeyTable[KeyB])
-		{
-			bl_mask ^= 0x02;
-			KeyTable[KeyB] = 0;
-			KeyTable[KeyAlt] = 0;
-			set_status("toggle BL display");
-		}
-		if (KeyTable[KeyN])
-		{
-			pf_mask ^= 0xff;
-			KeyTable[KeyN] = 0;
-			KeyTable[KeyAlt] = 0;
-			set_status("toggle PF display");
-		}
+
+
+//		/* ALT + bottom row (ZXCVBNM) disables/enables graphics */
+//		/* These keys' normal functions shouldn't happen when Alt pressed */
+//		if (KeyTable[KeyZ])
+//		{
+//			p0_mask = ~p0_mask;
+//			KeyTable[KeyZ] = 0;
+//			KeyTable[KeyAlt] = 0;
+//			set_status("toggle P0 display");
+//		}
+//		if (KeyTable[KeyX])
+//		{
+//			p1_mask = ~p1_mask;
+//			KeyTable[KeyX] = 0;
+//			KeyTable[KeyAlt] = 0;
+//			set_status("toggle P1 display");
+//		}
+//		if (KeyTable[KeyC])
+//		{
+//			m0_mask ^= 0x02;
+//			KeyTable[KeyC] = 0;
+//			KeyTable[KeyAlt] = 0;
+//			set_status("toggle M0 display");
+//		}
+//		if (KeyTable[KeyV])
+//		{
+//			m1_mask ^= 0x02;
+//			KeyTable[KeyV] = 0;
+//			KeyTable[KeyAlt] = 0;
+//			set_status("toggle M1 display");
+//		}
+//		if (KeyTable[KeyB])
+//		{
+//			bl_mask ^= 0x02;
+//			KeyTable[KeyB] = 0;
+//			KeyTable[KeyAlt] = 0;
+//			set_status("toggle BL display");
+//		}
+//		if (KeyTable[KeyN])
+//		{
+//			pf_mask ^= 0xff;
+//			KeyTable[KeyN] = 0;
+//			KeyTable[KeyAlt] = 0;
+//			set_status("toggle PF display");
+//		}
 
 		if (KeyTable[KeyD])
 		{
@@ -1828,7 +1836,7 @@ void Controls()
 			KeyTable[KeyComma] = 0;
 			KeyTable[KeyAlt] = 0;
 		}
-		*/
+		
 		if (KeyTable[KeySlash])
 		{
 			p0_mask = p1_mask = m0_mask = m1_mask = bl_mask = pf_mask = 0xff;
@@ -1836,6 +1844,7 @@ void Controls()
 			KeyTable[KeyAlt] = 0;
 			set_status("all graphics enabled");
 		}
+		*/
 	}
 	
 	if (KeyTable[KeyTab])	/* cycle through mouse directions for paddle */
@@ -1865,16 +1874,16 @@ void Controls()
 
 // for OLPC XO-1
 
-	if (KeyTable[SDLK_KP7]) 
-	{
-		IOPortB = IOPortB & 0xfe;	/* bit 0 = RESET */
-		set_status("RESET");
-	}
-	if (KeyTable[SDLK_KP1]) 
-	{
-		IOPortB = IOPortB & 0xfd;	/* bit 1 = SELECT */
-		set_status("SELECT");
-	}
+//	if (KeyTable[SDLK_KP7]) 
+//	{
+//		IOPortB = IOPortB & 0xfe;	/* bit 0 = RESET */
+//		set_status("RESET");
+//	}
+//	if (KeyTable[SDLK_KP1]) 
+//	{
+//		IOPortB = IOPortB & 0xfd;	/* bit 1 = SELECT */
+//		set_status("SELECT");
+//	}
 
 
 	if (KeyTable[P0Easy]) 
@@ -2032,8 +2041,9 @@ void Controls()
 }
 
 /**
-** z26 is Copyright 1997-2011 by John Saeger and contributors.  
-** z26 is released subject to the terms and conditions of the
-** GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
-** Please see COPYING.TXT for details.
+	z26 is Copyright 1997-2011 by John Saeger and contributors.  
+	z26 is released subject to the terms and conditions of the
+	GNU General Public License Version 2 (GPL).  
+	z26 comes with no warranty.
+	Please see COPYING.TXT for details.
 */

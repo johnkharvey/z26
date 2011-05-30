@@ -80,16 +80,16 @@ windows:
 	cp conf/config_windows.mak config.mak
 	$(MAKE) clean all
 
-c_windows:
-	cp conf/config_c_windows.mak config.mak
-	$(MAKE) clean all
-
 custom:
 	cp conf/config_custom.mak config.mak
 	$(MAKE) clean all
 
 es:
 	cp conf/config_es.mak config.mak
+	$(MAKE) clean all
+
+js:
+	cp conf/config_js.mak config.mak
 	$(MAKE) clean all
 
 ### No user-serviceable parts below (unless you know what you're doing!)
@@ -140,53 +140,35 @@ INSTALL_BINDIR=/usr/local/bin
 endif
 
 # Most platforms use this:
-z26: z26.o z26core.o
-	$(CC) z26.o z26core.o $(SDLLIBS) -o z26
+z26: z26.o
+	$(CC) z26.o $(SDLLIBS) -o z26
 	strip z26
 
-z26c: z26.o
-	$(CC) z26.o $(SDLLIBS) -o z26c
-	strip z26c
-
-# Windows uses this (and so will OS/2 if we ever support it):
-z26.exe: z26.o z26core.o
-	$(CC) z26.o z26core.o $(SDLLIBS) -o z26 
+# Windows uses this:
+z26.exe: z26.o
+	$(CC) z26.o $(SDLLIBS) -o z26
 	strip z26.exe
 
-z26c.exe: z26.o
-	$(CC) z26.o $(SDLLIBS) -o z26c
-	strip z26c.exe
-
-
 # linux-static uses this:
-z26-static: z26.o z26core.o
-	$(CC) z26.o z26core.o -Wl,-static $(SDLLIBS) -o z26-static
+z26-static: z26.o
+	$(CC) z26.o -Wl,-static $(SDLLIBS) -o z26-static
 	strip z26-static
 
 
-z26.o:	z26.c z26.h \
-	2600core.c         c_cpujam.c		guigame.c		palette.c     sdlvideo.c \
-	c_banks.c          guiinterface.c	pcx.c			c_soundq.c \
-	bintoasm.c		   gui_sort.c		c_pitfall2.c	c_starpath.c \
-	carts.c            ct.c				guisound.c      position.c    text.c \
-	c_catchuppixels.c  c_trace.c		guitiming.c     c_riot.c      c_tialine.c \
-	genclr.c           guitweaks.c		sdlflip.c		c_tiasnd.c \
-	globals.c          guiutil.c		sdlicon.c		c_tiawrite.c \
-	cli.c              guiabout.c		guivideo.c      sdlmouse.c    trace.c \
-	controls.c         gui.c			c_init.c        sdlpixcopy.c  tracex.c \
-	c_cpu.c            guidebug.c		kidvid.c        sdlsound.c \
-	c_cpuhand.c        guifilelist.c	mt.c            sdlsrv.c \
+z26.o:	z26.c \
+	2600core.c		c_cpujam.c	guigame.c	palette.c \
+	c_banks.c		guiinterface.c	pcx.c		c_soundq.c \
+	gui_sort.c		c_pitfall2.c	c_starpath.c	c_tialine.c \
+	carts.c			guisound.c	position.c	text.c \
+	c_catchuppixels.c	c_trace.c	c_riot.c \
+	genclr.c		guitweaks.c	sdlflip.c	c_tiasnd.c \
+	globals.c		guiutil.c	sdlicon.c	c_tiawrite.c \
+	cli.c			guiabout.c	guivideo.c	sdlmouse.c    \
+	controls.c		gui.c		c_init.c	sdlpixcopy.c  \
+	c_cpu.c			guidebug.c	kidvid.c	sdlsound.c \
+	c_cpuhand.c		guifilelist.c	sdlsrv.c	sdlvideo.c \
 	conf/c_core.mak
 	$(CC) -Wall $(Z26OPTS) $(C_CORE) $(CFLAGS) $(SDLCFLAGS) -c z26.c
-
-
-z26core.o: z26core.asm \
-	banks.asm    defs.asm    lincopy.asm	service.asm   tialine.asm \
-	cpu.asm      extern.asm  main.asm	soundq.asm    tiasnd.asm    trace.asm \
-	cpuhand.asm  head.asm    pitfall2.asm	starpath.asm  tiatab.asm \
-	cpujam.asm   init.asm    riot.asm	tail.asm      tiawrite.asm \
-	conf/c_core.mak
-	$(NASM) $(NASMFLAGS) $(C_CORE) -o z26core.o z26core.asm
 
 
 c_catchuppixels.c: catchuppixels.m4
@@ -206,7 +188,6 @@ install.unix: all z26.man
 install.null:
 	@echo "No install target for this platform."
 
-
 endif
 
 clean:
@@ -214,3 +195,9 @@ clean:
 
 realclean: clean
 	rm -f z26.cli z26.gui config.mak z26.log
+
+tarball: realclean
+	rm -f config.mak && \
+	cd .. && \
+	cp -a z26 z26_snapshot-`date +%Y%m%d` && \
+	tar cvfz z26_snapshot-`date +%Y%m%d`.tar.gz z26_snapshot-`date +%Y%m%d`

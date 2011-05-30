@@ -11,6 +11,7 @@ void hand_about_exit() {
 	exit_about = 1;
 }
 
+
 gui_entry about_gui_items[] = {
 	{ " Exit ", NULL, 0, hand_about_exit, NULL },
 	{ NULL, NULL, 0, NULL, NULL } // last element must always be this
@@ -23,13 +24,11 @@ void about_gui() {
 	SDL_Event ev;
 	int action;
 
-	set_framerate_string();
-
 	exit_about = 0;
 	while( !exit_about ) {
 		status_timer = 0;
 
-		sprintf(msg, "Version 2.16.00 -- http://www.whimsey.com/z26");
+		sprintf(msg, "Version 3.00.16 -- http://www.whimsey.com/z26");
 		draw_gui(about_gui_items, about_current);
 
 		SDL_WaitEvent(&ev);	/* TODO: respond to SDL_QUIT events */

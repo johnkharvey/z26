@@ -47,7 +47,7 @@ void hand_enable_joystick() {
 	UserJoystickEnabled = !UserJoystickEnabled;
 	set_yesno_string(enable_joystick_data, UserJoystickEnabled);
 	JoystickEnabled = UserJoystickEnabled;
-	srv_SetVideoMode();	/* because joystick detection happens when we set video mode */
+	gui_SetVideoMode();	/* because joystick detection happens when we set video mode */
 }
 
 void hand_enable_stelladaptor() {

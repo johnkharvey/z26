@@ -41,14 +41,47 @@ void ReadTIAdummy ( void){
 	TIA write handlers
 */
 
+
+void AdjustPalette() {
+
+	if (Frame > 256) return;
+	if (UserPaletteNumber != 0xff) return;
+	if (GamePaletteNumber != 0xff) return;
+	if (LinesInFrame != PrevLinesInFrame)
+	{
+		if (Frame != 5) return;		// force adjustment of unstable games (once)
+	}
+
+	if (LinesInFrame < 287)
+	{	// NTSC
+		if (PaletteNumber == 0) return;
+		PaletteNumber = 0;
+	}
+	else
+	{	// PAL
+		if (PaletteNumber == 1) return;
+		PaletteNumber = 1;
+	}
+	srv_SetPalette();
+	ClearScreenBuffers();
+	position_game();
+
+}
+
 void H_VSYNC(void){
 
 	if(DataBus & 0x02){
+	
+		if (VSyncFlag) return;	// somebody hitting VSYNC more than necessary
+		
 		PrevLinesInFrame = LinesInFrame;
 		LinesInFrame = ScanLine - 1;
 		ScanLine = 1;
-		Frame++;
+		if (LinesInFrame > 3) Frame++;	// ignore quick double-hit (pickpile)
+		
+		AdjustPalette();
 	}
+	VSyncFlag = DataBus & 0x02;
 }
 
 

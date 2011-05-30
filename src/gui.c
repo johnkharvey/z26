@@ -8,13 +8,24 @@
 #define FONT_WIDTH 6
 #define FONT_HEIGHT 9
 
+void gui_SetVideoMode()
+{
+db TempVideoMode;
+
+	TempVideoMode = VideoMode;
+	VideoMode &= 3;
+	srv_SetVideoMode();
+	VideoMode = TempVideoMode;
+}
+
+
 #include "guiutil.c"
 #include "gui_sort.c"
 #include "guifilelist.c"
 #include "guivideo.c"
 #include "guigame.c"
 #include "guisound.c"
-#include "guitiming.c"
+// #include "guitiming.c"
 #include "guitweaks.c"
 #include "guiinterface.c"
 #include "guidebug.c"
@@ -51,10 +62,14 @@ void hand_load_rom()
 {
 	int picked;
 	
-	picked = file_selector(newfile);
-	if(!picked) return;
-	ROMLoaded = cli_LoadROM(newfile);
-
+	ROMLoaded = 0;
+	
+	while (!ROMLoaded)
+	{
+		picked = file_selector(newfile);
+		if(!picked) return;
+		ROMLoaded = cli_LoadROM(newfile);
+	}
 	run_rom();
 }
 
@@ -71,7 +86,7 @@ gui_entry gui_items[] = {
 	{ " Game ", NULL, 0, game_gui, NULL },
 	{ " Video ", NULL, 0, video_gui, NULL },
 	{ " Sound ", NULL, 0, sound_gui, NULL },
-	{ " Timing ", NULL, 0, timing_gui, NULL },
+//	{ " Timing ", NULL, 0, timing_gui, NULL },
 	{ " Interface ", NULL, 0, interface_gui, NULL },
 	{ " Tweaks ", NULL, 0, tweaks_gui, NULL },
 	{ " Debug ", NULL, 0, debug_gui, NULL },
@@ -88,6 +103,8 @@ void gui() {
 	SDL_Event ev;
 	int old_js_state;
 	int action;
+	
+	gui_SetVideoMode();
 	
 	ResetEmulator = 1;	// let's always do this before running a game
 
@@ -150,6 +167,7 @@ void gui() {
 
 	cli_SaveParms();			// save parameters
 
+	srv_SetVideoMode();
 	PaletteNumber = OldPaletteNumber;
 	srv_SetPalette();
 }

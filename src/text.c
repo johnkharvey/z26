@@ -281,7 +281,7 @@ void clrscr() {
 		*sp++ = 0x80;
 }
 
-
+/*
 int get_offset() {		// put FPS display at bottom of screen
 
 	switch (height)
@@ -296,10 +296,10 @@ int get_offset() {		// put FPS display at bottom of screen
 	case 1024: return(1);
 	}
 }
-
+*/
 
 /*
-** our "screen" is 26 characters wide and 28 characters high
+** our "screen" is 53 characters wide and 28 characters high
 */
 
 void draw_char(char ch, char* font, char* surface, int fontheight, int row, int col, int fg, int bg)
@@ -309,13 +309,17 @@ void draw_char(char ch, char* font, char* surface, int fontheight, int row, int 
 	char *sp;	/* surface pointer */
 	char fbyte;	/* font byte */
 	
-	row += get_offset();
+//	row += get_offset();
 
 	fp = font + 8*ch;
 	
 	// do an extra row at the beginning
 	sp = surface + tiawidth*(row) + col;
-	for (j=0; j<6; j++) { *sp++ = bg; }
+	for (j=0; j<6; j++) 
+	{ 
+		*sp++ = bg; 
+		if (width == 256) *sp++ = bg;
+	}
 
 	for (i=1; i<=fontheight; i++)
 	{
@@ -324,9 +328,15 @@ void draw_char(char ch, char* font, char* surface, int fontheight, int row, int 
 		for (j=0; j<6; j++)
 		{
 			if (fbyte & 0x80)
+			{
 				*sp++ = fg;
+				if (width == 256) *sp++ = fg;
+			}
 			else
+			{	
 				*sp++ = bg;
+				if (width == 256) *sp++ = bg;
+			}
 			fbyte <<= 1;
 		}
 	}
@@ -336,12 +346,14 @@ void draw_msg_at_color(int x, int y, int fg, int bg) {
 	char *mp;	/* message pointer */
 	char ch;
 
-	if (fg) { fg &= 0xf; fg += theme; }
-	if (bg) { bg &= 0xf; bg += theme; }
-	
 	int col = x*6 + 2;	// 2
 	int row = y*9 + 2;	// 2
 
+	if (width == 256) col =x*12 + 2;
+
+	if (fg) { fg &= 0xf; fg += theme; }
+	if (bg) { bg &= 0xf; bg += theme; }
+	
 	mp = msg;
 
 	while (1)
@@ -350,6 +362,7 @@ void draw_msg_at_color(int x, int y, int fg, int bg) {
 		if (ch == 0) break;
 		draw_char(ch, simplex5, (char *) ScreenBuffer, 8, row, col, fg, bg);
 		col += 6;
+		if (width == 256) col += 6;
 	}
 }
 
@@ -357,11 +370,11 @@ void draw_long_msg_at_color(int x, int y, int fg, int bg) {
 	char *mp;	/* message pointer */
 	char ch;
 
-	if (fg) { fg &= 0xf; fg += theme; }
-	if (bg) { bg &= 0xf; bg += theme; }
-
 	int col = x*6 + 2;	// 2
 	int row = y*9 + 2;	// 2
+
+	if (fg) { fg &= 0xf; fg += theme; }
+	if (bg) { bg &= 0xf; bg += theme; }
 
 	mp = msg;
 
@@ -369,7 +382,7 @@ void draw_long_msg_at_color(int x, int y, int fg, int bg) {
 	{
 		ch = *mp++;
 		if (ch == 0) break;
-		if ((ch == '\n') || (col >150))
+		if ((ch == '\n') || (col >310))
 		{
 			row += 10;
 			col = 2;	// 2
@@ -418,17 +431,19 @@ void hilite_char_at(char ch, int x, int y) {
 
 void show_scanlines()
 {
-//	sprintf(msg,"%4u %5.0f ", LinesInFrame, CurrentFPS);
-//	draw_msg_at_color(42, (int) MaxLines/9 - 1, 84, 0);	// was 1,0
+	sprintf(msg,"%4u %5.0f ", LinesInFrame, CurrentFPS);
+	if (width == 256) draw_msg_at_color(16, (int) MaxLines/9 - 1, 84, 0);	// was 1,0
+	else draw_msg_at_color(42, (int) MaxLines/9 - 1, 84, 0);	// was 1,0
 
-	sprintf(msg, "%u %4u %5.0f ", SDLticks, LinesInFrame, CurrentFPS);
-	draw_msg_at_color(27, (int) MaxLines/9 - 1, 84, 0);
+//	sprintf(msg, "%u %4u %5.0f ", SDLticks, LinesInFrame, CurrentFPS);
+//	draw_msg_at_color(27, (int) MaxLines/9 - 1, 84, 0);
 }
 
 /* called once per frame when there's a status message to display */
 void show_transient_status() {
 	sprintf(msg, "%s", stat_msg);
-	draw_msg_at_color((26 - strlen(stat_msg))/2, (int) MaxLines/9 - 1, 84, 0);	// was 1,0
+	if (width == 256) draw_msg_at_color((26 - strlen(stat_msg))/2, (int) MaxLines/9 - 1, 84, 0);	// was 1,0
+	else draw_msg_at_color((52 - strlen(stat_msg))/2, (int) MaxLines/9 - 1, 84, 0);	// was 1,0
 }
 
 void clear_status() {
@@ -436,7 +451,7 @@ void clear_status() {
 }
 
 /* call this to set the status message (which will be displayed for
-	approximately 4 sec, then cleared) */
+	approximately 1 sec, then cleared) */
 void set_status(char *status) {
 	strcpy(stat_msg, status);
 	status_timer = 60; /* in frames */
@@ -444,25 +459,15 @@ void set_status(char *status) {
 
 void srv_print(char *msg)
 {
-//	SDL_Event ev;
-
-	video_mode_quiet = 1;	// avoid a bad loop
 	status_timer = 0;	// don't show the status line when printing a message
-	VideoMode = 2;
-	srv_SetVideoMode();	// set the messaging mode
-	video_mode_quiet = 0;	// let SetVideoMode call srv_print() again
 
 	if (srv_screen != NULL)
 	{
 		clrscr();
 		draw_long_msg_at_color(0, 4, 86, 80);
 		srv_CopyScreen();
-	        SDL_UpdateRect(srv_screen, 0, 0, 0, 0);
-		SDL_Delay(3000);
-//		SDL_WaitEvent(&ev);
+		SDL_Delay(1000);
 	}
-	
-//	printf("%s", msg);
 }
 
 

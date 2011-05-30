@@ -2,21 +2,14 @@
 ** sdlflip.c -- SDL page flipping code
 */
 
-dd	SDLticks = 0;
-
-dd	Flips = 0;
+int		SDLticks = 0;
 double	Ticks = 0.0;
 double	FirstFlipTime = 0.0;
 
+int	Flips = 0;
+int	FPSflips = 0;
 double	CurrentFPS = 0.0;
 double	FPStime = 0.0;
-dd	FPSflips = 0;
-
-int PageFlipping()
-{
-	return(!Phosphor && FullScreen && SyncToMonitor);
-//	return(!Phosphor && FullScreen && !InDesktop && SyncToMonitor);
-}
 
 double srv_get_microseconds()
 {
@@ -33,22 +26,6 @@ void srv_sleep_microseconds(double wait_time)
 	SDL_Delay((dd) wait_time/1000.0);
 }
 
-double Calc_Period()
-{
-	double myPeriod;
-
-	if (UserFrameRate != -1)				/* user specified rate? */
-		myPeriod = 1000000.0/UserFrameRate;		/*   yes, use it (microseconds) */
-	else if ((PaletteNumber==1)||(PaletteNumber==2))	
-		myPeriod = (LinesInFrame*1000000.0)/15600.0;	/* PAL/SECAM -- 312 * 50 = 15600 */
-	else    myPeriod = (LinesInFrame*1000000.0)/15720.0;	/* NTSC --	262 * 60 = 15720 */
-	
-	// make rate a little fast to force sync with audio stream
-	if (SyncToSoundBuffer) myPeriod *= 0.99; // LinesInFrame * 1000000.0/16000;	
-
-	return(myPeriod);
-}
-
 void srv_reset_timing()
 {
 	Flips = 0;
@@ -61,10 +38,7 @@ void srv_reset_timing()
 
 void srv_Flip()
 {
-	double Now;
-	double sleepytime;
-
-	Now = srv_get_microseconds();
+	double Now = srv_get_microseconds();
 
 	if (Ticks == 0.0)	Ticks = Now;
 	if (Flips++ == 0)	FirstFlipTime = Now;
@@ -85,27 +59,10 @@ void srv_Flip()
 		FPSflips = 0;
 	}
 	
-	Ticks += Calc_Period();		/* time of next flip */
-
-	if (PageFlipping())
-		SDL_Flip(srv_screen);
-	else
-	{
-		sleepytime = Ticks - Now;
-		if ((sleepytime > 0.0) && (sleepytime < 200000.0))	// 1/5 second max sleep time
-			srv_sleep_microseconds(sleepytime);
-		else	
-		{	/* we've fallen behind more than 1/5 second or there was a time quake */
-			if (sleepytime < -200000.0) Ticks = Now;
-		}
-		
-		if (!Phosphor || (Phosphor && (Flips & 1)))
-			SDL_UpdateRect(srv_screen, Horiz, Vert, pixelspread*tiawidth, scanlinespread*MaxLines);
-
-	}
-
+	SDL_GL_SwapBuffers();
 	screen_buffer_count = (screen_buffer_count + 1) & 0x03;
-	if (DoInterlace || PageFlipping())
+	
+	if (DoInterlace)
 	{
 		switch(screen_buffer_count)
 		{
@@ -127,7 +84,7 @@ void srv_Flip()
 			break;
 		}
 	}
-	else  // maybe phosphor mode
+	else
 	{
 		switch(screen_buffer_count)
 		{
@@ -160,8 +117,9 @@ void srv_Flip()
 }
 
 /**
-** z26 is Copyright 1997-2011 by John Saeger and contributors.  
-** z26 is released subject to the terms and conditions of the 
-** GNU General Public License Version 2 (GPL).	z26 comes with no warranty.
-** Please see COPYING.TXT for details.
+	z26 is Copyright 1997-2011 by John Saeger and contributors.  
+	z26 is released subject to the terms and conditions of the 
+	GNU General Public License Version 2 (GPL).	
+	z26 comes with no warranty.
+	Please see COPYING.TXT for details.
 */

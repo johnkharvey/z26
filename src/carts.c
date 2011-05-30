@@ -7,7 +7,7 @@ db KoolAide;		/* do KoolAide cheat */
 db RSBoxing;		/* do RSBOXING cheat */
 dd DefaultCFirst;	/* emu recommends game start here */
 db MPdirection;		/* direction mouse must move to emulate paddle */
-db MinVol;		/* minimum volume needed to make noise on PC-speaker */
+db MinVol;			/* minimum volume needed to make noise on PC-speaker */
 db LG_WrapLine;		/* light gun wrap line */
 
 
@@ -42,9 +42,10 @@ void RecognizeCart(void)
 	DefaultCFirst = 0xffff;
 
 	if (crc == 0xe5314b6c) GameOffset =  16; /* aciddrop */
+	if (crc == 0x19b76676) GameOffset =  16; /* Bermuda Triangle (PAL) */
 	if (crc == 0xd8777a3b) GameOffset =  42; /* Starsoft - Gefecht im All (PAL).bin */
 	if (crc == 0x7805bc6f) GameOffset = -16; /* Acid Drop (1992) (Salu) [f1] (NTSC by TJ).a26 */
-	if (crc == 0x7b4eb49c) GameOffset =  3;  /* pickpile */
+	if (crc == 0x7b4eb49c) GameOffset =  16;  /* pickpile */
 	if (crc == 0x20010308) GameOffset = -4;	 /* challang */
 	if (crc == 0xf3ded2e3) GameOffset = -4;  /* pandchse */
 	if (crc == 0xc44d074f) GameOffset = -7;  /* zoofun */
@@ -82,18 +83,15 @@ void RecognizeCart(void)
 
 	if (UserPaletteNumber == 0xff)		/* if user didn't specify a palette */
 	{
-                if (Lookup(NTSC_colours)) 
-			GamePaletteNumber = 0;	/* NTSC Palette */
-                
-                if (Lookup(PAL_colours)) 
-                       	GamePaletteNumber = 1;      /* PAL Palette */
+		if (Lookup(NTSC_colours))	GamePaletteNumber = 0;	/* NTSC Palette */
+		if (Lookup(PAL_colours))	GamePaletteNumber = 1;      /* PAL Palette */
 
 		PaletteNumber = GamePaletteNumber;
 	}
 
 /* games that want Player 1 set to hard */
 
-        if (Lookup(Player_1_hard)) IOPortB |= 0x80;
+	if (Lookup(Player_1_hard)) IOPortB |= 0x80;
 
 
 /* games that want the joystick controls reversed */
@@ -102,16 +100,15 @@ void RecognizeCart(void)
 
 
 /* games that need to use "impossible" joystick positions */
-        if (crc == 0x7a0d162d) AllowAll4 = 1;   /* Bumper Bash NTSC */
-        if (crc == 0x4af43194) AllowAll4 = 1;   /* Bumper Bash PAL */
+	if (crc == 0x7a0d162d) AllowAll4 = 1;   /* Bumper Bash NTSC */
+	if (crc == 0x4af43194) AllowAll4 = 1;   /* Bumper Bash PAL */
 
 
 /* detect controllers */
-       	LeftSuggestion = JS;		/* assume joystick controllers by default */
+	LeftSuggestion = JS;		/* assume joystick controllers by default */
 	RightSuggestion = JS;
 
 /* paddle games */
-
 	paddle = 0xff;				/* assume not recognized */
 
 	if (Lookup(Paddle_0)) paddle = 0;
@@ -125,7 +122,6 @@ void RecognizeCart(void)
 	if (crc == 0x96a0b1f9) { MouseBaseX = 1; MouseBaseY = 0; paddle = 0; }	/* PAL */
 
 	if (paddle != 0xff)			/* if we found a paddle game set its direction */
-
 	{
 		LeftSuggestion = PC;
 		RightSuggestion = PC;
@@ -143,8 +139,8 @@ void RecognizeCart(void)
 
 
 /* Kid Vid games */
-        if (crc == 0x9927a7ae) { RightSuggestion = KV; KidVid = 0x44; }	/* Smurfs Save the Day */
-        if (crc == 0x0b63f9e3) { RightSuggestion = KV; KidVid = 0x48; }	/* The Berenstain Bears */
+	if (crc == 0x9927a7ae) { RightSuggestion = KV; KidVid = 0x44; }	/* Smurfs Save the Day */
+	if (crc == 0x0b63f9e3) { RightSuggestion = KV; KidVid = 0x48; }	/* The Berenstain Bears */
 
 
 /* keypad games */
@@ -155,8 +151,8 @@ void RecognizeCart(void)
 
 /* driving controller games */
 
-        if (Lookup(driving_con_2)) RightSuggestion = DC;
-        if (Lookup(driving_con_3)) { RightSuggestion = DC; LeftSuggestion = DC; }
+	if (Lookup(driving_con_2)) RightSuggestion = DC;
+	if (Lookup(driving_con_3)) { RightSuggestion = DC; LeftSuggestion = DC; }
 
 
 /* lightgun games */
@@ -170,33 +166,34 @@ void RecognizeCart(void)
 
 /* Mindlink games */
 
-        if (crc == 0x81187400) RightSuggestion = ML;	/* Telepathy */
-        if (crc == 0x3183c019) LeftSuggestion = ML;	/* Bionic Breakthrough */
+	if (crc == 0x81187400) RightSuggestion = ML;	/* Telepathy */
+	if (crc == 0x3183c019) LeftSuggestion = ML;	/* Bionic Breakthrough */
 
 
 /* CompuMate keyboard */
-        if (crc == 0xa01ebff4) { RightSuggestion = CM; LeftSuggestion = CM; }	/* Spectravideo CompuMate PAL */
-		if (crc == 0xdfa1388d) { RightSuggestion = CM; LeftSuggestion = CM; }	/* Spectravideo CompuMate NTSC */
+	if (crc == 0xa01ebff4) { RightSuggestion = CM; LeftSuggestion = CM; }	/* Spectravideo CompuMate PAL */
+	if (crc == 0xdfa1388d) { RightSuggestion = CM; LeftSuggestion = CM; }	/* Spectravideo CompuMate NTSC */
 
 
 /* TrakBalls */
-        if (crc == 0x16119bbc) { RightSuggestion = ST; LeftSuggestion = ST; }	/* Missile Command hack NTSC ST mouse */
-        if (crc == 0x094ed116) { RightSuggestion = ST; LeftSuggestion = ST; }	/* Missile Command hack PAL ST mouse */
-        if (crc == 0x8f7e1223) { RightSuggestion = TB; LeftSuggestion = TB; }	/* Missile Command hack NTSC CX-22 */
-        if (crc == 0x90215889) { RightSuggestion = TB; LeftSuggestion = TB; }	/* Missile Command hack PAL CX-22 */
-        if (crc == 0x8590dabb) { RightSuggestion = AM; LeftSuggestion = AM; }	/* Missile Command hack NTSC Amiga mouse */
-        if (crc == 0xe4062d87) { RightSuggestion = AM; LeftSuggestion = AM; }	/* Missile Command hack PAL Amiga mouse */
-        if (crc == 0xd4f23bda) { RightSuggestion = AM; LeftSuggestion = AM; }	/* Missile Command hack NTSC Amiga mouse (v1.2) */
-        if (crc == 0x9593b81c) { RightSuggestion = AM; LeftSuggestion = AM; }	/* Missile Command hack PAL Amiga mouse (v1.2) */
+	if (crc == 0x16119bbc) { RightSuggestion = ST; LeftSuggestion = ST; }	/* Missile Command hack NTSC ST mouse */
+	if (crc == 0x094ed116) { RightSuggestion = ST; LeftSuggestion = ST; }	/* Missile Command hack PAL ST mouse */
+	if (crc == 0x8f7e1223) { RightSuggestion = TB; LeftSuggestion = TB; }	/* Missile Command hack NTSC CX-22 */
+	if (crc == 0x90215889) { RightSuggestion = TB; LeftSuggestion = TB; }	/* Missile Command hack PAL CX-22 */
+	if (crc == 0x8590dabb) { RightSuggestion = AM; LeftSuggestion = AM; }	/* Missile Command hack NTSC Amiga mouse */
+	if (crc == 0xe4062d87) { RightSuggestion = AM; LeftSuggestion = AM; }	/* Missile Command hack PAL Amiga mouse */
+	if (crc == 0xd4f23bda) { RightSuggestion = AM; LeftSuggestion = AM; }	/* Missile Command hack NTSC Amiga mouse (v1.2) */
+	if (crc == 0x9593b81c) { RightSuggestion = AM; LeftSuggestion = AM; }	/* Missile Command hack PAL Amiga mouse (v1.2) */
 
         
-
 /* if the user didn't specify controllers, use autodetection */
-        if (LeftController == 0xff) LeftController = LeftSuggestion;
+	if (LeftController == 0xff) LeftController = LeftSuggestion;
 	if (RightController == 0xff) RightController = RightSuggestion;
 
 /* bankswitching */
 
+	BSType = 0;
+	
 	if (Lookup(BS_1)) BSType = 1;		/* CommaVid */
 	if (Lookup(BS_3)) BSType = 3;		/* Parker Brothers */
 	if (Lookup(BS_4)) BSType = 4;		/* Tigervision */
@@ -204,51 +201,42 @@ void RecognizeCart(void)
 	if (Lookup(BS_9)) BSType = 9;		/* 8K banks reversed */
 	if (Lookup(BS_6)) BSType = 6;		/* 16K Superchip that can't be recognized automatically */
 	if (Lookup(BS_7)) BSType = 7;		/* M Network 16K */
-        if (Lookup(BS_8)) BSType = 8;           /* Atari 32K */
-        if (crc == 0xa01ebff4) BSType = 10;     /* Spectravideo CompuMate PAL */
-		if (crc == 0xdfa1388d) BSType = 10;		/* Spectravideo CompuMate NTSC */
+	if (Lookup(BS_8)) BSType = 8;           /* Atari 32K */
+	if (crc == 0xa01ebff4) BSType = 10;     /* Spectravideo CompuMate PAL */
+	if (crc == 0xdfa1388d) BSType = 10;	/* Spectravideo CompuMate NTSC */
 	if (Lookup(BS_11)) BSType = 11;		/* 32K Tigervision */
-        if (Lookup(BS_12)) BSType = 12;         /* 8K UA Ltd. */
+	if (Lookup(BS_12)) BSType = 12;         /* 8K UA Ltd. */
+		
+	if(BSType==0)
+	{
+	   switch(CartSize)
+	   {
+	   case 0x2000:
+		  BSType=2;                         /* 8K superchip */
 
-        if(BSType==0)
-        {
-           switch(CartSize)
-           {
-           case 0x2000:
-              BSType=2;                         /* 8K superchip */
-
-              for(i=0; i<2; i++)
-              {
-                 for(j=0; j<256; j++)
-                 {
-                    if(CartRom[0]!=CartRom[i*0x1000+j]) BSType=0;
-                 }
-              }
-           break;
-           case 0x4000:
-              BSType=6;                         /* 16K superchip */
-              for(i=0; i<4; i++)
-              {
-                 for(j=0; j<256; j++)
-                 {
-                    if(CartRom[0]!=CartRom[i*0x1000+j]) BSType=0;
-                 }
-              }
-           break;
-           case 0x8000:
-              BSType=11;			/* was 32K superchip (Fatal Run) */
-						/* now assume tigervision */
-//
-//              for(i=0; i<8; i++)
-//              {
-//                 for(j=0; j<256; j++)
-//                 {
-//                    if(CartRom[0]!=CartRom[i*0x1000+j]) BSType=0;
-//                 }
-//              }
-           break;
-           }
-        }
+		  for(i=0; i<2; i++)
+		  {
+			 for(j=0; j<256; j++)
+			 {
+				if(CartRom[0]!=CartRom[i*0x1000+j]) BSType=0;
+			 }
+		  }
+	   break;
+	   case 0x4000:
+		  BSType=6;                         /* 16K superchip */
+		  for(i=0; i<4; i++)
+		  {
+			 for(j=0; j<256; j++)
+			 {
+				if(CartRom[0]!=CartRom[i*0x1000+j]) BSType=0;
+			 }
+		  }
+	   break;
+	   case 0x8000:
+		  BSType=11;			/* tigervision */
+	   break;
+	   }
+	}
 	if (UserBankswitch !=0xff) BSType = UserBankswitch;
 }
 

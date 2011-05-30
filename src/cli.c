@@ -1,17 +1,17 @@
 /*
-** z26 command line stuff
+	z26 command line stuff
 */
 
 /*
-** load next Starpath Rom
+	load next Starpath Rom
 */
 
 #define SC_LOAD0_SAVE 515330    // where in ROM buffer to save Load 0
 
 void cli_LoadNextStarpath(void)
 {
-    dd i,j, LoadCount, LoadNum;
-	dd pageadr, pagebyte, pagecount;
+    int i,j, LoadCount, LoadNum;
+	int pageadr, pagebyte, pagecount;
 	db *p;
 	db *q;
 
@@ -46,13 +46,13 @@ void cli_LoadNextStarpath(void)
 }
 
 /*
-** reload a Starpath file
+	reload a Starpath file
 */
 
 void cli_ReloadStarpath(void)
 {
-	dd i,j;
-	dd pageadr, pagebyte, pagecount;
+	int i,j;
+	int pageadr, pagebyte, pagecount;
 	db *p;
 	db *q;
 
@@ -64,110 +64,79 @@ void cli_ReloadStarpath(void)
 		}
 		SC_StartAddress=CartRom[0x17fd]*256+CartRom[0x17fc];
 		SC_ControlByte=0x0d;
-	}else
-	{
-	pagecount = CartRom[0x2003];
-
-	for (i = 0; i < pagecount; i++)
-	{
-		pagebyte = CartRom[0x2010 + i];
-		pageadr = ((pagebyte & 3) * 0x800) + ((pagebyte & 0x1f) >> 2) * 256;
-
-		p = CartRom + pageadr;
-		q = CartRom + SC_LOAD0_SAVE + i*256;
-		for (j = 0; j < 256; j++)
-		{
-			*p++ = *q++;
-		}
 	}
+	else
+	{
+		pagecount = CartRom[0x2003];
 
+		for (i = 0; i < pagecount; i++)
+		{
+			pagebyte = CartRom[0x2010 + i];
+			pageadr = ((pagebyte & 3) * 0x800) + ((pagebyte & 0x1f) >> 2) * 256;
+
+			p = CartRom + pageadr;
+			q = CartRom + SC_LOAD0_SAVE + i*256;
+			for (j = 0; j < 256; j++)
+			{
+				*p++ = *q++;
+			}
+		}
 	SC_StartAddress=CartRom[0x2001]*256+CartRom[0x2000];
 	SC_ControlByte=CartRom[0x2002];
 	}
 }
 
 
-#define CRC16_REV 0xA001	/* CRC-16 polynomial reversed */
+#define CRC16_REV 0xA001		/* CRC-16 polynomial reversed */
 #define CRC32_REV 0xA0000001	/* CRC-32 polynomial reversed */
 
-
 /*
-** used for generating the CRC lookup table
+	used for generating the CRC lookup table
 */
 
 dd crcrevhware(dd data, dd genpoly, dd accum) 
 {
-  int i;
-  data <<= 1;
-  for (i=8;i>0;i--) {
-    data >>= 1;
-    if ((data ^ accum) & 1)
-      accum = (accum >> 1) ^ genpoly;
-    else
-      accum >>= 1;
-    }
-  return(accum);
+	int i;
+	data <<= 1;
+	for (i=8; i>0; i--) {
+		data >>= 1;
+		if ((data ^ accum) & 1)
+			accum = (accum >> 1) ^ genpoly;
+		else
+			accum >>= 1;
+	}
+	return(accum);
 }
 
 
 /*
-** init the CRC lookup table
+	update CRC
 */
 
-/*
-void init_crc(void) 
-{
-  int i;
-  for (i=0;i<256;i++)
-    crctab[i] = crcrevhware(i,CRC32_REV,0);
-}
-*/
-
-void init_crc(void)
-{
-}
-
-/*
-** update CRC
-*/
-
-void ucrc(unsigned char data) 
+void ucrc(dd data) 
 {
    crc = (crc >> 8) ^ crcrevhware((crc ^ data) & 0xff,CRC32_REV,0);
 }
-
-/*
-void ucrc(unsigned char data) 
-{
-   crc = (crc >> 8) ^ crctab[(crc ^ data) & 0xff];
-}
-*/
 
 
 int cli_calc_CRC(char *filename)
 {
 	FILE *fp;
 	db *p;
-	dd ch;
+	int ch;
 
-	init_crc();
-
+	if (filename == NULL) return(0);
 	fp = fopen(filename, "rb");
 	if (fp == NULL)	return(0);
 			
 	p = CartRom;
 	CartSize = 0;
-	Checksum = 0;
-	XChecksum = 0;
 	crc = 0;
 
 	while ( (ch = getc(fp)) != EOF )
 	{
 		*p++ = (db) ch;
-		Checksum += ch;
-		ucrc((db) ch);
-		if (XChecksum & 0x8000000) XChecksum |= 1;
-		XChecksum = (XChecksum << 1) ^ ch;
+		ucrc(ch);
 		++CartSize;
 		if (CartSize > 0x80000) break;
 	}
@@ -176,46 +145,17 @@ int cli_calc_CRC(char *filename)
 	return(1);
 }
 
-/*
-
-unsigned aurora_crc16(unsigned char *ptr, unsigned char len) 
-{
-	dd crc;
-	db t;
-	db *ptr;	// for best results -- make it point somewhere
-	dd len;		// likewise
-	dd crc_tab[16]={
-	0x0000,0x1021,0x2042,0x3063,0x4084,0x50a5,0x60c6,0x70e7,
-	0x8108,0x9129,0xa14a,0xb16b,0xc18c,0xd1ad,0xe1ce,0xf1ef,
-	}
-
-	crc = 0;
-	while(len-- != 0) 
-	{
-		t = crc >> 12;
-		crc <<= 4;
-		crc ^= crc_tab[t^(*ptr/16)];
-
-		t = crc >> 12;
-		crc <<= 4;
-		crc ^= crc_tab[t^(*ptr&15)];
-		++ptr;
-	}
-	return(crc);
-}
-
-*/
 
 /*
-** load a ROM image
-**
-** gets called from gui also -- special ROM setup can go here
+	load a ROM image
+
+	gets called from gui also -- special ROM setup can go here
 */
 
 int cli_LoadROM(char *filename)
 {
 
-unsigned char SCBIOS[188] = { 
+db SCBIOS[188] = { 
 0xa5,0xfa,0x85,0x81,0x4c,0x0e,0xf8,0xff,
 0xff,0xff,0xa9,0x00,0x85,0x81,0xa9,0x00,
 0x85,0x1b,0x85,0x1c,0x85,0x1d,0x85,0x1e,
@@ -242,10 +182,14 @@ unsigned char SCBIOS[188] = {
 0xff,0x4c,0xf0,0xff
 };
 
+	int i;
 
-	dd i;
-	
-	if (cli_calc_CRC(filename) == 0) return 0;
+	if (cli_calc_CRC(filename) == 0)
+	{
+		sprintf(msg, " Game not supported.");
+		srv_print(msg);
+		return(0);	// not supported in C engine
+	}
 
 	if (CartSize == 2048)	/* 2K cart -- copy lower to upper */
 	{
@@ -279,16 +223,43 @@ unsigned char SCBIOS[188] = {
 		cli_ReloadStarpath();
 	}
 
+	if (Lookup(BLACKLIST))
+	{
+		sprintf(msg, " Game not supported.");
+		srv_print(msg);
+		return(0);
+	}
+
 	return(1);
 }
 
 
-/*
-**  Command Line interpreter
-*/
-
 char cli_controllers[12][3] =
 	{"JS","PC","KP","DC","LG","CM","KV","ML","ST","TB","AM","NC"};
+
+int GetController(char *p)
+{
+	int i, LocalController;
+
+	LocalController = -1;			// set left controller
+	for (i=0; i<12; i++)
+	{
+		if (strncmp(p, cli_controllers[i],2) == 0)
+			LocalController = i;
+	}
+	if (LocalController == -1)
+	{
+		sprintf(msg, "Unknown controller type: %s", p);
+		srv_print(msg);
+		SDL_Quit();
+		exit(1);
+	}
+	return(LocalController);
+}
+
+/*
+	Command Line interpreter
+*/
 
 FILE *zlog;
 
@@ -298,7 +269,6 @@ void cli_InterpretParm(char *p)
 	double fparm;
 	int i;
 	
-
 	p++;
 	ch = *p++;
 	parm = atol(p);
@@ -307,216 +277,155 @@ void cli_InterpretParm(char *p)
 	switch (ch)
 	{
 	case 'd':  	dsp = parm;				break;	// sound processing
-	case 'e':	Narrow = 1;				break;	// narrow video
+	case 'e':	Narrow = parm;			break;	// width adjustment
+	case 'h':	Tall = parm;			break;	// height adjustment
 	case 'q':  	quiet = 1;				break;	// no sound
-	case 'S':	DoScanline = 1;				break;	// scanline display
-	case 'C':	theme = parm & 0x70;			break;	// color theme for the GUI
-	case 'o':	SimColourLoss = 1;			break;	// simulate colour loss
-	case 'n':	ShowLineCount = 1;			break;	// show line count and framerate
-	case '!':       DoInterlace = 1;			break;	// do interlace
-	case 'x':  	DoChecksum = 1;				break;	// print checksum
+	case 'S':	DoScanline = 1;			break;	// scanline display
+	case 'C':	theme = parm & 0x70;	break;	// color theme for the GUI
+	case 'o':	SimColourLoss = 1;		break;	// simulate colour loss
+	case 'n':	ShowLineCount = 1;		break;	// show line count and framerate
+	case '!':	DoInterlace = 1;		break;	// do interlace
 
 	case '0':  	UserP0Diff = 1;
-			IOPortB |= 64;				
-			break;						// p0 hard
+				IOPortB |= 64;				
+				break;							// p0 hard
 			
 	case '1':  	UserP1Diff = 1;
-			IOPortB |= 128;				
-			break;						// p1 hard
+				IOPortB |= 128;				
+				break;							// p1 hard
 			
 	case 'b':  	UserConsoleBW = 1;
-			IOPortB &= 0xc3;			
-			break;						// black and white
+				IOPortB &= 0xc3;			
+				break;							// black and white
 	
-	case 'c':  	UserPaletteNumber = parm;			// palette
-			PaletteNumber = UserPaletteNumber;
-			if(parm == 2) {
-			   IOPortB &= 0xf7;
-			}
-			break;
+	case 'c':  	UserPaletteNumber = parm;		// palette
+				PaletteNumber = UserPaletteNumber;
+				if(parm == 2) {
+					IOPortB &= 0xf7;
+				}
+				break;
 
-	case 'g':       UserBankswitch = parm & 0x0f;			// bankswitch scheme
-			BSType = UserBankswitch;
-			break;
+	case 'g':	UserBankswitch = parm & 0x0f;	// bankswitch scheme
+				BSType = UserBankswitch;
+				break;
 			
-	case 'u':  	UserCFirst = parm;
-			CFirst = parm;				
-			break;						// first line to scan
+	case 'u':  	break;							// first line to scan
 			
 	case 's':	SQ_Max = parm;					// size of sound queue
-			if (SQ_Max > 65536)	SQ_Max = 65536;
-			if (SQ_Max < 1024)	SQ_Max = 1024;
-			break;
+				if (SQ_Max > 65536)	SQ_Max = 65536;
+				if (SQ_Max < 1024)	SQ_Max = 1024;
+				break;
 
-	case 'r':	if (parm == 0)					// frame rate
-			{
-				SyncToMonitor = 1;
-				UserFrameRate = -1;
-				SyncToSoundBuffer = 0;
-			}
-			else
-			{
-				UserFrameRate = parm;
-				SyncToMonitor = 0;
-				SyncToSoundBuffer = 0;
-			}
-			break;
-
-	case '4':       UserAllowAll4 = 1;
-			AllowAll4 = UserAllowAll4;
-			break;						// allow all four directions
+	case '4':	UserAllowAll4 = 1;
+				AllowAll4 = UserAllowAll4;
+				break;							// allow all four directions
 	
-	case 'f':	UserPhosphor = parm;				// user specified phosphorescence
-			Phosphor = UserPhosphor;			
-			break;
+	case 'f':	UserDepth = parm;				// user specified scanline depth
+				Depth = UserDepth;			
+				break;
 
-	case 'V':	sprintf(msg, "%s\n\n%d.%d.%d", Z26_RELEASE, screen_width, screen_height, screen_bpp);
-			srv_print(msg);					// print out version
-			SDL_Quit();
-			exit(1);
+	case 'v':	if (parm >= 10)					// set video mode
+					FullScreen = 0;
+				else
+					FullScreen = 1;
 
-	case 'v':	FullScreen = 1;	/* 0-9 run in desktop */	// set video mode
-			InDesktop = 1;
+       			VideoMode = parm % 10;
+				break;
 
-			if (parm >= 10)	/* 10-19 run in a window */
-			{
-				FullScreen = 0;
-			}
-			if (parm >= 20)	/* 20-29 run fullscreen */
-			{
-				InDesktop = 0;
-				FullScreen = 1;
-			}
+	case ')':	LeftController = GetController(p);	// set left controller
+				UserLeftController = LeftController;
+				break;		
 
-       			parm = parm % 10;/* convert 1x, 2x ... to x */
-			VideoMode = parm;	
-			break;
+	case '(':	RightController = GetController(p);	// set right controller
+				UserRightController = RightController;
+				break;
 
-       	case ')':	UserLeftController = 0xff;			// set left controller
-			for (i=0; i<12; i++)
-			{
-				if (strncmp(p, cli_controllers[i],2) == 0)
-					UserLeftController=i;
-			}
-			if (UserLeftController == 0xff)
-			{
-				sprintf(msg, "Unknown controller type: %s", p);
-				srv_print(msg);
-				SDL_Quit();
-				exit(1);
-			}
-			LeftController = UserLeftController;
-			break;
-
-	case '(':	UserRightController = 0xff;			// set right controller
-			for (i=0; i<12; i++)
-			{
-				if (strncmp(p, cli_controllers[i],2) == 0)
-					UserRightController=i;
-			}
-			if (UserRightController == 0xff)
-			{
-				sprintf(msg, "Unknown controller type: %s", p);
-				srv_print(msg);
-				SDL_Quit();
-				exit(1);
-			}
-			RightController = UserRightController;
-			break;
-
-	case 'w':       UserSwapPortsFlag = 1;		
-			SwapPortsFlag = UserSwapPortsFlag;	
-			break;						// swap controller ports
+	case 'w':	UserSwapPortsFlag = 1;		
+				SwapPortsFlag = UserSwapPortsFlag;	
+				break;							// swap controller ports
 
 	case 'l':	Lightgun = parm;
-			UserLightgun = Lightgun;
-			break;						// lightgun
+				UserLightgun = Lightgun;
+				break;						// lightgun
 			
 	case 'a':	LGadjust = parm;
-			UserLGadjust = LGadjust;
-			break;						// lightgun adjust
+				UserLGadjust = LGadjust;
+				break;						// lightgun adjust
 
 	case 'M':	MouseRude = parm;			break;	// mouse rude
 	case 'G':	GrabInput = 1;				break;	// grab input
 
 	case 'P':	PaddleAdjust = parm;			break;	// paddle adjust
-	
-	case 'R':	SyncToSoundBuffer = 1;				// sync to sound buffer
-			SyncToMonitor = 0;
-			UserFrameRate = -1;
-			break;
 			
 	case 'p':  	UserPaddleSensitivity = parm;
-			PaddleSensitivity = (parm & 0xf) << 1;	
-			break;						// paddle sensitivity
+				PaddleSensitivity = (parm & 0xf) << 1;	
+				break;						// paddle sensitivity
 
-	case 'm':       if (parm < 100)					// mouse adjust
-			{
-				MouseBaseX = parm & 3;
-			} 
-			else
-			{
-				parm = parm - 100;
-				MouseBaseX = parm / 10;
-				MouseBaseY = parm % 10;
-				MPdirection = 1;  /* set directions for Marble Craze */
-			}
-
-			UserMouseBaseX = MouseBaseX;
-			UserMouseBaseY = MouseBaseY;
-
-			break;
+	case 'm':	if (parm < 100)					// mouse adjust
+				{
+					MouseBaseX = parm & 3;
+				} 
+				else
+				{
+					parm = parm - 100;
+					MouseBaseX = parm / 10;
+					MouseBaseY = parm % 10;
+					MPdirection = 1;  /* set directions for Marble Craze */
+				}
+				UserMouseBaseX = MouseBaseX;
+				UserMouseBaseY = MouseBaseY;
+				break;
 			
 	case 'i':	for (i = 0; i < strlen(p); i++)			// inactivate PC controller
-			{
-				switch (p[i])
 				{
-				case 'J':	JoystickEnabled = 0;		break;
-				case 'M':	MouseEnabled = 0;		break;
-				case 'K':	KeyboardEnabled = 0;		break;
-				case 'S':	StelladaptorEnabled = 0;	break;
-				case ' ':					break;
-				default:
-					sprintf(msg, "Bad PC controller seen: %c", p[i]);
-					srv_print(msg);
-					SDL_Quit();
-					exit(1);
-					break;
-				}
+					switch (p[i])
+					{
+					case 'J':	JoystickEnabled = 0;		break;
+					case 'M':	MouseEnabled = 0;			break;
+					case 'K':	KeyboardEnabled = 0;		break;
+					case 'S':	StelladaptorEnabled = 0;	break;
+					case ' ':								break;
+					default:
+						sprintf(msg, "Bad PC controller seen: %c", p[i]);
+						srv_print(msg);
+						SDL_Quit();
+						exit(1);
+						break;
+					}
 				
-				if (p[i] == ' ') break;
-			}
-			UserJoystickEnabled = JoystickEnabled;
-			break;
+					if (p[i] == ' ') break;
+				}
+				UserJoystickEnabled = JoystickEnabled;
+				break;
 			
 	case 't':	if (parm)					// trace mode
-				TraceCount = parm;
-			else
-				TraceCount = 0xff;			// hmmm...
+					TraceCount = parm;
+				else
+					TraceCount = 0xff;			// hmmm...
 
-			OldTraceCount = TraceCount;
-			TraceEnabled = 1; // controls.c checks this
-			UserTraceEnabled = TraceEnabled;
+				OldTraceCount = TraceCount;
+				TraceEnabled = 1; // controls.c checks this
+				UserTraceEnabled = TraceEnabled;
 
-			/* -tt means `start with trace disabled, until I hit F11' */
-			if(*p == 't')
-				TraceCount = 0;
+				/* -tt means `start with trace disabled, until I hit F11' */
+				if(*p == 't')
+					TraceCount = 0;
 
-			zlog = fopen("z26.log", "w");
-			if (zlog == NULL)
-			{
-				sprintf(msg, "Couldn't build log file.");
-				srv_print(msg);
-				TraceCount = 0;
-				TraceEnabled = 0;
-				OldTraceCount = 0;
-			}
-			break;
+				zlog = fopen("z26.log", "w");
+				if (zlog == NULL)
+				{
+					sprintf(msg, "Couldn't build log file.");
+					srv_print(msg);
+					TraceCount = 0;
+					TraceEnabled = 0;
+					OldTraceCount = 0;
+				}
+				break;
 
 	default:   	sprintf(msg, "Bad switch seen: -%c", ch);
-			srv_print(msg);
-			SDL_Quit();
-			exit(1);
+				srv_print(msg);
+				SDL_Quit();
+				exit(1);
 	}
 }
 
@@ -579,40 +488,35 @@ void cli_SaveParms()
 	fprintf(fp, "-v");					// (-v) do video mode
 	
 	if (!FullScreen)		fputc('1', fp);
-	else if (!InDesktop) 		fputc('2', fp);
 
 	fprintf(fp, "%1d ",VideoMode);
-	
-	if (UserCFirst != 0xffff)	fprintf(fp, "-d%d ", UserCFirst);
+
 	if (UserPaletteNumber != 0xff)	fprintf(fp, "-c%1d ", UserPaletteNumber);
-	if (UserBankswitch != 0xff)	fprintf(fp, "-g%d ", UserBankswitch);
+	if (UserBankswitch != 0xff)		fprintf(fp, "-g%d ", UserBankswitch);
 	if (UserLeftController != 0xff)	fprintf(fp, "-)%s ", cli_controllers[UserLeftController]);
 	if (UserRightController != 0xff) fprintf(fp, "-(%s ", cli_controllers[UserRightController]);
-	if (UserAllowAll4 != 0xff)	fprintf(fp, "-4 ");
-	if (UserSwapPortsFlag == 1)	fprintf(fp, "-w ");
-	if (ShowLineCount)		fprintf(fp, "-n ");
-	if (UserFrameRate != -1)	fprintf(fp, "-r%d ", UserFrameRate);
-	if (quiet)			fprintf(fp, "-q ");
-	if (dsp != 1)			fprintf(fp, "-d%1d ", dsp);
-	if (SyncToSoundBuffer)		fprintf(fp, "-R ");
-	if (SyncToMonitor)		fprintf(fp, "-r ");
-	if (Narrow)			fprintf(fp, "-e ");
-	if (SimColourLoss)		fprintf(fp, "-o ");
-	if (DoInterlace)		fprintf(fp, "-! ");
-	if (UserPhosphor != 60)		fprintf(fp, "-f%d ", UserPhosphor);
-	if (DoScanline)			fprintf(fp, "-S ");
-	if (theme)			fprintf(fp, "-C%d ", theme);
-	if (SQ_Max != 4096)		fprintf(fp, "-s%d ", SQ_Max);
-	if (UserP0Diff)			fprintf(fp, "-0 ");
-	if (UserP1Diff)			fprintf(fp, "-1 ");
-	if (UserConsoleBW)		fprintf(fp, "-b ");
-	if (!KeyboardEnabled)		fprintf(fp, "-iK ");
-	if (!MouseEnabled)		fprintf(fp, "-iM ");
-	if (!UserJoystickEnabled)	fprintf(fp, "-iJ ");
-	if (!StelladaptorEnabled)	fprintf(fp, "-iS ");
-	if (MouseRude)			fprintf(fp, "-M1 ");
-	if (GrabInput)			fprintf(fp, "-G ");
-	if (UserCFirst != 0xffff)	fprintf(fp, "-u%d ", UserCFirst);
+	if (UserAllowAll4 != 0xff)		fprintf(fp, "-4 ");
+	if (UserSwapPortsFlag == 1)		fprintf(fp, "-w ");
+	if (ShowLineCount)				fprintf(fp, "-n ");
+	if (quiet)						fprintf(fp, "-q ");
+	if (dsp != 1)					fprintf(fp, "-d%1d ", dsp);
+	if (Narrow)						fprintf(fp, "-e%d ", Narrow);
+	if (Tall)						fprintf(fp, "-h%d ", Tall);
+	if (SimColourLoss)				fprintf(fp, "-o ");
+	if (DoInterlace)				fprintf(fp, "-! ");
+	if (UserDepth != 60)			fprintf(fp, "-f%d ", UserDepth);
+	if (DoScanline)					fprintf(fp, "-S ");
+	/*if (theme)*/					fprintf(fp, "-C%d ", theme);
+	if (SQ_Max != 4096)				fprintf(fp, "-s%d ", SQ_Max);
+	if (UserP0Diff)					fprintf(fp, "-0 ");
+	if (UserP1Diff)					fprintf(fp, "-1 ");
+	if (UserConsoleBW)				fprintf(fp, "-b ");
+	if (!KeyboardEnabled)			fprintf(fp, "-iK ");
+	if (!MouseEnabled)				fprintf(fp, "-iM ");
+	if (!UserJoystickEnabled)		fprintf(fp, "-iJ ");
+	if (!StelladaptorEnabled)		fprintf(fp, "-iS ");
+	if (MouseRude)					fprintf(fp, "-M1 ");
+	if (GrabInput)					fprintf(fp, "-G ");
 	if (UserMouseBaseX != 0xff && UserMouseBaseY == 0xff)
 		fprintf(fp, "-m%d ", UserMouseBaseX);
 	if (UserMouseBaseY != 0xff)	
@@ -620,11 +524,11 @@ void cli_SaveParms()
 		if (UserMouseBaseX == 0xff) UserMouseBaseX = 0;
 		fprintf(fp, "-m%d ", 100+UserMouseBaseX*10+UserMouseBaseY);
 	}
-	if (UserPaddleSensitivity)	fprintf(fp, "-p%d ", UserPaddleSensitivity);
-	if (PaddleAdjust)		fprintf(fp, "-P%d ", PaddleAdjust);
-	if (UserLightgun)		fprintf(fp, "-l%d ", UserLightgun);
-	if (UserLGadjust != 5)		fprintf(fp, "-a%d ", UserLGadjust);
-	if (UserTraceCount == 1)	fprintf(fp, "-t ");
+	if (UserPaddleSensitivity)		fprintf(fp, "-p%d ", UserPaddleSensitivity);
+	if (PaddleAdjust)				fprintf(fp, "-P%d ", PaddleAdjust);
+	if (UserLightgun)				fprintf(fp, "-l%d ", UserLightgun);
+	if (UserLGadjust != 5)			fprintf(fp, "-a%d ", UserLGadjust);
+	if (UserTraceCount == 1)		fprintf(fp, "-t ");
 	else if (UserTraceCount == 0xff) fprintf(fp, "-tt ");
 
 	fprintf(fp, "\n");	// end-of-file
@@ -646,8 +550,7 @@ void cli_ReadParms(char *Filename)
 	else
 		rewind(parmfp);
 		
-	if (parmfp == NULL)
-		return; /* was return(0); *EST* */
+	if (parmfp == NULL) return;
 		
 	fp = parmfp;
 	
@@ -751,36 +654,13 @@ void cli_CommandLine(int argc, char *argv[])
 		SDL_Quit();
 		exit(1);
 	}
-/*
-	if (CartSize > 32768)
-	{
-		sprintf(msg, "Unsupported file.");
-		srv_print(msg);
-		SDL_Quit();
-		exit(1);
-	}
-*/
-	if (DoChecksum)
-	{
-		sprintf(msg, "\nCart analyzed:\n\n%06x   checksum\n%08x crc\n%d     bytes\n\n", Checksum, crc, CartSize);
-		srv_print(msg);
-		printf("%s", msg);
-		SDL_Delay(2000);	// a little extra delay
-
-		SDL_Quit();	/* delete comment before shipping ;-) */
-		exit(1);	/* delete comment before shipping ;-) */
-		
-//		cli_write_CRC(FileName);
-//
-//		SDL_Quit();
-//		exit(1);
-	}
 }
 
 
 /**
-** z26 is Copyright 1997-2011 by John Saeger and contributors.  
-** z26 is released subject to the terms and conditions of the 
-** GNU General Public License Version 2 (GPL).	z26 comes with no warranty.
-** Please see COPYING.TXT for details.
+	z26 is Copyright 1997-2011 by John Saeger and contributors.  
+	z26 is released subject to the terms and conditions of the 
+	GNU General Public License Version 2 (GPL).	
+	z26 comes with no warranty.
+	Please see COPYING.TXT for details.
 */

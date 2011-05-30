@@ -1,15 +1,9 @@
 /*
- banks.c -- z26 bank switch stuff
-
- z26 is Copyright 1997-2011 by John Saeger and contributors.  
- contributors.	 z26 is released subject to the terms and conditions of the 
- GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
- Please see COPYING.TXT for details.
+** banks.c -- z26 bank switch stuff
 */
 
 db Starpath;
 db Pitfall2;
-
 
 dd RomBank = 0; /* Rom bank pointer for F8 & F16 */
 /* take lower 4 bit of address and subtract this to get bank number */
@@ -1146,30 +1140,30 @@ void Init0840(void){
 
 
 void (* InitMemoryMap[24])(void) = {
-	Init4K,	//   0 -- 4K Atari
-	InitCV,	//   1 -- Commavid
+	Init4K,		//   0 -- 4K Atari
+	InitCV,		//   1 -- Commavid
 	InitF8SC,	//   2 -- 8K superchip
-	InitE0,	//   3 -- 8K Parker Bros.
-	Init3F,	//   4 -- 8K Tigervision
-	InitFE,	//   5 -- 8K Flat
+	InitE0,		//   3 -- 8K Parker Bros.
+	Init3F,		//   4 -- 8K Tigervision
+	InitFE,		//   5 -- 8K Flat
 	InitF6SC,	//   6 -- 16K superchip
-	InitE7,	//   7 -- 16K M-Network
+	InitE7,		//   7 -- 16K M-Network
 	InitF4SC,	//   8 -- 32K superchip
-	InitF8,	//   9 -- 8K Atari - banks swapped
-	InitCM,	//  10 -- Compumate
-	Init3F,	//  11 -- 512K Tigervision
-	InitUA,	//  12 -- 8K UA Ltd.
-	InitEF,	//  13 -- 64K Homestar Runner / Paul Slocum
-	Init3E,	//  14 -- 3E bankswitching (large 3F + 32k RAM)
-	InitSP,	//  15 -- Starpath
-	InitF6,	//  16 -- 16K Atari
-	InitF4,	//  17 -- 32K Atari
-	InitMB,	//  18 -- Megaboy
-	InitFA,	//  19 -- 12K
-	InitF8,	//  20 -- 8K Atari
-	InitP2,	//  21 -- Pitfall2
-	Init4K,	//	22 -- 4A50 / supercat
-	Init0840	// 23 -- 0840 EconoBanking
+	InitF8,		//   9 -- 8K Atari - banks swapped
+	InitCM,		//  10 -- Compumate
+	Init3F,		//  11 -- 512K Tigervision
+	InitUA,		//  12 -- 8K UA Ltd.
+	InitEF,		//  13 -- 64K Homestar Runner / Paul Slocum
+	Init3E,		//  14 -- 3E bankswitching (large 3F + 32k RAM)
+	InitSP,		//  15 -- Starpath
+	InitF6,		//  16 -- 16K Atari
+	InitF4,		//  17 -- 32K Atari
+	InitMB,		//  18 -- Megaboy
+	InitFA,		//  19 -- 12K
+	InitF8,		//  20 -- 8K Atari
+	InitP2,		//  21 -- Pitfall2
+	Init4K,		//	22 -- 4A50 / supercat
+	Init0840	//	23 -- 0840 EconoBanking
 };
 
 
@@ -1286,3 +1280,10 @@ void SetupBanks() {
 	(* InitMemoryMap[BSType])();
 }
 
+/**
+	z26 is Copyright 1997-2011 by John Saeger and contributors.  
+	z26 is released subject to the terms and conditions of the 
+	GNU General Public License Version 2 (GPL).	
+	z26 comes with no warranty.
+	Please see COPYING.TXT for details.
+*/

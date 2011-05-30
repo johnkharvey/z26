@@ -219,7 +219,7 @@ int file_selector(char *result) {
 	if (PaletteNumber != UserPaletteNumber)
 	{
 		PaletteNumber = UserPaletteNumber;
-		srv_SetVideoMode();
+		gui_SetVideoMode();
 	}
 	clrscr();
 

@@ -1,18 +1,9 @@
 /*
-
 	z26 RIOT emu
 
- z26 is Copyright 1997-2011 by John Saeger and contributors.  
- z26 is released subject to the terms and conditions of the 
- GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
- Please see COPYING.TXT for details.
-
-
- I'm not really sure what mode the timer starts up in but it's not mode 1.
- Otherwise blueprnt.bin doesn't come up and others as well.
+	I'm not really sure what mode the timer starts up in but it's not mode 1.
+	Otherwise blueprnt.bin doesn't come up and others as well.
 */
-
-extern dd ScanLine;	// TODO move ScanLine form c_core.c to init.c
 
 #define START_TIME 0x7fff
 
@@ -284,3 +275,11 @@ void (* WriteRIOTHandler[32])(void) = {
 	SetRIOTTimer64,		//  296h
 	SetRIOTTimer1024	//  297h
 };
+
+/**
+	z26 is Copyright 1997-2011 by John Saeger and contributors.  
+	z26 is released subject to the terms and conditions of the 
+	GNU General Public License Version 2 (GPL).  
+	z26 comes with no warranty.
+	Please see COPYING.TXT for details.
+*/

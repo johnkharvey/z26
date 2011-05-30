@@ -22,7 +22,7 @@ SDLLIBS=`$(SDLCONFIG) --libs`
 SDLCFLAGS=`$(SDLCONFIG) --cflags`
 
 # What z26-specific options shall we use for this platform?
-Z26OPTS=-DLINUX -DC_ENGINE
+Z26OPTS=-DLINUX
 
 # C core options.
 sinclude conf/c_core.mak
