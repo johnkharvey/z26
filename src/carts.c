@@ -207,36 +207,6 @@ void RecognizeCart(void)
 	if (Lookup(BS_11)) BSType = 11;		/* 32K Tigervision */
 	if (Lookup(BS_12)) BSType = 12;         /* 8K UA Ltd. */
 		
-	if(BSType==0)
-	{
-	   switch(CartSize)
-	   {
-	   case 0x2000:
-		  BSType=2;                         /* 8K superchip */
-
-		  for(i=0; i<2; i++)
-		  {
-			 for(j=0; j<256; j++)
-			 {
-				if(CartRom[0]!=CartRom[i*0x1000+j]) BSType=0;
-			 }
-		  }
-	   break;
-	   case 0x4000:
-		  BSType=6;                         /* 16K superchip */
-		  for(i=0; i<4; i++)
-		  {
-			 for(j=0; j<256; j++)
-			 {
-				if(CartRom[0]!=CartRom[i*0x1000+j]) BSType=0;
-			 }
-		  }
-	   break;
-	   case 0x8000:
-		  BSType=11;			/* tigervision */
-	   break;
-	   }
-	}
 	if (UserBankswitch !=0xff) BSType = UserBankswitch;
 }
 

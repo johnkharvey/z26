@@ -5,8 +5,8 @@
 int debug_current = 0;	/* currently selected GUI option */
 int exit_debug = 0;	/* exit timing menu */
 
-char trace_count_data[26];
-char trace_enabled_data[26];
+char trace_count_data[52];
+char trace_enabled_data[52];
 
 void set_debug_string() {
 	if (UserTraceCount == 0)	sprintf(trace_count_data, "Disabled");

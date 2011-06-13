@@ -6,29 +6,29 @@ int game_current = 0;	/* currently selected GUI option */
 int exit_game = 0;	/* exit video menu */
 
 char *controllers[] = {
-	"Joystick ",
-	"Paddle   ",
-	"Keypad   ",
-	"Driving  ",
-	"LightGun ",
-	"Compumate",
-	"KidVid   ",
-	"MindLink ",
-	"ST Mouse ",
-	"TrakBall ",
-	"AmigaMous",
-	"None     "
+	"Joystick  ",
+	"Paddle    ",
+	"Keypad    ",
+	"Driving   ",
+	"LightGun  ",
+	"Compumate ",
+	"KidVid    ",
+	"MindLink  ",
+	"ST Mouse  ",
+	"TrakBall  ",
+	"AmigaMouse",
+	"None      "
 };
 
-char bank_data[26];
-char palette_data[26];
-char left_control_data[26];
-char right_control_data[26];
-char allowall4_data[26];
-char swapports_data[26];
-char p0diff_data[26];
-char p1diff_data[26];
-char consoleBW_data[26];
+char bank_data[52];
+char palette_data[52];
+char left_control_data[52];
+char right_control_data[52];
+char allowall4_data[52];
+char swapports_data[52];
+char p0diff_data[52];
+char p1diff_data[52];
+char consoleBW_data[52];
 
 
 void set_p0diff_string() {
@@ -112,21 +112,31 @@ void set_palette_string() {
 void set_bank_string() {
 	switch (UserBankswitch)
 	{
-	case 0: sprintf(bank_data, "%d-4K Atari", UserBankswitch);	break;
-	case 1: sprintf(bank_data, "%d-Commavid", UserBankswitch);	break;
-	case 2: sprintf(bank_data, "%d-8K Super", UserBankswitch);	break;
-	case 3:	sprintf(bank_data, "%d-Parker Bro", UserBankswitch);	break;
-	case 4: sprintf(bank_data, "%d-Tiger Vis", UserBankswitch);	break;
-	case 5: sprintf(bank_data, "%d-Robotank", UserBankswitch);	break;
-	case 6: sprintf(bank_data, "%d-16K Super", UserBankswitch);	break;
-	case 7: sprintf(bank_data, "%d-M-Network", UserBankswitch); 	break;
-	case 8: sprintf(bank_data, "%d-32K Super", UserBankswitch);	break;
-	case 9: sprintf(bank_data, "%d-8K swapped", UserBankswitch);	break;
-	case 10: sprintf(bank_data, "%d-Compumate", UserBankswitch);	break;
-	case 11: sprintf(bank_data, "%d-32K-512K", UserBankswitch);	break;
-	case 12: sprintf(bank_data, "%d-UA Ltd", UserBankswitch);	break;
-	case 13: sprintf(bank_data, "%d-HS Runner", UserBankswitch);	break;
-	case 0xff: sprintf(bank_data, "Auto");				break;
+	case 0: sprintf(bank_data, "%d-2K+4K Atari [NoBS]", UserBankswitch);	break;
+	case 1: sprintf(bank_data, "%d-CommaVid [CV]", UserBankswitch);	break;
+	case 2: sprintf(bank_data, "%d-8K Superchip [F8SC]", UserBankswitch);	break;
+	case 3:	sprintf(bank_data, "%d-8K Parker Bros. [E0]", UserBankswitch);	break;
+	case 4: sprintf(bank_data, "%d-8K Tigervision [3F]", UserBankswitch);	break;
+	case 5: sprintf(bank_data, "%d-8K Activision [FE] (flat)", UserBankswitch);	break;
+	case 6: sprintf(bank_data, "%d-16K Superchip [F6SC]", UserBankswitch);	break;
+	case 7: sprintf(bank_data, "%d-16K M-Network [E7]", UserBankswitch); 	break;
+	case 8: sprintf(bank_data, "%d-32K Superchip [F4SC]", UserBankswitch);	break;
+	case 9: sprintf(bank_data, "%d-8K Atari swapped [F8]", UserBankswitch);	break;
+	case 10: sprintf(bank_data, "%d-Compumate [CM]", UserBankswitch);	break;
+	case 11: sprintf(bank_data, "%d-512K Tigervision+ [3F+]", UserBankswitch);	break;
+	case 12: sprintf(bank_data, "%d-8K United Appliance [UA]", UserBankswitch);	break;
+	case 13: sprintf(bank_data, "%d-64K HS Runner [EF]", UserBankswitch);	break;
+	case 14: sprintf(bank_data, "%d-512K Krokodile Cart [3E]", UserBankswitch);	break;
+	case 15: sprintf(bank_data, "%d-Starpath [AR]", UserBankswitch);	break;
+	case 16: sprintf(bank_data, "%d-16K Atari [F6]", UserBankswitch);	break;
+	case 17: sprintf(bank_data, "%d-32K Atari [F4]", UserBankswitch); 	break;
+	case 18: sprintf(bank_data, "%d-64K Megaboy [MB]", UserBankswitch);	break;
+	case 19: sprintf(bank_data, "%d-12K CBS [FA]", UserBankswitch);	break;
+	case 20: sprintf(bank_data, "%d-8K Atari [F8]", UserBankswitch);	break;
+	case 21: sprintf(bank_data, "%d-8K+DPC Pitfall2 [P2]", UserBankswitch);	break;
+	case 22: sprintf(bank_data, "%d-4A50 / supercat", UserBankswitch);	break;
+	case 23: sprintf(bank_data, "%d-0840 EconoBanking", UserBankswitch);	break;
+	case 0xff: sprintf(bank_data, "Auto");	break;
 	default: sprintf(bank_data, "%d-unknown", UserBankswitch);	break;
 	}
 }
@@ -157,14 +167,14 @@ void hand_palette_dec() {
 
 void hand_bank_inc() {
 	if (UserBankswitch == 0xff) UserBankswitch = 0;
-	else if (UserBankswitch == 15) UserBankswitch = 0xff;
+	else if (UserBankswitch == 23) UserBankswitch = 0xff;
 	else ++UserBankswitch;
 	set_bank_string();
 }
 
 void hand_bank_dec() {
-	if (UserBankswitch == 0xff) UserBankswitch = 15;
-	else if (UserBankswitch == 0) UserBankswitch = 0xff;
+	if (UserBankswitch == 0) UserBankswitch = 0xff;
+	else if (UserBankswitch == 0xff) UserBankswitch = 23;
 	else --UserBankswitch;
 	set_bank_string();
 }

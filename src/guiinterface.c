@@ -5,14 +5,14 @@
 int interface_current = 0;	/* currently selected GUI option */
 int exit_interface = 0;		/* exit interface menu */
 
-char theme_data[26];
-char show_fps_data[26];
-char enable_keyboard_data[26];
-char enable_mouse_data[26];
-char enable_joystick_data[26];
-char enable_stelladaptor_data[26];
-char mouse_rude_data[26];
-char grab_input_data[26];
+char theme_data[52];
+char show_fps_data[52];
+char enable_keyboard_data[52];
+char enable_mouse_data[52];
+char enable_joystick_data[52];
+char enable_stelladaptor_data[52];
+char mouse_rude_data[52];
+char grab_input_data[52];
 
 void set_theme_string() {
 	switch(theme/16)

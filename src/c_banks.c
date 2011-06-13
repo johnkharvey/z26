@@ -1169,6 +1169,8 @@ void (* InitMemoryMap[24])(void) = {
 
 void DetectBySize() {
 
+	int i, j;
+
 	if( CartSize == 480*0x400 ) {
 		BSType = 14;	/* 3E bankswitching with extra RAM */
 		return;
@@ -1188,7 +1190,15 @@ void DetectBySize() {
 		case 0x2000: /* 8k cart */
 			{
 				RomBank = 0x1000; /* need this for moonsweep and lancelot */
-				BSType = 20;
+				BSType = 2;
+				/* Superchip RAM ? */
+				for(i=0; i<2; i++)
+				{
+					for(j=0; j<256; j++)
+					{
+						if(CartRom[0]!=CartRom[i*0x1000+j]) BSType = 20;
+					}
+				}
 				break;
 			}
 
@@ -1200,13 +1210,29 @@ void DetectBySize() {
 
 		case 0x4000: /* 16k cart */
 			{
-				BSType = 16;
+				BSType = 6;
+				/* Superchip RAM ? */
+				for(i=0; i<4; i++)
+				{
+					for(j=0; j<256; j++)
+					{
+						if(CartRom[0]!=CartRom[i*0x1000+j]) BSType = 16;
+					}
+				}
 				break;
 			}
 
 		case 0x8000: /* 32k cart */
 			{
-				BSType = 17;
+				BSType = 8;
+				/* Superchip RAM ? */
+				for(i=0; i<8; i++)
+				{
+					for(j=0; j<256; j++)
+					{
+						if(CartRom[0]!=CartRom[i*0x1000+j]) BSType = 17;
+					}
+				}
 				break;
 			}
 

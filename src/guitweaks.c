@@ -7,12 +7,12 @@
 int tweaks_current = 0;	/* currently selected GUI option */
 int exit_tweaks = 0;	/* exit timing menu */
 
-char mpx_data[26];
-char mpy_data[26];
-char paddle_sensitivity_data[26];
-char paddle_adjust_data[26];
-char lightgun_cycles_data[26];
-char lightgun_scanlines_data[26];
+char mpx_data[52];
+char mpy_data[52];
+char paddle_sensitivity_data[52];
+char paddle_adjust_data[52];
+char lightgun_cycles_data[52];
+char lightgun_scanlines_data[52];
 
 void set_mpx_string() {
 	if (UserMouseBaseX == 0xff) sprintf(mpx_data, "Auto");

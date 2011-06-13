@@ -461,6 +461,9 @@ void H_RESMP0(void){
 	TIA_RESMP0 = DataBus & 0x02;
 	if(TIA_RESMP0){
 		TIA_ENAM0 = 0;	// locking missile to player disables it
+		// reset missile position to center of player position
+		if(TIA_P0_counter < 5) TIA_M0_counter = TIA_P0_counter - 5 + 159;
+		else TIA_M0_counter = TIA_P0_counter - 5;
 		Pointer_Index_M0 = (Pointer_Index_M0 & 0xbf);
 		TIA_M0_Line_Pointer = TIA_M0_Table[Pointer_Index_M0];
 	}
@@ -472,6 +475,9 @@ void H_RESMP1(void){
 	TIA_RESMP1 = DataBus & 0x02;
 	if(TIA_RESMP1){
 		TIA_ENAM1 = 0;	// locking missile to player disables it
+		// reset missile position to center of player position
+		if(TIA_P1_counter < 5) TIA_M1_counter = TIA_P1_counter - 5 + 159;
+		else TIA_M1_counter = TIA_P1_counter - 5;
 		Pointer_Index_M1 = (Pointer_Index_M1 & 0xbf);
 		TIA_M1_Line_Pointer = TIA_M1_Table[Pointer_Index_M1];
 	}

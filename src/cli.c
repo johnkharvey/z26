@@ -305,7 +305,9 @@ void cli_InterpretParm(char *p)
 				}
 				break;
 
-	case 'g':	UserBankswitch = parm & 0x0f;	// bankswitch scheme
+	case 'g':	UserBankswitch = parm;
+				if (UserBankswitch > 23) UserBankswitch = 0xff;	// bankswitch scheme
+				else if (UserBankswitch < 0) UserBankswitch = 0xff;
 				BSType = UserBankswitch;
 				break;
 			

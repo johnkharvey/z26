@@ -4,7 +4,7 @@
 
 /* 20040530 bkw */
 
-#define GUI_WIDTH 32
+#define GUI_WIDTH 38
 #define FONT_WIDTH 6
 #define FONT_HEIGHT 9
 

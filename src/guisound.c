@@ -7,9 +7,9 @@
 int sound_current = 0;	/* currently selected GUI option */
 int exit_sound = 0;	/* exit video menu */
 
-char quiet_data[26];
-char dsp_data[26];
-char sq_data[26];
+char quiet_data[52];
+char dsp_data[52];
+char sq_data[52];
 
 void set_dsp_string() {
 	if (dsp == 0) sprintf(dsp_data, "Off");

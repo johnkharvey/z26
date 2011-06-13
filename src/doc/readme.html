@@ -19,8 +19,8 @@
  style="background-color: rgb(31, 95, 159); color: rgb(104, 180, 255);"
  vlink="#8080ff" link="#9dceff">
 <div id="Section1" dir="ltr">
-<h2>z26 -- An Atari 2600 Emulator (3.01)</h2>
-<p>June 2, 2011</p>
+<h2>z26 -- An Atari 2600 Emulator (3.02)</h2>
+<p>June 13, 2011</p>
 <p>http://www.whimsey.com/z26</p>
 <h4>Copyright/License</h4>
 <p>z26 is Copyright ©1997-2011 by John Saeger and contributors. z26 is
@@ -29,16 +29,29 @@ conditions of the GNU General Public License Version 2 (GPL). z26 comes
 with no warranty. Please see the included COPYING.TXT for details.
 Source code for the current release is available at the home page
 listed above.</p>
-<h4>What's new in version 3.01?</h4>
+<h4>What's new in version 3.02?</h4>
 <ul>
-  <li>Fixed bug in collision detection allowing breakout to play.<br>
+  <li>Works on a Snow-Leopard (Intel) Macintosh (binary supplied).</li>
+  <li>All 23 bankswitch schemes are accessable from the GUI.&nbsp; <br>
+  </li>
+  <li>The Atari 32K bankswitch scheme without a SARA chip is now the
+default for 32K carts.</li>
+  <li>These changes allow Medieval Mayhem to play.<br>
+  </li>
+  <li>Fixed bug in missile positioning.&nbsp; Combat, Yars' Revenge and
+a number of other games now work.</li>
+  <li>FIxed bug with alt-Tab by including a version of SDL.dll from
+Enigma.</li>
+  <li>Thanks to Team Enigma!
+(http://www.nongnu.org/enigma/download.html#stable<br>
   </li>
   <li>Thanks to Eckhard Stolberg for help with this version! </li>
 </ul>
 <h4><span style="font-style: italic;"><span style="font-weight: bold;"></span></span>Software
 Requirements</h4>
 <p>This version of z26 is known to work on Windows XP, Windows 7,
-and Linux.&nbsp; As this version of z26 is written in C, it is possible
+Linux, and Intel Macintoshes.&nbsp; As this version of z26 is written
+in C, it is possible
 to compile and run this
 version of z26 on 64-bit Linux systems.<br>
 </p>
@@ -87,6 +100,49 @@ arrows, the enter key or the space bar. Press &lt;escape&gt; to return
 to the Main Menu.</p>
 <pre>Game Options – e5e657da              Recently run game CRC shown in hex.<br><br>         P0 Difficulty...: Easy      Player 0 difficulty -- easy or hard.<br>         P1 Difficulty...: Easy      Player 1 difficulty -- easy or hard.<br>         Console B/W.....: Color     Console B/W switch  -- color or B/W.<br><br>         Bankswitch......: Auto      Atari, Tigervision, Spectravideo, etc.<br>         Palette.........: Auto      NTSC, PAL or SECAM.<br>         Left Controller.: Auto      Joystick, paddle, keypad, etc.<br>         Right Controller: Auto      Joystick, paddle, keypad, etc.<br>         Swap Ports......: Auto      Swap left and right controllers.<br>         Allow All 4 Dir.: Auto      All 4 joystick directions simultaneously.<br><br>         Exit                        Return to Main Menu.</pre>
 <h4> </h4>
+<p>Navigate the menu with the up/down arrows and select with left/right
+arrows, the enter key or the space bar. Press &lt;escape&gt; </p>
+<p>The following bankswitch schemes are supported:<br>
+</p>
+<p>0 -- 2K+4K Atari [NoBS]<br>
+1 -- CommaVid [CV]<br>
+2 -- 8K Superchip [F8SC]<br>
+3 -- 8K Parker Bros. [E0]<br>
+4 -- 8K Tigervision [3F]<br>
+5 -- 8K Activision [FE] (flat)<br>
+6 -- 16K Superchip [F6SC]<br>
+7 -- 16K M-Network [E7]<br>
+8 -- 32K Superchip [F4SC]<br>
+9 -- 8K Atari swapped [F8]<br>
+10 -- Compumate [CM]<br>
+11 -- 32K - 512K Tigervision+ [3F+]<br>
+12 -- 8K United Appliance [UA]<br>
+13 -- 64K Homestar Runner / Paul Slocum [EF]<br>
+14 -- 512K Krokodile Cart / Andrew Davie (large 3F + 32K ram) [3E]<br>
+15 -- Starpath [AR]<br>
+16 -- 16K Atari [F6]<br>
+17 -- 32K Atari [F4]<br>
+18 -- 64K Megaboy [MB]<br>
+19 -- 12K CBS [FA]<br>
+20 -- 8K Atari [F8]<br>
+21 -- 8K + DPC Pitfall2 [P2]<br>
+22 -- 4A50 / supercat / John Payson<br>
+23 -- 0840 EconoBanking<br>
+</p>
+<p>The following controllers are supported:<br>
+</p>
+<p>Joystick<br>
+Paddle<br>
+Keypad<br>
+Driving<br>
+LightGun<br>
+Compumate<br>
+KidVid<br>
+MindLink<br>
+ST Mouse<br>
+TrakBall<br>
+AmigaMouse<br>
+</p>
 <h4>Video Menu
 </h4>
 <p>By default z26 runs full-screen at the resolution of your
@@ -287,8 +343,8 @@ can be turned off as well.</p>
 <h4>Offbeat Cartridge Formats (Bank Switching)</h4>
 <p>z26 currently supports the following schemes:</p>
 <ul>
-  <li> Standard 8K bank switching. </li>
-  <li> Standard 16K bank switching. </li>
+  <li> Atari 8K. </li>
+  <li> Atari 16K. </li>
   <li> Atari Super-Chip. </li>
   <li> CBS Ram Plus. </li>
   <li> Parker Brothers 8K. </li>
@@ -302,7 +358,11 @@ can be turned off as well.</p>
   <li> Compumate. </li>
   <li> Extended TigerVision (to 512K). </li>
   <li> UA Ltd. 8K. </li>
-  <li> 'EF' 64K (used by Paul Slocum's Homestar Runner RPG). </li>
+  <li> 'EF' 64K (used by Paul Slocum's Homestar Runner RPG).</li>
+  <li>Krokodile Cart.</li>
+  <li>4A50 / supercat.</li>
+  <li>Econobanking.<br>
+  </li>
 </ul>
 <p>Support is usually automatic, however one can override the default
 bankswitch scheme in the Game Options menu.</p>
@@ -361,7 +421,7 @@ are very demanding.<br>
 </p>
 <h4>Known Issues</h4>
 <ul>
-  <li>Some games have emulation errors (Yars and others).<br>
+  <li>Some games have emulation errors.<br>
   </li>
   <li>Multi-sprite trick doesn't work.</li>
   <li>Cosmic Ark starfield doesn't work.</li>
@@ -369,8 +429,6 @@ are very demanding.<br>
   </li>
   <li>Not all bankswitching schemes are implemented.</li>
   <li>The GUI can be slightly jumpy.</li>
-  <li>Screen capture captures the texture, not the screen.<br>
-  </li>
 </ul>
 <h4>Warranty</h4>
 Because the program is licensed free of charge, there is no warranty
@@ -399,10 +457,18 @@ other party has been advised of the possibility of such damages.<br>
 <p>Documentation was made with SeaMonkey.<br>
 </p>
 <h4>Credits</h4>
+The following people have made valuable suggestions for new features
+and/or have helped to identify bugs in z26 3.0:<br>
+<br>
+maiki, Thomas Jentzsch, mwalden, Keatah, flammingcowz, SpiceWare,
+Silvio Mogno.<br>
+<br>
 <p>Eckhard Stolberg has made contributions to z26 that are too numerous
 to count. He has been involved since the very early days and the high
 quality emulation that z26 provides would certainly not have been
-possible without his participation.</p>
+possible without his participation.&nbsp; The TIA and CPU engines in
+the 3.0 version of z26 was written by Eckhard.<br>
+</p>
 <p>Brian Watson made the 32-bit version of z26 possible and laid the
 foundation for the GUI.</p>
 <pre>     Paul Robson -- Wrote original A26.<br>       Ron Fries -- Original TIA sound emulation.<br>Ettore Perazzoli -- 6502 undocumented instructions.<br>   Andreas Boose -- Also 6502 undocumented instructions.<br>Wolfgang Lorentz -- 6502 diagnostics.<br>     Bob Colbert -- Object wrapping.<br>    Piero Cavina -- Multiple missiles.<br>     Erik Mooney -- HMOVE blanks.<br>    Kevin Horton -- Bankswitching and Quadrun voice.<br>       Dan Boris -- Atari 2600 schematics.<br>  Matt Pritchard -- Font design tools.<br>      Matt Conte -- Quadrun voice.<br>     John Dullea -- Fast elegant graphics and Pitfall II.<br>   Bradford Mott -- Object positioning (weird HMOVE).<br>   Chris Wilkson -- Pitfall II.<br>     Lee Krueger -- Kid Vid support, rare carts, and documentation.<br> Thomas Jentzsch -- Trace mode, Kid Vid support and fast video routines.<br> Henning Mueller -- CompuMate.<br> Christian Bogey -- SECAM colors.<br>   Oliver Achten -- PAL colors.<br>    Andrew Davie -- Extended Tigervision bankswitch demos.<br>     Paul Slocum -- Provided EF bankswitch demo.<br>       Billy Eno -- Provided interleaved display demo.<br>    Adam Wozniac -- Helped with TIA sound polynomials.<br>   Matt Matthews -- Linux consulting.<br>    Brian Watson -- Helped with Linux port, ASM-code, GUI framework.<br> James Wilkinson -- Helped with BeOS port.<br><br>Eckhard Stolberg -- Contributions too numerous to mention.</pre>
@@ -432,7 +498,8 @@ Justin Rodriguez, Francesco Azzurri, Greg Bendokus, Bruce Clarke, John
 Dullea (PCAE), Tim Boston, Chris Ainsley, Ricardo Henrique Tabone, and
 Seth Kintigh.</p>
 <p>And thanks to Len Shikowitz for *complaining* well beyond the call
-of duty. Definitely "the most obstinate, yet sincere, tester." :)</p>
+of duty. Definitely "the most obstinate, yet sincere, tester." :)<br>
+</p>
 <p>At some point I stopped keeping the list of everyone who have sent
 me suggestions up to date. I apologize for that. But thanks to the
 folks who have continued to send in suggestions, even though they

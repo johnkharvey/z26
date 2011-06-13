@@ -5,16 +5,16 @@
 int video_current = 0;	/* currently selected GUI option */
 int exit_video = 0;		/* exit video menu */
 
-char startline_data[26];
-char screen_data[26];
-char line_data[26];
-char narrow_data[26];
-char Tall_data[26];
-char vid_mode_data[26];
-char Depth_data[26];
-char colourloss_data[26];
-char eight_bit_data[26];
-char width_data[26];
+char startline_data[52];
+char screen_data[52];
+char line_data[52];
+char narrow_data[52];
+char Tall_data[52];
+char vid_mode_data[52];
+char Depth_data[52];
+char colourloss_data[52];
+char eight_bit_data[52];
+char width_data[52];
 
 
 void set_screen_string() {
