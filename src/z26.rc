@@ -1,0 +1,3 @@
+#define IDI_Z26
+
+id IDI_Z26 ICON "z26.ico"

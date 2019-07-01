@@ -4,105 +4,112 @@
 
 /* control key definitions */
 
-#include <SDL_keyboard.h>
+#define KeyEsc 		SDLK_ESCAPE&0x1ff	/* ESC (Quit) */
 
-#define KeyEsc 		SDLK_ESCAPE	/* ESC (Quit) */
+#define KeyF1 		SDLK_F1&0x1ff		/* F1  (Reset) */
+#define KeyF2 		SDLK_F2&0x1ff		/* F2  (Select) */
+#define KeyF3 		SDLK_F3&0x1ff		/* F3  (B/W) */
+#define KeyF4 		SDLK_F4&0x1ff		/* F4  (Color) */
+#define KeyF5 		SDLK_F5&0x1ff		/* F5  (P0 easy) */
+#define KeyF6 		SDLK_F6&0x1ff		/* F6  (P0 hard) */
+#define KeyF7 		SDLK_F7&0x1ff		/* F7  (P1 easy) */
+#define KeyF8 		SDLK_F8&0x1ff		/* F8  (P1 hard) */
+#define KeyF9 		SDLK_F9&0x1ff		/* F9  (unassigned) */
+#define KeyF10 		SDLK_F10&0x1ff		/* F10 (unassigned) */
+#define KeyF11 		SDLK_F11&0x1ff		/* F11 (trace on) */
+#define KeyF12 		SDLK_F12&0x1ff		/* F12 (trace off) */
 
-#define KeyF1 		SDLK_F1		/* F1  (Reset) */
-#define KeyF2 		SDLK_F2		/* F2  (Select) */
-#define KeyF3 		SDLK_F3		/* F3  (B/W) */
-#define KeyF4 		SDLK_F4		/* F4  (Color) */
-#define KeyF5 		SDLK_F5		/* F5  (P0 easy) */
-#define KeyF6 		SDLK_F6		/* F6  (P0 hard) */
-#define KeyF7 		SDLK_F7		/* F7  (P1 easy) */
-#define KeyF8 		SDLK_F8		/* F8  (P1 hard) */
-#define KeyF9 		SDLK_F9		/* F9  (unassigned) */
-#define KeyF10 		SDLK_F10	/* F10 (unassigned) */
-#define KeyF11 		SDLK_F11	/* F11 (trace on) */
-#define KeyF12 		SDLK_F12	/* F12 (trace off) */
+#define Key0		SDLK_0&0x1ff
+#define Key1		SDLK_1&0x1ff
+#define Key2		SDLK_2&0x1ff
+#define Key3		SDLK_3&0x1ff
+#define Key4		SDLK_4&0x1ff
+#define Key5		SDLK_5&0x1ff
+#define Key6		SDLK_6&0x1ff
+#define Key7		SDLK_7&0x1ff
+#define Key8		SDLK_8&0x1ff
+#define Key9		SDLK_9&0x1ff
 
-#define Key0		SDLK_0
-#define Key1		SDLK_1
-#define Key2		SDLK_2
-#define Key3		SDLK_3
-#define Key4		SDLK_4
-#define Key5		SDLK_5
-#define Key6		SDLK_6
-#define Key7		SDLK_7
-#define Key8		SDLK_8
-#define Key9		SDLK_9
+#define KeyQ		SDLK_q&0x1ff
+#define KeyW		SDLK_w&0x1ff
+#define KeyA		SDLK_a&0x1ff
+#define KeyZ		SDLK_z&0x1ff
+#define KeyX		SDLK_x&0x1ff
+#define KeyC		SDLK_c&0x1ff
+#define KeyU		SDLK_u&0x1ff
+#define KeyI		SDLK_i&0x1ff
+#define KeyO		SDLK_o&0x1ff
+#define KeyJ		SDLK_j&0x1ff
+#define KeyK		SDLK_k&0x1ff
+#define KeyL		SDLK_l&0x1ff
+#define KeyM		SDLK_m&0x1ff
+#define KeyComma 	SDLK_COMMA&0x1ff	/* , */
+#define KeyDot 		SDLK_PERIOD&0x1ff	/* . */
 
-#define KeyQ		SDLK_q
-#define KeyW		SDLK_w
-#define KeyA		SDLK_a
-#define KeyZ		SDLK_z
-#define KeyX		SDLK_x
-#define KeyC		SDLK_c
-#define KeyU		SDLK_u
-#define KeyI		SDLK_i
-#define KeyO		SDLK_o
-#define KeyJ		SDLK_j
-#define KeyK		SDLK_k
-#define KeyL		SDLK_l
-#define KeyM		SDLK_m
-#define KeyComma 	SDLK_COMMA	/* , */
-#define KeyDot 		SDLK_PERIOD	/* . */
+#define KeyG		SDLK_g&0x1ff
+#define KeyH		SDLK_h&0x1ff
+#define KeyP		SDLK_p&0x1ff
+#define KeyR		SDLK_r&0x1ff
+#define KeyT		SDLK_t&0x1ff
+#define KeyY		SDLK_y&0x1ff
+#define KeyColon 	SDLK_COLON&0x1ff	/* : */
 
-#define KeyG		SDLK_g
-#define KeyH		SDLK_h
-#define KeyP		SDLK_p
-#define KeyR		SDLK_r
-#define KeyT		SDLK_t
-#define KeyY		SDLK_y
-#define KeyColon 	SDLK_COLON	/* : */
-
-#define KeyLeft 	SDLK_LEFT	/* Left arrow */
-#define KeyRight 	SDLK_RIGHT	/* Right arrow */
-#define KeyUp 		SDLK_UP		/* Up arrow */
-#define KeyDown 	SDLK_DOWN	/* Down arrow */
-
-#define KeyLCtrl 	SDLK_LCTRL	/* Ctrl */
-#define KeyRCtrl 	SDLK_RCTRL	/* Ctrl */
+#define KeyLCtrl 	SDLK_LCTRL&0x1ff	/* Ctrl */
+#define KeyRCtrl 	SDLK_RCTRL&0x1ff	/* Ctrl */
 
 /* Some Linux distros configure the Alt keys as Meta keys, some as
 	Alt keys, and some as one Alt, one Meta. Also, in the future, we
 	want to be portable to other flavors of UNIX which only have
 	Meta keys (Alt keys are pretty PC-specific). */
-	
-#define KeyLMeta 	SDLK_LMETA
-#define KeyRMeta 	SDLK_RMETA
-#define KeyLAlt 	SDLK_LALT
-#define KeyRAlt 	SDLK_RALT
+
+#define KeyLMeta 	SDLK_LGUI&0x1ff
+#define KeyRMeta 	SDLK_RGUI&0x1ff
+
+#define KeyLAlt 	SDLK_LALT&0x1ff
+#define KeyRAlt 	SDLK_RALT&0x1ff
 /* kludges to allow testing for both CTRL (or ALT) keys at the same time */
-#define KeyCtrl		SDLK_F14	/* gets overwritten with LCtrl OR RCtrl */
-#define	KeyAlt		SDLK_F15	/* gets overwritten with LAlt OR RAlt OR LMeta OR Rmeta */
+#define KeyCtrl		SDLK_F14&0x1ff		/* gets overwritten with LCtrl OR RCtrl */
+#define	KeyAlt		SDLK_F15&0x1ff		/* gets overwritten with LAlt OR RAlt OR LMeta OR Rmeta */
 
 
-#define KeyLShift 	SDLK_LSHIFT
-#define KeyRShift 	SDLK_RSHIFT
-#define KeySlash 	SDLK_SLASH	/* / */
-#define KeyBackSlash 	SDLK_BACKSLASH	/* \ */
+#define KeyLShift 	SDLK_LSHIFT&0x1ff
+#define KeyRShift 	SDLK_RSHIFT&0x1ff
+#define KeySlash 	SDLK_SLASH&0x1ff	/* / */
+#define KeyBackSlash SDLK_BACKSLASH&0x1ff /* \ */
 
-#define KeyS 		SDLK_s		/* S (P2 left) */
-#define KeyF		SDLK_f		/* F (P2 right) */
-#define KeyE		SDLK_e		/* E (P2 up) */
-#define KeyD		SDLK_d		/* D (P2 down) */
-#define KeyN		SDLK_n		/* N (P2 fire) */
-#define KeyB		SDLK_b		/* B (P2 booster grip - trigger) */
-#define KeyV		SDLK_v		/* V (P2 booster grip - booster) */
+#define KeyS 		SDLK_s&0x1ff		/* S (P2 left) */
+#define KeyF		SDLK_f&0x1ff		/* F (P2 right) */
+#define KeyE		SDLK_e&0x1ff		/* E (P2 up) */
+#define KeyD		SDLK_d&0x1ff		/* D (P2 down) */
+#define KeyN		SDLK_n&0x1ff		/* N (P2 fire) */
+#define KeyB		SDLK_b&0x1ff		/* B (P2 booster grip - trigger) */
+#define KeyV		SDLK_v&0x1ff		/* V (P2 booster grip - booster) */
 
-#define KeyBackSpace 	SDLK_BACKSPACE	/* Back Space (pause game) */
-#define KeyEnter 	SDLK_RETURN	/* Enter (resume game) */
+#define KeyBackSpace SDLK_BACKSPACE&0x1ff /* Back Space (pause game) */
+#define KeyEnter 	SDLK_RETURN&0x1ff	/* Enter (resume game) */
 
-#define KeyEquals 	SDLK_EQUALS	/* = (do a screen dump) */
-#define KeyMinus 	SDLK_MINUS	/* switch between palettes */
+#define KeyEquals 	SDLK_EQUALS&0x1ff	/* = (do a screen dump) */
+#define KeyMinus 	SDLK_MINUS&0x1ff	/* switch between palettes */
 
-#define KeyPgUp 	SDLK_PAGEUP	/* scroll up */
-#define KeyPgDn 	SDLK_PAGEDOWN	/* scroll down */
-#define KeyHome 	SDLK_HOME	/* back to default screen position */
-#define KeyTab 		SDLK_TAB	/* switch mouse control in paddle mode */
+#define KeyLeft 	SDLK_LEFT&0x1ff		/* Left arrow */
+#define KeyRight 	SDLK_RIGHT&0x1ff	/* Right arrow */
+#define KeyUp 		SDLK_UP&0x1ff		/* Up arrow */
+#define KeyDown 	SDLK_DOWN&0x1ff		/* Down arrow */
 
-#define KeyBackTick SDLK_BACKQUOTE
+#define KeyPgUp 	SDLK_PAGEUP&0x1ff	/* scroll up */
+#define KeyPgDn 	SDLK_PAGEDOWN&0x1ff	/* scroll down */
+#define KeyHome 	SDLK_HOME&0x1ff		/* back to default screen position */
+#define KeyTab 		SDLK_TAB&0x1ff		/* switch mouse control in paddle mode */
+
+#define KPLeft		SDLK_KP_4&0x1ff
+#define KPRight		SDLK_KP_6&0x1ff
+#define KPUp 		SDLK_KP_8&0x1ff
+#define KPDown		SDLK_KP_2&0x1ff
+#define KPPgUp 		SDLK_KP_9&0x1ff
+#define KPPgDn		SDLK_KP_3&0x1ff
+#define KPHome 		SDLK_KP_7&0x1ff
+
+#define KeyBackTick SDLK_BACKQUOTE&0x1ff
 
 /* define control keys */
 
@@ -266,14 +273,6 @@ void DoJoystick_L()
 		if (KeyTable[P1Up]) IOPortA = IOPortA & 0xef;
 		if (KeyTable[P1Fire]) InputLatch[0] = 0x00;
 
-/* for OLPC XO-1
-
-		if (KeyTable[SDLK_KP6]) IOPortA = IOPortA & 0x7f;
-		if (KeyTable[SDLK_KP4]) IOPortA = IOPortA & 0xbf;
-		if (KeyTable[SDLK_KP2]) IOPortA = IOPortA & 0xdf;
-		if (KeyTable[SDLK_KP8]) IOPortA = IOPortA & 0xef;
-		if (KeyTable[SDLK_KP3]) InputLatch[0] = 0x00;
-*/		
 	}
 
 	if (JoystickEnabled)
@@ -281,23 +280,17 @@ void DoJoystick_L()
 		if (JoystickAxis[0][0] > 16384-4096)
 		{
 			IOPortA = IOPortA & 0x7f;
-			/* Stelladaptor sends "half moved right" for L+R pushed together */
-			if ((Stelladaptor[0]) && (JoystickAxis[0][0] < 16384+4096))
-				IOPortA = IOPortA & 0xbf;
 		}
 		if (JoystickAxis[0][0] < -16384) IOPortA = IOPortA & 0xbf;
 		if (JoystickAxis[0][1] > 16384-4096)
 		{
 			IOPortA = IOPortA & 0xdf;
-			/* Stelladaptor sends "half moved down" for U+D pushed together */
-			if ((Stelladaptor[0]) && (JoystickAxis[0][1] < 16384+4096))
-				IOPortA = IOPortA & 0xef;
 		}
 		if (JoystickAxis[0][1] < -16384) IOPortA = IOPortA & 0xef;
 		if (JoystickButton[0][0]) InputLatch[0] = 0x00; 
 	}
 
-	if ((!AllowAll4) && (!Stelladaptor[0]))
+	if (!AllowAll4)
 	{
 		if ((IOPortA & 0xc0) == 0) IOPortA = IOPortA | 0xc0;
 		if ((IOPortA & 0x30) == 0) IOPortA = IOPortA | 0x30;
@@ -322,21 +315,17 @@ void DoJoystick_R()
 		if (JoystickAxis[1][0] > 16384-4096)
 		{
 			IOPortA = IOPortA & 0xf7;
-			if ((Stelladaptor[1]) && (JoystickAxis[1][0] < 16384+4096))
-				IOPortA = IOPortA & 0xfb;
 		}
 		if (JoystickAxis[1][0] < -16384) IOPortA = IOPortA & 0xfb;
 		if (JoystickAxis[1][1] > 16384-4096)
 		{
 			IOPortA = IOPortA & 0xfd;
-			if ((Stelladaptor[1]) && (JoystickAxis[1][1] < 16384+4096))
-			IOPortA = IOPortA & 0xfe;
 		}
 		if (JoystickAxis[1][1] < -16384) IOPortA = IOPortA & 0xfe;
 		if (JoystickButton[1][0]) InputLatch[1] = 0x00; 
 	}
 
-	if ((!AllowAll4) && (!Stelladaptor[1]))	/* filter out "impossible" joystick motion */
+	if (!AllowAll4)	/* filter out "impossible" joystick motion */
 	{
 		if ((IOPortA & 0x0c) == 0) IOPortA = IOPortA | 0x0c;	/* left + right ? */
 		if ((IOPortA & 0x03) == 0) IOPortA = IOPortA | 0x03;	/* up + down ? */
@@ -827,23 +816,10 @@ void DoDriving_L()
 		if (JoystickAxis[0][0] > 16384) count++;
 		if (JoystickAxis[0][0] < -16384) count--;
 		if (JoystickButton[0][0]) InputLatch[0] = 0x00;
-
-
-		if (Stelladaptor[0])
-		{
-			IOPortA = IOPortA | 0xf0;
-			if (JoystickAxis[0][1] > 16384-4096)
-			{
-				IOPortA = IOPortA & 0xdf;
-				if (JoystickAxis[0][1] < 16384+4096)
-					IOPortA = IOPortA &0xef;
-			}
-		}
 	}
 
 	count = count & 0x0f;
-	if (!(Stelladaptor[0]))
-		IOPortA = (IOPortA & 0x0f) | (DCTable[count >> 2]) << 4;
+	IOPortA = (IOPortA & 0x0f) | (DCTable[count >> 2]) << 4;
 
 }
 
@@ -875,21 +851,9 @@ void DoDriving_R()
 		if (JoystickAxis[1][0] > 16384) count++;
 		if (JoystickAxis[1][0] < -16384) count--;
 		if (JoystickButton[1][0]) InputLatch[1] = 0x00;
-
-		if (Stelladaptor[1])
-		{
-			IOPortA = IOPortA | 0x0f;
-			if (JoystickAxis[1][1] > 16384-4096)
-			{
-				IOPortA = IOPortA & 0xfd;
-				if (JoystickAxis[1][1] < 16384+4096)
-					IOPortA = IOPortA &0xfe;
-			}
-		}
 	}
 	count = count & 0x0f;
-	if (!(Stelladaptor[1]))
-		IOPortA = (IOPortA & 0xf0) | (DCTable[count >> 2]);
+	IOPortA = (IOPortA & 0xf0) | (DCTable[count >> 2]);
 }
 
 db MLG_ShotCycle = 0;	/* cycle and line of hit - gets */
@@ -1524,7 +1488,7 @@ void Controls()
 {
 /* allow picture shifting only every couple of frames */
 	static int CtrlSkipCount = 0;
-
+	
 	if (GamePaused && !GameReallyPaused)
 	{
 		if (StartInGUI)
@@ -1542,14 +1506,7 @@ void Controls()
 	KeyTable[KeyAlt] = KeyTable[KeyLAlt] | KeyTable[KeyRAlt] | KeyTable[KeyLMeta] | KeyTable[KeyRMeta];
 	KeyTable[KeyCtrl] = KeyTable[KeyLCtrl] | KeyTable[KeyRCtrl];
 
-/* handle emulator functions */
-
-//	if (KeyTable[KeyBackTick]) {	/* backtick calls the GUI */
-//		gui();
-//		KeyTable[KeyBackTick] = 0;
-//	}
-
-	if (KeyTable[KeyPgUp])		/* shift picture up */
+	if (KeyTable[KeyPgUp] || KeyTable[KPPgUp])		/* shift picture up */
 	{
 		if ((CFirst) && (!CtrlSkipCount))
 		/* CFirst = 0 -> no shifting allowed */
@@ -1564,7 +1521,7 @@ void Controls()
 		if (CtrlSkipCount) CtrlSkipCount--;
 	}
 
-	if (KeyTable[KeyPgDn])	/* shift picture down */
+	if (KeyTable[KeyPgDn] || KeyTable[KPPgDn])	/* shift picture down */
 	{
 		if ((CFirst) && (!CtrlSkipCount))
 		{
@@ -1578,30 +1535,16 @@ void Controls()
 		if (CtrlSkipCount) CtrlSkipCount--;
 	}
 
-	if ((KeyTable[KeyHome]) && (OldCFirst))
+	if ((KeyTable[KeyHome] || KeyTable[KPHome]) && (OldCFirst))
 	/* reset to initial position, if there is one (OldCFirst != 0) */
 	{
 		CFirst = OldCFirst;
 		DefaultCFirst = 0xffff;	/*turn on automatic positioning */
 	}	
-	
-/* exit emulator, if ESC or backslash are pressed */
-//	ExitEmulator = (0 | KeyTable[KeyEsc] | KeyTable[KeyBackSlash]);
 
 	if (KeyTable[KeyEsc])
 	{
 		KeyTable[KeyEsc] = 0;
-		ExitEmulator = 128;
-		GamePaused = !LaunchedFromCommandline;
-		GameReallyPaused = 0;
-		ROMLoaded = 0;
-	}
-	
-// for OLPC XO-1
-
-	if (KeyTable[SDLK_KP9])
-	{
-		KeyTable[SDLK_KP9] = 0;
 		ExitEmulator = 128;
 		GamePaused = !LaunchedFromCommandline;
 		GameReallyPaused = 0;
@@ -1630,11 +1573,11 @@ void Controls()
 		GameReallyPaused = 0;
 		srv_reset_timing();		
 	}
-//	if ((KeyTable[KeyEnter])&&(KeyTable[KeyAlt])) 
-//	{
-//		FullScreen = !FullScreen;			/* toggle fullscreen */
-//		srv_SetVideoMode();		
-//	}
+	if ((KeyTable[KeyEnter])&&(KeyTable[KeyAlt])) 
+	{
+		FullScreen = !FullScreen;			/* toggle fullscreen */
+		srv_SetVideoMode();		
+	}
 	
 	if (KeyTable[KeyEquals])
 	{
@@ -1642,97 +1585,8 @@ void Controls()
 		SaveScreenshot();		/* do screenshot when = is pressed */
 	}
 
-	if (KeyTable[KeyAlt])	/* change video mode only when ALT is pressed */
+	if (KeyTable[KeyAlt])	/* alter display only when ALT is pressed */
 	{
-	
-// These have been disabled because changing video modes during a game doesn't currently work
-// One less thing to worry about if you ask me.
-
-
-		if (KeyTable[Key0])
-		{
-			VideoMode = 0;
-			srv_SetVideoMode();	/* set new video mode */
-			KeyTable[Key0] = 0;	/* make sure this happens only once ... */
-			KeyTable[KeyAlt] = 0;	/* ... by marking key as unpressed */
-			set_status("Sharp");
-		}
-		if (KeyTable[Key1])
-		{
-			VideoMode = 1;
-			srv_SetVideoMode();
-			KeyTable[Key1] = 0;
-			KeyTable[KeyAlt] = 0;
-			set_status("Blurry");
-		}
-		if (KeyTable[Key2])
-		{
-			VideoMode = 2;
-			srv_SetVideoMode();
-			KeyTable[Key2] = 0;
-			KeyTable[KeyAlt] = 0;
-			set_status("HD Sharp");
-		}
-		if (KeyTable[Key3])
-		{
-			VideoMode = 3;
-			srv_SetVideoMode();
-			KeyTable[Key3] = 0;
-			KeyTable[KeyAlt] = 0;
-			set_status("HD Blurry");
-		}
-		if (KeyTable[Key4])
-		{
-			VideoMode = 4;
-			srv_SetVideoMode();
-			KeyTable[Key4] = 0;
-			KeyTable[KeyAlt] = 0;
-			set_status("Fast Sharp");
-		}
-		if (KeyTable[Key5])
-		{
-			VideoMode = 5;
-			srv_SetVideoMode();
-			KeyTable[Key5] = 0;
-			KeyTable[KeyAlt] = 0;
-			set_status("Fast Blurry");
-		}
-//		if (KeyTable[Key6])
-//		{
-//			VideoMode = 6;
-//			srv_SetVideoMode();
-//			KeyTable[Key6] = 0;
-//			KeyTable[KeyAlt] = 0;
-//			set_status("1280x800");
-//		}
-//
-//		if (KeyTable[Key7])
-//		{
-//			VideoMode = 7;
-//			srv_SetVideoMode();
-//			KeyTable[Key7] = 0;
-//			KeyTable[KeyAlt] = 0;
-//			set_status("1200x900");
-//		}
-//
-//		if (KeyTable[Key8])
-//		{
-//			VideoMode = 8;
-//			srv_SetVideoMode();
-//			KeyTable[Key8] = 0;
-//			KeyTable[KeyAlt] = 0;
-//			set_status("1280x1024");
-//		}
-//
-		if (KeyTable[KeyS])
-		{
-			DoScanline = !DoScanline;
-			srv_SetVideoMode();
-			KeyTable[KeyE] = 0;
-			KeyTable[KeyAlt] = 0;
-			set_status("Toggle Scanline Mode");
-		}
-
 		if (KeyTable[KeyMinus])	/* cycle through palettes - NTSC, PAL, SECAM */
 		{
 			PaletteNumber++;
@@ -1749,102 +1603,12 @@ void Controls()
 			KeyTable[KeyMinus] = 0;
 		}
 
-
-//		/* ALT + bottom row (ZXCVBNM) disables/enables graphics */
-//		/* These keys' normal functions shouldn't happen when Alt pressed */
-//		if (KeyTable[KeyZ])
-//		{
-//			p0_mask = ~p0_mask;
-//			KeyTable[KeyZ] = 0;
-//			KeyTable[KeyAlt] = 0;
-//			set_status("toggle P0 display");
-//		}
-//		if (KeyTable[KeyX])
-//		{
-//			p1_mask = ~p1_mask;
-//			KeyTable[KeyX] = 0;
-//			KeyTable[KeyAlt] = 0;
-//			set_status("toggle P1 display");
-//		}
-//		if (KeyTable[KeyC])
-//		{
-//			m0_mask ^= 0x02;
-//			KeyTable[KeyC] = 0;
-//			KeyTable[KeyAlt] = 0;
-//			set_status("toggle M0 display");
-//		}
-//		if (KeyTable[KeyV])
-//		{
-//			m1_mask ^= 0x02;
-//			KeyTable[KeyV] = 0;
-//			KeyTable[KeyAlt] = 0;
-//			set_status("toggle M1 display");
-//		}
-//		if (KeyTable[KeyB])
-//		{
-//			bl_mask ^= 0x02;
-//			KeyTable[KeyB] = 0;
-//			KeyTable[KeyAlt] = 0;
-//			set_status("toggle BL display");
-//		}
-//		if (KeyTable[KeyN])
-//		{
-//			pf_mask ^= 0xff;
-//			KeyTable[KeyN] = 0;
-//			KeyTable[KeyAlt] = 0;
-//			set_status("toggle PF display");
-//		}
-
 		if (KeyTable[KeyD])
 		{
 			ShowLineCount = !ShowLineCount;
 			KeyTable[KeyD] = 0;
 			KeyTable[KeyAlt] = 0;
-//			set_status("toggle display");
 		}
-
-		if (KeyTable[KeyM])
-		{
-		      if (MouseRude == 0)
-			{
-			      MouseRude = 1;
-		      		SDL_ShowCursor(SDL_DISABLE);
-		      		set_status("mouse rude");
-			}
-		      else
-			{
-			      MouseRude = 0;
-		     		SDL_ShowCursor(SDL_ENABLE);
-		     		set_status("mouse polite");
-			}
-			KeyTable[KeyM] = 0;
-			KeyTable[KeyAlt] = 0;
-		}
-
-
-		/*
-			// maybe in the future we make pf0/1/2 separate.
-		if (KeyTable[KeyM])
-		{
-			pf1_mask = ~pf1_mask;
-			KeyTable[KeyM] = 0;
-			KeyTable[KeyAlt] = 0;
-		}
-		if (KeyTable[KeyComma])
-		{
-			pf2_mask = ~pf2_mask;
-			KeyTable[KeyComma] = 0;
-			KeyTable[KeyAlt] = 0;
-		}
-		
-		if (KeyTable[KeySlash])
-		{
-			p0_mask = p1_mask = m0_mask = m1_mask = bl_mask = pf_mask = 0xff;
-			KeyTable[KeySlash] = 0;
-			KeyTable[KeyAlt] = 0;
-			set_status("all graphics enabled");
-		}
-		*/
 	}
 	
 	if (KeyTable[KeyTab])	/* cycle through mouse directions for paddle */
@@ -1871,20 +1635,6 @@ void Controls()
 		IOPortB = IOPortB & 0xfd;	/* bit 1 = SELECT */
 		set_status("SELECT");
 	}
-
-// for OLPC XO-1
-
-//	if (KeyTable[SDLK_KP7]) 
-//	{
-//		IOPortB = IOPortB & 0xfe;	/* bit 0 = RESET */
-//		set_status("RESET");
-//	}
-//	if (KeyTable[SDLK_KP1]) 
-//	{
-//		IOPortB = IOPortB & 0xfd;	/* bit 1 = SELECT */
-//		set_status("SELECT");
-//	}
-
 
 	if (KeyTable[P0Easy]) 
 	{
@@ -2041,7 +1791,7 @@ void Controls()
 }
 
 /**
-	z26 is Copyright 1997-2011 by John Saeger and contributors.  
+	z26 is Copyright 1997-2019 by John Saeger and contributors.  
 	z26 is released subject to the terms and conditions of the
 	GNU General Public License Version 2 (GPL).  
 	z26 comes with no warranty.

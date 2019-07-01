@@ -47,6 +47,7 @@ void ReadHardware(void){
 	else {
 		DataBus &= 0x3f;	/* TIA only sets the two topmost bits */
 		if((AddressBus & 0xf) < 0x8) {
+			dl = 0;
 			CatchUpPixels();
 //			DataBus |= ((TIACollide >> ((AddressBus & 0x7) << 1)) & 0x3) << 6;
 		}else if (((AddressBus & 0xf) < 0xe) && ((AddressBus & 0xf) > 0x7)) {

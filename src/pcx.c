@@ -3,7 +3,7 @@
 */
 
 void SaveScreenshot() {
-	char def_screenshot[20] = "z26_";
+	char def_screenshot[] = "z26_";
 	char PCXFileName[20];
 	struct stat st;
 	static int PCXFileCounter=0;

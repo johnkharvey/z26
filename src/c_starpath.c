@@ -90,21 +90,21 @@ void ShowJAMmessage(void){
 	srv_Cleanup();
 	sprintf(msg, "JAM instruction %02x @ %04x\n", reg_a, reg_pc);
 	srv_print(msg);
-	exit(0);
+	ExitEmulator = 1; // be nice if we could get gui() to launch instead
 }
 
 void StarpathLoadNotFound(void){
 	srv_Cleanup();
 	sprintf(msg, "Unable to find load %02x\n", SC_ControlByte);
 	srv_print(msg);
-	exit(0);
+	ExitEmulator = 1;
 }
 
 void StarpathRealJAM(void){
 	srv_Cleanup();
 	sprintf(msg, "Starpath call @ %04x\n", reg_pc);
 	srv_print(msg);
-	exit(0);
+	ExitEmulator = 1;
 }
 
 

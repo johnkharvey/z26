@@ -27,14 +27,11 @@ void about_gui() {
 	exit_about = 0;
 	while( !exit_about ) {
 		status_timer = 0;
-
-		sprintf(msg, "Version 3.02.01 -- http://www.whimsey.com/z26");
+		sprintf(msg, "4.00 -- http://www.whimsey.com/z26");
 		draw_gui(about_gui_items, about_current);
-
 		SDL_WaitEvent(&ev);	/* TODO: respond to SDL_QUIT events */
 		action = gui_navigation(&ev);
 		if(action == GUI_NO_ACTION) continue;
-
 		about_current = gui_handle_action(action, &exit_about, about_gui_items, about_current);
 	}
 }
@@ -42,7 +39,7 @@ void about_gui() {
 
 
 /**
-** z26 is Copyright 1997-2011 by John Saeger and contributors.  
+** z26 is Copyright 1997-2019 by John Saeger and contributors.  
 ** z26 is released subject to the terms and conditions of the
 ** GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ** Please see COPYING.TXT for details.

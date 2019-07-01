@@ -18,26 +18,21 @@ db TempVideoMode;
 	VideoMode = TempVideoMode;
 }
 
-
 #include "guiutil.c"
 #include "gui_sort.c"
 #include "guifilelist.c"
 #include "guivideo.c"
 #include "guigame.c"
 #include "guisound.c"
-// #include "guitiming.c"
 #include "guitweaks.c"
 #include "guiinterface.c"
 #include "guidebug.c"
 #include "guiabout.c"
 
-/*** global variables */
-
-int exit_gui = 0;	/* handlers set this to 1 to exit the GUI */
-int gui_current = 0;	/* currently selected GUI option */
-
+int exit_gui = 0;		/* handlers set this to 1 to exit the GUI */
+int gui_current = 0;
 gui_entry *current_gui_items = NULL;
-db OldPaletteNumber;	/* remember game palette number */
+db OldPaletteNumber;
 char newfile[260];
 
 void run_rom()
@@ -48,10 +43,10 @@ void run_rom()
 		def_LoadDefaults();		// <---
 		StartInGUI = 1;			// <--- not a good default
 		
-		cli_ReadParms("z26.gui");
+		cli_ReadParms(z26gui);
 		OldPaletteNumber = UserPaletteNumber;
 		srv_SetPalette();
-		strncpy(FileName, newfile, 255);
+		strncpy(FileName, newfile, 260);
 		exit_gui = 1;
 		GamePaused = 0;
 		srv_reset_timing();
@@ -86,7 +81,6 @@ gui_entry gui_items[] = {
 	{ " Game ", NULL, 0, game_gui, NULL },
 	{ " Video ", NULL, 0, video_gui, NULL },
 	{ " Sound ", NULL, 0, sound_gui, NULL },
-//	{ " Timing ", NULL, 0, timing_gui, NULL },
 	{ " Interface ", NULL, 0, interface_gui, NULL },
 	{ " Tweaks ", NULL, 0, tweaks_gui, NULL },
 	{ " Debug ", NULL, 0, debug_gui, NULL },
@@ -106,7 +100,7 @@ void gui() {
 	
 	gui_SetVideoMode();
 	
-	ResetEmulator = 1;	// let's always do this before running a game
+	ResetEmulator = 1;
 
 	OldPaletteNumber = PaletteNumber;
 	if (PaletteNumber != UserPaletteNumber)
@@ -114,9 +108,6 @@ void gui() {
 		PaletteNumber = UserPaletteNumber;
 		srv_SetPalette();
 	}
-
-	/* Turn on key repeat for the gui */
-	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 
 	if(current_gui_items == NULL)
 	{
@@ -126,7 +117,7 @@ void gui() {
 	{
 		if(!ROMLoaded) 
 		{
-			hand_load_rom(SDLK_RETURN);
+			hand_load_rom();
 			if(ROMLoaded) return;
 		}
 	}
@@ -145,7 +136,6 @@ void gui() {
 		if(action == GUI_NO_ACTION) continue;
 		
 		gui_current = gui_handle_action(action, &exit_gui, current_gui_items, gui_current);
-
 	}
 
 	/* for now, GamePaused controls whether we're in the GUI or not. */
@@ -159,13 +149,9 @@ void gui() {
 		hand_exit();
 	}
 
-	/* Turn off key repeat for the game */
-	SDL_EnableKeyRepeat(0, 0);
-
-	/* restore the old joystick event state. */
 	SDL_JoystickEventState(old_js_state);
 
-	cli_SaveParms();			// save parameters
+	cli_SaveParms();
 
 	srv_SetVideoMode();
 	PaletteNumber = OldPaletteNumber;
@@ -173,7 +159,7 @@ void gui() {
 }
 
 /**
-** z26 is Copyright 1997-2011 by John Saeger and contributors.  
+** z26 is Copyright 1997-2019 by John Saeger and contributors.  
 ** z26 is released subject to the terms and conditions of the
 ** GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ** Please see COPYING.TXT for details.

@@ -10,9 +10,6 @@ char show_fps_data[52];
 char enable_keyboard_data[52];
 char enable_mouse_data[52];
 char enable_joystick_data[52];
-char enable_stelladaptor_data[52];
-char mouse_rude_data[52];
-char grab_input_data[52];
 
 void set_theme_string() {
 	switch(theme/16)
@@ -29,9 +26,7 @@ void set_theme_string() {
 	}
 }
 
-
 /* Handlers. You may be more familiar with the term `callback': that's what these are. */
-
 
 void hand_enable_keyboard() {
 	KeyboardEnabled = !KeyboardEnabled;
@@ -48,21 +43,6 @@ void hand_enable_joystick() {
 	set_yesno_string(enable_joystick_data, UserJoystickEnabled);
 	JoystickEnabled = UserJoystickEnabled;
 	gui_SetVideoMode();	/* because joystick detection happens when we set video mode */
-}
-
-void hand_enable_stelladaptor() {
-	StelladaptorEnabled = !StelladaptorEnabled;
-	set_yesno_string(enable_stelladaptor_data, StelladaptorEnabled);
-}
-
-void hand_mouse_rude() {
-	MouseRude = !MouseRude;
-	set_yesno_string(mouse_rude_data, MouseRude);
-}
-
-void hand_grab_input() {
-	GrabInput = !GrabInput;
-	set_yesno_string(grab_input_data, GrabInput);
 }
 
 void hand_show_fps() {
@@ -90,13 +70,9 @@ gui_entry interface_gui_items[] = {
 	{ " Show FPS...........: %s ", show_fps_data, 0, hand_show_fps, hand_show_fps },
 	{ " Theme..............: %s ", theme_data, 0, hand_theme_inc, hand_theme_dec },
 	{ " ", NULL, 0, NULL, NULL },
-	{ " Mouse Rude.........: %s ", mouse_rude_data, 0, hand_mouse_rude, hand_mouse_rude },
-	{ " Grab Input.........: %s ", grab_input_data, 0, hand_grab_input, hand_grab_input },
-	{ " ", NULL, 0, NULL, NULL },
 	{ " Enable Keyboard....: %s ", enable_keyboard_data, 0, hand_enable_keyboard, hand_enable_keyboard },
 	{ " Enable Mouse.......: %s ", enable_mouse_data, 0, hand_enable_mouse, hand_enable_mouse },
 	{ " Enable Joystick....: %s ", enable_joystick_data, 0, hand_enable_joystick, hand_enable_joystick },
-	{ " Enable Stelladaptor: %s ", enable_stelladaptor_data, 0, hand_enable_stelladaptor, hand_enable_stelladaptor },
 	{ " ", NULL, 0, NULL, NULL },
 	{ " Exit ", NULL, 0, hand_interface_exit, NULL },
 	{ NULL, NULL, 0, NULL, NULL } // last element must always be this
@@ -112,10 +88,7 @@ void interface_gui() {
 	set_yesno_string(enable_keyboard_data, KeyboardEnabled);
 	set_yesno_string(enable_mouse_data, MouseEnabled);
 	set_yesno_string(enable_joystick_data, UserJoystickEnabled);
-	set_yesno_string(enable_stelladaptor_data, StelladaptorEnabled);
 	set_yesno_string(show_fps_data, ShowLineCount);
-	set_yesno_string(mouse_rude_data, MouseRude);
-	set_yesno_string(grab_input_data, GrabInput);
 	set_theme_string();
 	
 	exit_interface = 0;
@@ -136,7 +109,7 @@ void interface_gui() {
 
 
 /**
-** z26 is Copyright 1997-2011 by John Saeger and contributors.  
+** z26 is Copyright 1997-2019 by John Saeger and contributors.  
 ** z26 is released subject to the terms and conditions of the
 ** GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ** Please see COPYING.TXT for details.

@@ -116,24 +116,27 @@ gui_action gui_navigation(SDL_Event *evp) {
 	}
 
 	if(evp->type == SDL_KEYDOWN) {
+//		printf("PgUp: %d\n", SDLK_PAGEUP);
+//		printf("-%d-", evp->key.keysym.sym);
 		switch(evp->key.keysym.sym) {
 			case SDLK_RETURN:
-			case SDLK_SPACE:
+//			case SDLK_SPACE:
 			case SDLK_RIGHT:
-			case SDLK_KP6:
+			case SDLK_KP_6:
+			case SDLK_KP_ENTER:
 				return GUI_ACTIVATE_PRI;
 
 			case SDLK_LEFT:
-			case SDLK_KP4:
+			case SDLK_KP_4:
 				return GUI_ACTIVATE_SEC;
 
 			case SDLK_UP:
-			case SDLK_KP8:
+			case SDLK_KP_8:
 				return GUI_UP;
 
 			case SDLK_TAB:
 			case SDLK_DOWN:
-			case SDLK_KP2:
+			case SDLK_KP_2:
 				return GUI_DOWN;
 
 			case SDLK_BACKSPACE:
@@ -141,19 +144,19 @@ gui_action gui_navigation(SDL_Event *evp) {
 				return GUI_EXIT_GUI;
 
 			case SDLK_PAGEUP:
-			case SDLK_KP9:
+			case SDLK_KP_9:
 				return GUI_PAGEUP;
 
 			case SDLK_PAGEDOWN:
-			case SDLK_KP3:
+			case SDLK_KP_3:
 				return GUI_PAGEDOWN;
 
 			case SDLK_HOME:
-			case SDLK_KP7:
+			case SDLK_KP_7:
 				return GUI_HOME;
 
 			case SDLK_END:
-			case SDLK_KP1:
+			case SDLK_KP_1:
 				return GUI_END;
 				
 			case SDLK_BACKSLASH:

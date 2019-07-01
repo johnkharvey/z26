@@ -49,9 +49,7 @@ void SQ_Store()
 
 void fillerup(void *unused, Uint8 *stream, int len)
 {
-	int count = SQ_Count();
-		
-	if(count < len) 
+	if(SQ_Count() < len) 
 	{
 		memset(stream, 0, len);
 	}
@@ -59,11 +57,30 @@ void fillerup(void *unused, Uint8 *stream, int len)
 	{
 		while(len)			/* 16-bit signed samples */
 		{
-
+			len -= 16;
 			*stream++ = 0;		/* LSB = 0 */
-			len--;
 			*stream++ = *SQ_Output++;
-			len--;
+			if(SQ_Output >= SQ_Top) SQ_Output = SoundQ;
+			*stream++ = 0;		/* LSB = 0 */
+			*stream++ = *SQ_Output++;
+			if(SQ_Output >= SQ_Top) SQ_Output = SoundQ;
+			*stream++ = 0;		/* LSB = 0 */
+			*stream++ = *SQ_Output++;
+			if(SQ_Output >= SQ_Top) SQ_Output = SoundQ;
+			*stream++ = 0;		/* LSB = 0 */
+			*stream++ = *SQ_Output++;
+			if(SQ_Output >= SQ_Top) SQ_Output = SoundQ;
+			*stream++ = 0;		/* LSB = 0 */
+			*stream++ = *SQ_Output++;
+			if(SQ_Output >= SQ_Top) SQ_Output = SoundQ;
+			*stream++ = 0;		/* LSB = 0 */
+			*stream++ = *SQ_Output++;
+			if(SQ_Output >= SQ_Top) SQ_Output = SoundQ;
+			*stream++ = 0;		/* LSB = 0 */
+			*stream++ = *SQ_Output++;
+			if(SQ_Output >= SQ_Top) SQ_Output = SoundQ;
+			*stream++ = 0;		/* LSB = 0 */
+			*stream++ = *SQ_Output++;
 			if(SQ_Output >= SQ_Top) SQ_Output = SoundQ;
 		}
 	}
@@ -88,22 +105,29 @@ void srv_sound_on()
 		if ( SDL_OpenAudio(&desired, &obtained) < 0 ) 
 		{
 			printf("Couldn't open audio: %s\n",SDL_GetError());
+			sound_is_on = 0;
 			quiet = 1;
 		}
-
-		SDL_PauseAudio(0);		/* turn on the callback */
-		sound_is_on = 1;
+		else
+		{
+			SDL_PauseAudio(0);		/* turn on the callback */
+			sound_is_on = 1;
+		}
 	}
 }
 
 void srv_sound_off()
 {
-	if (quiet==0) SDL_CloseAudio();
-	sound_is_on = 0;
+	if (sound_is_on && !quiet)
+	{
+		SDL_CloseAudio();
+		SDL_Delay(100);
+		sound_is_on = 0;
+	}
 }
 
 /**
-** z26 is Copyright 1997-2011 by John Saeger and contributors.  
+** z26 is Copyright 1997-2019 by John Saeger and contributors.  
 ** z26 is released subject to the terms and conditions of the 
 ** GNU General Public License Version 2 (GPL).	z26 comes with no warranty.
 ** Please see COPYING.TXT for details.

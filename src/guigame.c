@@ -112,32 +112,32 @@ void set_palette_string() {
 void set_bank_string() {
 	switch (UserBankswitch)
 	{
-	case 0: sprintf(bank_data, "%d-2K+4K Atari [NoBS]", UserBankswitch);	break;
-	case 1: sprintf(bank_data, "%d-CommaVid [CV]", UserBankswitch);	break;
-	case 2: sprintf(bank_data, "%d-8K Superchip [F8SC]", UserBankswitch);	break;
-	case 3:	sprintf(bank_data, "%d-8K Parker Bros. [E0]", UserBankswitch);	break;
-	case 4: sprintf(bank_data, "%d-8K Tigervision [3F]", UserBankswitch);	break;
-	case 5: sprintf(bank_data, "%d-8K Activision [FE] (flat)", UserBankswitch);	break;
-	case 6: sprintf(bank_data, "%d-16K Superchip [F6SC]", UserBankswitch);	break;
-	case 7: sprintf(bank_data, "%d-16K M-Network [E7]", UserBankswitch); 	break;
-	case 8: sprintf(bank_data, "%d-32K Superchip [F4SC]", UserBankswitch);	break;
-	case 9: sprintf(bank_data, "%d-8K Atari swapped [F8]", UserBankswitch);	break;
-	case 10: sprintf(bank_data, "%d-Compumate [CM]", UserBankswitch);	break;
-	case 11: sprintf(bank_data, "%d-512K Tigervision+ [3F+]", UserBankswitch);	break;
-	case 12: sprintf(bank_data, "%d-8K United Appliance [UA]", UserBankswitch);	break;
-	case 13: sprintf(bank_data, "%d-64K HS Runner [EF]", UserBankswitch);	break;
-	case 14: sprintf(bank_data, "%d-512K Krokodile Cart [3E]", UserBankswitch);	break;
-	case 15: sprintf(bank_data, "%d-Starpath [AR]", UserBankswitch);	break;
-	case 16: sprintf(bank_data, "%d-16K Atari [F6]", UserBankswitch);	break;
-	case 17: sprintf(bank_data, "%d-32K Atari [F4]", UserBankswitch); 	break;
-	case 18: sprintf(bank_data, "%d-64K Megaboy [MB]", UserBankswitch);	break;
-	case 19: sprintf(bank_data, "%d-12K CBS [FA]", UserBankswitch);	break;
-	case 20: sprintf(bank_data, "%d-8K Atari [F8]", UserBankswitch);	break;
-	case 21: sprintf(bank_data, "%d-8K+DPC Pitfall2 [P2]", UserBankswitch);	break;
-	case 22: sprintf(bank_data, "%d-4A50 / supercat", UserBankswitch);	break;
-	case 23: sprintf(bank_data, "%d-0840 EconoBanking", UserBankswitch);	break;
+	case 0: sprintf(bank_data, "[2K] [4K] 2K+4K Atari"); break;
+	case 1: sprintf(bank_data, "[CV] CommaVid");	break;
+	case 2: sprintf(bank_data, "[F8S] 8K Superchip");	break;
+	case 3:	sprintf(bank_data, "[E0] 8K Parker Bros."); break;
+	case 4: sprintf(bank_data, "[3F] 8K Tigervision");	break;
+	case 5: sprintf(bank_data, "[FE] 8K Activision (flat)"); break;
+	case 6: sprintf(bank_data, "[F6S] 16K Superchip");	break;
+	case 7: sprintf(bank_data, "[E7] 16K M-Network"); 	break;
+	case 8: sprintf(bank_data, "[F4S] 32K Superchip");	break;
+	case 9: sprintf(bank_data, "[F8] 8K Atari swapped"); break;
+	case 10: sprintf(bank_data, "[CM] Compumate");	break;
+	case 11: sprintf(bank_data, "[3F+] 512K Tigervision+");	break;
+	case 12: sprintf(bank_data, "[UA] 8K United Appliance"); break;
+	case 13: sprintf(bank_data, "[EF] 64K Homestar Runner"); break;
+	case 14: sprintf(bank_data, "[3E] 32-512K 3F + 32K RAM"); break;
+	case 15: sprintf(bank_data, "[AR] Starpath");	break;
+	case 16: sprintf(bank_data, "[F6] 16K Atari");	break;
+	case 17: sprintf(bank_data, "[F4] 32K Atari"); 	break;
+	case 18: sprintf(bank_data, "[MB] 64K Megaboy"); break;
+	case 19: sprintf(bank_data, "[FA] 12K CBS");	break;
+	case 20: sprintf(bank_data, "[F8] 8K Atari");	break;
+	case 21: sprintf(bank_data, "[DPC] [P2] 8K+DPC Pitfall2"); break;
+	case 22: sprintf(bank_data, "[4A5] supercat");	break;
+	case 23: sprintf(bank_data, "[084] EconoBanking"); break;
 	case 0xff: sprintf(bank_data, "Auto");	break;
-	default: sprintf(bank_data, "%d-unknown", UserBankswitch);	break;
+	default: sprintf(bank_data, "unknown");	break;
 	}
 }
 
@@ -361,7 +361,7 @@ void game_gui() {
 
 
 /**
-** z26 is Copyright 1997-2011 by John Saeger and contributors.  
+** z26 is Copyright 1997-2019 by John Saeger and contributors.  
 ** z26 is released subject to the terms and conditions of the
 ** GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ** Please see COPYING.TXT for details.

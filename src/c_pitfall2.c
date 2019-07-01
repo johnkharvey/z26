@@ -81,7 +81,7 @@ dd Tune_Music(void){
 	 write top register
 */
 
-void P2_WriteTop(boid){
+void P2_WriteTop(void){
 
 	P2_Top[AddressBus & 0x7] = DataBus;
 	if((AddressBus & 0x7) > 4)
@@ -92,7 +92,7 @@ void P2_WriteTop(boid){
 	write bottom register
 */
 
-void P2_WriteBottom(boid){
+void P2_WriteBottom(void){
 
 	P2_Bottom[AddressBus & 0x7] = DataBus;
 	if((AddressBus & 0x7) > 4)

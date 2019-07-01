@@ -1,19 +1,19 @@
 /*
-
 	2600core.c -- c_emulator() main entry point here...
-
 */
 
-void do_Instruction_line(void);
 void SetStarpath(void);
 void SetPitfallII(void);
 
+#include "z_tiatab.c"
+#include "z_tiavars.c"
 #include "c_trace.c"
 #include "c_riot.c"
-#include "c_tialine.c"
+#include "z_defs.c"
 #include "c_tiasnd.c"
+#include "z_tiawrite.c"
+#include "z_tialine.c"
 #include "c_soundq.c"
-#include "c_tiawrite.c"
 #include "c_cpuhand.c"
 #include "c_banks.c"
 #include "c_pitfall2.c"
@@ -25,49 +25,37 @@ void SetPitfallII(void);
 /*
  routine to blank the remains of the screen buffer, if not all of the
  displayed data gets filled by the rendering routine
-
- compare with TIABlank in tiawrite.asm ???
 */
 
 void BlankBufferEnd(void) {
-	int i;
-	dd *PTR;
+	db *PTR;
 	
-	PTR = (dd*) DisplayPointer;
-	if(LinesInFrame > 100){	
-		if((LinesInFrame - CFirst) < MaxLines){
-			for(i=0; i < ((MaxLines - LinesInFrame + CFirst) * 80); i++){
-				*PTR++ = 0;
-			}
+	PTR = (db*) DisplayPointer;
+	if(LinesInFrame > 100)
+	{	
+		while (PTR < ScreenBuffer + MaxLines*tiawidth)
+		{
+			*PTR++ = 0;
 		}
 	}
 }
-
 
 /*
 	Do one frame
 */
 
-void ScanFrame() {
-
-	/* Reset display pointer */
-	DisplayPointer = (dw*) ScreenBuffer;
+void ScanFrame() 
+{
+	DisplayPointer = ScreenBuffer;
 
 	do {
-		/* Generate a raster line */
-		nTIALineTo();
-
+		nTIALineTo();						/* Generate a raster line */
 		ScanLine++;
+		RClock -= CYCLESPERSCANLINE;		/* adjust RClock for next line */
 
-		/* adjust RClock for next line */
-		RClock -= CYCLESPERSCANLINE;
-
-		/* if charging capacitors... */
-		if( !(VBlank & 0x80) )
-			/* and if not fully charged... */
-			if(ChargeCounter < 0x80000000)
-				/* add some charge. */
-				ChargeCounter++;
+		if( !(VBlank & 0x80) )				/* if charging capacitors... */
+			if(ChargeCounter < 0x80000000)	/* and if not fully charged... */
+				ChargeCounter++;			/* add some charge. */
 
 		if( ScanLine >= OurBailoutLine) {
 			OurBailoutLine = BailoutLine;
@@ -77,18 +65,20 @@ void ScanFrame() {
 			Frame++;
 			ScanLine = 1;
 		}
-
-	} while (Frame == PrevFrame); /* Frame gets updated by tiawrite.asm */
-
-	/* Done with frame. Blank rest of screen buffer, update PrevFrame, and return to caller. */
+		if (VSyncCount > 500) { 			/* keep lots of VSyncs ... */
+			++Frame;						/* ... from hanging emulator */
+			VSyncCount = 0;
+		}
+		if (ExitEmulator) break;
+	} while (Frame == PrevFrame); 			/* Frame is updated by tiawrite.c */
 
 	BlankBufferEnd();
 	PrevFrame = Frame;
 }
 
 
-void Reset_emulator(void){
-	
+void Reset_emulator(void)
+{
 	ResetEmulator = 0;
 	InitData();
 	RecognizeCart();
@@ -105,12 +95,14 @@ void Reset_emulator(void){
 
 void c_emulator(void) {
 
-	Reset_emulator();
+	InitData();
+	Init_Service();
+	Controls();
 
 	/* ExitEmulator gets set by Controls() if the user presses Escape */
 	while( !ExitEmulator ) 
 	{
-		if(ResetEmulator) Reset_emulator();
+	if(ResetEmulator) Reset_emulator();
 
 		srv_Events();
 		if(srv_done) break;	/* SDL got a 'close window' message */
@@ -126,7 +118,7 @@ void c_emulator(void) {
 
 
 /**
- z26 is Copyright 1997-2011 by John Saeger and contributors.  
+ z26 is Copyright 1997-2019 by John Saeger and contributors.  
  z26 is released subject to the terms and conditions of the 
  GNU General Public License Version 2 (GPL).  
  z26 comes with no warranty.

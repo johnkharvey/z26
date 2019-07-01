@@ -2,6 +2,8 @@
 ** guifilelist.c -- the gui file lister
 */
 
+typedef int SDLKey;
+
 dd match=0;
 SDLKey matched[100];
 
@@ -66,11 +68,30 @@ void get_list(int file_type) {
 		} else {
 			if(!S_ISREG(sstat.st_mode)) continue;
 
-			/* only looks at *.bin, *.BIN, *.a26, *.A26 files */
-			if(	strstr(dent->d_name, ".bin") == NULL &&
-				strstr(dent->d_name, ".BIN") == NULL &&
-				strstr(dent->d_name, ".a26") == NULL &&
-				strstr(dent->d_name, ".A26") == NULL)
+			/* only look at *.bin, *.BIN, *.a26, *.A26 and other nice files*/
+			if(	stristr(dent->d_name, ".2k")  == NULL &&
+				stristr(dent->d_name, ".4k")  == NULL &&
+				stristr(dent->d_name, ".f8")  == NULL &&
+				stristr(dent->d_name, ".f8s") == NULL &&
+				stristr(dent->d_name, ".f6")  == NULL &&
+				stristr(dent->d_name, ".f6s") == NULL &&
+				stristr(dent->d_name, ".f4")  == NULL &&
+				stristr(dent->d_name, ".f4s") == NULL &&
+				stristr(dent->d_name, ".fa")  == NULL &&
+				stristr(dent->d_name, ".fe")  == NULL &&
+				stristr(dent->d_name, ".3f")  == NULL &&
+				stristr(dent->d_name, ".3f+") == NULL &&
+				stristr(dent->d_name, ".3e")  == NULL &&
+				stristr(dent->d_name, ".e0")  == NULL &&
+				stristr(dent->d_name, ".e7")  == NULL &&
+				stristr(dent->d_name, ".cv")  == NULL &&
+				stristr(dent->d_name, ".ua")  == NULL &&
+				stristr(dent->d_name, ".ar")  == NULL &&
+				stristr(dent->d_name, ".dpc") == NULL &&
+				stristr(dent->d_name, ".084") == NULL &&
+
+				stristr(dent->d_name, ".bin") == NULL &&
+				stristr(dent->d_name, ".a26") == NULL)
 			{
 				continue;
 			}
@@ -156,12 +177,11 @@ int draw_file_list(int cur, int window_line, int ymax)
 	return window_line;
 }
 
-
 int find_next_rom(int curfile, SDLKey k) {
 	int i,m,p;
 	int matchflag, dirflag;
 
-	if( (k<'a' || k>'z') && (k<'0' || k>'9') )
+	if( (k<'a' || k>'z') && (k<'0' || k>'9') && (k != ' ') )
 	{
 		match = 0;
 		return curfile; // only letters/numbers
@@ -200,7 +220,7 @@ int find_next_rom(int curfile, SDLKey k) {
 /* 
 ** File selector.
 **
-**	returns 1 if user picked a file, 0 if he aborted.
+**	returns 1 if user picked a file, 0 if she aborted.
 **
 **	result is filled with the filename.
 */
@@ -344,14 +364,13 @@ int file_selector(char *result) {
 			window_line = curfile;
 			type = file_list[curfile][strlen(file_list[curfile])-1];
 			
-			while (type == '/')	/* if it's a dir, find another file */
-			{
+			for (int i=1; i<=10; i++)	// if it's a dir ...
+			{							// try a few times to find another file
 				curfile = rand() % filesread;
 				window_line = curfile;
 				type = file_list[curfile][strlen(file_list[curfile])-1];
+				if (type != '/') break;
 			} 
-			
-			
 			
 			clrscr();
 			break;
@@ -365,16 +384,14 @@ int file_selector(char *result) {
 			}
 			break;
 		}
-
-		SDL_WM_SetCaption(file_list[curfile], file_list[curfile]);
-
+		SDL_SetWindowTitle(window, file_list[curfile]);
 	}
 	
 	return picked;
 }
 
 /**
-** z26 is Copyright 1997-2011 by John Saeger and contributors.  
+** z26 is Copyright 1997-2019 by John Saeger and contributors.  
 ** z26 is released subject to the terms and conditions of the
 ** GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ** Please see COPYING.TXT for details.

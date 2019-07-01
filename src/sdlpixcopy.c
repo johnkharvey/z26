@@ -2,69 +2,32 @@
 	sdlpixcopy.c -- pixel copy routines
 */
 
-// general purpose routine for interlacing
-
-void PixCopy32()
-{
-	dd p, i, j, l;
-	dd pixel;
-	db *source = emu_pixels;
-	db *prev = emu_pixels_prev;
-	dd *dest = (dd*) screen_pixels;
-	dd *ptr = (dd*) screen_pixels;
-	dd ptr_inc = srv_pitch/4 - pixelspread;
-
-	i = tiawidth/4;
-	while (i--)
-	{
-		if (* (dd*) source != * (dd*) prev)
-		{
-			p=4;
-			while (p--)
-			{
-				j = pixelspread; ptr = dest; l = lines2draw;
-				pixel = srv_colortab_hi[*source++];
-				while (l--) 
-				{ 
-					while (j--) { *ptr++ = pixel; }; j = pixelspread; ptr += ptr_inc; 
-				};
-				dest += pixelspread;
-			}
-		}
-		else
-		{
-			source += 4; dest += pixelspread*4;
-		}
-		prev += 4;
-	}
-}
-
-
 // for fast textures -- display every other TIA pixel (160 pixels)
 
-void FastPixCopy32()
+void PixCopy32_1()
 {
 	int i;
 	db *source = emu_pixels;
 	db *prev = emu_pixels_prev;
 	dd *dest = (dd*) screen_pixels;
 
-	i = tiawidth/4;
+	i = tiawidth/8;
 	while (i--)
 	{
-		if (* (dd*) source != * (dd*) prev)
+		if (* (dq*) source != * (dq*) prev)
 		{
+			*dest++ = srv_colortab_hi[*source++]; ++source;
+			*dest++ = srv_colortab_hi[*source++]; ++source;
 			*dest++ = srv_colortab_hi[*source++]; ++source;
 			*dest++ = srv_colortab_hi[*source++]; ++source;
 		}
 		else
 		{
-			source += 4; dest += 2;
+			source += 8; dest += 4;
 		}
-		prev += 4;
+		prev += 8;
 	}
 }
-
 
 // for normal textures
 
@@ -77,12 +40,12 @@ void PixCopy32_2()
 	dd *dest = (dd*) screen_pixels;
 	dd ptr_inc = srv_pitch/4;
 
-	i = tiawidth/4;
+	i = tiawidth/8;
 	while (i--)
 	{
-		if (* (dd*) source != * (dd*) prev)
+		if (* (dq*) source != * (dq*) prev)
 		{
-			p=4;
+			p=8;
 			while (p--)
 			{
 				pixel = srv_colortab_hi[*source];
@@ -94,9 +57,9 @@ void PixCopy32_2()
 		}
 		else
 		{
-			source += 4; dest += 4;
+			source += 8; dest += 8;
 		}
-		prev += 4;
+		prev += 8;
 	}
 }
 
@@ -113,12 +76,12 @@ void PixCopy32_4()
 	dd *ptr = (dd*) screen_pixels;
 	dd ptr_inc = srv_pitch/4 - 1;
 
-	i = tiawidth/4;
+	i = tiawidth/8;
 	while (i--)
 	{
-		if (* (dd*) source != * (dd*) prev)
+		if (* (dq*) source != * (dq*) prev)
 		{
-			p=4;
+			p=8;
 			while (p--)
 			{
 				ptr = dest;
@@ -137,14 +100,14 @@ void PixCopy32_4()
 		}
 		else
 		{
-			source += 4; dest += 8;
+			source += 8; dest += 16;
 		}
-		prev += 4;
+		prev += 8;
 	}
 }
 
 /**
-	z26 is Copyright 1997-2011 by John Saeger and contributors.  
+	z26 is Copyright 1997-2019 by John Saeger and contributors.  
 	z26 is released subject to the terms and conditions of the 
 	GNU General Public License Version 2 (GPL).	
 	z26 comes with no warranty.

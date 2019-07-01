@@ -1,7261 +1,958 @@
 /*
-
 	6507 CPU emulator for z26
-
 
  This C file gets generated from cpu.m4, so please edit it there.
 
- z26 is Copyright 1997-2011 by John Saeger and contributors.  
+ z26 is Copyright 1997-2019 by John Saeger and contributors.  
  z26 is released subject to the terms and conditions of the 
  GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
  Please see COPYING.TXT for details.
 */
 
-db dummy_flag;	/* used by ROL and ROR */
+db dummy_flag;				/* used by ROL and ROR */
 db dummy_high, dummy_low;	/* used by ADC and SBC */
+dd Address;
 
+#define bumpclock \
+	RClock++; \
+	RCycles++;
 
+#define readbank \
+	bumpclock \
+	ReadAccess[AddressBus]();
 
+#define writebank \
+	bumpclock \
+	WriteAccess[AddressBus]();
+
+#define opcode($1, $2, $3) \
+	void $1(void){ \
+	$2 \
+	$3 \
+}
+
+#define adr_implied 
+
+#define adr_immediate \
+	reg_pc++;
+
+#define adr_absolute \
+	readbank \
+	Address = DataBus; \
+	reg_pc++; \
+	AddressBus = reg_pc; \
+	readbank \
+	AddressBus = (DataBus << 8) + Address; \
+	reg_pc++;
+
+#define adr_zeropage \
+	readbank \
+	reg_pc++; \
+	AddressBus = DataBus;
+
+#define adr_zeropage_index($1) \
+	readbank \
+	reg_pc++; \
+	AddressBus = DataBus; \
+	readbank \
+	AddressBus = ((AddressBus + $1) & 0xff);
+
+#define adr_absolute_index_write($1) \
+	readbank \
+	Address = DataBus; \
+	reg_pc++; \
+	AddressBus = reg_pc; \
+	readbank \
+	reg_pc++; \
+	AddressBus = (DataBus << 8) + ((Address + $1) & 0xff); \
+	readbank \
+	AddressBus = (((AddressBus & 0xff00) + Address) + $1) & 0xffff;
+
+#define adr_absolute_index_read($1) \
+	readbank \
+	Address = DataBus; \
+	reg_pc++; \
+	AddressBus = reg_pc; \
+	readbank \
+	reg_pc++; \
+	AddressBus = (DataBus << 8) + ((Address + $1) & 0xff); \
+	if((Address + $1) > 0xff){ \
+		readbank \
+		AddressBus = (((AddressBus & 0xff00) + Address) + $1) & 0xffff; \
+	}
+
+#define adr_index_indirect \
+	readbank \
+	AddressBus = DataBus; \
+	reg_pc++; \
+	readbank \
+	AddressBus = (AddressBus + reg_x) & 0xff; \
+	readbank \
+	Address = DataBus; \
+	AddressBus = (AddressBus + 1) & 0xff; \
+	readbank \
+	AddressBus = (DataBus << 8) + Address;
+
+#define adr_indirect_index_read \
+	readbank \
+	AddressBus = DataBus; \
+	reg_pc++; \
+	readbank \
+	Address = DataBus; \
+	AddressBus = (AddressBus + 1) & 0xff; \
+	readbank \
+	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff); \
+	if((Address + reg_y) > 0xff){ \
+		readbank \
+		AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff; \
+	}
+
+#define adr_indirect_index_write \
+	readbank \
+	AddressBus = DataBus; \
+	reg_pc++; \
+	readbank \
+	Address = DataBus; \
+	AddressBus = (AddressBus + 1) & 0xff; \
+	readbank \
+	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff); \
+	readbank \
+	AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
+
+#define adr_relative($1) \
+	readbank \
+	reg_pc++; \
+	if($1){ \
+		if(DataBus & 0x80) Address = (0x100 - DataBus) * -1; \
+		else Address = DataBus; \
+		AddressBus++; \
+		readbank \
+		if(((reg_pc + Address) & 0xff00) != (reg_pc & 0xff00)){ \
+			AddressBus = (reg_pc & 0xff00) + ((reg_pc + Address) & 0xff); \
+			readbank \
+		} \
+		reg_pc = reg_pc + Address; \
+	}
+
+#define adr_absolute_indirect \
+	readbank \
+	reg_pc = DataBus; \
+	AddressBus = (AddressBus + 1) & 0xffff; \
+	readbank \
+	AddressBus = reg_pc + (DataBus << 8); \
+	readbank \
+	Address = DataBus; \
+	AddressBus = (AddressBus & 0xff00) + ((AddressBus + 1) & 0xff); \
+	readbank \
+	AddressBus = Address + (DataBus << 8);
+
+#define rmw_ram($1) \
+	readbank \
+	writebank \
+	$1 \
+	writebank
+
+#define rmw_accu($1) \
+	readbank \
+	$1
+
+#define adr_push($1) \
+	readbank \
+	AddressBus = reg_sp + 0x100; \
+	DataBus = $1; \
+	writebank \
+	reg_sp--;
+
+#define adr_pull \
+	readbank \
+	AddressBus = reg_sp + 0x100; \
+	readbank \
+	reg_sp++; \
+	AddressBus = reg_sp + 0x100; \
+	readbank
+
+#define test_z($1) \
+	if($1 == 0) flag_Z = 0x02; \
+	else flag_Z = 0;
+
+#define test_n($1) \
+	flag_N = ($1 & 0x80);
+
+#define test_v($1) \
+	flag_V = ($1 & 0x40);
+
+#define test_zn($1) \
+	test_z($1) \
+	test_n($1)
+
+#define ADC \
+	readbank \
+	if(!flag_D){ \
+		if( (((reg_a + DataBus + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ DataBus) & 0x80) ) flag_V = 0x40; \
+		else flag_V = 0; \
+		dummy_flag = (((reg_a + DataBus + flag_C) & 0x100) >> 8); \
+		reg_a = ((reg_a + DataBus + flag_C) & 0xff); \
+		flag_C = dummy_flag; \
+		test_zn(reg_a) \
+	}else{ \
+		dummy_low = (reg_a & 0xf) + (DataBus & 0xf) + flag_C; \
+		dummy_high = ((reg_a & 0xf0) >> 4) + ((DataBus & 0xf0) >> 4);	/* + ((dummy_low & 0x10) >> 4); */ \
+		if(dummy_low > 9) dummy_low += 6; \
+		if (dummy_low > 0xf) dummy_high++; \
+		test_z(((reg_a + DataBus + flag_C) & 0xff)) \
+		test_n(((dummy_high << 4) | (dummy_low & 0xf))) \
+		if( (((dummy_high << 4) ^ reg_a) & 0x80) && !((reg_a ^ DataBus) & 0x80) ) flag_V = 0x40; \
+		else flag_V = 0; \
+		if (dummy_high > 9) dummy_high += 6; \
+		if (dummy_high > 0xf) flag_C = 0x1; \
+		else flag_C = 0; \
+		reg_a = ((dummy_high << 4) | (dummy_low & 0xf)) & 0xff; \
+	}
+
+#define AND \
+	readbank \
+	reg_a &= DataBus; \
+	test_zn(reg_a)
+
+#define ANC \
+	AND \
+	if(reg_a & 0x80) flag_C = 1; \
+	else flag_C = 0;
+
+#define ANE \
+	readbank \
+	reg_a = ((reg_a | 0xee) & reg_x) & DataBus; \
+	test_zn(reg_a)
+
+#define ARR \
+	readbank \
+	if(!flag_D){ \
+		reg_a &= DataBus; \
+		reg_a = ((reg_a >> 1) | (flag_C << 7)) & 0xff; \
+		test_zn(reg_a) \
+		flag_C = (reg_a & 0x40) >> 6; \
+		flag_V = (((reg_a & 0x40) ^ ((reg_a & 0x20) << 1))) & 0x40; \
+	}else{ \
+		dummy_high = (reg_a & DataBus) >> 4; \
+		dummy_low = (reg_a & DataBus) & 0xf; \
+		flag_N = flag_C << 7; \
+		reg_a = (reg_a & DataBus) >> 1 | flag_N; \
+		test_z(reg_a) \
+		flag_V = (((reg_a & 0x40) ^ ((reg_a & 0x20) << 1))) & 0x40; \
+		if((dummy_low + (dummy_low & 1)) > 5) reg_a = (reg_a & 0xf0) | ((reg_a + 6) & 0xf); \
+		if((dummy_high + (dummy_high & 1)) > 5){ \
+			reg_a = (reg_a + 0x60) & 0xff; \
+			flag_C = 1; \
+		}else flag_C = 0; \
+	}
+
+#define ASL($1) \
+	flag_C = ($1 & 0x80) >> 7; \
+	$1 = ($1 << 1) & 0xfe; \
+	test_zn($1)
+
+#define ASR \
+	readbank \
+	reg_a &= DataBus; \
+	flag_C = reg_a & 0x01; \
+	reg_a = (reg_a >> 1) & 0x7f; \
+	test_zn(reg_a)
+
+#define BCC \
+	adr_relative(!flag_C)
+
+#define BCS \
+	adr_relative(flag_C)
+
+#define BEQ \
+	adr_relative(flag_Z)
+
+#define BIT \
+	readbank \
+	test_v(DataBus) \
+	test_n(DataBus) \
+	test_z((reg_a & DataBus))
+
+#define BNE \
+	adr_relative(!flag_Z)
+
+#define BMI \
+	adr_relative(flag_N)
+
+#define BPL \
+	adr_relative(!flag_N)
+
+#define BRK \
+	readbank \
+	reg_pc++; \
+	AddressBus = reg_sp + 0x100; \
+	DataBus = ((reg_pc & 0xff00) >> 8); \
+	flag_B = 0x10; \
+	writebank \
+	reg_sp--; \
+	AddressBus = reg_sp + 0x100; \
+	DataBus = reg_pc & 0xff; \
+	writebank \
+	reg_sp--; \
+	AddressBus = reg_sp + 0x100; \
+	DataBus = (flag_N | flag_V | 0x20 | flag_B | flag_D | flag_I | flag_Z | flag_C); \
+	flag_I = 0x04; \
+	writebank \
+	reg_sp--; \
+	AddressBus = 0xfffe; \
+	readbank \
+	reg_pc = DataBus; \
+	AddressBus = 0xffff; \
+	readbank \
+	reg_pc = (DataBus << 8) + reg_pc;
+
+#define BVC \
+	adr_relative(!flag_V)
+
+#define BVS \
+	adr_relative(flag_V)
+
+#define CLC \
+	readbank \
+	flag_C = 0;
+
+#define CLD \
+	readbank \
+	flag_D = 0;
+
+#define CLI \
+	readbank \
+	flag_I = 0;
+
+#define CLV \
+	readbank \
+	flag_V = 0;
+
+#define CMP \
+	readbank \
+	test_zn(((reg_a - DataBus) & 0xff)) \
+	if(reg_a >= DataBus) flag_C = 1; \
+	else flag_C = 0;
+
+#define CPX \
+	readbank \
+	test_zn(((reg_x - DataBus) & 0xff)) \
+	if(reg_x >= DataBus) flag_C = 1; \
+	else flag_C = 0;
+
+#define CPY \
+	readbank \
+	test_zn(((reg_y - DataBus) & 0xff)) \
+	if(reg_y >= DataBus) flag_C = 1; \
+	else flag_C = 0;
+
+#define DCP \
+	DataBus--; \
+	test_zn(((reg_a - DataBus) & 0xff)) \
+	if(reg_a >= DataBus) flag_C = 1; \
+	else flag_C = 0;
+
+#define DEC \
+	DataBus--; \
+	test_zn(DataBus)
+
+#define DEX \
+	readbank \
+	reg_x--; \
+	test_zn(reg_x)
+
+#define DEY \
+	readbank \
+	reg_y--; \
+	test_zn(reg_y)
+
+#define EOR \
+	readbank \
+	reg_a ^= DataBus; \
+	test_zn(reg_a)
+
+#define INC \
+	DataBus++; \
+	test_zn(DataBus);
+
+#define INX \
+	readbank \
+	reg_x++; \
+	test_zn(reg_x)
+
+#define INY \
+	readbank \
+	reg_y++; \
+	test_zn(reg_y)
+
+#define ISB \
+	DataBus++; \
+	if(!flag_D){ \
+		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40; \
+		else flag_V = 0; \
+		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8); \
+		reg_a = ((reg_a + (0xff - DataBus) + flag_C) & 0xff); \
+		flag_C = dummy_flag; \
+		test_zn(reg_a) \
+	}else{ \
+		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40; \
+		else flag_V = 0; \
+		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8); \
+		dummy_low = ((reg_a + (0xff - DataBus) + flag_C) & 0xff); \
+		test_zn(dummy_low) \
+		dummy_low = (reg_a & 0xf) - (DataBus & 0xf) - (1 - flag_C); \
+		dummy_high = (reg_a >> 4) - (DataBus >> 4) - ((dummy_low & 0x10) >> 4); \
+		if (dummy_low & 0x10) dummy_low -= 6; \
+		if (dummy_high & 0x10) dummy_high -= 6; \
+		reg_a = ((dummy_high << 4) | (dummy_low & 0xf)) & 0xff; \
+		flag_C = dummy_flag; \
+		}
+
+#define JMP \
+	reg_pc = AddressBus;
+
+#define JSR \
+	readbank  \
+	Address = DataBus; \
+	reg_pc++; \
+	AddressBus = reg_sp + 0x100; \
+	readbank \
+	DataBus = ((reg_pc & 0xff00) >> 8); \
+	writebank \
+	reg_sp--; \
+	AddressBus = reg_sp + 0x100; \
+	DataBus = reg_pc & 0xff; \
+	writebank \
+	reg_sp--; \
+	AddressBus = reg_pc; \
+	readbank \
+	reg_pc = (DataBus << 8) + Address;
+
+#define LAS \
+	readbank \
+	reg_a = reg_x = reg_sp & DataBus; \
+	reg_sp = reg_a; \
+	test_zn(reg_a)
+
+#define LAX \
+	readbank \
+	reg_a = reg_x = DataBus; \
+	test_zn(reg_a)
+
+#define LDA \
+	readbank \
+	reg_a = DataBus; \
+	test_zn(reg_a)
+
+#define LDX \
+	readbank \
+	reg_x = DataBus; \
+	test_zn(reg_x)
+
+#define LDY \
+	readbank \
+	reg_y = DataBus; \
+	test_zn(reg_y)
+
+#define LSR($1) \
+	flag_C = $1 & 0x01; \
+	$1 = ($1 >> 1) & 0x7f; \
+	test_zn($1)
+
+#define LXA \
+	readbank \
+	reg_a = (reg_a | 0xee) & DataBus; \
+	reg_x = reg_a; \
+	test_zn(reg_a)
+
+#define NOP \
+	readbank
+
+#define ORA \
+	readbank \
+	reg_a |= DataBus; \
+	test_zn(reg_a)
+
+#define PHA \
+	adr_push(reg_a)
+
+#define PHP \
+	adr_push((flag_N | flag_V | 0x20 | flag_B | flag_D | flag_I | flag_Z | flag_C))
+
+#define PLA \
+	adr_pull \
+	reg_a = DataBus; \
+	test_zn(reg_a)
+
+#define PLP \
+	adr_pull \
+	flag_N = DataBus & 0x80; \
+	flag_V = DataBus & 0x40; \
+/*	flag_B = DataBus & 0x10; */ \
+	flag_D = DataBus & 0x08; \
+	flag_I = DataBus & 0x04; \
+	flag_Z = DataBus & 0x02; \
+	flag_C = DataBus & 0x01;
+
+#define RLA \
+	dummy_flag = flag_C; \
+	flag_C = (DataBus & 0x80) >> 7; \
+	DataBus = ((DataBus << 1) | dummy_flag) & 0xff; \
+	reg_a &= DataBus; \
+	test_zn(reg_a)
+
+#define ROL($1) \
+	dummy_flag = flag_C; \
+	flag_C = ($1 & 0x80) >> 7; \
+	$1 = (($1 << 1) | dummy_flag) & 0xff; \
+	test_zn($1)
+
+#define ROR($1) \
+	dummy_flag = flag_C << 7; \
+	flag_C = $1 & 0x01; \
+	$1 = (($1 >> 1) | dummy_flag) & 0xff; \
+	test_zn($1)
+
+#define RRA \
+	dummy_flag = flag_C << 7; \
+	flag_C = DataBus & 0x01; \
+	DataBus = ((DataBus >> 1) | dummy_flag) & 0xff; \
+	if(!flag_D){ \
+		if( (((reg_a + DataBus + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ DataBus) & 0x80) ) flag_V = 0x40; \
+		else flag_V = 0; \
+		dummy_flag = (((reg_a + DataBus + flag_C) & 0x100) >> 8); \
+		reg_a = ((reg_a + DataBus + flag_C) & 0xff); \
+		flag_C = dummy_flag; \
+		test_zn(reg_a) \
+	}else{ \
+		dummy_low = (reg_a & 0xf) + (DataBus & 0xf) + flag_C; \
+		dummy_high = ((reg_a & 0xf0) >> 4) + ((DataBus & 0xf0) >> 4);	/* + ((dummy_low & 0x10) >> 4); */ \
+		if(dummy_low > 9) dummy_low += 6; \
+		if (dummy_low > 0xf) dummy_high++; \
+		test_z(((reg_a + DataBus + flag_C) & 0xff)) \
+		test_n(((dummy_high << 4) | (dummy_low & 0xf))) \
+		if( (((dummy_high << 4) ^ reg_a) & 0x80) && !((reg_a ^ DataBus) & 0x80) ) flag_V = 0x40; \
+		else flag_V = 0; \
+		if (dummy_high > 9) dummy_high += 6; \
+		if (dummy_high > 0xf) flag_C = 0x1; \
+		else flag_C = 0; \
+		reg_a = ((dummy_high << 4) | (dummy_low & 0xf)) & 0xff; \
+	}
+
+#define RTI \
+	readbank \
+	AddressBus = reg_sp + 0x100; \
+	readbank \
+	reg_sp++; \
+	AddressBus = reg_sp + 0x100; \
+	readbank \
+	flag_N = DataBus & 0x80; \
+	flag_V = DataBus & 0x40; \
+/*	flag_B = DataBus & 0x10; */ \
+	flag_D = DataBus & 0x08; \
+	flag_I = DataBus & 0x04; \
+	flag_Z = DataBus & 0x02; \
+	flag_C = DataBus & 0x01; \
+	reg_sp++; \
+	AddressBus = reg_sp + 0x100; \
+	readbank \
+	reg_pc = DataBus; \
+	reg_sp++; \
+	AddressBus = reg_sp + 0x100; \
+	readbank \
+	reg_pc = (DataBus << 8) + reg_pc;
+
+#define RTS \
+	readbank \
+	AddressBus = reg_sp + 0x100; \
+	readbank \
+	reg_sp++; \
+	AddressBus = reg_sp + 0x100; \
+	readbank \
+	reg_pc = DataBus; \
+	reg_sp++; \
+	AddressBus = reg_sp + 0x100; \
+	readbank \
+	reg_pc = (DataBus << 8) + reg_pc; \
+	readbank \
+	reg_pc++;
+
+#define SAX \
+	DataBus = (reg_a & reg_x); \
+	writebank
+
+#define SBC \
+	readbank \
+	if(!flag_D){ \
+		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40; \
+		else flag_V = 0; \
+		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8); \
+		reg_a = ((reg_a + (0xff - DataBus) + flag_C) & 0xff); \
+		flag_C = dummy_flag; \
+		test_zn(reg_a) \
+	}else{ \
+		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40; \
+		else flag_V = 0; \
+		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8); \
+		dummy_low = ((reg_a + (0xff - DataBus) + flag_C) & 0xff); \
+		test_zn(dummy_low) \
+		dummy_low = (reg_a & 0xf) - (DataBus & 0xf) - (1 - flag_C); \
+		dummy_high = (reg_a >> 4) - (DataBus >> 4) - ((dummy_low & 0x10) >> 4); \
+		if (dummy_low & 0x10) dummy_low -= 6; \
+		if (dummy_high & 0x10) dummy_high -= 6; \
+		reg_a = ((dummy_high << 4) | (dummy_low & 0xf)) & 0xff; \
+		flag_C = dummy_flag; \
+		}
+
+#define SBX \
+	readbank \
+	if(!((reg_x & reg_a) < DataBus)) flag_C = 1; \
+	else flag_C = 0; \
+	reg_x = ((reg_x & reg_a) - DataBus) & 0xff; \
+	test_zn(reg_x)
+
+#define SEC \
+	readbank \
+	flag_C = 1;
+
+#define SED \
+	readbank \
+	flag_D = 8;
+
+#define SEI \
+	readbank \
+	flag_I = 4;
+
+#define SHA \
+	DataBus = (((AddressBus + 0x100) & 0xff00) >> 8) & reg_x & reg_a; \
+	writebank
+
+#define SHS \
+	DataBus = (((AddressBus + 0x100) & 0xff00) >> 8) & reg_x & reg_a; \
+	reg_sp = (reg_a & reg_x); \
+	writebank
+
+#define SHX \
+	DataBus = (((AddressBus + 0x100) & 0xff00) >> 8) & reg_x; \
+	writebank
+
+#define SHY \
+	DataBus = (((AddressBus + 0x100) & 0xff00) >> 8) & reg_y; \
+	writebank
+
+#define SLO \
+	flag_C = (DataBus & 0x80) >> 7; \
+	DataBus = (DataBus << 1) & 0xfe; \
+	reg_a |= DataBus; \
+	test_zn(reg_a)
+
+#define SRE \
+	flag_C = DataBus & 0x01; \
+	DataBus = (DataBus >> 1) & 0x7f; \
+	reg_a ^= DataBus; \
+	test_zn(reg_a)
+
+#define STA \
+	DataBus = reg_a; \
+	writebank
+
+#define STX \
+	DataBus = reg_x; \
+	writebank
+
+#define STY \
+	DataBus = reg_y; \
+	writebank
+
+#define TAX \
+	readbank \
+	reg_x = reg_a; \
+	test_zn(reg_x)
+
+#define TAY \
+	readbank \
+	reg_y = reg_a; \
+	test_zn(reg_y)
+
+#define TXA \
+	readbank \
+	reg_a = reg_x; \
+	test_zn(reg_a)
+
+#define TYA \
+	readbank \
+	reg_a = reg_y; \
+	test_zn(reg_a)
+
+#define TSX \
+	readbank \
+	reg_x = reg_sp; \
+	test_zn(reg_x)
+
+#define TXS \
+	readbank \
+	reg_sp = reg_x;
 
 /*
 	the opcode definitions
 */
 
-/* 00 - BRK implied */
-void _00(void){
-	
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = reg_sp + 0x100;
-	DataBus = ((reg_pc & 0xff00) >> 8);
-	flag_B = 0x10;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-	reg_sp--;
-	AddressBus = reg_sp + 0x100;
-	DataBus = reg_pc & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-	reg_sp--;
-	AddressBus = reg_sp + 0x100;
-	DataBus = (flag_N | flag_V | 0x20 | flag_B | flag_D | flag_I | flag_Z | flag_C);
-	flag_I = 0x04;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-	if(TriggerWSYNC){
-	 	// WSYNC only halts the CPU on read cycles
-	 	TriggerWSYNC = 0;
-		if(RClock > CYCLESPERSCANLINE){
-	 		/* skip a line, if WSYNC came after end of line */
-	 		Timer = Timer - (2 * CYCLESPERSCANLINE - RClock);	//clock RIOT
-	 		RClock = 2 * CYCLESPERSCANLINE;	// and CPU clock
-	 	}else{
-	 		Timer = Timer - (CYCLESPERSCANLINE - RClock);	// clock RIOT
-	 		RClock = CYCLESPERSCANLINE;	// and CPU clock
-	 	}
-	}
-	reg_sp--;
-	AddressBus = 0xfffe;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc = DataBus;
-	AddressBus = 0xffff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc = (DataBus << 8) + reg_pc;
-}
-
-/* 01 - ORA (indirect,x) */
-void _01(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = DataBus;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (AddressBus + reg_x) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	AddressBus = (AddressBus + 1) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a |= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* 02 - JAM */
-
-/* 03 - SLO (indirect,x) */
-void _03(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = DataBus;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (AddressBus + reg_x) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	AddressBus = (AddressBus + 1) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-flag_C = (DataBus & 0x80) >> 7;
-	DataBus = (DataBus << 1) & 0xfe;
-	reg_a |= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 04 - NOP zeropage */
-void _04(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-}
-
-/* 05 - ORA zeropage */
-void _05(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a |= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* 06 - ASL zeropage */
-void _06(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-flag_C = (DataBus & 0x80) >> 7;
-	DataBus = (DataBus << 1) & 0xfe;
-	if(DataBus == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (DataBus & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 07 - SLO zeropage */
-void _07(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-flag_C = (DataBus & 0x80) >> 7;
-	DataBus = (DataBus << 1) & 0xfe;
-	reg_a |= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 08 - PHP implied */
-void _08(void){
-	
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = reg_sp + 0x100;
-	DataBus = (flag_N | flag_V | 0x20 | flag_B | flag_D | flag_I | flag_Z | flag_C);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-	reg_sp--;
-}
-
-/* 09 - ORA immediate */
-void _09(void){
-		reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a |= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* 0a - ASL implied */
-void _0a(void){
-	
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-flag_C = (reg_a & 0x80) >> 7;
-	reg_a = (reg_a << 1) & 0xfe;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* 0b - ANC immediate */
-void _0b(void){
-		reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a &= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-	if(reg_a & 0x80) flag_C = 1;
-	else flag_C = 0;
-}
-
-/* 0c - NOP absolute */
-void _0c(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-}
-
-/* 0d - ORA absolute */
-void _0d(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a |= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* 0e - ASL absolute */
-void _0e(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-flag_C = (DataBus & 0x80) >> 7;
-	DataBus = (DataBus << 1) & 0xfe;
-	if(DataBus == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (DataBus & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 0f - SLO absolute */
-void _0f(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-flag_C = (DataBus & 0x80) >> 7;
-	DataBus = (DataBus << 1) & 0xfe;
-	reg_a |= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 10 - BPL relative */
-void _10(void){
-	
-	int Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	if(!flag_N){
-		if(DataBus & 0x80) Address = (0x100 - DataBus) * -1;
-		else Address = DataBus;
-		AddressBus++;
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		if(((reg_pc + Address) & 0xff00) != (reg_pc & 0xff00)){
-			AddressBus = (reg_pc & 0xff00) + ((reg_pc + Address) & 0xff);
-			RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		}
-		reg_pc = reg_pc + Address;
-		
-	}
-}
-
-/* 11 - ORA (indirect),y */
-void _11(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = DataBus;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	AddressBus = (AddressBus + 1) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	if((Address + reg_y) > 0xff){
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	}
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a |= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* 12 - JAM */
-
-/* 13 - SLO (indirect),y */
-void _13(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = DataBus;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	AddressBus = (AddressBus + 1) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-flag_C = (DataBus & 0x80) >> 7;
-	DataBus = (DataBus << 1) & 0xfe;
-	reg_a |= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 14 - NOP zeropage,x */
-void _14(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = ((AddressBus + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-}
-
-/* 15 - ORA zeropage,x */
-void _15(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = ((AddressBus + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a |= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* 16 - ASL zeropage,x */
-void _16(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = ((AddressBus + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-flag_C = (DataBus & 0x80) >> 7;
-	DataBus = (DataBus << 1) & 0xfe;
-	if(DataBus == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (DataBus & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 17 - SLO zeropage,x */
-void _17(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = ((AddressBus + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-flag_C = (DataBus & 0x80) >> 7;
-	DataBus = (DataBus << 1) & 0xfe;
-	reg_a |= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 18 - CLC implied */
-void _18(void){
-	
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	flag_C = 0;
-}
-
-/* 19 - ORA absolute,y */
-void _19(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	if((Address + reg_y) > 0xff){
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	}
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a |= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* 1a - NOP implied */
-void _1a(void){
-	
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-}
-
-/* 1b - SLO absolute,y */
-void _1b(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-flag_C = (DataBus & 0x80) >> 7;
-	DataBus = (DataBus << 1) & 0xfe;
-	reg_a |= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 1c - NOP absolute,x */
-void _1c(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_x) & 0xff);
-	if((Address + reg_x) > 0xff){
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		AddressBus = (((AddressBus & 0xff00) + Address) + reg_x) & 0xffff;
-	}
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-}
-
-/* 1d - ORA absolute,x */
-void _1d(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_x) & 0xff);
-	if((Address + reg_x) > 0xff){
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		AddressBus = (((AddressBus & 0xff00) + Address) + reg_x) & 0xffff;
-	}
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a |= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* 1e - ASL absolute,x */
-void _1e(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (((AddressBus & 0xff00) + Address) + reg_x) & 0xffff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-flag_C = (DataBus & 0x80) >> 7;
-	DataBus = (DataBus << 1) & 0xfe;
-	if(DataBus == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (DataBus & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 1f - SLO absolute,x */
-void _1f(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (((AddressBus & 0xff00) + Address) + reg_x) & 0xffff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-flag_C = (DataBus & 0x80) >> 7;
-	DataBus = (DataBus << 1) & 0xfe;
-	reg_a |= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 20 - JSR absolute */
-void _20(void){
-	
-	db Address;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_sp + 0x100;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	DataBus = ((reg_pc & 0xff00) >> 8);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-	reg_sp--;
-	AddressBus = reg_sp + 0x100;
-	DataBus = reg_pc & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-	if(TriggerWSYNC){
-	 	// WSYNC only halts the CPU on read cycles
-	 	TriggerWSYNC = 0;
-		if(RClock > CYCLESPERSCANLINE){
-	 		/* skip a line, if WSYNC came after end of line */
-	 		Timer = Timer - (2 * CYCLESPERSCANLINE - RClock);	//clock RIOT
-	 		RClock = 2 * CYCLESPERSCANLINE;	// and CPU clock
-	 	}else{
-	 		Timer = Timer - (CYCLESPERSCANLINE - RClock);	// clock RIOT
-	 		RClock = CYCLESPERSCANLINE;	// and CPU clock
-	 	}
-	}
-	reg_sp--;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc = (DataBus << 8) + Address;
-}
-
-/* 21 - AND (indirect,x) */
-void _21(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = DataBus;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (AddressBus + reg_x) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	AddressBus = (AddressBus + 1) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a &= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* 22 - JAM */
-
-/* 23 - RLA (indirect,x) */
-void _23(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = DataBus;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (AddressBus + reg_x) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	AddressBus = (AddressBus + 1) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-dummy_flag = flag_C;
-	flag_C = (DataBus & 0x80) >> 7;
-	DataBus = ((DataBus << 1) | dummy_flag) & 0xff;
-	reg_a &= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 24 - BIT zeropage */
-void _24(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	flag_V = (DataBus & 0x40);
-	flag_N = (DataBus & 0x80);
-	if((reg_a & DataBus) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-}
-
-/* 25 - AND zeropage */
-void _25(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a &= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* 26 - ROL zeropage */
-void _26(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-dummy_flag = flag_C;
-	flag_C = (DataBus & 0x80) >> 7;
-	DataBus = ((DataBus << 1) | dummy_flag) & 0xff;
-	if(DataBus == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (DataBus & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 27 - RLA zeropage */
-void _27(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-dummy_flag = flag_C;
-	flag_C = (DataBus & 0x80) >> 7;
-	DataBus = ((DataBus << 1) | dummy_flag) & 0xff;
-	reg_a &= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 28 - PLP implied */
-void _28(void){
-	
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = reg_sp + 0x100;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_sp++;
-	AddressBus = reg_sp + 0x100;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	flag_N = DataBus & 0x80;
-	flag_V = DataBus & 0x40;
-//	flag_B = DataBus & 0x10;
-	flag_D = DataBus & 0x08;
-	flag_I = DataBus & 0x04;
-	flag_Z = DataBus & 0x02;
-	flag_C = DataBus & 0x01;
-}
-
-/* 29 - AND immediate */
-void _29(void){
-		reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a &= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* 2a - ROL implied */
-void _2a(void){
-	
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-dummy_flag = flag_C;
-	flag_C = (reg_a & 0x80) >> 7;
-	reg_a = ((reg_a << 1) | dummy_flag) & 0xff;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* 2b - ANC immediate */
-void _2b(void){
-		reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a &= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-	if(reg_a & 0x80) flag_C = 1;
-	else flag_C = 0;
-}
-
-/* 2c - BIT absolute */
-void _2c(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	flag_V = (DataBus & 0x40);
-	flag_N = (DataBus & 0x80);
-	if((reg_a & DataBus) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-}
-
-/* 2d - AND absolute */
-void _2d(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a &= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* 2e - ROL absolute */
-void _2e(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-dummy_flag = flag_C;
-	flag_C = (DataBus & 0x80) >> 7;
-	DataBus = ((DataBus << 1) | dummy_flag) & 0xff;
-	if(DataBus == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (DataBus & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 2f - RLA absolute */
-void _2f(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-dummy_flag = flag_C;
-	flag_C = (DataBus & 0x80) >> 7;
-	DataBus = ((DataBus << 1) | dummy_flag) & 0xff;
-	reg_a &= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 30 - BMI relative */
-void _30(void){
-	
-	int Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	if(flag_N){
-		if(DataBus & 0x80) Address = (0x100 - DataBus) * -1;
-		else Address = DataBus;
-		AddressBus++;
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		if(((reg_pc + Address) & 0xff00) != (reg_pc & 0xff00)){
-			AddressBus = (reg_pc & 0xff00) + ((reg_pc + Address) & 0xff);
-			RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		}
-		reg_pc = reg_pc + Address;
-		
-	}
-}
-
-/* 31 - AND (indirect),y */
-void _31(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = DataBus;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	AddressBus = (AddressBus + 1) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	if((Address + reg_y) > 0xff){
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	}
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a &= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* 32 - JAM */
-
-/* 33 - RLA (indirect),y */
-void _33(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = DataBus;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	AddressBus = (AddressBus + 1) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-dummy_flag = flag_C;
-	flag_C = (DataBus & 0x80) >> 7;
-	DataBus = ((DataBus << 1) | dummy_flag) & 0xff;
-	reg_a &= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 34 - NOP zeropage,x */
-void _34(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = ((AddressBus + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-}
-
-/* 35 - AND zeropage,x */
-void _35(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = ((AddressBus + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a &= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* 36 - ROL zeropage,x */
-void _36(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = ((AddressBus + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-dummy_flag = flag_C;
-	flag_C = (DataBus & 0x80) >> 7;
-	DataBus = ((DataBus << 1) | dummy_flag) & 0xff;
-	if(DataBus == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (DataBus & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 37 - RLA zeropage,x */
-void _37(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = ((AddressBus + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-dummy_flag = flag_C;
-	flag_C = (DataBus & 0x80) >> 7;
-	DataBus = ((DataBus << 1) | dummy_flag) & 0xff;
-	reg_a &= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 38 - SEC implied */
-void _38(void){
-	
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	flag_C = 1;
-}
-
-/* 39 - AND absolute,y */
-void _39(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	if((Address + reg_y) > 0xff){
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	}
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a &= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* 3a - NOP implied */
-void _3a(void){
-	
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-}
-
-/* 3b - RLA absolute,y */
-void _3b(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-dummy_flag = flag_C;
-	flag_C = (DataBus & 0x80) >> 7;
-	DataBus = ((DataBus << 1) | dummy_flag) & 0xff;
-	reg_a &= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 3c - NOP absolute,x */
-void _3c(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_x) & 0xff);
-	if((Address + reg_x) > 0xff){
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		AddressBus = (((AddressBus & 0xff00) + Address) + reg_x) & 0xffff;
-	}
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-}
-
-/* 3d - AND absolute,x */
-void _3d(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_x) & 0xff);
-	if((Address + reg_x) > 0xff){
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		AddressBus = (((AddressBus & 0xff00) + Address) + reg_x) & 0xffff;
-	}
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a &= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* 3e - ROL absolute,x */
-void _3e(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (((AddressBus & 0xff00) + Address) + reg_x) & 0xffff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-dummy_flag = flag_C;
-	flag_C = (DataBus & 0x80) >> 7;
-	DataBus = ((DataBus << 1) | dummy_flag) & 0xff;
-	if(DataBus == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (DataBus & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 3f - RLA absolute,x */
-void _3f(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (((AddressBus & 0xff00) + Address) + reg_x) & 0xffff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-dummy_flag = flag_C;
-	flag_C = (DataBus & 0x80) >> 7;
-	DataBus = ((DataBus << 1) | dummy_flag) & 0xff;
-	reg_a &= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 40 - RTI implied */
-void _40(void){
-	
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = reg_sp + 0x100;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_sp++;
-	AddressBus = reg_sp + 0x100;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	flag_N = DataBus & 0x80;
-	flag_V = DataBus & 0x40;
-//	flag_B = DataBus & 0x10;
-	flag_D = DataBus & 0x08;
-	flag_I = DataBus & 0x04;
-	flag_Z = DataBus & 0x02;
-	flag_C = DataBus & 0x01;
-	reg_sp++;
-	AddressBus = reg_sp + 0x100;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc = DataBus;
-	reg_sp++;
-	AddressBus = reg_sp + 0x100;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc = (DataBus << 8) + reg_pc;
-}
-
-/* 41 - EOR (indirect,x) */
-void _41(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = DataBus;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (AddressBus + reg_x) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	AddressBus = (AddressBus + 1) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a ^= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* 42 - JAM */
-
-/* 43 - SRE (indirect,x) */
-void _43(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = DataBus;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (AddressBus + reg_x) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	AddressBus = (AddressBus + 1) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-flag_C = DataBus & 0x01;
-	DataBus = (DataBus >> 1) & 0x7f;
-	reg_a ^= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 44 - NOP zeropage */
-void _44(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-}
-
-/* 45 - EOR zeropage */
-void _45(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a ^= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* 46 - LSR zeropage */
-void _46(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-flag_C = DataBus & 0x01;
-	DataBus = (DataBus >> 1) & 0x7f;
-	if(DataBus == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (DataBus & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 47 - SRE zeropage */
-void _47(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-flag_C = DataBus & 0x01;
-	DataBus = (DataBus >> 1) & 0x7f;
-	reg_a ^= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 48 - PHA implied */
-void _48(void){
-	
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = reg_sp + 0x100;
-	DataBus = reg_a;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-	reg_sp--;
-}
-
-/* 49 - EOR immediate */
-void _49(void){
-		reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a ^= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* 4a - LSR implied */
-void _4a(void){
-	
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-flag_C = reg_a & 0x01;
-	reg_a = (reg_a >> 1) & 0x7f;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* 4b - ASR immediate */
-void _4b(void){
-		reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a &= DataBus;
-	flag_C = reg_a & 0x01;
-	reg_a = (reg_a >> 1) & 0x7f;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* 4c - JMP absolute */
-void _4c(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	reg_pc++;
-	reg_pc = AddressBus;
-}
-
-/* 4d - EOR absolute */
-void _4d(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a ^= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* 4e - LSR absolute */
-void _4e(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-flag_C = DataBus & 0x01;
-	DataBus = (DataBus >> 1) & 0x7f;
-	if(DataBus == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (DataBus & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 4f - SRE absolute */
-void _4f(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-flag_C = DataBus & 0x01;
-	DataBus = (DataBus >> 1) & 0x7f;
-	reg_a ^= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 50 - BVC relative */
-void _50(void){
-	
-	int Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	if(!flag_V){
-		if(DataBus & 0x80) Address = (0x100 - DataBus) * -1;
-		else Address = DataBus;
-		AddressBus++;
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		if(((reg_pc + Address) & 0xff00) != (reg_pc & 0xff00)){
-			AddressBus = (reg_pc & 0xff00) + ((reg_pc + Address) & 0xff);
-			RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		}
-		reg_pc = reg_pc + Address;
-		
-	}
-}
-
-/* 51 - EOR (indirect),y */
-void _51(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = DataBus;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	AddressBus = (AddressBus + 1) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	if((Address + reg_y) > 0xff){
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	}
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a ^= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* 52 - JAM */
-
-/* 53 - SRE (indirect),y */
-void _53(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = DataBus;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	AddressBus = (AddressBus + 1) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-flag_C = DataBus & 0x01;
-	DataBus = (DataBus >> 1) & 0x7f;
-	reg_a ^= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 54 - NOP zeropage,x */
-void _54(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = ((AddressBus + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-}
-
-/* 55 - EOR zeropage,x */
-void _55(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = ((AddressBus + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a ^= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* 56 - LSR zeropage,x */
-void _56(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = ((AddressBus + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-flag_C = DataBus & 0x01;
-	DataBus = (DataBus >> 1) & 0x7f;
-	if(DataBus == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (DataBus & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 57 - SRE zeropage,x */
-void _57(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = ((AddressBus + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-flag_C = DataBus & 0x01;
-	DataBus = (DataBus >> 1) & 0x7f;
-	reg_a ^= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 58 - CLI implied */
-void _58(void){
-	
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	flag_I = 0;
-}
-
-/* 59 - EOR absolute,y */
-void _59(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	if((Address + reg_y) > 0xff){
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	}
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a ^= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* 5a - NOP implied */
-void _5a(void){
-	
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-}
-
-/* 5b - SRE absolute,y */
-void _5b(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-flag_C = DataBus & 0x01;
-	DataBus = (DataBus >> 1) & 0x7f;
-	reg_a ^= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 5c - NOP absolute,x */
-void _5c(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_x) & 0xff);
-	if((Address + reg_x) > 0xff){
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		AddressBus = (((AddressBus & 0xff00) + Address) + reg_x) & 0xffff;
-	}
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-}
-
-/* 5d - EOR absolute,x */
-void _5d(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_x) & 0xff);
-	if((Address + reg_x) > 0xff){
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		AddressBus = (((AddressBus & 0xff00) + Address) + reg_x) & 0xffff;
-	}
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a ^= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* 5e - LSR absolute,x */
-void _5e(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (((AddressBus & 0xff00) + Address) + reg_x) & 0xffff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-flag_C = DataBus & 0x01;
-	DataBus = (DataBus >> 1) & 0x7f;
-	if(DataBus == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (DataBus & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 5f - SRE absolute,x */
-void _5f(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (((AddressBus & 0xff00) + Address) + reg_x) & 0xffff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-flag_C = DataBus & 0x01;
-	DataBus = (DataBus >> 1) & 0x7f;
-	reg_a ^= DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 60 - RTS implied */
-void _60(void){
-	
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = reg_sp + 0x100;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_sp++;
-	AddressBus = reg_sp + 0x100;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc = DataBus;
-	reg_sp++;
-	AddressBus = reg_sp + 0x100;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc = (DataBus << 8) + reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-}
-
-/* 61 - ADC (indirect,x) */
-void _61(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = DataBus;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (AddressBus + reg_x) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	AddressBus = (AddressBus + 1) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	if(!flag_D){
-		if( (((reg_a + DataBus + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ DataBus) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + DataBus + flag_C) & 0x100) >> 8);
-		reg_a = ((reg_a + DataBus + flag_C) & 0xff);
-		flag_C = dummy_flag;
-		if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-	}else{
-		dummy_low = (reg_a & 0xf) + (DataBus & 0xf) + flag_C;
-		dummy_high = ((reg_a & 0xf0) >> 4) + ((DataBus & 0xf0) >> 4);	// + ((dummy_low & 0x10) >> 4);
-		if(dummy_low > 9) dummy_low += 6;
-		if (dummy_low > 0xf) dummy_high++;
-		if(((reg_a + DataBus + flag_C) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-		flag_N = (((dummy_high << 4) | (dummy_low & 0xf)) & 0x80);
-		if( (((dummy_high << 4) ^ reg_a) & 0x80) && !((reg_a ^ DataBus) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		if (dummy_high > 9) dummy_high += 6;
-		if (dummy_high > 0xf) flag_C = 0x1;
-		else flag_C = 0;
-		reg_a = ((dummy_high << 4) | (dummy_low & 0xf)) & 0xff;
-	}
-}
-
-/* 62 - JAM */
-
-/* 63 - RRA (indirect,x) */
-void _63(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = DataBus;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (AddressBus + reg_x) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	AddressBus = (AddressBus + 1) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-dummy_flag = flag_C << 7;
-	flag_C = DataBus & 0x01;
-	DataBus = ((DataBus >> 1) | dummy_flag) & 0xff;
-	if(!flag_D){
-		if( (((reg_a + DataBus + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ DataBus) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + DataBus + flag_C) & 0x100) >> 8);
-		reg_a = ((reg_a + DataBus + flag_C) & 0xff);
-		flag_C = dummy_flag;
-		if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-	}else{
-		dummy_low = (reg_a & 0xf) + (DataBus & 0xf) + flag_C;
-		dummy_high = ((reg_a & 0xf0) >> 4) + ((DataBus & 0xf0) >> 4);	// + ((dummy_low & 0x10) >> 4);
-		if(dummy_low > 9) dummy_low += 6;
-		if (dummy_low > 0xf) dummy_high++;
-		if(((reg_a + DataBus + flag_C) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-		flag_N = (((dummy_high << 4) | (dummy_low & 0xf)) & 0x80);
-		if( (((dummy_high << 4) ^ reg_a) & 0x80) && !((reg_a ^ DataBus) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		if (dummy_high > 9) dummy_high += 6;
-		if (dummy_high > 0xf) flag_C = 0x1;
-		else flag_C = 0;
-		reg_a = ((dummy_high << 4) | (dummy_low & 0xf)) & 0xff;
-	}
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 64 - NOP zeropage */
-void _64(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-}
-
-/* 65 - ADC zeropage */
-void _65(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	if(!flag_D){
-		if( (((reg_a + DataBus + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ DataBus) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + DataBus + flag_C) & 0x100) >> 8);
-		reg_a = ((reg_a + DataBus + flag_C) & 0xff);
-		flag_C = dummy_flag;
-		if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-	}else{
-		dummy_low = (reg_a & 0xf) + (DataBus & 0xf) + flag_C;
-		dummy_high = ((reg_a & 0xf0) >> 4) + ((DataBus & 0xf0) >> 4);	// + ((dummy_low & 0x10) >> 4);
-		if(dummy_low > 9) dummy_low += 6;
-		if (dummy_low > 0xf) dummy_high++;
-		if(((reg_a + DataBus + flag_C) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-		flag_N = (((dummy_high << 4) | (dummy_low & 0xf)) & 0x80);
-		if( (((dummy_high << 4) ^ reg_a) & 0x80) && !((reg_a ^ DataBus) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		if (dummy_high > 9) dummy_high += 6;
-		if (dummy_high > 0xf) flag_C = 0x1;
-		else flag_C = 0;
-		reg_a = ((dummy_high << 4) | (dummy_low & 0xf)) & 0xff;
-	}
-}
-
-/* 66 - ROR zeropage */
-void _66(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-dummy_flag = flag_C << 7;
-	flag_C = DataBus & 0x01;
-	DataBus = ((DataBus >> 1) | dummy_flag) & 0xff;
-	if(DataBus == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (DataBus & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 67 - RRA zeropage */
-void _67(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-dummy_flag = flag_C << 7;
-	flag_C = DataBus & 0x01;
-	DataBus = ((DataBus >> 1) | dummy_flag) & 0xff;
-	if(!flag_D){
-		if( (((reg_a + DataBus + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ DataBus) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + DataBus + flag_C) & 0x100) >> 8);
-		reg_a = ((reg_a + DataBus + flag_C) & 0xff);
-		flag_C = dummy_flag;
-		if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-	}else{
-		dummy_low = (reg_a & 0xf) + (DataBus & 0xf) + flag_C;
-		dummy_high = ((reg_a & 0xf0) >> 4) + ((DataBus & 0xf0) >> 4);	// + ((dummy_low & 0x10) >> 4);
-		if(dummy_low > 9) dummy_low += 6;
-		if (dummy_low > 0xf) dummy_high++;
-		if(((reg_a + DataBus + flag_C) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-		flag_N = (((dummy_high << 4) | (dummy_low & 0xf)) & 0x80);
-		if( (((dummy_high << 4) ^ reg_a) & 0x80) && !((reg_a ^ DataBus) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		if (dummy_high > 9) dummy_high += 6;
-		if (dummy_high > 0xf) flag_C = 0x1;
-		else flag_C = 0;
-		reg_a = ((dummy_high << 4) | (dummy_low & 0xf)) & 0xff;
-	}
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 68 - PLA implied */
-void _68(void){
-	
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = reg_sp + 0x100;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_sp++;
-	AddressBus = reg_sp + 0x100;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a = DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* 69 - ADC immediate */
-void _69(void){
-		reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	if(!flag_D){
-		if( (((reg_a + DataBus + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ DataBus) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + DataBus + flag_C) & 0x100) >> 8);
-		reg_a = ((reg_a + DataBus + flag_C) & 0xff);
-		flag_C = dummy_flag;
-		if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-	}else{
-		dummy_low = (reg_a & 0xf) + (DataBus & 0xf) + flag_C;
-		dummy_high = ((reg_a & 0xf0) >> 4) + ((DataBus & 0xf0) >> 4);	// + ((dummy_low & 0x10) >> 4);
-		if(dummy_low > 9) dummy_low += 6;
-		if (dummy_low > 0xf) dummy_high++;
-		if(((reg_a + DataBus + flag_C) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-		flag_N = (((dummy_high << 4) | (dummy_low & 0xf)) & 0x80);
-		if( (((dummy_high << 4) ^ reg_a) & 0x80) && !((reg_a ^ DataBus) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		if (dummy_high > 9) dummy_high += 6;
-		if (dummy_high > 0xf) flag_C = 0x1;
-		else flag_C = 0;
-		reg_a = ((dummy_high << 4) | (dummy_low & 0xf)) & 0xff;
-	}
-}
-
-/* 6a - ROR implied */
-void _6a(void){
-	
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-dummy_flag = flag_C << 7;
-	flag_C = reg_a & 0x01;
-	reg_a = ((reg_a >> 1) | dummy_flag) & 0xff;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* 6b - ARR immediate */
-void _6b(void){
-		reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	if(!flag_D){
-		reg_a &= DataBus;
-		reg_a = ((reg_a >> 1) | (flag_C << 7)) & 0xff;
-		if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-		flag_C = (reg_a & 0x40) >> 6;
-		flag_V = (((reg_a & 0x40) ^ ((reg_a & 0x20) << 1))) & 0x40;
-	}else{
-		dummy_high = (reg_a & DataBus) >> 4;
-		dummy_low = (reg_a & DataBus) & 0xf;
-		flag_N = flag_C << 7;
-		reg_a = (reg_a & DataBus) >> 1 | flag_N;
-		if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-		flag_V = (((reg_a & 0x40) ^ ((reg_a & 0x20) << 1))) & 0x40;
-		if((dummy_low + (dummy_low & 1)) > 5) reg_a = (reg_a & 0xf0) | ((reg_a + 6) & 0xf);
-		if((dummy_high + (dummy_high & 1)) > 5){
-			reg_a = (reg_a + 0x60) & 0xff;
-			flag_C = 1;
-		}else flag_C = 0;
-	}
-}
-
-/* 6c - JMP (indirect) */
-void _6c(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc = DataBus;
-	AddressBus = (AddressBus + 1) & 0xffff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = reg_pc + (DataBus << 8);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	AddressBus = (AddressBus & 0xff00) + ((AddressBus + 1) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = Address + (DataBus << 8);
-	reg_pc = AddressBus;
-}
-
-/* 6d - ADC absolute */
-void _6d(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	if(!flag_D){
-		if( (((reg_a + DataBus + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ DataBus) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + DataBus + flag_C) & 0x100) >> 8);
-		reg_a = ((reg_a + DataBus + flag_C) & 0xff);
-		flag_C = dummy_flag;
-		if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-	}else{
-		dummy_low = (reg_a & 0xf) + (DataBus & 0xf) + flag_C;
-		dummy_high = ((reg_a & 0xf0) >> 4) + ((DataBus & 0xf0) >> 4);	// + ((dummy_low & 0x10) >> 4);
-		if(dummy_low > 9) dummy_low += 6;
-		if (dummy_low > 0xf) dummy_high++;
-		if(((reg_a + DataBus + flag_C) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-		flag_N = (((dummy_high << 4) | (dummy_low & 0xf)) & 0x80);
-		if( (((dummy_high << 4) ^ reg_a) & 0x80) && !((reg_a ^ DataBus) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		if (dummy_high > 9) dummy_high += 6;
-		if (dummy_high > 0xf) flag_C = 0x1;
-		else flag_C = 0;
-		reg_a = ((dummy_high << 4) | (dummy_low & 0xf)) & 0xff;
-	}
-}
-
-/* 6e - ROR absolute */
-void _6e(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-dummy_flag = flag_C << 7;
-	flag_C = DataBus & 0x01;
-	DataBus = ((DataBus >> 1) | dummy_flag) & 0xff;
-	if(DataBus == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (DataBus & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 6f - RRA absolute */
-void _6f(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-dummy_flag = flag_C << 7;
-	flag_C = DataBus & 0x01;
-	DataBus = ((DataBus >> 1) | dummy_flag) & 0xff;
-	if(!flag_D){
-		if( (((reg_a + DataBus + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ DataBus) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + DataBus + flag_C) & 0x100) >> 8);
-		reg_a = ((reg_a + DataBus + flag_C) & 0xff);
-		flag_C = dummy_flag;
-		if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-	}else{
-		dummy_low = (reg_a & 0xf) + (DataBus & 0xf) + flag_C;
-		dummy_high = ((reg_a & 0xf0) >> 4) + ((DataBus & 0xf0) >> 4);	// + ((dummy_low & 0x10) >> 4);
-		if(dummy_low > 9) dummy_low += 6;
-		if (dummy_low > 0xf) dummy_high++;
-		if(((reg_a + DataBus + flag_C) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-		flag_N = (((dummy_high << 4) | (dummy_low & 0xf)) & 0x80);
-		if( (((dummy_high << 4) ^ reg_a) & 0x80) && !((reg_a ^ DataBus) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		if (dummy_high > 9) dummy_high += 6;
-		if (dummy_high > 0xf) flag_C = 0x1;
-		else flag_C = 0;
-		reg_a = ((dummy_high << 4) | (dummy_low & 0xf)) & 0xff;
-	}
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 70 - BVS relative */
-void _70(void){
-	
-	int Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	if(flag_V){
-		if(DataBus & 0x80) Address = (0x100 - DataBus) * -1;
-		else Address = DataBus;
-		AddressBus++;
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		if(((reg_pc + Address) & 0xff00) != (reg_pc & 0xff00)){
-			AddressBus = (reg_pc & 0xff00) + ((reg_pc + Address) & 0xff);
-			RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		}
-		reg_pc = reg_pc + Address;
-		
-	}
-}
-
-/* 71 - ADC (indirect),y */
-void _71(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = DataBus;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	AddressBus = (AddressBus + 1) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	if((Address + reg_y) > 0xff){
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	}
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	if(!flag_D){
-		if( (((reg_a + DataBus + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ DataBus) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + DataBus + flag_C) & 0x100) >> 8);
-		reg_a = ((reg_a + DataBus + flag_C) & 0xff);
-		flag_C = dummy_flag;
-		if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-	}else{
-		dummy_low = (reg_a & 0xf) + (DataBus & 0xf) + flag_C;
-		dummy_high = ((reg_a & 0xf0) >> 4) + ((DataBus & 0xf0) >> 4);	// + ((dummy_low & 0x10) >> 4);
-		if(dummy_low > 9) dummy_low += 6;
-		if (dummy_low > 0xf) dummy_high++;
-		if(((reg_a + DataBus + flag_C) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-		flag_N = (((dummy_high << 4) | (dummy_low & 0xf)) & 0x80);
-		if( (((dummy_high << 4) ^ reg_a) & 0x80) && !((reg_a ^ DataBus) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		if (dummy_high > 9) dummy_high += 6;
-		if (dummy_high > 0xf) flag_C = 0x1;
-		else flag_C = 0;
-		reg_a = ((dummy_high << 4) | (dummy_low & 0xf)) & 0xff;
-	}
-}
-
-/* 72 - JAM */
-
-/* 73 - RRA (indirect),y */
-void _73(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = DataBus;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	AddressBus = (AddressBus + 1) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-dummy_flag = flag_C << 7;
-	flag_C = DataBus & 0x01;
-	DataBus = ((DataBus >> 1) | dummy_flag) & 0xff;
-	if(!flag_D){
-		if( (((reg_a + DataBus + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ DataBus) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + DataBus + flag_C) & 0x100) >> 8);
-		reg_a = ((reg_a + DataBus + flag_C) & 0xff);
-		flag_C = dummy_flag;
-		if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-	}else{
-		dummy_low = (reg_a & 0xf) + (DataBus & 0xf) + flag_C;
-		dummy_high = ((reg_a & 0xf0) >> 4) + ((DataBus & 0xf0) >> 4);	// + ((dummy_low & 0x10) >> 4);
-		if(dummy_low > 9) dummy_low += 6;
-		if (dummy_low > 0xf) dummy_high++;
-		if(((reg_a + DataBus + flag_C) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-		flag_N = (((dummy_high << 4) | (dummy_low & 0xf)) & 0x80);
-		if( (((dummy_high << 4) ^ reg_a) & 0x80) && !((reg_a ^ DataBus) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		if (dummy_high > 9) dummy_high += 6;
-		if (dummy_high > 0xf) flag_C = 0x1;
-		else flag_C = 0;
-		reg_a = ((dummy_high << 4) | (dummy_low & 0xf)) & 0xff;
-	}
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 74 - NOP zeropage,x */
-void _74(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = ((AddressBus + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-}
-
-/* 75 - ADC zeropage,x */
-void _75(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = ((AddressBus + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	if(!flag_D){
-		if( (((reg_a + DataBus + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ DataBus) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + DataBus + flag_C) & 0x100) >> 8);
-		reg_a = ((reg_a + DataBus + flag_C) & 0xff);
-		flag_C = dummy_flag;
-		if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-	}else{
-		dummy_low = (reg_a & 0xf) + (DataBus & 0xf) + flag_C;
-		dummy_high = ((reg_a & 0xf0) >> 4) + ((DataBus & 0xf0) >> 4);	// + ((dummy_low & 0x10) >> 4);
-		if(dummy_low > 9) dummy_low += 6;
-		if (dummy_low > 0xf) dummy_high++;
-		if(((reg_a + DataBus + flag_C) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-		flag_N = (((dummy_high << 4) | (dummy_low & 0xf)) & 0x80);
-		if( (((dummy_high << 4) ^ reg_a) & 0x80) && !((reg_a ^ DataBus) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		if (dummy_high > 9) dummy_high += 6;
-		if (dummy_high > 0xf) flag_C = 0x1;
-		else flag_C = 0;
-		reg_a = ((dummy_high << 4) | (dummy_low & 0xf)) & 0xff;
-	}
-}
-
-/* 76 - ROR zeropage,x */
-void _76(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = ((AddressBus + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-dummy_flag = flag_C << 7;
-	flag_C = DataBus & 0x01;
-	DataBus = ((DataBus >> 1) | dummy_flag) & 0xff;
-	if(DataBus == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (DataBus & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 77 - RRA zeropage,x */
-void _77(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = ((AddressBus + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-dummy_flag = flag_C << 7;
-	flag_C = DataBus & 0x01;
-	DataBus = ((DataBus >> 1) | dummy_flag) & 0xff;
-	if(!flag_D){
-		if( (((reg_a + DataBus + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ DataBus) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + DataBus + flag_C) & 0x100) >> 8);
-		reg_a = ((reg_a + DataBus + flag_C) & 0xff);
-		flag_C = dummy_flag;
-		if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-	}else{
-		dummy_low = (reg_a & 0xf) + (DataBus & 0xf) + flag_C;
-		dummy_high = ((reg_a & 0xf0) >> 4) + ((DataBus & 0xf0) >> 4);	// + ((dummy_low & 0x10) >> 4);
-		if(dummy_low > 9) dummy_low += 6;
-		if (dummy_low > 0xf) dummy_high++;
-		if(((reg_a + DataBus + flag_C) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-		flag_N = (((dummy_high << 4) | (dummy_low & 0xf)) & 0x80);
-		if( (((dummy_high << 4) ^ reg_a) & 0x80) && !((reg_a ^ DataBus) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		if (dummy_high > 9) dummy_high += 6;
-		if (dummy_high > 0xf) flag_C = 0x1;
-		else flag_C = 0;
-		reg_a = ((dummy_high << 4) | (dummy_low & 0xf)) & 0xff;
-	}
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 78 - SEI implied */
-void _78(void){
-	
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	flag_I = 4;
-}
-
-/* 79 - ADC absolute,y */
-void _79(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	if((Address + reg_y) > 0xff){
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	}
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	if(!flag_D){
-		if( (((reg_a + DataBus + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ DataBus) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + DataBus + flag_C) & 0x100) >> 8);
-		reg_a = ((reg_a + DataBus + flag_C) & 0xff);
-		flag_C = dummy_flag;
-		if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-	}else{
-		dummy_low = (reg_a & 0xf) + (DataBus & 0xf) + flag_C;
-		dummy_high = ((reg_a & 0xf0) >> 4) + ((DataBus & 0xf0) >> 4);	// + ((dummy_low & 0x10) >> 4);
-		if(dummy_low > 9) dummy_low += 6;
-		if (dummy_low > 0xf) dummy_high++;
-		if(((reg_a + DataBus + flag_C) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-		flag_N = (((dummy_high << 4) | (dummy_low & 0xf)) & 0x80);
-		if( (((dummy_high << 4) ^ reg_a) & 0x80) && !((reg_a ^ DataBus) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		if (dummy_high > 9) dummy_high += 6;
-		if (dummy_high > 0xf) flag_C = 0x1;
-		else flag_C = 0;
-		reg_a = ((dummy_high << 4) | (dummy_low & 0xf)) & 0xff;
-	}
-}
-
-/* 7a - NOP implied */
-void _7a(void){
-	
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-}
-
-/* 7b - RRA absolute,y */
-void _7b(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-dummy_flag = flag_C << 7;
-	flag_C = DataBus & 0x01;
-	DataBus = ((DataBus >> 1) | dummy_flag) & 0xff;
-	if(!flag_D){
-		if( (((reg_a + DataBus + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ DataBus) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + DataBus + flag_C) & 0x100) >> 8);
-		reg_a = ((reg_a + DataBus + flag_C) & 0xff);
-		flag_C = dummy_flag;
-		if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-	}else{
-		dummy_low = (reg_a & 0xf) + (DataBus & 0xf) + flag_C;
-		dummy_high = ((reg_a & 0xf0) >> 4) + ((DataBus & 0xf0) >> 4);	// + ((dummy_low & 0x10) >> 4);
-		if(dummy_low > 9) dummy_low += 6;
-		if (dummy_low > 0xf) dummy_high++;
-		if(((reg_a + DataBus + flag_C) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-		flag_N = (((dummy_high << 4) | (dummy_low & 0xf)) & 0x80);
-		if( (((dummy_high << 4) ^ reg_a) & 0x80) && !((reg_a ^ DataBus) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		if (dummy_high > 9) dummy_high += 6;
-		if (dummy_high > 0xf) flag_C = 0x1;
-		else flag_C = 0;
-		reg_a = ((dummy_high << 4) | (dummy_low & 0xf)) & 0xff;
-	}
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 7c - NOP absolute,x */
-void _7c(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_x) & 0xff);
-	if((Address + reg_x) > 0xff){
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		AddressBus = (((AddressBus & 0xff00) + Address) + reg_x) & 0xffff;
-	}
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-}
-
-/* 7d - ADC absolute,x */
-void _7d(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_x) & 0xff);
-	if((Address + reg_x) > 0xff){
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		AddressBus = (((AddressBus & 0xff00) + Address) + reg_x) & 0xffff;
-	}
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	if(!flag_D){
-		if( (((reg_a + DataBus + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ DataBus) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + DataBus + flag_C) & 0x100) >> 8);
-		reg_a = ((reg_a + DataBus + flag_C) & 0xff);
-		flag_C = dummy_flag;
-		if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-	}else{
-		dummy_low = (reg_a & 0xf) + (DataBus & 0xf) + flag_C;
-		dummy_high = ((reg_a & 0xf0) >> 4) + ((DataBus & 0xf0) >> 4);	// + ((dummy_low & 0x10) >> 4);
-		if(dummy_low > 9) dummy_low += 6;
-		if (dummy_low > 0xf) dummy_high++;
-		if(((reg_a + DataBus + flag_C) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-		flag_N = (((dummy_high << 4) | (dummy_low & 0xf)) & 0x80);
-		if( (((dummy_high << 4) ^ reg_a) & 0x80) && !((reg_a ^ DataBus) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		if (dummy_high > 9) dummy_high += 6;
-		if (dummy_high > 0xf) flag_C = 0x1;
-		else flag_C = 0;
-		reg_a = ((dummy_high << 4) | (dummy_low & 0xf)) & 0xff;
-	}
-}
-
-/* 7e - ROR absolute,x */
-void _7e(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (((AddressBus & 0xff00) + Address) + reg_x) & 0xffff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-dummy_flag = flag_C << 7;
-	flag_C = DataBus & 0x01;
-	DataBus = ((DataBus >> 1) | dummy_flag) & 0xff;
-	if(DataBus == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (DataBus & 0x80);
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 7f - RRA absolute,x */
-void _7f(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (((AddressBus & 0xff00) + Address) + reg_x) & 0xffff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-dummy_flag = flag_C << 7;
-	flag_C = DataBus & 0x01;
-	DataBus = ((DataBus >> 1) | dummy_flag) & 0xff;
-	if(!flag_D){
-		if( (((reg_a + DataBus + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ DataBus) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + DataBus + flag_C) & 0x100) >> 8);
-		reg_a = ((reg_a + DataBus + flag_C) & 0xff);
-		flag_C = dummy_flag;
-		if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-	}else{
-		dummy_low = (reg_a & 0xf) + (DataBus & 0xf) + flag_C;
-		dummy_high = ((reg_a & 0xf0) >> 4) + ((DataBus & 0xf0) >> 4);	// + ((dummy_low & 0x10) >> 4);
-		if(dummy_low > 9) dummy_low += 6;
-		if (dummy_low > 0xf) dummy_high++;
-		if(((reg_a + DataBus + flag_C) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-		flag_N = (((dummy_high << 4) | (dummy_low & 0xf)) & 0x80);
-		if( (((dummy_high << 4) ^ reg_a) & 0x80) && !((reg_a ^ DataBus) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		if (dummy_high > 9) dummy_high += 6;
-		if (dummy_high > 0xf) flag_C = 0x1;
-		else flag_C = 0;
-		reg_a = ((dummy_high << 4) | (dummy_low & 0xf)) & 0xff;
-	}
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 80 - NOP immediate */
-void _80(void){
-		reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-}
-
-/* 81 - STA (indirect,x) */
-void _81(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = DataBus;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (AddressBus + reg_x) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	AddressBus = (AddressBus + 1) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	DataBus = reg_a;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 82 - NOP immediate */
-void _82(void){
-		reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-}
-
-/* 83 - SAX (indirect),x */
-void _83(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = DataBus;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (AddressBus + reg_x) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	AddressBus = (AddressBus + 1) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	DataBus = (reg_a & reg_x);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 84 - STY zeropage */
-void _84(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	DataBus = reg_y;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 85 - STA zeropage */
-void _85(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	DataBus = reg_a;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 86 - STX zeropage */
-void _86(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	DataBus = reg_x;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 87 - SAX zeropage */
-void _87(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	DataBus = (reg_a & reg_x);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 88 - DEY implied */
-void _88(void){
-	
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_y--;
-	if(reg_y == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_y & 0x80);
-}
-
-/* 89 - NOP immediate */
-void _89(void){
-		reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-}
-
-/* 8a - TXA implied */
-void _8a(void){
-	
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a = reg_x;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* 8b - ANE immediate */
-void _8b(void){
-		reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a = ((reg_a | 0xee) & reg_x) & DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* 8c - STY absolute */
-void _8c(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	reg_pc++;
-	DataBus = reg_y;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 8d - STA absolute */
-void _8d(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	reg_pc++;
-	DataBus = reg_a;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 8e - STX absolute */
-void _8e(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	reg_pc++;
-	DataBus = reg_x;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 8f - SAX absolute */
-void _8f(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	reg_pc++;
-	DataBus = (reg_a & reg_x);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 90 - BCC relative */
-void _90(void){
-	
-	int Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	if(!flag_C){
-		if(DataBus & 0x80) Address = (0x100 - DataBus) * -1;
-		else Address = DataBus;
-		AddressBus++;
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		if(((reg_pc + Address) & 0xff00) != (reg_pc & 0xff00)){
-			AddressBus = (reg_pc & 0xff00) + ((reg_pc + Address) & 0xff);
-			RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		}
-		reg_pc = reg_pc + Address;
-		
-	}
-}
-
-/* 91 - STA (indirect),y */
-void _91(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = DataBus;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	AddressBus = (AddressBus + 1) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	DataBus = reg_a;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 92 - JAM */
-
-/* 93 - SHA (indirect),y */
-void _93(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = DataBus;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	AddressBus = (AddressBus + 1) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	DataBus = (((AddressBus + 0x100) & 0xff00) >> 8) & reg_x & reg_a;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 94 - STY zeropage,x */
-void _94(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = ((AddressBus + reg_x) & 0xff);
-	DataBus = reg_y;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 95 - STA zeropage,x */
-void _95(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = ((AddressBus + reg_x) & 0xff);
-	DataBus = reg_a;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 96 - STX zeropage,y */
-void _96(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = ((AddressBus + reg_y) & 0xff);
-	DataBus = reg_x;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 97 - SAX zeropage,y */
-void _97(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = ((AddressBus + reg_y) & 0xff);
-	DataBus = (reg_a & reg_x);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 98 - TYA implied */
-void _98(void){
-	
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a = reg_y;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* 99 - STA absolute,y */
-void _99(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	DataBus = reg_a;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 9a - TXS implied */
-void _9a(void){
-	
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_sp = reg_x;
-}
-
-/* 9b - SHS absolute,y */
-void _9b(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	DataBus = (((AddressBus + 0x100) & 0xff00) >> 8) & reg_x & reg_a;
-	reg_sp = (reg_a & reg_x);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 9c - SHY absolute,x */
-void _9c(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (((AddressBus & 0xff00) + Address) + reg_x) & 0xffff;
-	DataBus = (((AddressBus + 0x100) & 0xff00) >> 8) & reg_y;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 9d - STA absolute,x */
-void _9d(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (((AddressBus & 0xff00) + Address) + reg_x) & 0xffff;
-	DataBus = reg_a;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 9e - SHX absolute,y */
-void _9e(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	DataBus = (((AddressBus + 0x100) & 0xff00) >> 8) & reg_x;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* 9f - SHA absolute,y */
-void _9f(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	DataBus = (((AddressBus + 0x100) & 0xff00) >> 8) & reg_x & reg_a;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* a0 - LDY immediate */
-void _a0(void){
-		reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_y = DataBus;
-	if(reg_y == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_y & 0x80);
-}
-
-/* a1 - LDA (indirect,x) */
-void _a1(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = DataBus;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (AddressBus + reg_x) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	AddressBus = (AddressBus + 1) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a = DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* a2 - LDX immediate */
-void _a2(void){
-		reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_x = DataBus;
-	if(reg_x == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_x & 0x80);
-}
-
-/* a3 - LAX (indirect,x) */
-void _a3(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = DataBus;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (AddressBus + reg_x) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	AddressBus = (AddressBus + 1) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a = reg_x = DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* a4 - LDY zeropage */
-void _a4(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_y = DataBus;
-	if(reg_y == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_y & 0x80);
-}
-
-/* a5 - LDA zeropage */
-void _a5(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a = DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* a6 - LDX zeropage */
-void _a6(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_x = DataBus;
-	if(reg_x == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_x & 0x80);
-}
-
-/* a7 - LAX zeropage */
-void _a7(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a = reg_x = DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* a8 - TAY implied */
-void _a8(void){
-	
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_y = reg_a;
-	if(reg_y == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_y & 0x80);
-}
-
-/* a9 - LDA immediate */
-void _a9(void){
-		reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a = DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* aa - TAX implied */
-void _aa(void){
-	
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_x = reg_a;
-	if(reg_x == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_x & 0x80);
-}
-
-/* ab - LXA immediate */
-void _ab(void){
-		reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a = (reg_a | 0xee) & DataBus;
-	reg_x = reg_a;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* ac - LDY absolute */
-void _ac(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_y = DataBus;
-	if(reg_y == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_y & 0x80);
-}
-
-/* ad - LDA absolute */
-void _ad(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a = DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* ae - LDX absolute */
-void _ae(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_x = DataBus;
-	if(reg_x == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_x & 0x80);
-}
-
-/* af - LAX absolute */
-void _af(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a = reg_x = DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* b0 - BCS relative */
-void _b0(void){
-	
-	int Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	if(flag_C){
-		if(DataBus & 0x80) Address = (0x100 - DataBus) * -1;
-		else Address = DataBus;
-		AddressBus++;
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		if(((reg_pc + Address) & 0xff00) != (reg_pc & 0xff00)){
-			AddressBus = (reg_pc & 0xff00) + ((reg_pc + Address) & 0xff);
-			RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		}
-		reg_pc = reg_pc + Address;
-		
-	}
-}
-
-/* b1 - LDA (indirect),y */
-void _b1(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = DataBus;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	AddressBus = (AddressBus + 1) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	if((Address + reg_y) > 0xff){
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	}
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a = DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* b2 - JAM */
-
-/* b3 - LAX (indirect),y */
-void _b3(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = DataBus;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	AddressBus = (AddressBus + 1) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	if((Address + reg_y) > 0xff){
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	}
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a = reg_x = DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* b4 - LDY zeropage,x */
-void _b4(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = ((AddressBus + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_y = DataBus;
-	if(reg_y == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_y & 0x80);
-}
-
-/* b5 - LDA zeropage,x */
-void _b5(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = ((AddressBus + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a = DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* b6 - LDX zeropage,y */
-void _b6(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = ((AddressBus + reg_y) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_x = DataBus;
-	if(reg_x == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_x & 0x80);
-}
-
-/* b7 - LAX zeropage,Y */
-void _b7(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = ((AddressBus + reg_y) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a = reg_x = DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* b8 - CLV implied */
-void _b8(void){
-	
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	flag_V = 0;
-}
-
-/* b9 - LDA absolute,y */
-void _b9(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	if((Address + reg_y) > 0xff){
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	}
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a = DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* ba - TSX implied */
-void _ba(void){
-	
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_x = reg_sp;
-	if(reg_x == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_x & 0x80);
-}
-
-/* bb - LAS absolute,y */
-void _bb(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	if((Address + reg_y) > 0xff){
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	}
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a = reg_x = reg_sp & DataBus;
-	reg_sp = reg_a;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* bc - LDY absolute,x */
-void _bc(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_x) & 0xff);
-	if((Address + reg_x) > 0xff){
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		AddressBus = (((AddressBus & 0xff00) + Address) + reg_x) & 0xffff;
-	}
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_y = DataBus;
-	if(reg_y == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_y & 0x80);
-}
-
-/* bd - LDA absolute,x */
-void _bd(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_x) & 0xff);
-	if((Address + reg_x) > 0xff){
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		AddressBus = (((AddressBus & 0xff00) + Address) + reg_x) & 0xffff;
-	}
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a = DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* be - LDX absolute,y */
-void _be(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	if((Address + reg_y) > 0xff){
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	}
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_x = DataBus;
-	if(reg_x == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_x & 0x80);
-}
-
-/* bf - LAX absolute,y */
-void _bf(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	if((Address + reg_y) > 0xff){
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	}
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_a = reg_x = DataBus;
-	if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-}
-
-/* c0 - CPY immediate */
-void _c0(void){
-		reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	if(((reg_y - DataBus) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (((reg_y - DataBus) & 0xff) & 0x80);
-	if(reg_y >= DataBus) flag_C = 1;
-	else flag_C = 0;
-}
-
-/* c1 - CMP (indirect,x) */
-void _c1(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = DataBus;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (AddressBus + reg_x) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	AddressBus = (AddressBus + 1) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	if(((reg_a - DataBus) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (((reg_a - DataBus) & 0xff) & 0x80);
-	if(reg_a >= DataBus) flag_C = 1;
-	else flag_C = 0;
-}
-
-/* c2 - NOP immediate */
-void _c2(void){
-		reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-}
-
-/* c3 - DCP (indirect,x) */
-void _c3(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = DataBus;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (AddressBus + reg_x) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	AddressBus = (AddressBus + 1) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-DataBus--;
-	if(((reg_a - DataBus) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (((reg_a - DataBus) & 0xff) & 0x80);
-	if(reg_a >= DataBus) flag_C = 1;
-	else flag_C = 0;
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* c4 - CPY zeropage */
-void _c4(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	if(((reg_y - DataBus) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (((reg_y - DataBus) & 0xff) & 0x80);
-	if(reg_y >= DataBus) flag_C = 1;
-	else flag_C = 0;
-}
-
-/* c5 - CMP zeropage */
-void _c5(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	if(((reg_a - DataBus) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (((reg_a - DataBus) & 0xff) & 0x80);
-	if(reg_a >= DataBus) flag_C = 1;
-	else flag_C = 0;
-}
-
-/* c6 - DEC zeropage */
-void _c6(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-DataBus--;
-	if(DataBus == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (DataBus & 0x80);;
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* c7 - DCP zeropage */
-void _c7(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-DataBus--;
-	if(((reg_a - DataBus) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (((reg_a - DataBus) & 0xff) & 0x80);
-	if(reg_a >= DataBus) flag_C = 1;
-	else flag_C = 0;
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* c8 - INY implied */
-void _c8(void){
-	
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_y++;
-	if(reg_y == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_y & 0x80);
-}
-
-/* c9 - CMP immediate */
-void _c9(void){
-		reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	if(((reg_a - DataBus) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (((reg_a - DataBus) & 0xff) & 0x80);
-	if(reg_a >= DataBus) flag_C = 1;
-	else flag_C = 0;
-}
-
-/* ca - DEX implied */
-void _ca(void){
-	
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_x--;
-	if(reg_x == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_x & 0x80);
-}
-
-/* cb - SBX immediate */
-void _cb(void){
-		reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	if(!((reg_x & reg_a) < DataBus)) flag_C = 1;
-	else flag_C = 0;
-	reg_x = ((reg_x & reg_a) - DataBus) & 0xff;
-	if(reg_x == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_x & 0x80);
-}
-
-/* cc - CPY absolute */
-void _cc(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	if(((reg_y - DataBus) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (((reg_y - DataBus) & 0xff) & 0x80);
-	if(reg_y >= DataBus) flag_C = 1;
-	else flag_C = 0;
-}
-
-/* cd - CMP absolute */
-void _cd(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	if(((reg_a - DataBus) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (((reg_a - DataBus) & 0xff) & 0x80);
-	if(reg_a >= DataBus) flag_C = 1;
-	else flag_C = 0;
-}
-
-/* ce - DEC absolute */
-void _ce(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-DataBus--;
-	if(DataBus == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (DataBus & 0x80);;
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* cf - DCP absolute */
-void _cf(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-DataBus--;
-	if(((reg_a - DataBus) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (((reg_a - DataBus) & 0xff) & 0x80);
-	if(reg_a >= DataBus) flag_C = 1;
-	else flag_C = 0;
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* d0 - BNE relative */
-void _d0(void){
-	
-	int Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	if(!flag_Z){
-		if(DataBus & 0x80) Address = (0x100 - DataBus) * -1;
-		else Address = DataBus;
-		AddressBus++;
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		if(((reg_pc + Address) & 0xff00) != (reg_pc & 0xff00)){
-			AddressBus = (reg_pc & 0xff00) + ((reg_pc + Address) & 0xff);
-			RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		}
-		reg_pc = reg_pc + Address;
-		
-	}
-}
-
-/* d1 - CMP (indirect),y */
-void _d1(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = DataBus;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	AddressBus = (AddressBus + 1) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	if((Address + reg_y) > 0xff){
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	}
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	if(((reg_a - DataBus) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (((reg_a - DataBus) & 0xff) & 0x80);
-	if(reg_a >= DataBus) flag_C = 1;
-	else flag_C = 0;
-}
-
-/* d2 - JAM */
-
-/* d3 - DCP (indirect),y */
-void _d3(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = DataBus;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	AddressBus = (AddressBus + 1) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-DataBus--;
-	if(((reg_a - DataBus) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (((reg_a - DataBus) & 0xff) & 0x80);
-	if(reg_a >= DataBus) flag_C = 1;
-	else flag_C = 0;
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* d4 - NOP zeropage,x */
-void _d4(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = ((AddressBus + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-}
-
-/* d5 - CMP zeropage,x */
-void _d5(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = ((AddressBus + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	if(((reg_a - DataBus) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (((reg_a - DataBus) & 0xff) & 0x80);
-	if(reg_a >= DataBus) flag_C = 1;
-	else flag_C = 0;
-}
-
-/* d6 - DEC zeropage,x */
-void _d6(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = ((AddressBus + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-DataBus--;
-	if(DataBus == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (DataBus & 0x80);;
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* d7 - DCP zeropage,x */
-void _d7(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = ((AddressBus + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-DataBus--;
-	if(((reg_a - DataBus) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (((reg_a - DataBus) & 0xff) & 0x80);
-	if(reg_a >= DataBus) flag_C = 1;
-	else flag_C = 0;
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* d8 - CLD implied */
-void _d8(void){
-	
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	flag_D = 0;
-}
-
-/* d9 - CMP absolute,y */
-void _d9(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	if((Address + reg_y) > 0xff){
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	}
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	if(((reg_a - DataBus) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (((reg_a - DataBus) & 0xff) & 0x80);
-	if(reg_a >= DataBus) flag_C = 1;
-	else flag_C = 0;
-}
-
-/* da - NOP implied */
-void _da(void){
-	
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-}
-
-/* db - DCP absolute,y */
-void _db(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-DataBus--;
-	if(((reg_a - DataBus) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (((reg_a - DataBus) & 0xff) & 0x80);
-	if(reg_a >= DataBus) flag_C = 1;
-	else flag_C = 0;
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* dc - NOP absolute,x */
-void _dc(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_x) & 0xff);
-	if((Address + reg_x) > 0xff){
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		AddressBus = (((AddressBus & 0xff00) + Address) + reg_x) & 0xffff;
-	}
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-}
-
-/* dd - CMP absolute,x */
-void _dd(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_x) & 0xff);
-	if((Address + reg_x) > 0xff){
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		AddressBus = (((AddressBus & 0xff00) + Address) + reg_x) & 0xffff;
-	}
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	if(((reg_a - DataBus) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (((reg_a - DataBus) & 0xff) & 0x80);
-	if(reg_a >= DataBus) flag_C = 1;
-	else flag_C = 0;
-}
-
-/* de - DEC absolute,x */
-void _de(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (((AddressBus & 0xff00) + Address) + reg_x) & 0xffff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-DataBus--;
-	if(DataBus == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (DataBus & 0x80);;
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* df - DCP absolute,x */
-void _df(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (((AddressBus & 0xff00) + Address) + reg_x) & 0xffff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-DataBus--;
-	if(((reg_a - DataBus) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (((reg_a - DataBus) & 0xff) & 0x80);
-	if(reg_a >= DataBus) flag_C = 1;
-	else flag_C = 0;
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* e0 - CPX immediate */
-void _e0(void){
-		reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	if(((reg_x - DataBus) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (((reg_x - DataBus) & 0xff) & 0x80);
-	if(reg_x >= DataBus) flag_C = 1;
-	else flag_C = 0;
-}
-
-/* e1 - SBC (indirect,x) */
-void _e1(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = DataBus;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (AddressBus + reg_x) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	AddressBus = (AddressBus + 1) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	if(!flag_D){
-		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8);
-		reg_a = ((reg_a + (0xff - DataBus) + flag_C) & 0xff);
-		flag_C = dummy_flag;
-		if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-	}else{
-		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8);
-		dummy_low = ((reg_a + (0xff - DataBus) + flag_C) & 0xff);
-		if(dummy_low == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (dummy_low & 0x80);
-		dummy_low = (reg_a & 0xf) - (DataBus & 0xf) - (1 - flag_C);
-		dummy_high = (reg_a >> 4) - (DataBus >> 4) - ((dummy_low & 0x10) >> 4);
-		if (dummy_low & 0x10) dummy_low -= 6;
-		if (dummy_high & 0x10) dummy_high -= 6;
-		reg_a = ((dummy_high << 4) | (dummy_low & 0xf)) & 0xff;
-		flag_C = dummy_flag;
-		}
-}
-
-/* e2 - NOP immediate */
-void _e2(void){
-		reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-}
-
-/* e3 - ISB (indirect,x) */
-void _e3(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = DataBus;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (AddressBus + reg_x) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	AddressBus = (AddressBus + 1) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-DataBus++;
-	if(!flag_D){
-		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8);
-		reg_a = ((reg_a + (0xff - DataBus) + flag_C) & 0xff);
-		flag_C = dummy_flag;
-		if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-	}else{
-		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8);
-		dummy_low = ((reg_a + (0xff - DataBus) + flag_C) & 0xff);
-		if(dummy_low == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (dummy_low & 0x80);
-		dummy_low = (reg_a & 0xf) - (DataBus & 0xf) - (1 - flag_C);
-		dummy_high = (reg_a >> 4) - (DataBus >> 4) - ((dummy_low & 0x10) >> 4);
-		if (dummy_low & 0x10) dummy_low -= 6;
-		if (dummy_high & 0x10) dummy_high -= 6;
-		reg_a = ((dummy_high << 4) | (dummy_low & 0xf)) & 0xff;
-		flag_C = dummy_flag;
-		}
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* e4 - CPX zeropage */
-void _e4(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	if(((reg_x - DataBus) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (((reg_x - DataBus) & 0xff) & 0x80);
-	if(reg_x >= DataBus) flag_C = 1;
-	else flag_C = 0;
-}
-
-/* e5 - SBC zeropage */
-void _e5(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	if(!flag_D){
-		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8);
-		reg_a = ((reg_a + (0xff - DataBus) + flag_C) & 0xff);
-		flag_C = dummy_flag;
-		if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-	}else{
-		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8);
-		dummy_low = ((reg_a + (0xff - DataBus) + flag_C) & 0xff);
-		if(dummy_low == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (dummy_low & 0x80);
-		dummy_low = (reg_a & 0xf) - (DataBus & 0xf) - (1 - flag_C);
-		dummy_high = (reg_a >> 4) - (DataBus >> 4) - ((dummy_low & 0x10) >> 4);
-		if (dummy_low & 0x10) dummy_low -= 6;
-		if (dummy_high & 0x10) dummy_high -= 6;
-		reg_a = ((dummy_high << 4) | (dummy_low & 0xf)) & 0xff;
-		flag_C = dummy_flag;
-		}
-}
-
-/* e6 - INC zeropage */
-void _e6(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-DataBus++;
-	if(DataBus == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (DataBus & 0x80);;
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* e7 - ISB zeropage */
-void _e7(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-DataBus++;
-	if(!flag_D){
-		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8);
-		reg_a = ((reg_a + (0xff - DataBus) + flag_C) & 0xff);
-		flag_C = dummy_flag;
-		if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-	}else{
-		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8);
-		dummy_low = ((reg_a + (0xff - DataBus) + flag_C) & 0xff);
-		if(dummy_low == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (dummy_low & 0x80);
-		dummy_low = (reg_a & 0xf) - (DataBus & 0xf) - (1 - flag_C);
-		dummy_high = (reg_a >> 4) - (DataBus >> 4) - ((dummy_low & 0x10) >> 4);
-		if (dummy_low & 0x10) dummy_low -= 6;
-		if (dummy_high & 0x10) dummy_high -= 6;
-		reg_a = ((dummy_high << 4) | (dummy_low & 0xf)) & 0xff;
-		flag_C = dummy_flag;
-		}
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* e8 - INX implied */
-void _e8(void){
-	
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_x++;
-	if(reg_x == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_x & 0x80);
-}
-
-/* e9 - SBC immediate */
-void _e9(void){
-		reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	if(!flag_D){
-		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8);
-		reg_a = ((reg_a + (0xff - DataBus) + flag_C) & 0xff);
-		flag_C = dummy_flag;
-		if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-	}else{
-		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8);
-		dummy_low = ((reg_a + (0xff - DataBus) + flag_C) & 0xff);
-		if(dummy_low == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (dummy_low & 0x80);
-		dummy_low = (reg_a & 0xf) - (DataBus & 0xf) - (1 - flag_C);
-		dummy_high = (reg_a >> 4) - (DataBus >> 4) - ((dummy_low & 0x10) >> 4);
-		if (dummy_low & 0x10) dummy_low -= 6;
-		if (dummy_high & 0x10) dummy_high -= 6;
-		reg_a = ((dummy_high << 4) | (dummy_low & 0xf)) & 0xff;
-		flag_C = dummy_flag;
-		}
-}
-
-/* ea - NOP implied (this is the real one) */
-void _ea(void){
-	
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-}
-
-/* eb - SBC immediate */
-void _eb(void){
-		reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	if(!flag_D){
-		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8);
-		reg_a = ((reg_a + (0xff - DataBus) + flag_C) & 0xff);
-		flag_C = dummy_flag;
-		if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-	}else{
-		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8);
-		dummy_low = ((reg_a + (0xff - DataBus) + flag_C) & 0xff);
-		if(dummy_low == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (dummy_low & 0x80);
-		dummy_low = (reg_a & 0xf) - (DataBus & 0xf) - (1 - flag_C);
-		dummy_high = (reg_a >> 4) - (DataBus >> 4) - ((dummy_low & 0x10) >> 4);
-		if (dummy_low & 0x10) dummy_low -= 6;
-		if (dummy_high & 0x10) dummy_high -= 6;
-		reg_a = ((dummy_high << 4) | (dummy_low & 0xf)) & 0xff;
-		flag_C = dummy_flag;
-		}
-}
-
-/* ec - CPX absolute */
-void _ec(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	if(((reg_x - DataBus) & 0xff) == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (((reg_x - DataBus) & 0xff) & 0x80);
-	if(reg_x >= DataBus) flag_C = 1;
-	else flag_C = 0;
-}
-
-/* ed - SBC absolute */
-void _ed(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	if(!flag_D){
-		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8);
-		reg_a = ((reg_a + (0xff - DataBus) + flag_C) & 0xff);
-		flag_C = dummy_flag;
-		if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-	}else{
-		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8);
-		dummy_low = ((reg_a + (0xff - DataBus) + flag_C) & 0xff);
-		if(dummy_low == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (dummy_low & 0x80);
-		dummy_low = (reg_a & 0xf) - (DataBus & 0xf) - (1 - flag_C);
-		dummy_high = (reg_a >> 4) - (DataBus >> 4) - ((dummy_low & 0x10) >> 4);
-		if (dummy_low & 0x10) dummy_low -= 6;
-		if (dummy_high & 0x10) dummy_high -= 6;
-		reg_a = ((dummy_high << 4) | (dummy_low & 0xf)) & 0xff;
-		flag_C = dummy_flag;
-		}
-}
-
-/* ee - INC absolute */
-void _ee(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-DataBus++;
-	if(DataBus == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (DataBus & 0x80);;
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* ef - ISB absolute */
-void _ef(void){
-	db Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + Address;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-DataBus++;
-	if(!flag_D){
-		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8);
-		reg_a = ((reg_a + (0xff - DataBus) + flag_C) & 0xff);
-		flag_C = dummy_flag;
-		if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-	}else{
-		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8);
-		dummy_low = ((reg_a + (0xff - DataBus) + flag_C) & 0xff);
-		if(dummy_low == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (dummy_low & 0x80);
-		dummy_low = (reg_a & 0xf) - (DataBus & 0xf) - (1 - flag_C);
-		dummy_high = (reg_a >> 4) - (DataBus >> 4) - ((dummy_low & 0x10) >> 4);
-		if (dummy_low & 0x10) dummy_low -= 6;
-		if (dummy_high & 0x10) dummy_high -= 6;
-		reg_a = ((dummy_high << 4) | (dummy_low & 0xf)) & 0xff;
-		flag_C = dummy_flag;
-		}
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* f0 - BEQ relative */
-void _f0(void){
-	
-	int Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	if(flag_Z){
-		if(DataBus & 0x80) Address = (0x100 - DataBus) * -1;
-		else Address = DataBus;
-		AddressBus++;
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		if(((reg_pc + Address) & 0xff00) != (reg_pc & 0xff00)){
-			AddressBus = (reg_pc & 0xff00) + ((reg_pc + Address) & 0xff);
-			RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		}
-		reg_pc = reg_pc + Address;
-		
-	}
-}
-
-/* f1 - SBC (indirect),y */
-void _f1(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = DataBus;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	AddressBus = (AddressBus + 1) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	if((Address + reg_y) > 0xff){
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	}
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	if(!flag_D){
-		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8);
-		reg_a = ((reg_a + (0xff - DataBus) + flag_C) & 0xff);
-		flag_C = dummy_flag;
-		if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-	}else{
-		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8);
-		dummy_low = ((reg_a + (0xff - DataBus) + flag_C) & 0xff);
-		if(dummy_low == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (dummy_low & 0x80);
-		dummy_low = (reg_a & 0xf) - (DataBus & 0xf) - (1 - flag_C);
-		dummy_high = (reg_a >> 4) - (DataBus >> 4) - ((dummy_low & 0x10) >> 4);
-		if (dummy_low & 0x10) dummy_low -= 6;
-		if (dummy_high & 0x10) dummy_high -= 6;
-		reg_a = ((dummy_high << 4) | (dummy_low & 0xf)) & 0xff;
-		flag_C = dummy_flag;
-		}
-}
-
-/* f2 - JAM */
-
-/* f3 - ISB (indirect),y */
-void _f3(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = DataBus;
-	reg_pc++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	AddressBus = (AddressBus + 1) & 0xff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-DataBus++;
-	if(!flag_D){
-		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8);
-		reg_a = ((reg_a + (0xff - DataBus) + flag_C) & 0xff);
-		flag_C = dummy_flag;
-		if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-	}else{
-		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8);
-		dummy_low = ((reg_a + (0xff - DataBus) + flag_C) & 0xff);
-		if(dummy_low == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (dummy_low & 0x80);
-		dummy_low = (reg_a & 0xf) - (DataBus & 0xf) - (1 - flag_C);
-		dummy_high = (reg_a >> 4) - (DataBus >> 4) - ((dummy_low & 0x10) >> 4);
-		if (dummy_low & 0x10) dummy_low -= 6;
-		if (dummy_high & 0x10) dummy_high -= 6;
-		reg_a = ((dummy_high << 4) | (dummy_low & 0xf)) & 0xff;
-		flag_C = dummy_flag;
-		}
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* f4 - NOP zeropage,x */
-void _f4(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = ((AddressBus + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-}
-
-/* f5 - SBC zeropage,x */
-void _f5(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = ((AddressBus + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	if(!flag_D){
-		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8);
-		reg_a = ((reg_a + (0xff - DataBus) + flag_C) & 0xff);
-		flag_C = dummy_flag;
-		if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-	}else{
-		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8);
-		dummy_low = ((reg_a + (0xff - DataBus) + flag_C) & 0xff);
-		if(dummy_low == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (dummy_low & 0x80);
-		dummy_low = (reg_a & 0xf) - (DataBus & 0xf) - (1 - flag_C);
-		dummy_high = (reg_a >> 4) - (DataBus >> 4) - ((dummy_low & 0x10) >> 4);
-		if (dummy_low & 0x10) dummy_low -= 6;
-		if (dummy_high & 0x10) dummy_high -= 6;
-		reg_a = ((dummy_high << 4) | (dummy_low & 0xf)) & 0xff;
-		flag_C = dummy_flag;
-		}
-}
-
-/* f6 - INC zeropage,x */
-void _f6(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = ((AddressBus + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-DataBus++;
-	if(DataBus == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (DataBus & 0x80);;
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* f7 - ISB zeropage,x */
-void _f7(void){
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = DataBus;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = ((AddressBus + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-DataBus++;
-	if(!flag_D){
-		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8);
-		reg_a = ((reg_a + (0xff - DataBus) + flag_C) & 0xff);
-		flag_C = dummy_flag;
-		if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-	}else{
-		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8);
-		dummy_low = ((reg_a + (0xff - DataBus) + flag_C) & 0xff);
-		if(dummy_low == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (dummy_low & 0x80);
-		dummy_low = (reg_a & 0xf) - (DataBus & 0xf) - (1 - flag_C);
-		dummy_high = (reg_a >> 4) - (DataBus >> 4) - ((dummy_low & 0x10) >> 4);
-		if (dummy_low & 0x10) dummy_low -= 6;
-		if (dummy_high & 0x10) dummy_high -= 6;
-		reg_a = ((dummy_high << 4) | (dummy_low & 0xf)) & 0xff;
-		flag_C = dummy_flag;
-		}
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* f8 - SED implied */
-void _f8(void){
-	
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	flag_D = 8;
-}
-
-/* f9 - SBC absolute,y */
-void _f9(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	if((Address + reg_y) > 0xff){
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	}
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	if(!flag_D){
-		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8);
-		reg_a = ((reg_a + (0xff - DataBus) + flag_C) & 0xff);
-		flag_C = dummy_flag;
-		if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-	}else{
-		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8);
-		dummy_low = ((reg_a + (0xff - DataBus) + flag_C) & 0xff);
-		if(dummy_low == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (dummy_low & 0x80);
-		dummy_low = (reg_a & 0xf) - (DataBus & 0xf) - (1 - flag_C);
-		dummy_high = (reg_a >> 4) - (DataBus >> 4) - ((dummy_low & 0x10) >> 4);
-		if (dummy_low & 0x10) dummy_low -= 6;
-		if (dummy_high & 0x10) dummy_high -= 6;
-		reg_a = ((dummy_high << 4) | (dummy_low & 0xf)) & 0xff;
-		flag_C = dummy_flag;
-		}
-}
-
-/* fa - NOP implied */
-void _fa(void){
-	
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-}
-
-/* fb - ISB absolute,y */
-void _fb(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_y) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (((AddressBus & 0xff00) + Address) + reg_y) & 0xffff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-DataBus++;
-	if(!flag_D){
-		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8);
-		reg_a = ((reg_a + (0xff - DataBus) + flag_C) & 0xff);
-		flag_C = dummy_flag;
-		if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-	}else{
-		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8);
-		dummy_low = ((reg_a + (0xff - DataBus) + flag_C) & 0xff);
-		if(dummy_low == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (dummy_low & 0x80);
-		dummy_low = (reg_a & 0xf) - (DataBus & 0xf) - (1 - flag_C);
-		dummy_high = (reg_a >> 4) - (DataBus >> 4) - ((dummy_low & 0x10) >> 4);
-		if (dummy_low & 0x10) dummy_low -= 6;
-		if (dummy_high & 0x10) dummy_high -= 6;
-		reg_a = ((dummy_high << 4) | (dummy_low & 0xf)) & 0xff;
-		flag_C = dummy_flag;
-		}
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* fc - NOP absolute,x */
-void _fc(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_x) & 0xff);
-	if((Address + reg_x) > 0xff){
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		AddressBus = (((AddressBus & 0xff00) + Address) + reg_x) & 0xffff;
-	}
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-}
-
-/* fd - SBC absolute,x */
-void _fd(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_x) & 0xff);
-	if((Address + reg_x) > 0xff){
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		AddressBus = (((AddressBus & 0xff00) + Address) + reg_x) & 0xffff;
-	}
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	if(!flag_D){
-		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8);
-		reg_a = ((reg_a + (0xff - DataBus) + flag_C) & 0xff);
-		flag_C = dummy_flag;
-		if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-	}else{
-		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8);
-		dummy_low = ((reg_a + (0xff - DataBus) + flag_C) & 0xff);
-		if(dummy_low == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (dummy_low & 0x80);
-		dummy_low = (reg_a & 0xf) - (DataBus & 0xf) - (1 - flag_C);
-		dummy_high = (reg_a >> 4) - (DataBus >> 4) - ((dummy_low & 0x10) >> 4);
-		if (dummy_low & 0x10) dummy_low -= 6;
-		if (dummy_high & 0x10) dummy_high -= 6;
-		reg_a = ((dummy_high << 4) | (dummy_low & 0xf)) & 0xff;
-		flag_C = dummy_flag;
-		}
-}
-
-/* fe - INC absolute,x */
-void _fe(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (((AddressBus & 0xff00) + Address) + reg_x) & 0xffff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-DataBus++;
-	if(DataBus == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (DataBus & 0x80);;
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
-/* ff - ISB absolute,x */
-void _ff(void){
-	dd Address;
-
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	Address = DataBus;
-	reg_pc++;
-	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	reg_pc++;
-	AddressBus = (DataBus << 8) + ((Address + reg_x) & 0xff);
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-	AddressBus = (((AddressBus & 0xff00) + Address) + reg_x) & 0xffff;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-DataBus++;
-	if(!flag_D){
-		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8);
-		reg_a = ((reg_a + (0xff - DataBus) + flag_C) & 0xff);
-		flag_C = dummy_flag;
-		if(reg_a == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (reg_a & 0x80);
-	}else{
-		if( (((reg_a + (0xff - DataBus) + flag_C) ^ reg_a) & 0x80) && !((reg_a ^ (0xff - DataBus)) & 0x80) ) flag_V = 0x40;
-		else flag_V = 0;
-		dummy_flag = (((reg_a + (0xff - DataBus) + flag_C) & 0x100) >> 8);
-		dummy_low = ((reg_a + (0xff - DataBus) + flag_C) & 0xff);
-		if(dummy_low == 0) flag_Z = 0x02;
-	else flag_Z = 0;
-	flag_N = (dummy_low & 0x80);
-		dummy_low = (reg_a & 0xf) - (DataBus & 0xf) - (1 - flag_C);
-		dummy_high = (reg_a >> 4) - (DataBus >> 4) - ((dummy_low & 0x10) >> 4);
-		if (dummy_low & 0x10) dummy_low -= 6;
-		if (dummy_high & 0x10) dummy_high -= 6;
-		reg_a = ((dummy_high << 4) | (dummy_low & 0xf)) & 0xff;
-		flag_C = dummy_flag;
-		}
-RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* write value in DataBus to address in AddressBus */
-	(* WriteAccess[AddressBus])();
-}
-
+opcode(_00,adr_implied,BRK)											/* 00 - BRK implied */
+opcode(_01,adr_index_indirect,ORA)									/* 01 - ORA (indirect,x) */
+																	/* 02 - JAM */
+opcode(_03,adr_index_indirect,rmw_ram(SLO))							/* 03 - SLO (indirect,x) */
+opcode(_04,adr_zeropage,NOP)										/* 04 - NOP zeropage */
+opcode(_05,adr_zeropage,ORA)										/* 05 - ORA zeropage */
+opcode(_06,adr_zeropage,rmw_ram(ASL(DataBus)))						/* 06 - ASL zeropage */
+opcode(_07,adr_zeropage,rmw_ram(SLO))								/* 07 - SLO zeropage */
+opcode(_08,adr_implied,PHP)											/* 08 - PHP implied */
+opcode(_09,adr_immediate,ORA)										/* 09 - ORA immediate */
+opcode(_0a,adr_implied,rmw_accu(ASL(reg_a)))						/* 0a - ASL implied */
+opcode(_0b,adr_immediate,ANC)										/* 0b - ANC immediate */
+opcode(_0c,adr_absolute,NOP)										/* 0c - NOP absolute */
+opcode(_0d,adr_absolute,ORA)										/* 0d - ORA absolute */
+opcode(_0e,adr_absolute,rmw_ram(ASL(DataBus)))						/* 0e - ASL absolute */
+opcode(_0f,adr_absolute,rmw_ram(SLO))								/* 0f - SLO absolute */
+opcode(_10,adr_implied,BPL)											/* 10 - BPL relative */
+opcode(_11,adr_indirect_index_read,ORA)								/* 11 - ORA (indirect),y */
+																	/* 12 - JAM */
+opcode(_13,adr_indirect_index_write,rmw_ram(SLO))					/* 13 - SLO (indirect),y */
+opcode(_14,adr_zeropage_index(reg_x),NOP)							/* 14 - NOP zeropage,x */
+opcode(_15,adr_zeropage_index(reg_x),ORA)							/* 15 - ORA zeropage,x */
+opcode(_16,adr_zeropage_index(reg_x),rmw_ram(ASL(DataBus)))			/* 16 - ASL zeropage,x */
+opcode(_17,adr_zeropage_index(reg_x),rmw_ram(SLO))					/* 17 - SLO zeropage,x */
+opcode(_18,adr_implied,CLC)											/* 18 - CLC implied */
+opcode(_19,adr_absolute_index_read(reg_y),ORA)						/* 19 - ORA absolute,y */
+opcode(_1a,adr_implied,NOP)											/* 1a - NOP implied */
+opcode(_1b,adr_absolute_index_write(reg_y),rmw_ram(SLO))			/* 1b - SLO absolute,y */
+opcode(_1c,adr_absolute_index_read(reg_x),NOP)						/* 1c - NOP absolute,x */
+opcode(_1d,adr_absolute_index_read(reg_x),ORA)						/* 1d - ORA absolute,x */
+opcode(_1e,adr_absolute_index_write(reg_x),rmw_ram(ASL(DataBus)))	/* 1e - ASL absolute,x */
+opcode(_1f,adr_absolute_index_write(reg_x),rmw_ram(SLO))			/* 1f - SLO absolute,x */
+opcode(_20,,JSR)													/* 20 - JSR absolute */
+opcode(_21,adr_index_indirect,AND)									/* 21 - AND (indirect,x) */
+																	/* 22 - JAM */
+opcode(_23,adr_index_indirect,rmw_ram(RLA))							/* 23 - RLA (indirect,x) */
+opcode(_24,adr_zeropage,BIT)										/* 24 - BIT zeropage */
+opcode(_25,adr_zeropage,AND)										/* 25 - AND zeropage */
+opcode(_26,adr_zeropage,rmw_ram(ROL(DataBus)))						/* 26 - ROL zeropage */
+opcode(_27,adr_zeropage,rmw_ram(RLA))								/* 27 - RLA zeropage */
+opcode(_28,adr_implied,PLP)											/* 28 - PLP implied */
+opcode(_29,adr_immediate,AND)										/* 29 - AND immediate */
+opcode(_2a,adr_implied,rmw_accu(ROL(reg_a)))						/* 2a - ROL implied */
+opcode(_2b,adr_immediate,ANC)										/* 2b - ANC immediate */
+opcode(_2c,adr_absolute,BIT)										/* 2c - BIT absolute */
+opcode(_2d,adr_absolute,AND)										/* 2d - AND absolute */
+opcode(_2e,adr_absolute,rmw_ram(ROL(DataBus)))						/* 2e - ROL absolute */
+opcode(_2f,adr_absolute,rmw_ram(RLA))								/* 2f - RLA absolute */
+opcode(_30,adr_implied,BMI)											/* 30 - BMI relative */
+opcode(_31,adr_indirect_index_read,AND)								/* 31 - AND (indirect),y */
+																	/* 32 - JAM */
+opcode(_33,adr_indirect_index_write,rmw_ram(RLA))					/* 33 - RLA (indirect),y */
+opcode(_34,adr_zeropage_index(reg_x),NOP)							/* 34 - NOP zeropage,x */
+opcode(_35,adr_zeropage_index(reg_x),AND)							/* 35 - AND zeropage,x */
+opcode(_36,adr_zeropage_index(reg_x),rmw_ram(ROL(DataBus)))			/* 36 - ROL zeropage,x */
+opcode(_37,adr_zeropage_index(reg_x),rmw_ram(RLA))					/* 37 - RLA zeropage,x */
+opcode(_38,adr_implied,SEC)											/* 38 - SEC implied */
+opcode(_39,adr_absolute_index_read(reg_y),AND)						/* 39 - AND absolute,y */
+opcode(_3a,adr_implied,NOP)											/* 3a - NOP implied */
+opcode(_3b,adr_absolute_index_write(reg_y),rmw_ram(RLA))			/* 3b - RLA absolute,y */
+opcode(_3c,adr_absolute_index_read(reg_x),NOP)						/* 3c - NOP absolute,x */
+opcode(_3d,adr_absolute_index_read(reg_x),AND)						/* 3d - AND absolute,x */
+opcode(_3e,adr_absolute_index_write(reg_x),rmw_ram(ROL(DataBus)))	/* 3e - ROL absolute,x */
+opcode(_3f,adr_absolute_index_write(reg_x),rmw_ram(RLA))			/* 3f - RLA absolute,x */
+opcode(_40,adr_implied,RTI)											/* 40 - RTI implied */
+opcode(_41,adr_index_indirect,EOR)									/* 41 - EOR (indirect,x) */
+																	/* 42 - JAM */
+opcode(_43,adr_index_indirect,rmw_ram(SRE))							/* 43 - SRE (indirect,x) */
+opcode(_44,adr_zeropage,NOP)										/* 44 - NOP zeropage */
+opcode(_45,adr_zeropage,EOR)										/* 45 - EOR zeropage */
+opcode(_46,adr_zeropage,rmw_ram(LSR(DataBus)))						/* 46 - LSR zeropage */
+opcode(_47,adr_zeropage,rmw_ram(SRE))								/* 47 - SRE zeropage */
+opcode(_48,adr_implied,PHA)											/* 48 - PHA implied */
+opcode(_49,adr_immediate,EOR)										/* 49 - EOR immediate */
+opcode(_4a,adr_implied,rmw_accu(LSR(reg_a)))						/* 4a - LSR implied */
+opcode(_4b,adr_immediate,ASR)										/* 4b - ASR immediate */
+opcode(_4c,adr_absolute,JMP)										/* 4c - JMP absolute */
+opcode(_4d,adr_absolute,EOR)										/* 4d - EOR absolute */
+opcode(_4e,adr_absolute,rmw_ram(LSR(DataBus)))						/* 4e - LSR absolute */
+opcode(_4f,adr_absolute,rmw_ram(SRE))								/* 4f - SRE absolute */
+opcode(_50,adr_implied,BVC)											/* 50 - BVC relative */
+opcode(_51,adr_indirect_index_read,EOR)								/* 51 - EOR (indirect),y */
+																	/* 52 - JAM */
+opcode(_53,adr_indirect_index_write,rmw_ram(SRE))					/* 53 - SRE (indirect),y */
+opcode(_54,adr_zeropage_index(reg_x),NOP)							/* 54 - NOP zeropage,x */
+opcode(_55,adr_zeropage_index(reg_x),EOR)							/* 55 - EOR zeropage,x */
+opcode(_56,adr_zeropage_index(reg_x),rmw_ram(LSR(DataBus)))			/* 56 - LSR zeropage,x */
+opcode(_57,adr_zeropage_index(reg_x),rmw_ram(SRE))					/* 57 - SRE zeropage,x */
+opcode(_58,adr_implied,CLI)											/* 58 - CLI implied */
+opcode(_59,adr_absolute_index_read(reg_y),EOR)						/* 59 - EOR absolute,y */
+opcode(_5a,adr_implied,NOP)											/* 5a - NOP implied */
+opcode(_5b,adr_absolute_index_write(reg_y),rmw_ram(SRE))			/* 5b - SRE absolute,y */
+opcode(_5c,adr_absolute_index_read(reg_x),NOP)						/* 5c - NOP absolute,x */
+opcode(_5d,adr_absolute_index_read(reg_x),EOR)						/* 5d - EOR absolute,x */
+opcode(_5e,adr_absolute_index_write(reg_x),rmw_ram(LSR(DataBus)))	/* 5e - LSR absolute,x */
+opcode(_5f,adr_absolute_index_write(reg_x),rmw_ram(SRE))			/* 5f - SRE absolute,x */
+opcode(_60,adr_implied,RTS)											/* 60 - RTS implied */
+opcode(_61,adr_index_indirect,ADC)									/* 61 - ADC (indirect,x) */
+																	/* 62 - JAM */
+opcode(_63,adr_index_indirect,rmw_ram(RRA))							/* 63 - RRA (indirect,x) */
+opcode(_64,adr_zeropage,NOP)										/* 64 - NOP zeropage */
+opcode(_65,adr_zeropage,ADC)										/* 65 - ADC zeropage */
+opcode(_66,adr_zeropage,rmw_ram(ROR(DataBus)))						/* 66 - ROR zeropage */
+opcode(_67,adr_zeropage,rmw_ram(RRA))								/* 67 - RRA zeropage */
+opcode(_68,adr_implied,PLA)											/* 68 - PLA implied */
+opcode(_69,adr_immediate,ADC)										/* 69 - ADC immediate */
+opcode(_6a,adr_implied,rmw_accu(ROR(reg_a)))						/* 6a - ROR implied */
+opcode(_6b,adr_immediate,ARR)										/* 6b - ARR immediate */
+opcode(_6c,adr_absolute_indirect,JMP)								/* 6c - JMP (indirect) */
+opcode(_6d,adr_absolute,ADC)										/* 6d - ADC absolute */
+opcode(_6e,adr_absolute,rmw_ram(ROR(DataBus)))						/* 6e - ROR absolute */
+opcode(_6f,adr_absolute,rmw_ram(RRA))								/* 6f - RRA absolute */
+opcode(_70,adr_implied,BVS)											/* 70 - BVS relative */
+opcode(_71,adr_indirect_index_read,ADC)								/* 71 - ADC (indirect),y */
+																	/* 72 - JAM */
+opcode(_73,adr_indirect_index_write,rmw_ram(RRA))					/* 73 - RRA (indirect),y */
+opcode(_74,adr_zeropage_index(reg_x),NOP)							/* 74 - NOP zeropage,x */
+opcode(_75,adr_zeropage_index(reg_x),ADC)							/* 75 - ADC zeropage,x */
+opcode(_76,adr_zeropage_index(reg_x),rmw_ram(ROR(DataBus)))			/* 76 - ROR zeropage,x */
+opcode(_77,adr_zeropage_index(reg_x),rmw_ram(RRA))					/* 77 - RRA zeropage,x */
+opcode(_78,adr_implied,SEI)											/* 78 - SEI implied */
+opcode(_79,adr_absolute_index_read(reg_y),ADC)						/* 79 - ADC absolute,y */
+opcode(_7a,adr_implied,NOP)											/* 7a - NOP implied */
+opcode(_7b,adr_absolute_index_write(reg_y),rmw_ram(RRA))			/* 7b - RRA absolute,y */
+opcode(_7c,adr_absolute_index_read(reg_x),NOP)						/* 7c - NOP absolute,x */
+opcode(_7d,adr_absolute_index_read(reg_x),ADC)						/* 7d - ADC absolute,x */
+opcode(_7e,adr_absolute_index_write(reg_x),rmw_ram(ROR(DataBus)))	/* 7e - ROR absolute,x */
+opcode(_7f,adr_absolute_index_write(reg_x),rmw_ram(RRA))			/* 7f - RRA absolute,x */
+opcode(_80,adr_immediate,NOP)										/* 80 - NOP immediate */
+opcode(_81,adr_index_indirect,STA)									/* 81 - STA (indirect,x) */
+opcode(_82,adr_immediate,NOP)										/* 82 - NOP immediate */
+opcode(_83,adr_index_indirect,SAX)									/* 83 - SAX (indirect),x */
+opcode(_84,adr_zeropage,STY)										/* 84 - STY zeropage */
+opcode(_85,adr_zeropage,STA)										/* 85 - STA zeropage */
+opcode(_86,adr_zeropage,STX)										/* 86 - STX zeropage */
+opcode(_87,adr_zeropage,SAX)										/* 87 - SAX zeropage */
+opcode(_88,adr_implied,DEY)											/* 88 - DEY implied */
+opcode(_89,adr_immediate,NOP)										/* 89 - NOP immediate */
+opcode(_8a,adr_implied,TXA)											/* 8a - TXA implied */
+opcode(_8b,adr_immediate,ANE)										/* 8b - ANE immediate */
+opcode(_8c,adr_absolute,STY)										/* 8c - STY absolute */
+opcode(_8d,adr_absolute,STA)										/* 8d - STA absolute */
+opcode(_8e,adr_absolute,STX)										/* 8e - STX absolute */
+opcode(_8f,adr_absolute,SAX)										/* 8f - SAX absolute */
+opcode(_90,adr_implied,BCC)											/* 90 - BCC relative */
+opcode(_91,adr_indirect_index_write,STA)							/* 91 - STA (indirect),y */
+																	/* 92 - JAM */
+opcode(_93,adr_indirect_index_write,SHA)							/* 93 - SHA (indirect),y */
+opcode(_94,adr_zeropage_index(reg_x),STY)							/* 94 - STY zeropage,x */
+opcode(_95,adr_zeropage_index(reg_x),STA)							/* 95 - STA zeropage,x */
+opcode(_96,adr_zeropage_index(reg_y),STX)							/* 96 - STX zeropage,y */
+opcode(_97,adr_zeropage_index(reg_y),SAX)							/* 97 - SAX zeropage,y */
+opcode(_98,adr_implied,TYA)											/* 98 - TYA implied */
+opcode(_99,adr_absolute_index_write(reg_y),STA)						/* 99 - STA absolute,y */
+opcode(_9a,adr_implied,TXS)											/* 9a - TXS implied */
+opcode(_9b,adr_absolute_index_write(reg_y),SHS)						/* 9b - SHS absolute,y */
+opcode(_9c,adr_absolute_index_write(reg_x),SHY)						/* 9c - SHY absolute,x */
+opcode(_9d,adr_absolute_index_write(reg_x),STA)						/* 9d - STA absolute,x */
+opcode(_9e,adr_absolute_index_write(reg_y),SHX)						/* 9e - SHX absolute,y */
+opcode(_9f,adr_absolute_index_write(reg_y),SHA)						/* 9f - SHA absolute,y */
+opcode(_a0,adr_immediate,LDY)										/* a0 - LDY immediate */
+opcode(_a1,adr_index_indirect,LDA)									/* a1 - LDA (indirect,x) */
+opcode(_a2,adr_immediate,LDX)										/* a2 - LDX immediate */
+opcode(_a3,adr_index_indirect,LAX)									/* a3 - LAX (indirect,x) */
+opcode(_a4,adr_zeropage,LDY)										/* a4 - LDY zeropage */
+opcode(_a5,adr_zeropage,LDA)										/* a5 - LDA zeropage */
+opcode(_a6,adr_zeropage,LDX)										/* a6 - LDX zeropage */
+opcode(_a7,adr_zeropage,LAX)										/* a7 - LAX zeropage */
+opcode(_a8,adr_implied,TAY)											/* a8 - TAY implied */
+opcode(_a9,adr_immediate,LDA)										/* a9 - LDA immediate */
+opcode(_aa,adr_implied,TAX)											/* aa - TAX implied */
+opcode(_ab,adr_immediate,LXA)										/* ab - LXA immediate */
+opcode(_ac,adr_absolute,LDY)										/* ac - LDY absolute */
+opcode(_ad,adr_absolute,LDA)										/* ad - LDA absolute */
+opcode(_ae,adr_absolute,LDX)										/* ae - LDX absolute */
+opcode(_af,adr_absolute,LAX)										/* af - LAX absolute */
+opcode(_b0,adr_implied,BCS)											/* b0 - BCS relative */
+opcode(_b1,adr_indirect_index_read,LDA)								/* b1 - LDA (indirect),y */
+																	/* b2 - JAM */
+opcode(_b3,adr_indirect_index_read,LAX)								/* b3 - LAX (indirect),y */
+opcode(_b4,adr_zeropage_index(reg_x),LDY)							/* b4 - LDY zeropage,x */
+opcode(_b5,adr_zeropage_index(reg_x),LDA)							/* b5 - LDA zeropage,x */
+opcode(_b6,adr_zeropage_index(reg_y),LDX)							/* b6 - LDX zeropage,y */
+opcode(_b7,adr_zeropage_index(reg_y),LAX)							/* b7 - LAX zeropage,Y */
+opcode(_b8,adr_implied,CLV)											/* b8 - CLV implied */
+opcode(_b9,adr_absolute_index_read(reg_y),LDA)						/* b9 - LDA absolute,y */
+opcode(_ba,adr_implied,TSX)											/* ba - TSX implied */
+opcode(_bb,adr_absolute_index_read(reg_y),LAS)						/* bb - LAS absolute,y */
+opcode(_bc,adr_absolute_index_read(reg_x),LDY)						/* bc - LDY absolute,x */
+opcode(_bd,adr_absolute_index_read(reg_x),LDA)						/* bd - LDA absolute,x */
+opcode(_be,adr_absolute_index_read(reg_y),LDX)						/* be - LDX absolute,y */
+opcode(_bf,adr_absolute_index_read(reg_y),LAX)						/* bf - LAX absolute,y */
+opcode(_c0,adr_immediate,CPY)										/* c0 - CPY immediate */
+opcode(_c1,adr_index_indirect,CMP)									/* c1 - CMP (indirect,x) */
+opcode(_c2,adr_immediate,NOP)										/* c2 - NOP immediate */
+opcode(_c3,adr_index_indirect,rmw_ram(DCP))							/* c3 - DCP (indirect,x) */
+opcode(_c4,adr_zeropage,CPY)										/* c4 - CPY zeropage */
+opcode(_c5,adr_zeropage,CMP)										/* c5 - CMP zeropage */
+opcode(_c6,adr_zeropage,rmw_ram(DEC))								/* c6 - DEC zeropage */
+opcode(_c7,adr_zeropage,rmw_ram(DCP))								/* c7 - DCP zeropage */
+opcode(_c8,adr_implied,INY)											/* c8 - INY implied */
+opcode(_c9,adr_immediate,CMP)										/* c9 - CMP immediate */
+opcode(_ca,adr_implied,DEX)											/* ca - DEX implied */
+opcode(_cb,adr_immediate,SBX)										/* cb - SBX immediate */
+opcode(_cc,adr_absolute,CPY)										/* cc - CPY absolute */
+opcode(_cd,adr_absolute,CMP)										/* cd - CMP absolute */
+opcode(_ce,adr_absolute,rmw_ram(DEC))								/* ce - DEC absolute */
+opcode(_cf,adr_absolute,rmw_ram(DCP))								/* cf - DCP absolute */
+opcode(_d0,adr_implied,BNE)											/* d0 - BNE relative */
+opcode(_d1,adr_indirect_index_read,CMP)								/* d1 - CMP (indirect),y */
+																	/* d2 - JAM */
+opcode(_d3,adr_indirect_index_write,rmw_ram(DCP))					/* d3 - DCP (indirect),y */
+opcode(_d4,adr_zeropage_index(reg_x),NOP)							/* d4 - NOP zeropage,x */
+opcode(_d5,adr_zeropage_index(reg_x),CMP)							/* d5 - CMP zeropage,x */
+opcode(_d6,adr_zeropage_index(reg_x),rmw_ram(DEC))					/* d6 - DEC zeropage,x */
+opcode(_d7,adr_zeropage_index(reg_x),rmw_ram(DCP))					/* d7 - DCP zeropage,x */
+opcode(_d8,adr_implied,CLD)											/* d8 - CLD implied */
+opcode(_d9,adr_absolute_index_read(reg_y),CMP)						/* d9 - CMP absolute,y */
+opcode(_da,adr_implied,NOP)											/* da - NOP implied */
+opcode(_db,adr_absolute_index_write(reg_y),rmw_ram(DCP))			/* db - DCP absolute,y */
+opcode(_dc,adr_absolute_index_read(reg_x),NOP)						/* dc - NOP absolute,x */
+opcode(_dd,adr_absolute_index_read(reg_x),CMP)						/* dd - CMP absolute,x */
+opcode(_de,adr_absolute_index_write(reg_x),rmw_ram(DEC))			/* de - DEC absolute,x */
+opcode(_df,adr_absolute_index_write(reg_x),rmw_ram(DCP))			/* df - DCP absolute,x */
+opcode(_e0,adr_immediate,CPX)										/* e0 - CPX immediate */
+opcode(_e1,adr_index_indirect,SBC)									/* e1 - SBC (indirect,x) */
+opcode(_e2,adr_immediate,NOP)										/* e2 - NOP immediate */
+opcode(_e3,adr_index_indirect,rmw_ram(ISB))							/* e3 - ISB (indirect,x) */
+opcode(_e4,adr_zeropage,CPX)										/* e4 - CPX zeropage */
+opcode(_e5,adr_zeropage,SBC)										/* e5 - SBC zeropage */
+opcode(_e6,adr_zeropage,rmw_ram(INC))								/* e6 - INC zeropage */
+opcode(_e7,adr_zeropage,rmw_ram(ISB))								/* e7 - ISB zeropage */
+opcode(_e8,adr_implied,INX)											/* e8 - INX implied */
+opcode(_e9,adr_immediate,SBC)										/* e9 - SBC immediate */
+opcode(_ea,adr_implied,NOP)											/* ea - NOP implied (this is the real one) */
+opcode(_eb,adr_immediate,SBC)										/* eb - SBC immediate */
+opcode(_ec,adr_absolute,CPX)										/* ec - CPX absolute */
+opcode(_ed,adr_absolute,SBC)										/* ed - SBC absolute */
+opcode(_ee,adr_absolute,rmw_ram(INC))								/* ee - INC absolute */
+opcode(_ef,adr_absolute,rmw_ram(ISB))								/* ef - ISB absolute */
+opcode(_f0,adr_implied,BEQ)											/* f0 - BEQ relative */
+opcode(_f1,adr_indirect_index_read,SBC)								/* f1 - SBC (indirect),y */
+																	/* f2 - JAM */
+opcode(_f3,adr_indirect_index_write,rmw_ram(ISB))					/* f3 - ISB (indirect),y */
+opcode(_f4,adr_zeropage_index(reg_x),NOP)							/* f4 - NOP zeropage,x */
+opcode(_f5,adr_zeropage_index(reg_x),SBC)							/* f5 - SBC zeropage,x */
+opcode(_f6,adr_zeropage_index(reg_x),rmw_ram(INC))					/* f6 - INC zeropage,x */
+opcode(_f7,adr_zeropage_index(reg_x),rmw_ram(ISB))					/* f7 - ISB zeropage,x */
+opcode(_f8,adr_implied,SED)											/* f8 - SED implied */
+opcode(_f9,adr_absolute_index_read(reg_y),SBC)						/* f9 - SBC absolute,y */
+opcode(_fa,adr_implied,NOP)											/* fa - NOP implied */
+opcode(_fb,adr_absolute_index_write(reg_y),rmw_ram(ISB))			/* fb - ISB absolute,y */
+opcode(_fc,adr_absolute_index_read(reg_x),NOP)						/* fc - NOP absolute,x */
+opcode(_fd,adr_absolute_index_read(reg_x),SBC)						/* fd - SBC absolute,x */
+opcode(_fe,adr_absolute_index_write(reg_x),rmw_ram(INC))			/* fe - INC absolute,x */
+opcode(_ff,adr_absolute_index_write(reg_x),rmw_ram(ISB))			/* ff - ISB absolute,x */
 
 /*
 	opcode vector table
@@ -7288,43 +985,37 @@ void (* vectors[256])(void) = {
 	Initialise the 6502/6507 CPU emulator
 */
 
-void Init_CPU(void){
-
- 	reg_pc = 0;
- 	reg_a = 0;
- 	flag_C = 0;
- 	reg_x = 0;
- 	reg_y = 0;
- 	reg_sp = 0;
- 	flag_Z = 0;
- 	flag_N = 0;
- 	flag_D = 0;
- 	flag_V = 0;
- 	flag_I = 0;
+void Init_CPU(void) {
+	reg_pc = 0;		/*  program counter */
+	reg_sp = 0;		/*  stack pointer */
+	reg_a = 0;		/*  accumulator (stored in AL) */
+	flag_C = 0;		/*  carry bit   (stored in AH) */
+	reg_x = 0;		/*  x register */
+	reg_y = 0;		/*  y register */
+	flag_Z = 0;		/*  zero test value (Z set when 0) */
+	flag_N = 0;		/*  sign test value (N set when negative) */
+	flag_D = 0;		/*  decimal flag */
+	flag_V = 0;		/*  overflow flag */
+	flag_I = 0;		/*  interrupt disable flag */
+	flag_B = 0;		/*  break flag */
  	flag_B = 0x10;	/* B flag is always set exept when pushing the status byte after a hardware IRQ */
- 	RCycles = 0;
+	RCycles = 0;		/*  cycles per instruction */
+	RClock = 0;		/*  clock cycles */
+
+	TriggerWSYNC = 0;	/* TIA tells CPU to pause on next read cycle */
 }
 
 /*
 	Reset the CPU
 */
 
-void Reset(void){
-
-	/* stack pointer initializes to $01ff */
+void Reset(void) {
 	reg_sp = 0xff;
-	/* get reset vector from $fffc + $fffd */
-	AddressBus = 0xfffc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
+	AddressBus = 0xfffc;		// get reset vector from $fffc + $fffd
+	readbank
 	reg_pc = DataBus;
 	AddressBus++;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
+	readbank
 	reg_pc += (DataBus << 8);
 	RClock = 0;
 }
@@ -7333,53 +1024,12 @@ void Reset(void){
 	do a single instruction
 */
 
-void do_Instruction(void){
-
-	if(TraceCount) TraceInstruction();
+void do_Instruction(void) {
+	if (TraceCount) TraceInstruction();
 	RCycles = 0;
 	AddressBus = reg_pc;
-	RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
+	readbank
 	reg_pc++;
 	AddressBus = reg_pc;
-	(* vectors[DataBus])();	/* do the instruction */
-/*	ClockRIOT() is only used here, so we can include it directly */
-	Timer -= RCycles;	/* This is all ClockRIOT() does */
-}
-
-void do_Instruction_line(void){
-
-	while(RClock < CYCLESPERSCANLINE){
-		if(TriggerWSYNC){
-/*
-	 	WSYNC only halts the CPU on read cycles
-	 	except BRK and JSR we can handle it here,
-	 	because the next read after the write is always an opcode fetch
-*/
-		 	TriggerWSYNC = 0;
-//			if(RClock > CYCLESPERSCANLINE){
-//	 			/* skip a line, if WSYNC came after end of line */
-//	 			Timer = Timer - (2 * CYCLESPERSCANLINE - RClock);	//clock RIOT
-//		 		RClock = 2 * CYCLESPERSCANLINE;	// and CPU clock
-//		 	}else{
-	 			Timer = Timer - (CYCLESPERSCANLINE - RClock);	// clock RIOT
-	 			RClock = CYCLESPERSCANLINE;	// and CPU clock
-//		 	}
-		}
-
-		if(TraceCount) TraceInstruction();
-		RCycles = 0;
-		AddressBus = reg_pc;
-		RClock++;	/* cycles for this scanline */
-	RCycles++;	/* cycles for this instruction */
-/* read value at address in AddressBus to DataBus */
-	(* ReadAccess[AddressBus])();
-		reg_pc++;
-		AddressBus = reg_pc;
-		(* vectors[DataBus])();	/* do the instruction */
-	 /*	ClockRIOT() is only used here, so we can include it directly */
-		Timer -= RCycles;	/* This is all ClockRIOT() does */
-	}
+	(* vectors[DataBus])();
 }

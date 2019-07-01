@@ -2,7 +2,6 @@
 ** recognize cart and set up special properties
 */
 
-
 db KoolAide;		/* do KoolAide cheat */
 db RSBoxing;		/* do RSBOXING cheat */
 dd DefaultCFirst;	/* emu recommends game start here */
@@ -10,6 +9,41 @@ db MPdirection;		/* direction mouse must move to emulate paddle */
 db MinVol;			/* minimum volume needed to make noise on PC-speaker */
 db LG_WrapLine;		/* light gun wrap line */
 
+// this came from the thread:
+// https://stackoverflow.com/questions/27303062/strstr-function-like-that-ignores-upper-or-lower-case
+// and was written by Clifford
+
+char* stristr( const char* str1, const char* str2 )
+{
+    const char* p1 = str1 ;
+    const char* p2 = str2 ;
+    const char* r = *p2 == 0 ? str1 : 0 ;
+
+    while( *p1 != 0 && *p2 != 0 )
+    {
+        if( tolower( (unsigned char)*p1 ) == tolower( (unsigned char)*p2 ) )
+        {
+            if( r == 0 ) r = p1 ;
+            p2++ ;
+        }
+        else
+        {
+            p2 = str2 ;
+            if( r != 0 ) p1 = r + 1 ;
+            if( tolower( (unsigned char)*p1 ) == tolower( (unsigned char)*p2 ) )
+            {
+                r = p1 ;
+                p2++ ;
+            }
+            else
+            {
+                r = 0 ;
+            }
+        }
+        p1++ ;
+    }
+    return *p2 == 0 ? (char*)r : 0 ;
+}
 
 db Lookup(dd *table)
 {
@@ -23,13 +57,10 @@ db Lookup(dd *table)
 	}
 }
 
-
 void RecognizeCart(void)
 {
 	db paddle;
-        dd i,j;
-
-        db LeftSuggestion, RightSuggestion;
+	db LeftSuggestion, RightSuggestion;
 
 	KoolAide = 0;				/* KoolAide RESP cheat */
 	if (Lookup(Kool)) KoolAide = 1;
@@ -41,43 +72,43 @@ void RecognizeCart(void)
 
 	DefaultCFirst = 0xffff;
 
-	if (crc == 0xe5314b6c) GameOffset =  16; /* aciddrop */
-	if (crc == 0x19b76676) GameOffset =  16; /* Bermuda Triangle (PAL) */
-	if (crc == 0xd8777a3b) GameOffset =  42; /* Starsoft - Gefecht im All (PAL).bin */
-	if (crc == 0x7805bc6f) GameOffset = -16; /* Acid Drop (1992) (Salu) [f1] (NTSC by TJ).a26 */
-	if (crc == 0x7b4eb49c) GameOffset =  16;  /* pickpile */
-	if (crc == 0x20010308) GameOffset = -4;	 /* challang */
-	if (crc == 0xf3ded2e3) GameOffset = -4;  /* pandchse */
-	if (crc == 0xc44d074f) GameOffset = -7;  /* zoofun */
-	if (crc == 0x4f40a18e) GameOffset =  16; /* air_raid */
-	if (crc == 0x7b8fcd3a) GameOffset =  21; /* bibi */
-	if (crc == 0x6f62a864) GameOffset = -10; /* grescape */
-	if (crc == 0x38d3342b) GameOffset =  10; /* coln */
-	if (crc == 0x92fd7dbf) GameOffset =  16; /* alienret */
-	if (crc == 0x84a23e70) GameOffset = -8;  /* kingkong */
-	if (crc == 0x7b7921c3) GameOffset =  3;  /* vg_steep */
-	if (crc == 0xeab1d9d0) GameOffset =  3;  /* vg_treas */
-	if (crc == 0x71b85acc) GameOffset =  11; /* walker */
-	if (crc == 0x36910e4d) GameOffset =  8;  /* frogger2 */
-	if (crc == 0x81ae3d7d) GameOffset =  8;  /* metdef */
-	if (crc == 0x350c63ba) GameOffset =  8;  /* minrvol2 */
-	if (crc == 0x747bfaf6) GameOffset =  10; /* snalsqrl */
-	if (crc == 0xdc25b7ea) GameOffset = -16; /* timewarp */
-	if (crc == 0xf674d128) GameOffset =  8;  /* baseattk */
-	if (crc == 0x7117e8a9) GameOffset = -4;  /* drgndfnd */
-	if (crc == 0x77daa7b0) GameOffset =  16; /* firebird */
-	if (crc == 0x25967483) GameOffset =  22; /* motocros */
-	if (crc == 0xa9d7698f) GameOffset =  8;	 /* spact_tw */
-	if (crc == 0x5463707)  GameOffset =  8;  /* cosmcorr */
-	if (crc == 0xf5f8ffff) GameOffset =  8;  /* dancplat */
-	if (crc == 0x9d63d054) GameOffset =  5;  /* forest */
-	if (crc == 0x680a43b0) GameOffset =  12;  /* saveship */
+	if (crc == 0xe5314b6c) GameOffset =  16; 	/* aciddrop */
+	if (crc == 0x19b76676) GameOffset =  12; 	/* Bermuda Triangle (PAL) */
+	if (crc == 0xd8777a3b) GameOffset =  42; 	/* Starsoft - Gefecht im All (PAL).bin */
+	if (crc == 0x7805bc6f) GameOffset = -16; 	/* Acid Drop (1992) (Salu) [f1] (NTSC by TJ).a26 */
+	if (crc == 0x7b4eb49c) GameOffset =  16; 	/* pickpile */
+	if (crc == 0x20010308) GameOffset = -4;	 	/* challang */
+	if (crc == 0xf3ded2e3) GameOffset = -4;  	/* pandchse */
+	if (crc == 0xc44d074f) GameOffset = -7;  	/* zoofun */
+	if (crc == 0x4f40a18e) GameOffset =  16; 	/* air_raid */
+	if (crc == 0x7b8fcd3a) GameOffset =  21; 	/* bibi */
+	if (crc == 0x6f62a864) GameOffset = -10; 	/* grescape */
+	if (crc == 0x38d3342b) GameOffset =  10; 	/* coln */
+	if (crc == 0x92fd7dbf) GameOffset =  16; 	/* alienret */
+	if (crc == 0x84a23e70) GameOffset = -8;  	/* kingkong */
+	if (crc == 0x7b7921c3) GameOffset =  3;  	/* vg_steep */
+	if (crc == 0xeab1d9d0) GameOffset =  3;  	/* vg_treas */
+	if (crc == 0x71b85acc) GameOffset =  11; 	/* walker */
+	if (crc == 0x36910e4d) GameOffset =  8;  	/* frogger2 */
+	if (crc == 0x81ae3d7d) GameOffset =  8;  	/* metdef */
+	if (crc == 0x350c63ba) GameOffset =  8;  	/* minrvol2 */
+	if (crc == 0x747bfaf6) GameOffset =  10; 	/* snalsqrl */
+	if (crc == 0xdc25b7ea) GameOffset = -16; 	/* timewarp */
+	if (crc == 0xf674d128) GameOffset =  8;  	/* baseattk */
+	if (crc == 0x7117e8a9) GameOffset = -4;  	/* drgndfnd */
+	if (crc == 0x77daa7b0) GameOffset =  16; 	/* firebird */
+	if (crc == 0x25967483) GameOffset =  22; 	/* motocros */
+	if (crc == 0xa9d7698f) GameOffset =  8;	 	/* spact_tw */
+	if (crc == 0x5463707)  GameOffset =  8;  	/* cosmcorr */
+	if (crc == 0xf5f8ffff) GameOffset =  8;  	/* dancplat */
+	if (crc == 0x9d63d054) GameOffset =  5;  	/* forest */
+	if (crc == 0x680a43b0) GameOffset =  12;	/* saveship */
+	if (crc == 0x39d92c76) GameOffset = -12;	/* PAL artillery duel */
+	if (crc == 0x8ab11748) GameOffset = -12;	/* Karate (unknown) */
+	if (crc == 0xcbebf38e) GameOffset = 10;		/* Nightmare (PAL) */
 
-	if (crc == 0xb17b62db) CFirst = 1;	 /* Balthazar */
-	if (crc == 0xfa07aa39) CFirst = 0;	 /* pharhcrs -- vblank triggers frame */
-
-	DefaultCFirst = CFirst;
-
+	if (crc == 0xb17b62db) DefaultCFirst = 1;	 /* Balthazar */
+	if (crc == 0xfa07aa39) DefaultCFirst = 0;	 /* pharhcrs -- vblank triggers frame */
 
 /* special palettes */
 
@@ -85,6 +116,9 @@ void RecognizeCart(void)
 	{
 		if (Lookup(NTSC_colours))	GamePaletteNumber = 0;	/* NTSC Palette */
 		if (Lookup(PAL_colours))	GamePaletteNumber = 1;      /* PAL Palette */
+		if (strstr(FileName, "NTSC")) GamePaletteNumber = 0;
+		if (strstr(FileName, "PAL")) GamePaletteNumber = 1;
+		if (strstr(FileName, "SECAM")) GamePaletteNumber = 2;
 
 		PaletteNumber = GamePaletteNumber;
 	}
@@ -198,20 +232,73 @@ void RecognizeCart(void)
 	if (Lookup(BS_3)) BSType = 3;		/* Parker Brothers */
 	if (Lookup(BS_4)) BSType = 4;		/* Tigervision */
 	if (Lookup(BS_5)) BSType = 5;		/* Activision 8K flat model */
-	if (Lookup(BS_9)) BSType = 9;		/* 8K banks reversed */
 	if (Lookup(BS_6)) BSType = 6;		/* 16K Superchip that can't be recognized automatically */
 	if (Lookup(BS_7)) BSType = 7;		/* M Network 16K */
-	if (Lookup(BS_8)) BSType = 8;           /* Atari 32K */
-	if (crc == 0xa01ebff4) BSType = 10;     /* Spectravideo CompuMate PAL */
+	if (Lookup(BS_8)) BSType = 8;       /* Atari 32K */
+	if (Lookup(BS_9)) BSType = 9;		/* 8K banks reversed */
+	if (crc == 0xa01ebff4) BSType = 10; /* Spectravideo CompuMate PAL */
 	if (crc == 0xdfa1388d) BSType = 10;	/* Spectravideo CompuMate NTSC */
 	if (Lookup(BS_11)) BSType = 11;		/* 32K Tigervision */
-	if (Lookup(BS_12)) BSType = 12;         /* 8K UA Ltd. */
-		
+	if (Lookup(BS_12)) BSType = 12;     /* 8K UA Ltd. */
+
+	if (stristr(FileName, "[2K]"))  BSType = 0;		// 4K Atari
+	if (stristr(FileName, "[4K]"))  BSType = 0;		// 4K Atari
+	if (stristr(FileName, "[CV]"))  BSType = 1;		// Commavid
+	if (stristr(FileName, "[F8S]")) BSType = 2;		// 8K superchip
+	if (stristr(FileName, "[E0]"))  BSType = 3;		// 8K Parker Bros.
+	if (stristr(FileName, "[3F]"))  BSType = 4;		// 8K Tigervision
+	if (stristr(FileName, "[FE]"))  BSType = 5;		// 8K flat
+	if (stristr(FileName, "[F6S]")) BSType = 6;		// 16K superchip
+	if (stristr(FileName, "[E7]"))  BSType = 7;		// 16K M-Network
+	if (stristr(FileName, "[F4S]")) BSType = 8;		// 32K superchip
+	if (stristr(FileName, "[F8R]")) BSType = 9;		// 8K Atari banks swapped
+	if (stristr(FileName, "[CM]"))  BSType = 10;	// Compumate
+	if (stristr(FileName, "[3F+]")) BSType = 11;	// 512K Tigervision
+	if (stristr(FileName, "[UA]"))  BSType = 12;	// UA Ltd.
+	if (stristr(FileName, "[EF]"))  BSType = 13;	// 64K Homestar Runner / Paul Slocum
+	if (stristr(FileName, "[3E]"))  BSType = 14;	// large 3F + 32K RAM (Krokodile / Andrew Davie)
+	if (stristr(FileName, "[AR]"))  BSType = 15;	// Starpath
+	if (stristr(FileName, "[F6]"))  BSType = 16;	// 16K Atari
+	if (stristr(FileName, "[F4]"))  BSType = 17;	// 32K Atari
+	if (stristr(FileName, "[MB]"))  BSType = 18;	// Megaboy
+	if (stristr(FileName, "[FA]"))  BSType = 19;	// 12K CBS
+	if (stristr(FileName, "[F8]"))  BSType = 20;	// 8K Atari
+	if (stristr(FileName, "[P2]"))  BSType = 21;	// Pitfall 2
+	if (stristr(FileName, "[4A5]")) BSType = 22;	// supercat
+	if (stristr(FileName, "[084]")) BSType = 23;	// EconoBanking
+
+	if (stristr(FileName, ".2k"))	BSType = 0;		// 4K Atari
+	if (stristr(FileName, ".4k"))	BSType = 0;		// 4K Atari
+	if (stristr(FileName, ".cv"))	BSType = 1;		// Commavid
+	if (stristr(FileName, ".f8s"))	BSType = 2;		// 8K superchip
+	if (stristr(FileName, ".e0"))	BSType = 3;		// 8K Parker Bros.
+	if (stristr(FileName, ".3f"))	BSType = 4;		// 8K Tigervision
+	if (stristr(FileName, ".fe"))	BSType = 5;		// 8K flat
+	if (stristr(FileName, ".f6s"))	BSType = 6;		// 16K superchip
+	if (stristr(FileName, ".e7"))	BSType = 7;		// 16K M-Network
+	if (stristr(FileName, ".f4s"))	BSType = 8;		// 32K superchip
+	if (stristr(FileName, ".f8r"))	BSType = 9;		// 8K Atari banks swapped
+	if (stristr(FileName, ".cm"))   BSType = 10;	// Compumate
+	if (stristr(FileName, ".3f+"))	BSType = 11;	// 512K Tigervision
+	if (stristr(FileName, ".ua"))	BSType = 12;	// UA Ltd.
+	if (stristr(FileName, ".ef"))   BSType = 13;	// 64K Homestar Runner / Paul Slocum
+	if (stristr(FileName, ".3e"))	BSType = 14;	// large 3F + 32K RAM (Krokodile / Andrew Davie)
+	if (stristr(FileName, ".ar"))	BSType = 15;	// Starpath
+	if (stristr(FileName, ".f6"))	BSType = 16;	// 16K Atari
+	if (stristr(FileName, ".f4"))	BSType = 17;	// 32K Atari
+	if (stristr(FileName, ".mb"))   BSType = 18;	// Megaboy
+	if (stristr(FileName, ".fa"))	BSType = 19;	// 12K CBS
+	if (stristr(FileName, ".f8"))	BSType = 20;	// 8K Atari
+	if (stristr(FileName, ".p2"))	BSType = 21;	// Pitfall 2
+	if (stristr(FileName, ".dpc"))	BSType = 21;	// Pitfall 2
+	if (stristr(FileName, ".4a5"))	BSType = 22;	// supercat
+	if (stristr(FileName, ".084"))	BSType = 23;	// EconoBanking
+
 	if (UserBankswitch !=0xff) BSType = UserBankswitch;
 }
 
 /**
-** z26 is Copyright 1997-2011 by John Saeger and contributors.  
+** z26 is Copyright 1997-2019 by John Saeger and contributors.  
 ** z26 is released subject to the terms and conditions of the 
 ** GNU General Public License Version 2 (GPL).	z26 comes with no warranty.
 ** Please see COPYING.TXT for details.

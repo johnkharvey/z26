@@ -302,6 +302,9 @@ dd	BS_3[] = {	// Parker Brothers
 
 	0xdff58acf,		/* Not Boulder Dash Demo (PD) (PAL).a26 <-- not sure about this */
 	0x4944af7,		/* Not Boulder Dash Demo (PD).a26       <-- not sure about this */
+
+	0xf7dc3553,  /* Mr. Do!'s Castle (1984) (Parker Brothers) (PB5820) ~.bin */
+
 	-1
 };
 
@@ -325,6 +328,9 @@ dd	BS_4[] = {	// Tigervision
 	0x3310b79e,     /* Polaris NTSC ? */
 	0x52630ec9,     /* Polaris NTSC (Thomas Jentzsch hack) */
 	0x81bfd401,		/* Miner 2049er - Starring Bounty Bob (1982) (Tigervision) (7-008) (Prototype).bin */
+
+	0x236bf08e,  /* Miner 2049er - Starring Bounty Bob (1983) (Tigervision) (7-008) [fixed] ~.bin */
+
 	-1
 };
 
@@ -339,6 +345,11 @@ dd	BS_5[] = {	// Robotank
 	0x0a4d0768,     /* Robot Tank TC (Thomas Jentzsch hack) */
 	0xc343187b,     /* Space Shuttle (NTSC) */
 	0x6405529b,		/* Robot Tank (1983) (Activision) [h1].a26 */
+
+	0x8d15f5e6,  /* Activision Decathlon, The (1983) (Activision, David Crane) (EAZ-030) (SECAM).bin */
+	0xb5173962,  /* Space Shuttle - A Journey Into Space (1983) (Activision - Woodside Design Associates, Steve 'Jessica Stevens' Kitchen) (EAZ-033) (SECAM).bin */
+
+
 	-1
 };
 
@@ -353,6 +364,7 @@ dd	BS_9[] = {	// 8K swapped
 	0x80dec6a,		/* Bobby Needs Food V11 (belial).a26 */
 	0x548c52e3,		/* Bobby Needs Food V12 (belial) (PAL).a26 */
 	0x4c85b3af,		/* Bobby Needs Food V12 (belial).a26 */
+	0x6df357b6,		/* Racer (1982) (Atari - Roklan, Joe Gaucher) (Prototype) ~ */
 	-1
 };
 
@@ -378,6 +390,9 @@ dd	BS_7[] = {	// M-Network
 	0x7eb30c60,		/* Sudoku 7-17-06 (PD).a26 */
 	0x312fb6be,		/* Sudoku 7-26-06 (PD).a26 */
 	0x797406ce,		/* Sudoku 7-27-06 (PD).a26 */
+
+	0x3523e777,  /* Bump 'n' Jump (1983) (M Network - INTV, David Akers, Joe King, Patricia Lewis Du Long, Jeff Ratcliff) (MT7045) ~.bin */
+
 	-1
 };
 
@@ -402,7 +417,8 @@ dd	BS_8[] = {
 
 dd	BS_11[] = {
 	0x2e76744c,		/* beu11.bin */
-	0xe6e43258,		/* samfox */
+//	0xe6e43258,		/* samfox */
+//	0x056e9c02,		/* hillsluigi */
 	-1
 };
 	
@@ -415,14 +431,14 @@ dd      BS_12[] = {
 
 
 dd      BLACKLIST[] = {
-	0xbd849dd2,		/* Gyruss (1984) (Parker Bros) [b3].a26 */
-	0xf968489,		/* Droid Demo 2-M for SuperCharger (David Conrad Schweinsberg) (PD).a26 */
-	0x30aab3a9,		/* Rocky & Bullwinkle (SuperCharger) (prototype) [b1].a26 */
+//	0xbd849dd2,		/* Gyruss (1984) (Parker Bros) [b3].a26 */
+//	0xf968489,		/* Droid Demo 2-M for SuperCharger (David Conrad Schweinsberg) (PD).a26 */
+//	0x30aab3a9,		/* Rocky & Bullwinkle (SuperCharger) (prototype) [b1].a26 */
 	-1
 };
 
 /**
-** z26 is Copyright 1997-2011 by John Saeger and contributors.  
+** z26 is Copyright 1997-2019 by John Saeger and contributors.  
 ** z26 is released subject to the terms and conditions of the 
 ** GNU General Public License Version 2 (GPL).	z26 comes with no warranty.
 ** Please see COPYING.TXT for details.

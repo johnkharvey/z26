@@ -2,8 +2,6 @@
 	sdlvideo.c -- SDL video code
 */
 
-const SDL_VideoInfo *screen_info;
-
 SDL_Surface *screen_surface;
 
 #include "sdlpixcopy.c"
@@ -12,41 +10,27 @@ void ClearScreenBuffers()
 {
 	memset(RealScreenBuffer1, 0,    MaxLines*tiawidth);
 	memset(RealScreenBuffer2, 0x80, MaxLines*tiawidth);
-	memset(RealScreenBuffer3, 0,    MaxLines*tiawidth);
-	memset(RealScreenBuffer4, 0x80, MaxLines*tiawidth);
-
-	memset(texture_buffer, 0, 4*1024*1024);
+	memset(texture_buffer, 0, 4*1280*1280);
 }
-
 
 void CreateScreen()	// need to be able to force video mode change
 {
 	gl_CreateScreen();
-
 	srv_pitch = srv_screen->pitch;
+	SDL_SetWindowTitle(window, FileName);
 
-	SDL_WM_SetCaption(FileName, FileName);
-	
-	if (MouseRude|FullScreen)
+	if (FullScreen)
 		SDL_ShowCursor(SDL_DISABLE);
 	else	
 		SDL_ShowCursor(SDL_ENABLE);
 }
 
-
-/*
-** set up the palette
-*/
-
 void srv_SetPalette()
 {
 	int i;
-	
 	dd hi = Depth;
 	dd med = (Depth + 100)/2;
-
 	db red, grn, blu;
-	SDL_Color palette[256];
 
 	GeneratePalette();
 	for ( i=0; i<128; i++)
@@ -55,16 +39,11 @@ void srv_SetPalette()
 		grn = PCXPalette[3*i+1];
 		blu = PCXPalette[3*i+2];
 
-		palette[i].r = red;
-		palette[i].g = grn;
-		palette[i].b = blu;
-
 		srv_colortab_hi[i] =  SDL_MapRGB(srv_screen->format, red, grn, blu);
 		srv_colortab_med[i] = SDL_MapRGB(srv_screen->format, (red*med)/100, (grn*med)/100, (blu*med)/100);
 		srv_colortab_low[i] = SDL_MapRGB(srv_screen->format, (red*hi)/100,  (grn*hi)/100,  (blu*hi)/100);
 	}
 }
-
 
 void srv_InitJoystick() {
 dd i;
@@ -77,16 +56,6 @@ dd i;
 			for (i=0; i<SDL_NumJoysticks(); i++)
 			{
 				JoystickTable[i]=SDL_JoystickOpen(i);
-				/* Stelladaptor only has 2 buttons and 2 axes */
-				if ((SDL_JoystickNumAxes(JoystickTable[i]) == 2) &&
-				    (SDL_JoystickNumButtons(JoystickTable[i]) == 2) &&
-				    (SDL_JoystickNumHats(JoystickTable[i]) == 0) &&
-				    (SDL_JoystickNumBalls(JoystickTable[i]) == 0) &&
-				    (StelladaptorEnabled))
-				{
-					Stelladaptor[i] = 1;
-				}
-				else Stelladaptor[i] = 0;
 			}
 //			SDL_JoystickEventState(SDL_ENABLE);
 		}
@@ -95,65 +64,62 @@ dd i;
 
 }
 
-void srv_SetVideoMode() {
-
-	/* If user gave a valid video mode, use it, or else use default */
-	if (VideoMode > 5) VideoMode = 0; 
-
-	srv_CreateIcon();
-	SDL_WM_SetIcon(z26Icon, z26IconMask);
-	srv_InitJoystick();
-
+void srv_ChooseScreenResolution()
+{
 	switch(VideoMode)
 	{
 	default:
-	case 0:	 MaxLines = 256; width = 512;  height = 512;  srv_screen = small_screen; break;
-	case 1:	 MaxLines = 256; width = 512;  height = 512;  srv_screen = small_screen; break;
-	case 2:	 MaxLines = 256; width = 1024; height = 1024; srv_screen = large_screen; break;
-	case 3:	 MaxLines = 256; width = 1024; height = 1024; srv_screen = large_screen; break;
-	case 4:	 MaxLines = 256; width = 256;  height = 256;  srv_screen = tiny_screen;  break;
-	case 5:	 MaxLines = 256; width = 256;  height = 256;  srv_screen = tiny_screen;  break;
+	case 0:	 MaxLines = 256; width = 640;  height = 512;  srv_screen = small_screen; break;
+	case 1:	 MaxLines = 256; width = 640;  height = 512;  srv_screen = small_screen; break;
+	case 2:	 MaxLines = 256; width = 1280; height = 1024; srv_screen = large_screen; break;
+	case 3:	 MaxLines = 256; width = 1280; height = 1024; srv_screen = large_screen; break;
+	case 4:	 MaxLines = 256; width = 320;  height = 256;  srv_screen = tiny_screen;  break;
+	case 5:	 MaxLines = 256; width = 320;  height = 256;  srv_screen = tiny_screen;  break;
 	}
+}
+
+void srv_SetVideoMode() {
+
+	if (VideoMode > 5) VideoMode = 4; 
+
+	srv_InitJoystick();
+	srv_ChooseScreenResolution();
+	srv_set_screen_size();
+	SDL_SetWindowSize(window, width, height);
+	SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 
 	scanlinespread = height / MaxLines;
 
-	pixelspread = width / 512;
+	pixelspread = width / tiawidth;
 	if (pixelspread == 0) pixelspread = 1;
 
 	ClearScreenBuffers();
 	CreateScreen();
 	srv_SetPalette();
 
-	if(GrabInput) SDL_WM_GrabInput(SDL_GRAB_ON);
-	
-	position_game(); 	/* set game's vertical position */
-}
+	if (FullScreen)
+	{
+		SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+	}
+	else
+	{
+		SDL_SetWindowFullscreen(window, 0);
+	}
 
+	position_game();
+}
 
 void srv_CopyScreen()
 {
  	void (*copy)();
-	dd bpp = srv_screen->format->BytesPerPixel;
 	dd i;
-	dd oldpixelspread = pixelspread;
-	
-	odd++;		  // alternate startline for interlaced display
-	
-	if (tiawidth == 160) pixelspread *= 2;	// for the narrow tia engine
-	
-	Vert = (height - scanlinespread*MaxLines) / 2;
-	Horiz = (width - pixelspread*tiawidth) / 2;
-	if (width == 256) Horiz = (width - pixelspread*tiawidth/2) / 2;
 
 	srv_buffer = srv_screen->pixels;
 	srv_pitch = srv_screen->pitch;
 
 	emu_pixels = ScreenBuffer;
 	emu_pixels_prev = ScreenBufferPrev;
-	prev_emu_pixels = PrevScreenBuffer;
-	prev_emu_pixels_prev = PrevScreenBufferPrev;
-
-	screen_pixels = srv_buffer + Horiz*bpp + (Vert)*srv_pitch;
+	screen_pixels = srv_buffer;
 	
 	if (status_timer > 0) 
 		{
@@ -167,18 +133,10 @@ void srv_CopyScreen()
 	
 	lines2draw = scanlinespread;
 
-	copy = PixCopy32;
-	if (scanlinespread == 1) 
-		copy = FastPixCopy32;
-	else if (DoInterlace)
-	{
-		lines2draw = scanlinespread / 2;
-		if (odd & 1) screen_pixels += lines2draw * srv_pitch;
-	}
-	else if (scanlinespread == 2)
-		copy = PixCopy32_2;
-	else if (scanlinespread == 4)
-		copy = PixCopy32_4;
+	copy = PixCopy32_1;
+	if (scanlinespread == 1)	 	copy = PixCopy32_1;
+	else if (scanlinespread == 2)	copy = PixCopy32_2;
+	else if (scanlinespread == 4)	copy = PixCopy32_4;
 
 	for (i=0; i<MaxLines; ++i)
 	{	
@@ -186,36 +144,26 @@ void srv_CopyScreen()
 		screen_pixels += scanlinespread * srv_pitch;
 		emu_pixels += tiawidth;
 		emu_pixels_prev += tiawidth;
-		prev_emu_pixels += tiawidth;
-		prev_emu_pixels_prev += tiawidth;
 	}
 
 	gl_DrawScreen();
-	
 	srv_Flip();
-	
-	pixelspread = oldpixelspread;
 }
-
 
 void gui_CopyScreen()
 {
-	db oldDoInterlace = DoInterlace;
-	dd oldtiawidth = tiawidth;
-	
-	DoInterlace = 0;
+	int oldtiawidth = tiawidth;
+	int oldscanline = DoScanline;
 	tiawidth = 320;
-	
+	if ((VideoMode == 4) || (VideoMode == 5)) DoScanline = 0;
 	srv_CopyScreen();
-	
-	DoInterlace = oldDoInterlace;
 	tiawidth = oldtiawidth;
+	DoScanline = oldscanline;
 }
 
 
-
 /**
-	z26 is Copyright 1997-2011 by John Saeger and contributors.  
+	z26 is Copyright 1997-2019 by John Saeger and contributors.  
 	z26 is released subject to the terms and conditions of the 
 	GNU General Public License Version 2 (GPL).	
 	z26 comes with no warranty.

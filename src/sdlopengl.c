@@ -2,9 +2,7 @@
 ** sdlopengl.c -- opengl code
 */
 
-#include "SDL_opengl.h"
-
-dd texture_buffer[1024*1024];
+dd texture_buffer[1280*1280];
 
 #define INIT_ENTRY_POINT(funcname) \
 _ ## funcname = SDL_GL_GetProcAddress(#funcname); \
@@ -52,68 +50,114 @@ void init_glfuncs(void)
 }
 
 
+SDL_Window *window = NULL;
+SDL_GLContext context;
+int win_width = 640;
+int win_height = 512;
+
+void srv_ChooseScreenResolution();
+
+void srv_set_screen_size(void)
+{
+	screen_width = width;
+	screen_height = height;
+
+	if (FullScreen)
+	{
+		SDL_DisplayMode DM;
+		SDL_GetCurrentDisplayMode(0, &DM);
+		screen_width = DM.w;
+		screen_height = DM.h;
+	}
+
+}
+
 void gl_InitOpenGL() {
-	SDL_Surface *screen_surface;
+	int flags = SDL_WINDOW_OPENGL;
+
+	if (FullScreen) flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+
+	if (window) 
+	{
+		SDL_DestroyWindow(window);
+		window = NULL;
+	}
+	
+	srv_ChooseScreenResolution();	
 
 	if (SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER,1)<0)	// page-flipping needs double buffering
 	{
 		printf("Unable to set GL attribute : %s\n",SDL_GetError());
 		exit(1);
 	}
-	
-	if (SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL,1)<0)	// enable page-flipping
+
+	if ((width < win_width) || (height < win_height))
 	{
-		printf("Unable to set GL attribute : %s\n",SDL_GetError());
-		exit(1);
+		width = win_width; height = win_height;
 	}
-	
+
+	window = SDL_CreateWindow("OpenGL Window", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 
+								width, height, SDL_WINDOW_OPENGL);
+
+	if (!window) 
+	{
+	    fprintf(stderr, "Couldn't create window: %s\n", SDL_GetError());
+	    exit(1);
+	}
+
+	context = SDL_GL_CreateContext(window);
+	if (!context) 
+	{
+	    fprintf(stderr, "Couldn't create context: %s\n", SDL_GetError());
+	    exit(1);
+	}
+
+	if (SDL_GL_SetSwapInterval(Vsync))	/* 0  = immediate updates */
+										/* 1  = sync with vertical retrace */
+										/* -1 = adaptive */
+	{
+		fprintf(stderr, "Couldn't set swap interval.\n");
+	}
+
 	if (SDL_GL_LoadLibrary(NULL)<0)
 	{
 		printf("Unable to dynamically open GL lib : %s\n",SDL_GetError());
 		exit(1);
 	}
-	
-	if (FullScreen) 
-		screen_surface = SDL_SetVideoMode(0, 0, 0, SDL_OPENGL|SDL_FULLSCREEN);
-	else
-		screen_surface = SDL_SetVideoMode(640, 512, 0, SDL_OPENGL);
 
-	if (screen_surface == NULL)
-	{
-		printf("Unable to open video mode : %s\n",SDL_GetError());
-		SDL_Quit();
-		exit(1);
-	}
+	srv_set_screen_size();
 
-	screen_width = screen_surface->w;
-	screen_height = screen_surface->h;
-		
 	init_glfuncs();
 }
 
 void gl_CreateScreen() {
-int	vsize = (screen_height/MaxLines)*MaxLines;
-int	vpos, hoffset, maxheight;
-int	maxstretch = (screen_width * 3) / 40;
+	int hpos=0, vpos=0, hsize=0, vsize=0;
+	int i;
 
-	if (vsize+Tall*4 > screen_height)	maxheight = screen_height;
-	else					maxheight = vsize+Tall*4;
-		
-	if (Narrow > maxstretch)		hoffset = maxstretch*4;
-	else					hoffset = Narrow*4;
+	for (i=100; i>=1; i--)		// should work up to 32000x25600 resolution
+		if ((screen_width >= i*320) && (screen_height >= i*256))
+		{
+			hsize = (i*320*width_adjust)/100;
+			vsize = i*256;
+			break;
+		}
 
-	vpos = (screen_height - maxheight)/2;
-	
 	_glEnable( GL_TEXTURE_2D );
 	_glClearColor( 0.0f, 0.0f, 0.0f, 0.0f );
 
-	_glViewport( -hoffset, vpos, screen_width+hoffset*2, maxheight );
+	vpos = (screen_height - vsize)/2;
+	hpos = (screen_width - hsize)/2;
 
+	_glViewport( hpos, vpos, hsize, vsize );
 	_glMatrixMode( GL_PROJECTION );
 	_glLoadIdentity();
-	_glOrtho( 0, screen_width, screen_height, 0, -1, 1 );
+	_glOrtho( 0, screen_width/2, screen_height, 0, -1, 1 );
 	_glMatrixMode( GL_MODELVIEW );
 	_glLoadIdentity();
+	if (FullScreen)
+	{
+		SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+	}
 }
 
 void gl_DrawScreen() {
@@ -132,7 +176,7 @@ void gl_DrawScreen() {
 		_glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 	}
 	
-	_glTexImage2D( GL_TEXTURE_2D, 0, 3, srv_screen->w, srv_screen->h, 0, GL_BGRA, GL_UNSIGNED_BYTE, texture_buffer );
+	_glTexImage2D( GL_TEXTURE_2D, 0, 3, width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE, texture_buffer );
 	
 	_glBegin( GL_QUADS );
 	_glTexCoord2i( 0, 0 );
@@ -150,7 +194,7 @@ void gl_DrawScreen() {
 
 
 /**
-** z26 is Copyright 1997-2011 by John Saeger and contributors.  
+** z26 is Copyright 1997-2019 by John Saeger and contributors.  
 ** z26 is released subject to the terms and conditions of the 
 ** GNU General Public License Version 2 (GPL).	z26 comes with no warranty.
 ** Please see COPYING.TXT for details.

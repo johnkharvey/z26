@@ -234,9 +234,14 @@ void WriteRIOT(void){
 	gets used in cpu.asm and tialine.asm
 */
 
+/*
 void  ClockRIOT(void){
 	Timer -= RCycles;
 }
+*/
+
+#define ClockRIOT \
+	Timer -= RCycles;
 
 void (* WriteRIOTHandler[32])(void) = {
 	WritePortA,		//  280h

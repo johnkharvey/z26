@@ -4,6 +4,18 @@
 **		regular file) 
 */
 
+// needed for vc++ -- works on gcc
+
+int strcasecmp(const char *s1, const char *s2)
+{
+	while(tolower(*s1) == tolower(*s2++))
+	{
+		if(*s1++ == '\0') return 0;
+	}
+	
+	return *(const unsigned char *)s1 - *(const unsigned char *)(s2 - 1);
+}
+
 int filename_cmp(char *left, char *right) {
 	int rlen, llen;
 	char llast, rlast;

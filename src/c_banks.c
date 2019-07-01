@@ -359,8 +359,8 @@ void InitE0(void){
 	
 	up to 256 2K banks of ROM at $1000 - $17FF
 	select bank by writing bank number to any address between $0000 and $003F
-	[3F]  -> 2K of ROM fixed at $1800 - $ 1FFFF (this is always the 4th 2K bank in the ROM)
-	[3F+] -> 2K of ROM fixed at $1800 - $ 1FFFF (this is always the last 2K bank in the ROM)
+	[3F]  -> 2K of ROM fixed at $1800 - $ 1FFF (this is always the 4th 2K bank in the ROM)
+	[3F+] -> 2K of ROM fixed at $1800 - $ 1FFF (this is always the last 2K bank in the ROM)
 */
 void ReadBS3Flow(void){
 	DataBus = CartRom[(AddressBus & 0x7ff) + TVSlice0];
@@ -387,6 +387,56 @@ void Init3F(void){
 	for(i = 0; i < 0x40; i++){
 		WriteAccess[i] = &WriteHotspot3F;
 	}
+	Copy64K();
+}
+
+/*
+	14 -- 512K Krokodile Cart / Andrew Davie [3E]
+
+	up to 256 2K banks of ROM at $1000 - $17FF
+	select ROM bank by writing bank number to address $003F
+	2K of ROM fixed at $1800 - $1FFF (this is always the 4th 2K bank in the ROM)
+	32 1K banks of RAM at $1000 - $17FF
+	select RAM bank by writing bank number to address $003E
+	read from RAM at $1000 - $13FF
+	write to  RAM at $1400 - $17FF
+*/
+void ReadBS3Elow(void){
+	if(!ROMorRAM3E) DataBus = CartRom[(AddressBus & 0x7ff) + TVSlice0];
+	else DataBus = Ram[(AddressBus & 0x3ff)+ TVSlice0];
+}
+void WriteBS3E(void){
+	Ram[(AddressBus & 0x3ff) + TVSlice0] = DataBus;
+}
+void WriteHotspot3E_E(void){
+	TVSlice0 = DataBus << 10;
+	ROMorRAM3E = 1;
+	(* TIARIOTWriteAccess[0x3e])();
+}
+void WriteHotspot3E_F(void){
+	TVSlice0 = DataBus << 11;
+	ROMorRAM3E = 0;
+	(* TIARIOTWriteAccess[0x3f])();
+}
+void Init3E(void){
+	int i;
+	
+	for(i = 0; i < 0x1000; i++){
+		ReadAccess[i] = TIARIOTReadAccess[i];
+		WriteAccess[i] = TIARIOTWriteAccess[i];
+		WriteAccess[0x1000 + i] = &WriteROM4K;
+	}
+	for(i = 0; i < 0x800; i++){
+//		ReadAccess[0x1000 + i] = &ReadBS3Flow;
+		ReadAccess[0x1000 + i] = &ReadBS3Elow;
+		ReadAccess[0x1800 + i] = &ReadBS3Fhigh;
+	}
+	for(i = 0; i < 0x400; i++){
+//		ReadAccess[0x1400 + i] = &WriteBS3E;
+		WriteAccess[0x1400 + i] = &WriteBS3E;
+	}
+	WriteAccess[0x3e] = &WriteHotspot3E_E;
+	WriteAccess[0x3f] = &WriteHotspot3E_F;
 	Copy64K();
 }
 
@@ -684,7 +734,7 @@ void InitCM(void){
 
 
 /*
-	12 -- 8K United Appliance Ldt. [UA]
+	12 -- 8K United Appliance Ltd. [UA]
 
 	2 4K ROM banks at $1000 - $1FFF
 	select bank 0 by accessing $0220
@@ -744,57 +794,6 @@ void InitEF(void){
 	HotspotAdjust = 0;
 	Copy64K();
 }
-
-
-/*
-	14 -- 512K Krokodile Cart / Andrew Davie [3E]
-
-	up to 256 2K banks of ROM at $1000 - $17FF
-	select ROM bank by writing bank number to address $003F
-	2K of ROM fixed at $1800 - $ 1FFFF (this is always the 4th 2K bank in the ROM)
-	32 1K banks of RAM at $1000 - $17FF
-	select RAM bank by writing bank number to address $003E
-	read from RAM at $1000 - $13FF
-	write to  RAM at $1400 - $17FF
-*/
-void ReadBS3Elow(void){
-	if(!ROMorRAM3E) DataBus = CartRom[(AddressBus & 0x7ff) + TVSlice0];
-	else DataBus = Ram[(AddressBus & 0x3ff)+ TVSlice0];
-}
-void WriteBS3E(void){
-	Ram[(AddressBus & 0x3ff) + TVSlice0] = DataBus;
-}
-void WriteHotspot3E_E(void){
-	TVSlice0 = DataBus << 10;
-	ROMorRAM3E = 1;
-	(* TIARIOTWriteAccess[0x3e])();
-}
-void WriteHotspot3E_F(void){
-	TVSlice0 = DataBus << 11;
-	ROMorRAM3E = 0;
-	(* TIARIOTWriteAccess[0x3f])();
-}
-void Init3E(void){
-	int i;
-	
-	for(i = 0; i < 0x1000; i++){
-		ReadAccess[i] = TIARIOTReadAccess[i];
-		WriteAccess[i] = TIARIOTWriteAccess[i];
-		WriteAccess[0x1000 + i] = &WriteROM4K;
-	}
-	for(i = 0; i < 0x800; i++){
-		ReadAccess[0x1000 + i] = &ReadBS3Flow;
-		ReadAccess[0x1800 + i] = &ReadBS3Fhigh;
-	}
-	for(i = 0; i < 0x400; i++){
-		ReadAccess[0x1400 + i] = &WriteBS3E;
-		WriteAccess[0x1400 + i] = &WriteBS3E;
-	}
-	WriteAccess[0x3e] = &WriteHotspot3E_E;
-	WriteAccess[0x3f] = &WriteHotspot3E_F;
-	Copy64K();
-}
-
 
 /*
 	15 -- Starpath [AR]
@@ -1307,7 +1306,7 @@ void SetupBanks() {
 }
 
 /**
-	z26 is Copyright 1997-2011 by John Saeger and contributors.  
+	z26 is Copyright 1997-2019 by John Saeger and contributors.  
 	z26 is released subject to the terms and conditions of the 
 	GNU General Public License Version 2 (GPL).	
 	z26 comes with no warranty.

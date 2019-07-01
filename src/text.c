@@ -318,7 +318,7 @@ void draw_char(char ch, char* font, char* surface, int fontheight, int row, int 
 	for (j=0; j<6; j++) 
 	{ 
 		*sp++ = bg; 
-		if (width == 256) *sp++ = bg;
+		if (width <= 320) *sp++ = bg;
 	}
 
 	for (i=1; i<=fontheight; i++)
@@ -330,12 +330,12 @@ void draw_char(char ch, char* font, char* surface, int fontheight, int row, int 
 			if (fbyte & 0x80)
 			{
 				*sp++ = fg;
-				if (width == 256) *sp++ = fg;
+				if (width <= 320) *sp++ = fg;
 			}
 			else
 			{	
 				*sp++ = bg;
-				if (width == 256) *sp++ = bg;
+				if (width <= 320) *sp++ = bg;
 			}
 			fbyte <<= 1;
 		}
@@ -349,7 +349,7 @@ void draw_msg_at_color(int x, int y, int fg, int bg) {
 	int col = x*6 + 2;	// 2
 	int row = y*9 + 2;	// 2
 
-	if (width == 256) col =x*12 + 2;
+	if (width <= 320) col =x*12 + 2;
 
 	if (fg) { fg &= 0xf; fg += theme; }
 	if (bg) { bg &= 0xf; bg += theme; }
@@ -362,7 +362,7 @@ void draw_msg_at_color(int x, int y, int fg, int bg) {
 		if (ch == 0) break;
 		draw_char(ch, simplex5, (char *) ScreenBuffer, 8, row, col, fg, bg);
 		col += 6;
-		if (width == 256) col += 6;
+		if (width <= 320) col += 6;
 	}
 }
 
@@ -431,9 +431,10 @@ void hilite_char_at(char ch, int x, int y) {
 
 void show_scanlines()
 {
-	sprintf(msg,"%4u %5.0f ", LinesInFrame, CurrentFPS);
-	if (width == 256) draw_msg_at_color(16, (int) MaxLines/9 - 1, 84, 0);	// was 1,0
-	else draw_msg_at_color(42, (int) MaxLines/9 - 1, 84, 0);	// was 1,0
+//	sprintf(msg,"%2.1f%% %4u %3.0f ", WorkPercent, LinesInFrame, CurrentFPS);
+	sprintf(msg,"     %4u %3.0f ", LinesInFrame, CurrentFPS);
+	if (width <= 320) draw_msg_at_color(11, (int) MaxLines/9 - 1, 84, 0);	// was 1,0
+	else draw_msg_at_color(37, (int) MaxLines/9 - 1, 84, 0);	// was 1,0
 
 //	sprintf(msg, "%u %4u %5.0f ", SDLticks, LinesInFrame, CurrentFPS);
 //	draw_msg_at_color(27, (int) MaxLines/9 - 1, 84, 0);
@@ -442,7 +443,7 @@ void show_scanlines()
 /* called once per frame when there's a status message to display */
 void show_transient_status() {
 	sprintf(msg, "%s", stat_msg);
-	if (width == 256) draw_msg_at_color((26 - strlen(stat_msg))/2, (int) MaxLines/9 - 1, 84, 0);	// was 1,0
+	if (width <= 320) draw_msg_at_color((26 - strlen(stat_msg))/2, (int) MaxLines/9 - 1, 84, 0);	// was 1,0
 	else draw_msg_at_color((52 - strlen(stat_msg))/2, (int) MaxLines/9 - 1, 84, 0);	// was 1,0
 }
 
@@ -472,7 +473,7 @@ void srv_print(char *msg)
 
 
 /**
-** z26 is Copyright 1997-2011 by John Saeger and contributors.  
+** z26 is Copyright 1997-2019 by John Saeger and contributors.  
 ** z26 is released subject to the terms and conditions of the
 ** GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ** Please see COPYING.TXT for details.

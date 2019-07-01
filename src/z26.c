@@ -1,18 +1,17 @@
 /*
-	z26 -- an Atari 2600 emulator
+**	z26 -- an Atari 2600 emulator
 */
 
 #define Z26_RELEASE "z26 -- An Atari 2600 Emulator"
 
-void QueueSoundBytes();
-void position_game();
-void srv_print();
-void srv_Events();
-void show_scanlines();
-void show_transient_status();
+void QueueSoundBytes(void);
+void position_game(void);
+void srv_print(char *msg);
+void srv_Events(void);
+void show_scanlines(void);
+void show_transient_status(void);
 void set_status(char *status);
-void gui();
-
+void gui(void);
 
 #include <ctype.h>
 #include <stdio.h>
@@ -22,32 +21,28 @@ void gui();
 #include <sys/stat.h>
 #include <time.h>
 
+const char *homedir;
+char z26cli[1024] = {0};
+char z26gui[1024] = {0};
+char z26home[1024] = {0};
+
 #ifdef LINUX
 #include <unistd.h>		// for chdir
+#include <sys/types.h>
+#include <pwd.h>
 #endif
 
+FILE *parmfp = NULL;
 
-// needed for vc++ -- works on gcc
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_audio.h>
+#include <SDL2/SDL_opengl.h>
+#include <SDL2/SDL_keyboard.h>
 
-int strcasecmp(const char *s1, const char *s2)
-{
-	while(tolower(*s1) == tolower(*s2++))
-	{
-		if(*s1++ == '\0') return 0;
-	}
-	
-	return *(unsigned char *)s1 - *(unsigned char *)(s2 - 1);
-}
-
-FILE *parmfp = NULL;	// parameter file pointer
-
-#include "SDL.h"		// not in vc++ or gcc -- must be supplied
-#include "SDL_audio.h"
-#include "SDL_opengl.h"
-
-typedef unsigned int			dd;		/* define double */
-typedef unsigned short int		dw;		/* define word */
-typedef unsigned char			db;		/* define byte */
+typedef unsigned long long int  dq;
+typedef unsigned int			dd;
+typedef unsigned short int		dw;
+typedef unsigned char			db;
 
 #include "globals.c"
 #include "ct.c"
@@ -63,20 +58,50 @@ typedef unsigned char			db;		/* define byte */
 #include "gui.c"
 #include "2600core.c"
 
-int total_ticks;
-double seconds;
-
 int main(int argc, char *argv[]) 
 {
+
+#ifdef LINUX
+#ifndef MAC
+	playwav();	// play a little wav file twice on Linux startup
+	playwav();	// otherwise sound doesn't always work (see sdlplaywav.c)
+#endif
+	if ((homedir = getenv("HOME")) == NULL) {
+	    homedir = getpwuid(getuid())->pw_dir;
+	}
+#endif
+#ifdef WINDOWS
+	putenv("SDL_AUDIODRIVER=directsound");	// windows needs env var for sound
+	homedir = getenv("USERPROFILE");
+#endif
+
+	strncpy(z26gui, homedir, sizeof(z26gui)-1);
+	strncpy(z26cli, homedir, sizeof(z26cli)-1);
+	strncpy(z26home, homedir, sizeof(z26home)-1);
+
+#ifdef LINUX
+	strncat(z26gui, "/z26.gui", sizeof(z26gui)-1);
+	strncat(z26cli, "/z26.cli", sizeof(z26cli)-1);
+#endif
+#ifdef WINDOWS
+	strncat(z26gui, "\\z26.gui", sizeof(z26gui)-1);
+	strncat(z26cli, "\\z26.cli", sizeof(z26cli)-1);
+#endif
+
+	if (chdir(z26home) != 0)
+	{
+		printf("couldn't go home\n");
+	}
+
 	srand(time(0));
 	def_LoadDefaults();
-	LaunchedFromCommandline = 0;
 
 	if (argc == 1)
 	{
 		StartInGUI = 1;
 		GamePaused = 1;
-		cli_ReadParms("z26.gui");
+		LaunchedFromCommandline = 0;
+		cli_ReadParms(z26gui);
 	}
 	else
 	{
@@ -85,11 +110,7 @@ int main(int argc, char *argv[])
 	}
 	
 	Init_SDL();
-	
-	c_emulator();		   /* call emulator */
-
-	if(GrabInput)
-		SDL_WM_GrabInput(SDL_GRAB_OFF);
+	c_emulator();
 
 	if(TraceEnabled && (zlog != NULL)) {
 		fprintf(zlog, "Exiting emulator with status %d\n", MessageCode);
@@ -100,15 +121,17 @@ int main(int argc, char *argv[])
 	srv_sound_off();
 	SDL_Quit();
 
+if (parmfp) {
 	fflush(parmfp);
 	fclose(parmfp);
+	}
 	
 	return MessageCode;
 }                                                         
 
 
 /**
-	z26 is Copyright 1997-2011 by John Saeger and contributors.
+	z26 is Copyright 1997-2019 by John Saeger and contributors.
 	z26 is released subject to the terms and conditions of the 
 	GNU General Public License Version 2 (GPL).
 	z26 comes with no warranty.

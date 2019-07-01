@@ -135,10 +135,11 @@ int cli_calc_CRC(char *filename)
 
 	while ( (ch = getc(fp)) != EOF )
 	{
+		if (CartSize >= sizeof(CartRom)) break;
+		++CartSize;
 		*p++ = (db) ch;
 		ucrc(ch);
-		++CartSize;
-		if (CartSize > 0x80000) break;
+//		if (CartSize > 0x80000) break;
 	}
 
 	fclose(fp);
@@ -266,25 +267,26 @@ FILE *zlog;
 void cli_InterpretParm(char *p)
 {
 	int ch, parm;
-	double fparm;
+//	double fparm;
 	int i;
 	
 	p++;
 	ch = *p++;
 	parm = atol(p);
-	fparm = atof(p);
+//	fparm = atof(p);
 
 	switch (ch)
 	{
 	case 'd':  	dsp = parm;				break;	// sound processing
-	case 'e':	Narrow = parm;			break;	// width adjustment
-	case 'h':	Tall = parm;			break;	// height adjustment
+//	case 'e':	Narrow = parm;			break;	// width adjustment
+//	case 'h':	Tall = parm;			break;	// height adjustment
+	case 'W':	width_adjust = parm;	break;	// width adjustment
 	case 'q':  	quiet = 1;				break;	// no sound
 	case 'S':	DoScanline = 1;			break;	// scanline display
 	case 'C':	theme = parm & 0x70;	break;	// color theme for the GUI
 	case 'o':	SimColourLoss = 1;		break;	// simulate colour loss
+	case 'r':	Vsync = 0;				break;  // turn off vsync
 	case 'n':	ShowLineCount = 1;		break;	// show line count and framerate
-	case '!':	DoInterlace = 1;		break;	// do interlace
 
 	case '0':  	UserP0Diff = 1;
 				IOPortB |= 64;				
@@ -354,9 +356,6 @@ void cli_InterpretParm(char *p)
 				UserLGadjust = LGadjust;
 				break;						// lightgun adjust
 
-	case 'M':	MouseRude = parm;			break;	// mouse rude
-	case 'G':	GrabInput = 1;				break;	// grab input
-
 	case 'P':	PaddleAdjust = parm;			break;	// paddle adjust
 			
 	case 'p':  	UserPaddleSensitivity = parm;
@@ -385,7 +384,6 @@ void cli_InterpretParm(char *p)
 					case 'J':	JoystickEnabled = 0;		break;
 					case 'M':	MouseEnabled = 0;			break;
 					case 'K':	KeyboardEnabled = 0;		break;
-					case 'S':	StelladaptorEnabled = 0;	break;
 					case ' ':								break;
 					default:
 						sprintf(msg, "Bad PC controller seen: %c", p[i]);
@@ -437,7 +435,7 @@ void cli_WriteParms(int argc, char *argv[])
 	FILE *fp;
 	char *p;
 
-	fp = fopen("z26.cli", "w");
+	fp = fopen(z26cli, "w");
 	if (fp == NULL)
 	{
 		sprintf(msg, "Couldn't build z26.cli file.");
@@ -472,7 +470,7 @@ void cli_SaveParms()
 	FILE *fp;
 
 	if (parmfp == NULL)
-		parmfp = fopen("z26.gui", "w+");
+		parmfp = fopen(z26gui, "w+");
 	else
 		rewind(parmfp);
 
@@ -493,6 +491,8 @@ void cli_SaveParms()
 
 	fprintf(fp, "%1d ",VideoMode);
 
+	/*if (theme)*/					fprintf(fp, "-C%d ", theme);
+
 	if (UserPaletteNumber != 0xff)	fprintf(fp, "-c%1d ", UserPaletteNumber);
 	if (UserBankswitch != 0xff)		fprintf(fp, "-g%d ", UserBankswitch);
 	if (UserLeftController != 0xff)	fprintf(fp, "-)%s ", cli_controllers[UserLeftController]);
@@ -502,13 +502,11 @@ void cli_SaveParms()
 	if (ShowLineCount)				fprintf(fp, "-n ");
 	if (quiet)						fprintf(fp, "-q ");
 	if (dsp != 1)					fprintf(fp, "-d%1d ", dsp);
-	if (Narrow)						fprintf(fp, "-e%d ", Narrow);
-	if (Tall)						fprintf(fp, "-h%d ", Tall);
+	if (width_adjust != 100)		fprintf(fp, "-W%d ", width_adjust);
 	if (SimColourLoss)				fprintf(fp, "-o ");
-	if (DoInterlace)				fprintf(fp, "-! ");
+	if (!Vsync)						fprintf(fp, "-r ");
 	if (UserDepth != 60)			fprintf(fp, "-f%d ", UserDepth);
 	if (DoScanline)					fprintf(fp, "-S ");
-	/*if (theme)*/					fprintf(fp, "-C%d ", theme);
 	if (SQ_Max != 4096)				fprintf(fp, "-s%d ", SQ_Max);
 	if (UserP0Diff)					fprintf(fp, "-0 ");
 	if (UserP1Diff)					fprintf(fp, "-1 ");
@@ -516,9 +514,6 @@ void cli_SaveParms()
 	if (!KeyboardEnabled)			fprintf(fp, "-iK ");
 	if (!MouseEnabled)				fprintf(fp, "-iM ");
 	if (!UserJoystickEnabled)		fprintf(fp, "-iJ ");
-	if (!StelladaptorEnabled)		fprintf(fp, "-iS ");
-	if (MouseRude)					fprintf(fp, "-M1 ");
-	if (GrabInput)					fprintf(fp, "-G ");
 	if (UserMouseBaseX != 0xff && UserMouseBaseY == 0xff)
 		fprintf(fp, "-m%d ", UserMouseBaseX);
 	if (UserMouseBaseY != 0xff)	
@@ -576,7 +571,6 @@ void cli_ReadParms(char *Filename)
 }
 
 
-char FileName[260];
 char ROMLoaded = 0; char ROMSeen = 0;
 
 
@@ -604,15 +598,15 @@ void cli_CommandLine(int argc, char *argv[])
 
 	ShowFPS = 0;				/* resets flag for displaying FPS count */
 
-	fp = fopen("z26.cli", "r");
+	fp = fopen(z26cli, "r");
 	if (fp == NULL)				// when running from command line, if .cli file doesn't exist ...
 	{
-		cli_ReadParms("z26.gui");	//    ... use .gui file
+		cli_ReadParms(z26gui);	//    ... use .gui file
 	}
 	else
 	{
 		fclose(fp);
-		cli_ReadParms("z26.cli");	//    ... else use .cli file
+		cli_ReadParms(z26cli);	//    ... else use .cli file
 	}
 
 	i = 1;
@@ -630,12 +624,14 @@ void cli_CommandLine(int argc, char *argv[])
 				strcat(FileName,".bin");
 			ROMLoaded = cli_LoadROM(FileName);
 			ROMSeen = 1;
-			if (TraceEnabled) {
+			
+			if (TraceEnabled) 
+			{
 				fprintf(zlog,"Loaded ROM: %s\n\n", FileName);
 				fprintf(zlog,
-						"(Frame Line Cycle Clock) "
-						"(P0_Pos P1_Pos M0_Pos M1_Pos BL_Pos)  "
-						"flags  A X Y SP  Code  Disasm\n");
+						"(Frame Line CPU TIA)  "
+						"( P0  P1  M0  M1  BL)  collsn   "
+						"flags   A  X  Y SP   Adr  Code\n");
 			}
 		}
 	}
@@ -656,11 +652,13 @@ void cli_CommandLine(int argc, char *argv[])
 		SDL_Quit();
 		exit(1);
 	}
+
+//	cli_write_CRC(FileName);
 }
 
 
 /**
-	z26 is Copyright 1997-2011 by John Saeger and contributors.  
+	z26 is Copyright 1997-2019 by John Saeger and contributors.  
 	z26 is released subject to the terms and conditions of the 
 	GNU General Public License Version 2 (GPL).	
 	z26 comes with no warranty.
