@@ -9,6 +9,8 @@ char FileName[260];
 
 int screen_width = 0;	/* physical width */
 int screen_height = 0;	/* physical height */
+int win_width = 640;
+int win_height = 512;
 int tiawidth = 320;		
 int pixelspread = 1;	/* how many times to replicate the tia pixels */
 int scanlinespread = 1;	/* how many display lines per scanline */
@@ -64,8 +66,9 @@ int JoystickAxis[16][6];
 db JoystickButton[16][32];
 
 db ShowFPS;
-db SoundQ[65537];		/* sound queue */
-dd SQ_Max = 4096;		/* 3072 */
+db SoundQ[8192];		/* sound queue */
+dd SQ_Max = 4096;		/* must be divisible by 32 (see sdlsound.c) */
+						/* but we like it divisible by 1024 */
 
 /* make the output buffers big enough for 500 scanlines with tiawidth of 320 */
 
@@ -90,7 +93,12 @@ int ExitEmulator;			/* leave the emulator when ESC or backslash are pressed */
 int GamePaused;				/* toggle to pause emulator */
 int GameReallyPaused;		/* ... it's a little bit complicated by the GUI */
 
-int ResetEmulator = 0;
+int ResetEmulator = 1;		// <-- Making this 1 instead of 0 fixes a really old
+							//  bug relating to launching from command line. 
+							//  It's a really great idea to reset the emulator 
+							//  when launching from the command line. We also 
+							//  do it down below for good measure.
+
 int StartInGUI = 0;
 int LaunchedFromCommandline = 0;
 
@@ -107,11 +115,11 @@ int Seconds;				/* seconds since 1.1.1970 - used to randomize RIOT timer */
 int UserLeftController;		/* -)  user specified left controller */
 int LeftController;			/* controller in left port */
 
-int UserRightController;		/* -(  user specified right controller */
-int RightController;			/* controller in Right port */
+int UserRightController;	/* -(  user specified right controller */
+int RightController;		/* controller in Right port */
 
-int UserBankswitch = 0;			/* -gN user specified bankswitch type */
-int BSType = 0;					/* override bankswitching type *EST* */
+int UserBankswitch = 0;		/* -gN user specified bankswitch type */
+int BSType = 0;				/* override bankswitching type *EST* */
 
 int UserPaletteNumber;		/* -cN user specified palette number */
 int GamePaletteNumber;		/* game specific palette */
@@ -136,6 +144,7 @@ int Vsync; 					/* sync to monitor */
 int GameOffset;				/* game specific vertical offset */
 int CFirst;					/* first game line to display (zero has VBlank trigger a new frame) */
 int OldCFirst;				/* remember original CFirst (for homing the display) */
+int DefaultCFirst;			/* emu recommends game start here */
 
 db quiet;					/* set if we want no sound */
 int dsp;					/* do digital signal processing */
@@ -176,10 +185,10 @@ db KidVid;					/* ID byte on tapes for KidVid game *EST* */
 db KidVidTape;				/* tape number to be played *EST* */
 int PaddleAdjust;			/* wait for N lines before starting to evaluate paddle charge */
 
-int UserJoystickEnabled;		/* user wants the joystick enabled */
-int JoystickEnabled;			/* allow PC joystick input for VCS controllers with multiple PC inputs */
+int UserJoystickEnabled;	/* user wants the joystick enabled */
+int JoystickEnabled;		/* allow PC joystick input for VCS controllers with multiple PC inputs */
 int MouseEnabled;			/* allow PC mouse input for VCS controllers with multiple PC inputs */
-int KeyboardEnabled;			/* allow PC keyboard input for VCS controllers with multiple PC inputs */
+int KeyboardEnabled;		/* allow PC keyboard input for VCS controllers with multiple PC inputs */
 
 /*
 ** reinitialize the above variables
@@ -187,6 +196,8 @@ int KeyboardEnabled;			/* allow PC keyboard input for VCS controllers with multi
 
 void def_LoadDefaults(void)
 {
+	ResetEmulator = 1;			// Wow, what a great idea!
+
 	UserBankswitch = 0xff;
 	BSType = 0;
 
@@ -217,6 +228,8 @@ void def_LoadDefaults(void)
 	Vsync = 1;
 	width_adjust = 85;
 	CFirst = 0xffff;
+	OldCFirst = 0xffff;
+	DefaultCFirst = 0xffff;
 	quiet = 0;
 	IOPortA = 0xff;
 	IOPortA_Controllers = 0xff;

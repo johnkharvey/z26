@@ -12,7 +12,7 @@ SDL_Surface *tiny_screen = NULL;
 db *srv_buffer;
 dd srv_pitch;
 
-dd width, height;	/* dimensions of current window or video display in pixels */
+dd tex_width, tex_height;	/* dimensions of current window or video display in pixels */
 
 db *screen_pixels;      /* pointer to display screen */
 db *emu_pixels;         /* pointer to current emulator buffer */
@@ -44,9 +44,9 @@ void Init_SDL()
 	
 	gl_InitOpenGL();
 
-	small_screen = SDL_CreateRGBSurfaceFrom(&texture_buffer, 640, 512, 32, 4*640, 0, 0, 0, 0);
-	large_screen = SDL_CreateRGBSurfaceFrom(&texture_buffer, 1280, 1024, 32, 4*1280, 0, 0, 0, 0);
-	tiny_screen =  SDL_CreateRGBSurfaceFrom(&texture_buffer, 320, 256, 32, 4*320, 0, 0, 0, 0);
+	small_screen = SDL_CreateRGBSurfaceFrom(&texture_buffer, 512, 512, 32, 4*512, 0, 0, 0, 0);
+	large_screen = SDL_CreateRGBSurfaceFrom(&texture_buffer, 1024, 1024, 32, 4*1024, 0, 0, 0, 0);
+	tiny_screen =  SDL_CreateRGBSurfaceFrom(&texture_buffer, 256, 256, 32, 4*256, 0, 0, 0, 0);
 
 	screen_buffer_count = 0;
 	

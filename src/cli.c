@@ -316,7 +316,7 @@ void cli_InterpretParm(char *p)
 	case 'u':  	break;							// first line to scan
 			
 	case 's':	SQ_Max = parm;					// size of sound queue
-				if (SQ_Max > 65536)	SQ_Max = 65536;
+				if (SQ_Max > 8192)	SQ_Max = 8192;
 				if (SQ_Max < 1024)	SQ_Max = 1024;
 				break;
 

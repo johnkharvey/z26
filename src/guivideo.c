@@ -47,32 +47,14 @@ void set_Depth_string() {
 
 void hand_screen_inc() {
 	if (FullScreen) FullScreen = 0; else FullScreen = 1;
-	if (FullScreen)
-	{
-		SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-	}
-	else
-	{
-		SDL_SetWindowFullscreen(window, 0);
-	}
-	srv_set_screen_size();
-	CreateScreen();
 	set_screen_string();
+	gui_SetVideoMode();
 }
 
 void hand_screen_dec() {
 	if (FullScreen) FullScreen = 0; else FullScreen = 1;
-	if (FullScreen)
-	{
-		SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-	}
-	else
-	{
-		SDL_SetWindowFullscreen(window, 0);
-	}
-	srv_set_screen_size();
-	CreateScreen();
 	set_screen_string();
+	gui_SetVideoMode();
 }
 
 void hand_line_inc() {

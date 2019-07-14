@@ -4,7 +4,6 @@
 
 db KoolAide;		/* do KoolAide cheat */
 db RSBoxing;		/* do RSBOXING cheat */
-dd DefaultCFirst;	/* emu recommends game start here */
 db MPdirection;		/* direction mouse must move to emulate paddle */
 db MinVol;			/* minimum volume needed to make noise on PC-speaker */
 db LG_WrapLine;		/* light gun wrap line */
@@ -107,8 +106,8 @@ void RecognizeCart(void)
 	if (crc == 0x8ab11748) GameOffset = -12;	/* Karate (unknown) */
 	if (crc == 0xcbebf38e) GameOffset = 10;		/* Nightmare (PAL) */
 
-	if (crc == 0xb17b62db) DefaultCFirst = 1;	 /* Balthazar */
-	if (crc == 0xfa07aa39) DefaultCFirst = 0;	 /* pharhcrs -- vblank triggers frame */
+//	if (crc == 0xb17b62db) DefaultCFirst = 1;	 /* Balthazar */
+//	if (crc == 0xfa07aa39) DefaultCFirst = 0;	 /* pharhcrs -- vblank triggers frame */
 
 /* special palettes */
 

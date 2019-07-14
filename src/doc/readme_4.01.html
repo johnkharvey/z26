@@ -5,7 +5,10 @@
 	<title>z26 readme</title>
 	<meta name="generator" content="LibreOffice 6.0.7.3 (Linux)"/>
 	<meta name="created" content="00:00:00"/>
-	<meta name="changed" content="2019-06-28T10:21:24.647432915"/>
+	<meta name="changed" content="2019-07-14T17:50:22.039947775"/>
+	<meta name="created" content="00:00:00">
+	<meta name="created" content="00:00:00">
+	<meta name="created" content="00:00:00">
 	<style type="text/css">
 		p { color: #68b4ff; font-family: "Arial"; font-size: 11pt; so-language: en-US }
 		h2 { color: #68b4ff; font-family: "Arial"; font-size: 14pt; so-language: en-US; font-style: italic }
@@ -17,8 +20,8 @@
 </head>
 <body lang="en-US" text="#68b4ff" link="#9dceff" vlink="#8080ff" bgcolor="#1f5f9f" dir="ltr">
 <div id="Section1" dir="ltr">
-	<h2>z26 -- An Atari 2600 Emulator (4.00)</h2>
-	<p>July 1, 2019</p>
+	<h2>z26 -- An Atari 2600 Emulator (4.01)</h2>
+	<p>July 14, 2019</p>
 	<p>http://www.whimsey.com/z26</p>
 	<h4>Copyright/License</h4>
 	<p>z26 is Copyright ©1997-2019 by John Saeger and contributors. z26
@@ -26,111 +29,22 @@
 	Public License Version 2 (GPL). z26 comes with no warranty. Please
 	see the included COPYING.TXT for details. Source code for the
 	current release is available at the home page listed above.</p>
-	<h4>What's new in version 4.00?</h4>
+	<h4>What's new in version 4.01?</h4>
 	<ul>
 		<li/>
-<p>The classic z26 graphics engine as implemented in the DOS
-		version of z26 has been ported from assembly language to C.
-		Generally speaking, we now have accuracy that is similar to the
-		original z26 that ran on DOS. The original version of this engine
-		basically came into being in z26 version 1.31 in 1999. It was the
-		first 2600 emulator to implement support for “early HMOVE.” The
-		engine in z26 4.00 does it like the original. We also include an
-		implementation of the “multi-sprite trick” which we first
-		supported in z26 version 1.29, also from 1999.</p>
+<p>Went back to using square textures in OpenGL rendering. We
+		had gone to non-square textures in z26 4.00 but there are still
+		some folks with older computers with older versions of OpenGL that
+		require square textures. Thanks to Karl-Heinz Versl for help
+		working this out.</p>
 		<li/>
-<p>This version now runs on the Raspberry Pi and it will run
-		games at full speed even if the processor is throttled. For example
-		if you have a low-quality power supply and the voltage is sometimes
-		too low, or if the chip overheats, throttling kicks in. I test this
-		by underclocking the processor to 600 Mhz which is the speed the
-		processor runs at if it’s throttled.</p>
+<p>Fixed ability to go back and forth between windowed
+		display and full screen during game play by pressing alt-enter.</p>
 		<li/>
-<p>We now use SDL 2.0 so we can switch from windowed mode to
-		full screen without restarting the emulator.</p>
-		<li/>
-<p>Also thanks to SDL 2.0 we can turn monitor synchronization
-		on and off. This lets us enable synchronization automatically in
-		many cases where the OpenGL driver has disabled it, and it lets us
-		do full-speed benchmarking. To do benchmarking turn off the Vsync
-		option in the Video menu and turn on FPS display in the Interface
-		menu.</p>
-		<li/>
-<p>Dropped support for PAL color loss. Evidently not all PAL
-		console/TV combinations do color loss anyway.</p>
-		<li/>
-<p>You can specify the color scheme of a ROM by including one
-		of the strings NTSC, PAL, or SECAM as part of the filename.</p>
-		<li/>
-<p>We’ve added automatic recognition for some additional
-		ROMS.</p>
-		<li/>
-<p>Dropped support for interlaced games. This may or may not
-		be temporary, but I needed the display code to be a little simpler.</p>
-		<li/>
-<p>Dropped the game height adjustment from the video menu. It
-		tended to mess up the scanlines.</p>
-		<li/>
-<p>Dropped DSP and sound queue size adjustments from the
-		sound menu. They’re really not needed these days.</p>
-		<li/>
-<p>Dropped support for the Stelladaptor. I’ve never had one
-		and I don’t even really know what it is, so I’m not sure how I
-		would support this option anyway. There may be some more modern way
-		of hooking up real controllers that I might like to look into, and
-		whatever it is I’d like to have one for myself before enabling it
-		in z26. Personally I mostly use the keyboard anyway, unless I’m
-		using a mouse. It’s simply convenient.</p>
-		<li/>
-<p>Dropped support for mouse rude and grab input options in
-		the interface menu. If you’re running full screen you don’t
-		need them. I suggest running full screen. It’s better that way.</p>
-		<li/>
-<p>Modified (fixed?) [3E] bankswitching so that some demos
-		are now more playable.</p>
-		<li/>
-<p>Limited display to 240 scanlines for NTSC games. This
-		cleans up the junk at the bottom of Demon Attack and some other
-		games. PAL and SECAM games still get the full 256 scanlines.</p>
-		<li/>
-<p>You can specify the bankswitch scheme of a ROM by giving
-		the ROM file a filename extension using a bankswitch abbreviation,
-		or by enclosing the bankswitch abbreviation in square brackets. For
-		example, one of the large Tigervision schemes is [3F+]. So you can
-		name the ROM filename.3f+ and z26 will recognize the bankswitch
-		scheme of that ROM as 3f+ or simply enclose 3f+ in square brackets
-		thus: [3f+] and likewise z26 will recognize it. The other options
-		are listed below under the game menu.</p>
-		<li/>
-<p>Restored the ability to shift game image up, down and back
-		to the original position with PgUp, PgDn, and Home keys.</p>
-		<li/>
-<p>The configuration files z26.cli and z26.gui are now built
-		in your home directory. To restore defaults delete these files from
-		your home directory.</p>
-		<li/>
-<p>The Fast Sharp texture is now the default. The fast
-		textures do not support scanlines so scanline options are not shown
-		in the video menu if a fast texture is selected.</p>
-		<li/>
-<p>Changed mac build system to use command line tools. Thanks
-		to Joseph Long for showing how to do this.
-		(<a href="https://joseph-long.com/writing/app-bundles-with-a-makefile/">https://joseph-long.com/writing/app-bundles-with-a-makefile/</a>)</p>
-		<li/>
-<p>The distribution now includes a small wave file z26.wav
-		which is used as part of the sound initialization on Linux
-		platforms. After compiling on Linux, if you move the executable,
-		please be sure to move z26.wav along with the executable. Thanks to
-		Nick Arnoeyts for the code to play a wave file
-		(<a href="https://gist.github.com/armornick/3447121">https://gist.github.com/armornick/3447121</a>).</p>
-		<li/>
-<p>The ROM lister now begins in your home directory, so it no
-		longer matters where you place the z26 executable. On Windows make
-		sure to include SDL2.dll in the same directory as z26.exe, and on
-		Linux make sure to include z26.wav in the same directory as z26.</p>
+<p>Reset emulator when launched from command line. Fixes
+		starting line when launched from command line.</p>
 	</ul>
-	<h4><br/>
-Software Requirements</h4>
+	<h4>Software Requirements</h4>
 	<p>This version of z26 is known to work on Windows 10, Linux, and
 	Intel Macintoshes. As this version of z26 is written in C, it is
 	possible to compile and run this version of z26 on 64-bit Linux
@@ -145,12 +59,14 @@ Software Requirements</h4>
 	if you want. You will need a copy of SDL2.dll either in the z26
 	directory, or in the Windows directory. This .dll is included in the
 	.zip file along with the z26 executable. If you like you can pin z26
-	to the taskbar. Then you can click to run it.</p>
+	to the taskbar. Then you can click to run it. 
+	</p>
 	<h4>Macintosh Installation</h4>
 	<p>Unzip the archive. You can leave the folder in the download
 	directory if you want. Or you can move the app to the applications
 	folder. Then if you like, just drag the app to the dock. Click to
-	run.</p>
+	run. 
+	</p>
 	<h4>Linux Installation 
 	</h4>
 	<p>First, you need the build tools and the SDL 2.0 library. On a
@@ -187,11 +103,13 @@ Software Requirements</h4>
 	have an executable named z26 that you can put where you like. Before
 	running z26, you need to enable the OpenGL drivers by running:</p>
 	<pre style="margin-bottom: 0.2in">     sudo raspi-config</pre><p>
-	Choose option 7 – Advanced Options.</p>
-	<p>Then choose option A7 – GL Driver.</p>
-	<p>Then choose option G1 – GL (Full KMS).</p>
-	<p>Exit the config program by pressing escape until you reach the
-	command line prompt and reboot your system.</p>
+	Choose option 7 – Advanced Options.<br/>
+Then choose option A7 –
+	GL Driver.<br/>
+Then choose option G1 – GL (Full KMS).<br/>
+Exit
+	the config program by pressing escape until you reach the command
+	line prompt and reboot your system.</p>
 	<p>To run z26, open a terminal in the directory you put z26 and type
 	./z26 at the command line prompt.</p>
 	<h4>Main Menu</h4>
@@ -395,7 +313,7 @@ AmigaMouse</p>
 
          Exit                        Return to Main Menu.</pre><h4>
 	About Menu</h4>
-	<pre> 4.00 -- http://www.whimsey.com/z26
+	<pre> 4.01 -- http://www.whimsey.com/z26
 
          Exit                        Return to Main Menu.</pre><h4>
 	Restoring Defaults</h4>
@@ -642,12 +560,15 @@ In no event unless required by applicable law
 	programs), even if such holder or other party has been advised of
 	the possibility of such damages.</p>
 	<h4>Tools</h4>
-	<p>z26 is built with GCC. On Windows we use MinGW/Msys.<br/>
-Fonts
-	were designed with CSEDIT by Matt Pritchard.</p>
+	<p>On a mac, z26 is built with clang, otherwise z26 is built with
+	GCC. On Windows we use MinGW/Msys.<br/>
+Fonts were designed with
+	CSEDIT by Matt Pritchard.</p>
 	<h4>Credits</h4>
-	<p>Thanks to “Clifford” from the Stack Overflow community for
-	the stristr() routine.</p>
+	<p>Thanks to Karl-Heinz Versl for help working out square textures
+	on vintage machines (4.01).<br/>
+Thanks to “Clifford” from the
+	Stack Overflow community for the stristr() routine (4.00).</p>
 	<p>The following people have made valuable suggestions for new
 	features and/or have helped to identify bugs in z26 3.0:<br/>
 <br/>

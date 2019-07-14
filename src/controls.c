@@ -1576,7 +1576,9 @@ void Controls()
 	if ((KeyTable[KeyEnter])&&(KeyTable[KeyAlt])) 
 	{
 		FullScreen = !FullScreen;			/* toggle fullscreen */
-		srv_SetVideoMode();		
+		srv_SetVideoMode();
+		KeyTable[KeyEnter] = 0;
+		KeyTable[KeyAlt] = 0;
 	}
 	
 	if (KeyTable[KeyEquals])

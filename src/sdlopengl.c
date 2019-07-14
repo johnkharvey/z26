@@ -49,28 +49,8 @@ void init_glfuncs(void)
 	INIT_ENTRY_POINT(glClear);
 }
 
-
 SDL_Window *window = NULL;
 SDL_GLContext context;
-int win_width = 640;
-int win_height = 512;
-
-void srv_ChooseScreenResolution();
-
-void srv_set_screen_size(void)
-{
-	screen_width = width;
-	screen_height = height;
-
-	if (FullScreen)
-	{
-		SDL_DisplayMode DM;
-		SDL_GetCurrentDisplayMode(0, &DM);
-		screen_width = DM.w;
-		screen_height = DM.h;
-	}
-
-}
 
 void gl_InitOpenGL() {
 	int flags = SDL_WINDOW_OPENGL;
@@ -82,8 +62,6 @@ void gl_InitOpenGL() {
 		SDL_DestroyWindow(window);
 		window = NULL;
 	}
-	
-	srv_ChooseScreenResolution();	
 
 	if (SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER,1)<0)	// page-flipping needs double buffering
 	{
@@ -91,13 +69,8 @@ void gl_InitOpenGL() {
 		exit(1);
 	}
 
-	if ((width < win_width) || (height < win_height))
-	{
-		width = win_width; height = win_height;
-	}
-
 	window = SDL_CreateWindow("OpenGL Window", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 
-								width, height, SDL_WINDOW_OPENGL);
+								win_width, win_height, SDL_WINDOW_OPENGL);
 
 	if (!window) 
 	{
@@ -125,8 +98,6 @@ void gl_InitOpenGL() {
 		exit(1);
 	}
 
-	srv_set_screen_size();
-
 	init_glfuncs();
 }
 
@@ -151,13 +122,9 @@ void gl_CreateScreen() {
 	_glViewport( hpos, vpos, hsize, vsize );
 	_glMatrixMode( GL_PROJECTION );
 	_glLoadIdentity();
-	_glOrtho( 0, screen_width/2, screen_height, 0, -1, 1 );
+	_glOrtho( 0, (screen_width/2)*320/256, screen_height, 0, -1, 1 );
 	_glMatrixMode( GL_MODELVIEW );
 	_glLoadIdentity();
-	if (FullScreen)
-	{
-		SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-	}
 }
 
 void gl_DrawScreen() {
@@ -175,8 +142,8 @@ void gl_DrawScreen() {
 		_glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
 		_glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 	}
-	
-	_glTexImage2D( GL_TEXTURE_2D, 0, 3, width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE, texture_buffer );
+
+	_glTexImage2D( GL_TEXTURE_2D, 0, 3, tex_width, tex_height, 0, GL_BGRA, GL_UNSIGNED_BYTE, texture_buffer );
 	
 	_glBegin( GL_QUADS );
 	_glTexCoord2i( 0, 0 );
