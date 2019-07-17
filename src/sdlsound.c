@@ -4,10 +4,10 @@
 
 dd SQ_resample;	/* a counter for mixing sound to 44100 Hz */
 
-db SQ_byte;	/* byte to put in the sound queue */
+db SQ_byte;		/* byte to put in the sound queue */
 db *SQ_Input;	/* pointer to next available byte for storing */
 db *SQ_Output;	/* pointer to next available byte for fetching */
-db *SQ_Top;	/* pointer to the top of the queue */
+db *SQ_Top;		/* pointer to the top of the queue */
 
 void Init_SoundQ() 
 {
@@ -22,15 +22,6 @@ int SQ_Count() {
 
 	if (count < 0) count += SQ_Max;
 	return(count);
-}
-
-int SQ_Test()
-{
-	int count = SQ_Count();
-	
-	if(count >= SQ_Max-4) return -1; 	/* full (with a little slop for resampling) */
-	if(count <= SQ_Max/2) return 0; 	/* less than 1/2 full */
-	return 1; 				/* just right */
 }
 
 /*

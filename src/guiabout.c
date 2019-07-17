@@ -27,7 +27,7 @@ void about_gui() {
 	exit_about = 0;
 	while( !exit_about ) {
 		status_timer = 0;
-		sprintf(msg, "4.01 -- http://www.whimsey.com/z26");
+		sprintf(msg, "4.02 -- http://www.whimsey.com/z26");
 		draw_gui(about_gui_items, about_current);
 		SDL_WaitEvent(&ev);	/* TODO: respond to SDL_QUIT events */
 		action = gui_navigation(&ev);

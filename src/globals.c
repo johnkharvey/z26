@@ -50,7 +50,6 @@ dd VBlankOff;			/* a valid VBlankOff was detected here */
 dd VBlankOn;			/* a valid VBlankOn was detected here */
 dd MaxLines;			/* # of lines in this video mode */
 dd MaxNTSC;				/* # of lines if NTSC game */
-dd BailoutLine;			/* auto-sync occurs if game goes past this line */
 
 dd SC_StartAddress;		/* supercharger start address */
 db SC_ControlByte;		/* supercharger control byte */
@@ -66,8 +65,12 @@ int JoystickAxis[16][6];
 db JoystickButton[16][32];
 
 db ShowFPS;
-db SoundQ[8192];		/* sound queue */
-dd SQ_Max = 4096;		/* must be divisible by 32 (see sdlsound.c) */
+
+#define SQ_BUCKET 1024
+#define SQ_MAX 8*SQ_BUCKET
+
+db SoundQ[SQ_MAX];		/* sound queue */
+dd SQ_Max = SQ_MAX;		/* must be divisible by 32 (see sdlsound.c) */
 						/* but we like it divisible by 1024 */
 
 /* make the output buffers big enough for 500 scanlines with tiawidth of 320 */
@@ -297,7 +300,6 @@ int VSyncFlag = 0;	/* VSync flag */
 int VSyncCount = 0;	/* VSync count this frame */
 
 int ScanLine = 0;	/* Current scan line */
-int OurBailoutLine = 0; /* Initial bailout line (fine tune if exceeded) */
 
 db *DisplayPointer;	/* where to store the next TIA graphics output byte */
 
@@ -342,7 +344,6 @@ void InitCVars(void)
 	VBlankOff=0;
 	VBlankOn=0;
 	LinesInFrame=262;
-	BailoutLine=400;	/* 320, 360, 380 */
 	for (i=0; i<KEYTABLESIZE; i++) KeyTable[i] = 0;
 
 	memset(RiotRam, 0, sizeof(RiotRam));
@@ -356,7 +357,6 @@ void InitCVars(void)
 	VSyncFlag = 0;		/* VSync flag */
 
 	ScanLine = 1;		/* Current scan line */
-	OurBailoutLine = 400; /* Initial bailout line (fine tune if exceeded) */
 
 	DisplayPointer = ScreenBuffer;
 }

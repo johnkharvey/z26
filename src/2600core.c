@@ -44,6 +44,8 @@ void BlankBufferEnd(void) {
 	Do one frame
 */
 
+#define BAILOUT_LINE 400
+
 void ScanFrame() 
 {
 	DisplayPointer = ScreenBuffer;
@@ -57,8 +59,7 @@ void ScanFrame()
 			if(ChargeCounter < 0x80000000)	/* and if not fully charged... */
 				ChargeCounter++;			/* add some charge. */
 
-		if( ScanLine >= OurBailoutLine) {
-			OurBailoutLine = BailoutLine;
+		if( ScanLine >= BAILOUT_LINE) {
 			PrevLinesInFrame = LinesInFrame;
 			LinesInFrame = ScanLine-1;
 

@@ -267,24 +267,17 @@ FILE *zlog;
 void cli_InterpretParm(char *p)
 {
 	int ch, parm;
-//	double fparm;
 	int i;
 	
 	p++;
 	ch = *p++;
 	parm = atol(p);
-//	fparm = atof(p);
 
 	switch (ch)
 	{
-	case 'd':  	dsp = parm;				break;	// sound processing
-//	case 'e':	Narrow = parm;			break;	// width adjustment
-//	case 'h':	Tall = parm;			break;	// height adjustment
 	case 'W':	width_adjust = parm;	break;	// width adjustment
-	case 'q':  	quiet = 1;				break;	// no sound
 	case 'S':	DoScanline = 1;			break;	// scanline display
 	case 'C':	theme = parm & 0x70;	break;	// color theme for the GUI
-	case 'o':	SimColourLoss = 1;		break;	// simulate colour loss
 	case 'r':	Vsync = 0;				break;  // turn off vsync
 	case 'n':	ShowLineCount = 1;		break;	// show line count and framerate
 
@@ -311,13 +304,6 @@ void cli_InterpretParm(char *p)
 				if (UserBankswitch > 23) UserBankswitch = 0xff;	// bankswitch scheme
 				else if (UserBankswitch < 0) UserBankswitch = 0xff;
 				BSType = UserBankswitch;
-				break;
-			
-	case 'u':  	break;							// first line to scan
-			
-	case 's':	SQ_Max = parm;					// size of sound queue
-				if (SQ_Max > 8192)	SQ_Max = 8192;
-				if (SQ_Max < 1024)	SQ_Max = 1024;
 				break;
 
 	case '4':	UserAllowAll4 = 1;
@@ -422,10 +408,8 @@ void cli_InterpretParm(char *p)
 				}
 				break;
 
-	default:   	sprintf(msg, "Bad switch seen: -%c", ch);
-				srv_print(msg);
-				SDL_Quit();
-				exit(1);
+	default:   	printf("Ignoring parameter: -%c\n", ch);
+				break;
 	}
 }
 
@@ -469,21 +453,15 @@ void cli_SaveParms()
 {
 	FILE *fp;
 
-	if (parmfp == NULL)
-		parmfp = fopen(z26gui, "w+");
-	else
-		rewind(parmfp);
+	fp = fopen(z26gui, "w+");
 
-	if (parmfp == NULL)
+	if (fp == NULL)
 	{
 		sprintf(msg, "Couldn't find z26.gui file.");
 		srv_print(msg);
 		SDL_Quit();
 		exit(1);
 	}
-	
-	rewind(parmfp);
-	fp = parmfp;
 	
 	fprintf(fp, "-v");					// (-v) do video mode
 	
@@ -501,13 +479,10 @@ void cli_SaveParms()
 	if (UserSwapPortsFlag == 1)		fprintf(fp, "-w ");
 	if (ShowLineCount)				fprintf(fp, "-n ");
 	if (quiet)						fprintf(fp, "-q ");
-	if (dsp != 1)					fprintf(fp, "-d%1d ", dsp);
 	if (width_adjust != 100)		fprintf(fp, "-W%d ", width_adjust);
-	if (SimColourLoss)				fprintf(fp, "-o ");
 	if (!Vsync)						fprintf(fp, "-r ");
 	if (UserDepth != 60)			fprintf(fp, "-f%d ", UserDepth);
 	if (DoScanline)					fprintf(fp, "-S ");
-	if (SQ_Max != 4096)				fprintf(fp, "-s%d ", SQ_Max);
 	if (UserP0Diff)					fprintf(fp, "-0 ");
 	if (UserP1Diff)					fprintf(fp, "-1 ");
 	if (UserConsoleBW)				fprintf(fp, "-b ");
@@ -531,7 +506,7 @@ void cli_SaveParms()
 	fprintf(fp, "\n");	// end-of-file
 	fflush(fp);
 	
-//	fclose(fp);
+	fclose(fp);
 }
 
 
@@ -542,14 +517,9 @@ void cli_ReadParms(char *Filename)
 	char ParmString[1024];
 	char *p;
 
-	if (parmfp == NULL)
-		parmfp = fopen(Filename, "r+");
-	else
-		rewind(parmfp);
+	fp = fopen(Filename, "r+");
 		
-	if (parmfp == NULL) return;
-		
-	fp = parmfp;
+	if (fp == NULL) return;
 	
 	i = 0;
 
@@ -567,7 +537,7 @@ void cli_ReadParms(char *Filename)
 		while (!isspace(*p++)) ;
 	}
 	
-//	fclose(fp);	
+	fclose(fp);	
 }
 
 

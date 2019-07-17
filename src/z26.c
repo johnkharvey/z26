@@ -121,11 +121,6 @@ int main(int argc, char *argv[])
 	srv_sound_off();
 	SDL_Quit();
 
-if (parmfp) {
-	fflush(parmfp);
-	fclose(parmfp);
-	}
-	
 	return MessageCode;
 }                                                         
 
