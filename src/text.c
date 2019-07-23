@@ -469,6 +469,7 @@ void srv_print(char *msg)
 		srv_CopyScreen();
 		SDL_Delay(1000);
 	}
+	printf("%s\n", msg);
 }
 
 

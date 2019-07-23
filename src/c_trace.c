@@ -149,18 +149,17 @@ extern void cpu_Reset(void);
 
 db cpu_Rbyte;
 
-unsigned char xReadROM(unsigned int adr)
+void draw_trace_column_headers(void)
 {
-	db dummy;
-	
-		AddressBus = (adr & 0xffff);
-		dummy = DataBus;
-		debugflag = 1;
-//	(* ReadROMAccess)();		// <--- *** poison *** ---
-	debugflag = 0;
-	cpu_Rbyte = DataBus;
-	DataBus = dummy;
-		return(cpu_Rbyte);
+	if (TraceEnabled) 
+	{
+		fprintf(zlog,"Loaded ROM: %s\n\n", FileName);
+		fprintf(zlog,
+				"(Frame Line CPU TIA)  "
+				"( P0  P1  M0  M1  BL)  collsn   "
+				"flags   A  X  Y SP   Adr  Code\n");
+	}
+
 }
 
 unsigned char ReadROM(unsigned int adr)

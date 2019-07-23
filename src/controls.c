@@ -1026,11 +1026,13 @@ void DoKidVid_R()
 {
 	if (KeyTable[KeyF1])
 	{
+		KeyTable[KeyF1] = 0;
 		KidVidTape = 0;		/* "rewind Kid Vid tape */
 		kv_CloseSampleFile();
 	}
 	if (KeyTable[Key1])
 	{
+		KeyTable[Key1] = 0;
 		KidVidTape = 2;
 		if (KidVid == KVBBEARS) KidVidIdx = KVBLOCKBITS;
 		else KidVidIdx = 0;
@@ -1040,6 +1042,7 @@ void DoKidVid_R()
 	}
 	if (KeyTable[Key2])
 	{
+		KeyTable[Key2] = 0;
 		KidVidTape = 3;
 		if (KidVid == KVBBEARS) KidVidIdx = KVBLOCKBITS;
 		else KidVidIdx = 0;
@@ -1049,6 +1052,7 @@ void DoKidVid_R()
 	}
 	if (KeyTable[Key3])
 	{
+		KeyTable[Key3] = 0;
 		if (KidVid == KVBBEARS)		/* Berenstain Bears ? */
 		{
 			KidVidTape = 4;
@@ -1575,17 +1579,17 @@ void Controls()
 	}
 	if ((KeyTable[KeyEnter])&&(KeyTable[KeyAlt])) 
 	{
-		FullScreen = !FullScreen;			/* toggle fullscreen */
+		FullScreen = !FullScreen;	/* toggle fullscreen */
 		srv_SetVideoMode();
 		KeyTable[KeyEnter] = 0;
 		KeyTable[KeyAlt] = 0;
 	}
 	
-	if (KeyTable[KeyEquals])
+	if (KeyTable[KeyEquals])		/* this used to be the screenshot key ... */
 	{
-		KeyTable[KeyEquals] = 0;	/* only one screenshot per keystroke */
-		SaveScreenshot();		/* do screenshot when = is pressed */
-	}
+		KeyTable[KeyEquals] = 0;	/* ... trap it anyway ... */
+//		SaveScreenshot();			/* ... else we switch to color mode ... */
+	}								/* ... for reasons unknown ... */
 
 	if (KeyTable[KeyAlt])	/* alter display only when ALT is pressed */
 	{

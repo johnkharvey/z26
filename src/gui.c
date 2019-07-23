@@ -49,6 +49,8 @@ void run_rom()
 		strncpy(FileName, newfile, 260);
 		exit_gui = 1;
 		GamePaused = 0;
+		kv_CloseSampleFile();
+		draw_trace_column_headers();
 		srv_reset_timing();
 	} 
 }
@@ -65,6 +67,7 @@ void hand_load_rom()
 		if(!picked) return;
 		ROMLoaded = cli_LoadROM(newfile);
 	}
+
 	run_rom();
 }
 

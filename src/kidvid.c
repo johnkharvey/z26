@@ -2,362 +2,44 @@
 ** Kid Vid sample file loading routines
 */
 
-
-/*
-** z26 is Copyright 1997-2011 by John Saeger and contributors.  
-** z26 is released subject to the terms and conditions of the 
-** GNU General Public License Version 2 (GPL).	z26 comes with no warranty.
-** Please see COPYING.TXT for details.
-*/
-
 FILE *SampleFile, *SharedSampleFile;
-db SampleByte;
-int FileOpened=0;
+db KidvidSampleByte;
+int KidvidFileOpened=0;
 dd kv_TapeBusy;
 int kv_FilePointer, kv_SharedData, kv_Beep;
 unsigned long int kv_SongCounter=0;
 
-
 unsigned char SongPositions[44+38+42+62+80+62] = {
 /* kvs1 44 */
-   11,
-   12+0x80,
-   13+0x80,
-   14,
-   15+0x80,
-   16,
-   8+0x80,
-   17,
-   18+0x80,
-   19,
-   20+0x80,
-   21,
-   8+0x80,
-   22,
-   15+0x80,
-   23,
-   18+0x80,
-   14,
-   20+0x80,
-   16,
-   18+0x80,
-   17,
-   15+0x80,
-   19,
-   8+0x80,
-   21,
-   20+0x80,
-   22,
-   18+0x80,
-   23,
-   15+0x80,
-   14,
-   20+0x80,
-   16,
-   8+0x80,
-   22,
-   15+0x80,
-   23,
-   18+0x80,
-   14,
-   20+0x80,
-   16,
-   8+0x80,
-   9,
+   11, 12+0x80, 13+0x80, 14, 15+0x80, 16, 8+0x80, 17, 18+0x80, 19, 20+0x80, 21,
+   8+0x80, 22, 15+0x80, 23, 18+0x80, 14, 20+0x80, 16, 18+0x80, 17, 15+0x80, 19,
+   8+0x80, 21, 20+0x80, 22, 18+0x80, 23, 15+0x80, 14, 20+0x80, 16, 8+0x80, 22,
+   15+0x80, 23, 18+0x80, 14, 20+0x80, 16, 8+0x80, 9,
 
 /* kvs2 38 */
-   25+0x80,
-   26,
-   27,
-   28,
-   8,
-   29,
-   30,
-   26,
-   27,
-   28,
-   8,
-   29,
-   30,
-   26,
-   27,
-   28,
-   8,
-   29,
-   30,
-   26,
-   27,
-   28,
-   8,
-   29,
-   30,
-   26,
-   27,
-   28,
-   8,
-   29,
-   30,
-   26,
-   27,
-   28,
-   8,
-   29,
-   30+0x80,
-   9,
+   25+0x80, 26, 27, 28, 8, 29, 30, 26, 27, 28, 8, 29, 30, 26, 27, 28, 8, 29, 30,
+   26, 27, 28, 8, 29, 30, 26, 27, 28, 8, 29, 30, 26, 27, 28, 8, 29, 30+0x80, 9,
 
 /* kvs3 42 */
-   32,
-   33,
-   34,
-   35,
-   36,
-   37,
-   38,
-   39,
-   40,
-   41,
-   34,
-   42,
-   36,
-   43,
-   40,
-   39,
-   38,
-   37,
-   34,
-   43,
-   36,
-   39,
-   40,
-   37,
-   38,
-   43,
-   34,
-   37,
-   36,
-   43,
-   40,
-   39,
-   38,
-   37,
-   34,
-   43,
-   36,
-   39,
-   40,
-   37,
-   38+0x80,
-   9,
+   32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 34, 42, 36, 43, 40, 39, 38, 37, 34,
+   43, 36, 39, 40, 37, 38, 43, 34, 37, 36, 43, 40, 39, 38, 37, 34, 43, 36, 39,
+   40, 37, 38+0x80, 9,
 
 /* kvb1 62 */
-   0,
-   1,
-   45,
-   2,
-   3,
-   46,
-   4,
-   5,
-   47,
-   6,
-   7,
-   48,
-   4,
-   3,
-   49,
-   2,
-   1,
-   50,
-   6,
-   7,
-   51,
-   4,
-   5,
-   52,
-   6,
-   1,
-   53,
-   2,
-   7,
-   54,
-   6,
-   5,
-   45,
-   2,
-   1,
-   46,
-   4,
-   3,
-   47,
-   2,
-   5,
-   48,
-   4,
-   7,
-   49,
-   6,
-   1,
-   50,
-   2,
-   5,
-   51,
-   6,
-   3,
-   52,
-   4,
-   7,
-   53,
-   2,
-   1,
-   54,
-   6+0x80,
-   9,
+   0, 1, 45, 2, 3, 46, 4, 5, 47, 6, 7, 48, 4, 3, 49, 2, 1, 50, 6, 7, 51, 4, 5,
+   52, 6, 1, 53, 2, 7, 54, 6, 5, 45, 2, 1, 46, 4, 3, 47, 2, 5, 48, 4, 7, 49, 6,
+   1, 50, 2, 5, 51, 6, 3, 52, 4, 7, 53, 2, 1, 54, 6+0x80, 9,
 
 /* kvb2 80 */
-   0,
-   1,
-   56,
-   4,
-   3,
-   57,
-   2,
-   5,
-   58,
-   6,
-   7,
-   59,
-   2,
-   3,
-   60,
-   4,
-   1,
-   61,
-   6,
-   7,
-   62,
-   2,
-   5,
-   63,
-   6,
-   1,
-   64,
-   4,
-   7,
-   65,
-   6,
-   5,
-   66,
-   4,
-   1,
-   67,
-   2,
-   3,
-   68,
-   6,
-   5,
-   69,
-   2,
-   7,
-   70,
-   4,
-   1,
-   71,
-   2,
-   5,
-   72,
-   4,
-   3,
-   73,
-   6,
-   7,
-   74,
-   2,
-   1,
-   75,
-   6,
-   3,
-   76,
-   4,
-   5,
-   77,
-   6,
-   7,
-   78,
-   2,
-   3,
-   79,
-   4,
-   1,
-   80,
-   2,
-   7,
-   81,
-   4+0x80,
-   9,
+   0, 1, 56, 4, 3, 57, 2, 5, 58, 6, 7, 59, 2, 3, 60, 4, 1, 61, 6, 7, 62, 2, 5,
+   63, 6, 1, 64, 4, 7, 65, 6, 5, 66, 4, 1, 67, 2, 3, 68, 6, 5, 69, 2, 7, 70, 4,
+   1, 71, 2, 5, 72, 4, 3, 73, 6, 7, 74, 2, 1, 75, 6, 3, 76, 4, 5, 77, 6, 7, 78,
+   2, 3, 79, 4, 1, 80, 2, 7, 81, 4+0x80, 9,
 
 /* kvb3 62 */
-   0,
-   1,
-   83,
-   2,
-   3,
-   84,
-   4,
-   5,
-   85,
-   6,
-   7,
-   86,
-   4,
-   3,
-   87,
-   2,
-   1,
-   88,
-   6,
-   7,
-   89,
-   2,
-   5,
-   90,
-   6,
-   1,
-   91,
-   4,
-   7,
-   92,
-   6,
-   5,
-   93,
-   4,
-   1,
-   94,
-   2,
-   3,
-   95,
-   6,
-   5,
-   96,
-   2,
-   7,
-   97,
-   4,
-   1,
-   98,
-   6,
-   5,
-   99,
-   4,
-   3,
-   100,
-   2,
-   7,
-   101,
-   4,
-   1,
-   102,
-   2+0x80,
-   9
+   0, 1, 83, 2, 3, 84, 4, 5, 85, 6, 7, 86, 4, 3, 87, 2, 1, 88, 6, 7, 89, 2, 5,
+   90, 6, 1, 91, 4, 7, 92, 6, 5, 93, 4, 1, 94, 2, 3, 95, 6, 5, 96, 2, 7, 97, 4,
+   1, 98, 6, 5, 99, 4, 3, 100, 2, 7, 101, 4, 1, 102, 2+0x80, 9
 };
 
 unsigned long int SongStart[104] = {
@@ -484,28 +166,34 @@ unsigned long int SongStart[104] = {
 void kv_OpenSampleFile(void)
 {
 char kvNameTable[6][9] =
-   {"kvs3.wav", "kvs1.wav", "kvs2.wav", "kvb3.wav", "kvb1.wav", "kvb2.wav"};
+   {"KVS3.WAV", "KVS1.WAV", "KVS2.WAV", "KVB3.WAV", "KVB1.WAV", "KVB2.WAV"};
 int StartSong[6] = {44+38, 0, 44, 44+38+42+62+80, 44+38+42, 44+38+42+62};
 int i;
-   if(!FileOpened){
+   if(!KidvidFileOpened){
       if(KidVid==0x44) i=0;
       else i=3;
       i=i+KidVidTape-1;
       if(KidVidTape==4) i=i-3;
 
-      if(quiet==0){
+      if(quiet==0)
+      {
          SampleFile=fopen(&kvNameTable[i][0], "rb");
-         if(SampleFile!=NULL){
-            SharedSampleFile=fopen("kvshared.wav", "rb");
+         if(SampleFile!=NULL)
+         {
+            SharedSampleFile=fopen("KVSHARED.WAV", "rb");
             if(SharedSampleFile==NULL){
                fclose(SampleFile);
-               FileOpened=0;
+               KidvidFileOpened=0;
             }else{
-               FileOpened=1;
+               KidvidFileOpened=1;
                fseek(SampleFile, 45, SEEK_SET);
             }
-         }else FileOpened=0;
-      }else FileOpened=0;
+         }
+         else 
+            KidvidFileOpened=0;
+      }
+      else 
+         KidvidFileOpened=0;
 
       kv_SongCounter=0;
       kv_TapeBusy=0;
@@ -515,17 +203,17 @@ int i;
 
 void kv_CloseSampleFile(void)
 {
-   if(FileOpened){
+   if(KidvidFileOpened){
       fclose(SampleFile);
       fclose(SharedSampleFile);
-      FileOpened=0;
+      KidvidFileOpened=0;
    }
 }
 
 void kv_SetNextSong(void)
 {
 unsigned char Temp;
-   if(FileOpened){
+   if(KidvidFileOpened){
       if(SongPositions[kv_FilePointer] & 0x80) kv_Beep=0;
       else kv_Beep=1;
       Temp=SongPositions[kv_FilePointer] & 0x7f;
@@ -546,19 +234,46 @@ unsigned char Temp;
 void kv_GetNextSampleByte(void)
 {
 static int oddeven = 0;
-   if(kv_SongCounter==0) SampleByte = (db) 0x80;
-   else{
-      oddeven=oddeven^1;
-      if(oddeven&1){
+static int PrevSampleByte = 0x80;
+
+   if (kv_SongCounter==0) 
+      KidvidSampleByte = (db) 0x80;
+   else
+   {
+      oddeven = oddeven^1;
+      if (oddeven&1)
+      {
          kv_SongCounter--;
-         if((kv_SongCounter>262*48)||(kv_Beep==0)) kv_TapeBusy=1;
-         else kv_TapeBusy=0;
-         if(FileOpened){
-            if(kv_SharedData) SampleByte=getc(SharedSampleFile);
-            else SampleByte=getc(SampleFile);
-         }else SampleByte = (db) 0x80;
-         if((kv_Beep==0)&&(kv_SongCounter==0)) kv_SetNextSong();
+         
+         if ((kv_SongCounter>262*48)||(kv_Beep==0)) 
+            kv_TapeBusy=1;
+         else 
+            kv_TapeBusy=0;
+
+         if(KidvidFileOpened)
+         {
+            if (kv_SharedData) 
+               KidvidSampleByte=getc(SharedSampleFile);
+            else 
+               KidvidSampleByte=getc(SampleFile);
+
+            PrevSampleByte = KidvidSampleByte;
+         }
+         else 
+            KidvidSampleByte = (db) 0x80;
+
+         if((kv_Beep==0)&&(kv_SongCounter==0)) 
+            kv_SetNextSong();
       }
+      else 
+         KidvidSampleByte = (db) PrevSampleByte;
    }
 }
 
+
+/*
+** z26 is Copyright 1997-2019 by John Saeger and contributors.  
+** z26 is released subject to the terms and conditions of the 
+** GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
+** Please see COPYING.TXT for details.
+*/

@@ -2,7 +2,7 @@
 ** sdlsound.c -- SDL sound code
 */
 
-dd SQ_resample;	/* a counter for mixing sound to 44100 Hz */
+dd SQ_resample;	/* a counter for resampling sound to 44100 Hz */
 
 db SQ_byte;		/* byte to put in the sound queue */
 db *SQ_Input;	/* pointer to next available byte for storing */
@@ -48,32 +48,8 @@ void fillerup(void *unused, Uint8 *stream, int len)
 	{
 		while(len)			/* 16-bit signed samples */
 		{
-			len -= 32;
+			len -= 8;
 			*stream++ = 0;	/* LSB = 0 */
-			*stream++ = *SQ_Output++;
-			*stream++ = 0;
-			*stream++ = *SQ_Output++;
-			*stream++ = 0;
-			*stream++ = *SQ_Output++;
-			*stream++ = 0;
-			*stream++ = *SQ_Output++;
-			*stream++ = 0;
-			*stream++ = *SQ_Output++;
-			*stream++ = 0;
-			*stream++ = *SQ_Output++;
-			*stream++ = 0;
-			*stream++ = *SQ_Output++;
-			*stream++ = 0;
-			*stream++ = *SQ_Output++;
-			*stream++ = 0;
-			*stream++ = *SQ_Output++;
-			*stream++ = 0;
-			*stream++ = *SQ_Output++;
-			*stream++ = 0;
-			*stream++ = *SQ_Output++;
-			*stream++ = 0;
-			*stream++ = *SQ_Output++;
-			*stream++ = 0;
 			*stream++ = *SQ_Output++;
 			*stream++ = 0;
 			*stream++ = *SQ_Output++;
@@ -100,7 +76,7 @@ void srv_sound_on()
 		desired.callback = fillerup;
 		desired.format = AUDIO_S16;	/* 16-bit */
 		desired.channels = 1;		/* mono */
-		desired.samples = 1024;		/* must be divisible by 32 (see above) */
+		desired.samples = 1024;		/* must be divisible by 4 (see above) */
 
 		if ( SDL_OpenAudio(&desired, &obtained) < 0 ) 
 		{

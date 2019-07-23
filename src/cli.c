@@ -278,6 +278,7 @@ void cli_InterpretParm(char *p)
 	case 'W':	width_adjust = parm;	break;	// width adjustment
 	case 'S':	DoScanline = 1;			break;	// scanline display
 	case 'C':	theme = parm & 0x70;	break;	// color theme for the GUI
+	case 'q':  	quiet = 1;				break;	// no sound
 	case 'r':	Vsync = 0;				break;  // turn off vsync
 	case 'n':	ShowLineCount = 1;		break;	// show line count and framerate
 
@@ -397,7 +398,7 @@ void cli_InterpretParm(char *p)
 				if(*p == 't')
 					TraceCount = 0;
 
-				zlog = fopen("z26.log", "w");
+				zlog = fopen(z26log, "w");
 				if (zlog == NULL)
 				{
 					sprintf(msg, "Couldn't build log file.");
@@ -406,9 +407,11 @@ void cli_InterpretParm(char *p)
 					TraceEnabled = 0;
 					OldTraceCount = 0;
 				}
+
 				break;
 
-	default:   	printf("Ignoring parameter: -%c\n", ch);
+	default:   	sprintf(msg, "Ignoring parameter: -%c\n", ch);
+				srv_print(msg);
 				break;
 	}
 }
@@ -594,15 +597,7 @@ void cli_CommandLine(int argc, char *argv[])
 				strcat(FileName,".bin");
 			ROMLoaded = cli_LoadROM(FileName);
 			ROMSeen = 1;
-			
-			if (TraceEnabled) 
-			{
-				fprintf(zlog,"Loaded ROM: %s\n\n", FileName);
-				fprintf(zlog,
-						"(Frame Line CPU TIA)  "
-						"( P0  P1  M0  M1  BL)  collsn   "
-						"flags   A  X  Y SP   Adr  Code\n");
-			}
+			draw_trace_column_headers();
 		}
 	}
 

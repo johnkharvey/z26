@@ -162,10 +162,6 @@ gui_action gui_navigation(SDL_Event *evp) {
 			case SDLK_BACKSLASH:
 				return GUI_RANDOM;
 				
-			case SDLK_EQUALS:
-				SaveScreenshot();
-				return GUI_NO_ACTION;
-
 			default:
 				return GUI_NO_ACTION;
 		}
@@ -274,7 +270,7 @@ void draw_gui(gui_entry *entries, int cur) {
 
 
 /**
-** z26 is Copyright 1997-2011 by John Saeger and contributors.  
+** z26 is Copyright 1997-2019 by John Saeger and contributors.  
 ** z26 is released subject to the terms and conditions of the
 ** GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
 ** Please see COPYING.TXT for details.

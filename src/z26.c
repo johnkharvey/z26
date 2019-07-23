@@ -25,6 +25,7 @@ const char *homedir;
 char z26cli[1024] = {0};
 char z26gui[1024] = {0};
 char z26home[1024] = {0};
+char z26log[1024] = {0};
 
 #ifdef LINUX
 #include <unistd.h>		// for chdir
@@ -44,15 +45,16 @@ typedef unsigned int			dd;
 typedef unsigned short int		dw;
 typedef unsigned char			db;
 
+void draw_trace_column_headers(void);
+
 #include "globals.c"
 #include "ct.c"
 #include "carts.c"
 #include "cli.c"
-#include "kidvid.c"
 #include "palette.c"
+#include "kidvid.c"
 #include "sdlsrv.c"
 #include "text.c"
-#include "pcx.c"
 #include "controls.c"
 #include "position.c"
 #include "gui.c"
@@ -75,17 +77,20 @@ int main(int argc, char *argv[])
 	homedir = getenv("USERPROFILE");
 #endif
 
+	strncpy(z26home, homedir, sizeof(z26home)-1);
 	strncpy(z26gui, homedir, sizeof(z26gui)-1);
 	strncpy(z26cli, homedir, sizeof(z26cli)-1);
-	strncpy(z26home, homedir, sizeof(z26home)-1);
+	strncpy(z26log, homedir, sizeof(z26log)-1);
 
 #ifdef LINUX
 	strncat(z26gui, "/z26.gui", sizeof(z26gui)-1);
 	strncat(z26cli, "/z26.cli", sizeof(z26cli)-1);
+	strncat(z26log, "/z26.log", sizeof(z26log)-1);
 #endif
 #ifdef WINDOWS
 	strncat(z26gui, "\\z26.gui", sizeof(z26gui)-1);
 	strncat(z26cli, "\\z26.cli", sizeof(z26cli)-1);
+	strncat(z26log, "\\z26.log", sizeof(z26log)-1);
 #endif
 
 	if (chdir(z26home) != 0)
