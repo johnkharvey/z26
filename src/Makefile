@@ -4,15 +4,15 @@ APP_NAME=z26mac
 ICONFILE=z26icon
 
 linux:
-	gcc -Wall -DLINUX -O3 z26.c -o z26 -lSDL2
+	gcc -std=gnu99 -Wall -DLINUX -O3 z26.c -o z26 -lSDL2
 	strip z26
 
 debug:
-	gcc -Wall -DLINUX -g3 z26.c -o z26d -lSDL2
+	gcc -std=gnu99 -Wall -DLINUX -g3 z26.c -o z26d -lSDL2
 
 windows:
 	windres z26.rc -O coff -o z26.res
-	gcc -Wall -DWINDOWS -O3 z26.c -o z26.exe -lmingw32 -lSDL2main -lSDL2 z26.res
+	gcc -std=gnu99 -Wall -DWINDOWS -O3 z26.c -o z26.exe -lmingw32 -lSDL2main -lSDL2 z26.res
 	strip z26.exe
 
 # https://joseph-long.com/writing/sdl-2-on-os-x-mavericks/

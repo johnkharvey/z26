@@ -5,7 +5,8 @@
 	<title>z26 readme</title>
 	<meta name="generator" content="LibreOffice 6.0.7.3 (Linux)"/>
 	<meta name="created" content="00:00:00"/>
-	<meta name="changed" content="2019-07-23T13:00:13.415267022"/>
+	<meta name="changed" content="2019-07-24T15:56:15.614612538"/>
+	<meta name="created" content="00:00:00">
 	<meta name="created" content="00:00:00">
 	<meta name="created" content="00:00:00">
 	<meta name="created" content="00:00:00">
@@ -25,8 +26,8 @@
 </head>
 <body lang="en-US" text="#68b4ff" link="#9dceff" vlink="#8080ff" bgcolor="#1f5f9f" dir="ltr">
 <div id="Section1" dir="ltr">
-	<h2>z26 -- An Atari 2600 Emulator (4.03)</h2>
-	<p>July 23, 2019</p>
+	<h2>z26 -- An Atari 2600 Emulator (4.04)</h2>
+	<p>July 24, 2019</p>
 	<p>http://www.whimsey.com/z26</p>
 	<h4>Copyright/License</h4>
 	<p>z26 is Copyright ©1997-2019 by John Saeger and contributors. z26
@@ -34,33 +35,14 @@
 	Public License Version 2 (GPL). z26 comes with no warranty. Please
 	see the included COPYING.TXT for details. Source code for the
 	current release is available at the home page listed above.</p>
-	<h4>What's new in version 4.03?</h4>
+	<h4>What's new in version 4.04?</h4>
 	<ul>
 		<li/>
-<p>Nicer kidvid sound. There were two games that used the Kid
-		Vid voice module: Smurfs Save The Day and Berenstain Bears. You can find the sound files here:
-		<a href="http://www.atariage.com/2600/archives/KidVidAudio/">http://www.atariage.com/2600/archives/KidVidAudio/</a>.
-		Unzip the archive and put the sound files in the same directory as
-		your roms. z26 expects the filenames to be in upper case.</p>
+<p>Pressing F4 to put the console in “color” mode during
+		gameplay now works.</p>
 		<li/>
-<p>We now build trace log files in the home directory on all
-		platforms. Fixed the trace log so that column titles print
-		correctly whether the log was initiated from a game launched from
-		the gui or from the command line.</p>
-		<li/>
-<p>Restored ability to turn sound off and on that was broken
-		in the last release.</p>
-		<li/>
-<p>Removed ability to do a screen shot by pressing equals
-		during game play. It’s better to press backspace to pause the
-		game and use the operating system’s screen capture facility. To
-		resume the game press enter.</p>
-		<li/>
-<p>Sync to monitor works for PAL games with 314 scanlines or
-		less if you set the refresh rate of your monitor to 50 Hz.</p>
-		<li/>
-<p>Sync to monitor works for NTSC games with 262 scanlines or
-		less if you set the refresh rate of your monitor to 60 Hz.</p>
+<p>Added -std=gnu99 compiler switch for linux and windows
+		builds.</p>
 	</ul>
 	<h4>Software Requirements</h4>
 	<p>This version of z26 is known to work on Windows 10, Linux, and
@@ -581,9 +563,13 @@ In no event unless required by applicable law
 Fonts were designed with
 	CSEDIT by Matt Pritchard.</p>
 	<h4>Credits</h4>
-	<p>Thanks to MrMaddog for help with the kidvid games (4.03).<br/>
+	<p>Thanks to s0c7 for help with a compiler switch (4.04).<br/>
 Thanks
-	to Karl-Heinz Versl for help working out square textures on vintage
+	to alex_79 for reporting the problem with the F4 key (4.04).<br/>
+Thanks
+	to MrMaddog for help with the kidvid games (4.03).<br/>
+Thanks to
+	Karl-Heinz Versl for help working out square textures on vintage
 	machines (4.01).<br/>
 Thanks to “Clifford” from the Stack
 	Overflow community for the stristr() routine (4.00).</p>

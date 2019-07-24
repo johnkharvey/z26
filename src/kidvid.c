@@ -250,17 +250,12 @@ static int PrevSampleByte = 0x80;
          else 
             kv_TapeBusy=0;
 
-         if(KidvidFileOpened)
-         {
-            if (kv_SharedData) 
-               KidvidSampleByte=getc(SharedSampleFile);
-            else 
-               KidvidSampleByte=getc(SampleFile);
-
-            PrevSampleByte = KidvidSampleByte;
-         }
+         if (kv_SharedData) 
+            KidvidSampleByte=getc(SharedSampleFile);
          else 
-            KidvidSampleByte = (db) 0x80;
+            KidvidSampleByte=getc(SampleFile);
+
+         PrevSampleByte = KidvidSampleByte;
 
          if((kv_Beep==0)&&(kv_SongCounter==0)) 
             kv_SetNextSong();

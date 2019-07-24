@@ -73,7 +73,8 @@ void srv_Events()
 			case SDL_KEYDOWN:
 				if ((event.key.repeat != 0) && !GamePaused) break;
 				sc = event.key.keysym.sym;
-				sc &= 0x1ff;
+				if (sc == SDLK_EQUALS) break;	// disable old screenshot key (=)
+				sc &= 0x1ff;					// it got confused with F4
 				KeyTable[sc] = 0x80;
 				break;
 

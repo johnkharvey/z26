@@ -1585,11 +1585,11 @@ void Controls()
 		KeyTable[KeyAlt] = 0;
 	}
 	
-	if (KeyTable[KeyEquals])		/* this used to be the screenshot key ... */
-	{
-		KeyTable[KeyEquals] = 0;	/* ... trap it anyway ... */
-//		SaveScreenshot();			/* ... else we switch to color mode ... */
-	}								/* ... for reasons unknown ... */
+//	if (KeyTable[KeyEquals])		/* this used to be the screenshot key ... */
+//	{								/* ... it's been disabled in sdlsrv.c ... */
+//		KeyTable[KeyEquals] = 0;	/* ... because SDLK_EQUALS&0x1ff == SDLK_F4&0x1ff ... */
+//		SaveScreenshot();			/* screenshots don't look so great with ... */
+//	}								/* ... square textures anyway */
 
 	if (KeyTable[KeyAlt])	/* alter display only when ALT is pressed */
 	{
