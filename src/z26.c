@@ -4,6 +4,12 @@
 
 #define Z26_RELEASE "z26 -- An Atari 2600 Emulator"
 
+#ifndef WINDOWS
+#ifndef MAC
+#define do_linux_desktop_integration
+#endif
+#endif
+
 void QueueSoundBytes(void);
 void position_game(void);
 void srv_print(char *msg);
@@ -26,6 +32,7 @@ char z26cli[1024] = {0};
 char z26gui[1024] = {0};
 char z26home[1024] = {0};
 char z26log[1024] = {0};
+char z26wav[1024] = {0};
 
 #ifdef LINUX
 #include <unistd.h>		// for chdir
@@ -59,19 +66,20 @@ void draw_trace_column_headers(void);
 #include "position.c"
 #include "gui.c"
 #include "2600core.c"
+#include "linux_startup_audio_kludge.c"
+#ifdef do_linux_desktop_integration
+#include "linux_write_desktop_file.c"
+#endif
 
 int main(int argc, char *argv[]) 
 {
 
 #ifdef LINUX
-#ifndef MAC
-	playwav();	// play a little wav file twice on Linux startup
-	playwav();	// otherwise sound doesn't always work (see sdlplaywav.c)
-#endif
 	if ((homedir = getenv("HOME")) == NULL) {
 	    homedir = getpwuid(getuid())->pw_dir;
 	}
 #endif
+
 #ifdef WINDOWS
 	putenv("SDL_AUDIODRIVER=directsound");	// windows needs env var for sound
 	homedir = getenv("USERPROFILE");
@@ -81,16 +89,31 @@ int main(int argc, char *argv[])
 	strncpy(z26gui, homedir, sizeof(z26gui)-1);
 	strncpy(z26cli, homedir, sizeof(z26cli)-1);
 	strncpy(z26log, homedir, sizeof(z26log)-1);
+	strncpy(z26wav, homedir, sizeof(z26wav)-1);
 
 #ifdef LINUX
 	strncat(z26gui, "/z26.gui", sizeof(z26gui)-1);
 	strncat(z26cli, "/z26.cli", sizeof(z26cli)-1);
 	strncat(z26log, "/z26.log", sizeof(z26log)-1);
+	strncat(z26wav, "/z26.wav", sizeof(z26wav)-1);
+#ifndef MAC
+	
+	// play a little wav file twice on Linux startup
+	// otherwise sound doesn't always work (see sdlplaywav.c)
+	linux_startup_audio_kludge();
+
+#ifdef do_linux_desktop_integration
+	linux_write_desktop_file();
 #endif
+
+#endif
+#endif
+
 #ifdef WINDOWS
 	strncat(z26gui, "\\z26.gui", sizeof(z26gui)-1);
 	strncat(z26cli, "\\z26.cli", sizeof(z26cli)-1);
 	strncat(z26log, "\\z26.log", sizeof(z26log)-1);
+	strncat(z26wav, "\\z26.wav", sizeof(z26wav)-1);
 #endif
 
 	if (chdir(z26home) != 0)

@@ -5,7 +5,8 @@
 	<title>z26 readme</title>
 	<meta name="generator" content="LibreOffice 6.0.7.3 (Linux)"/>
 	<meta name="created" content="00:00:00"/>
-	<meta name="changed" content="2019-07-24T15:56:15.614612538"/>
+	<meta name="changed" content="2019-08-01T08:06:49.431850235"/>
+	<meta name="created" content="00:00:00">
 	<meta name="created" content="00:00:00">
 	<meta name="created" content="00:00:00">
 	<meta name="created" content="00:00:00">
@@ -26,8 +27,8 @@
 </head>
 <body lang="en-US" text="#68b4ff" link="#9dceff" vlink="#8080ff" bgcolor="#1f5f9f" dir="ltr">
 <div id="Section1" dir="ltr">
-	<h2>z26 -- An Atari 2600 Emulator (4.04)</h2>
-	<p>July 24, 2019</p>
+	<h2>z26 -- An Atari 2600 Emulator (4.05)</h2>
+	<p>August 1, 2019</p>
 	<p>http://www.whimsey.com/z26</p>
 	<h4>Copyright/License</h4>
 	<p>z26 is Copyright ©1997-2019 by John Saeger and contributors. z26
@@ -35,14 +36,32 @@
 	Public License Version 2 (GPL). z26 comes with no warranty. Please
 	see the included COPYING.TXT for details. Source code for the
 	current release is available at the home page listed above.</p>
-	<h4>What's new in version 4.04?</h4>
+	<h4>What's new in version 4.05?</h4>
 	<ul>
 		<li/>
-<p>Pressing F4 to put the console in “color” mode during
-		gameplay now works.</p>
+<p>Automatic desktop integration on linux. On distros and
+		desktop environments that use a .desktop file in
+		~/.local/share/applications and an icon file in
+		~/.local/share/icons, and as far as I can tell, this should be just
+		about everybody, you should be able to run the program once and
+		then access it from the system menu after that. Then you can add
+		the launcher to the desktop or a program launcher or panel as
+		supported by your distro and desktop environment. You should be
+		able to see z26 in the “Games” submenu of your system menu.</p>
 		<li/>
-<p>Added -std=gnu99 compiler switch for linux and windows
-		builds.</p>
+<p>On linux, if you move the linux application you no longer
+		need to remember to move the z26.wav file along with it. Just run
+		the program once from its new location manually by opening a
+		terminal in the directory of the new location and running ./z26.
+		This integrates the new location of z26 into your desktop
+		environment.</p>
+		<li/>
+<p>This means that on linux systems that support this type of
+		integration, after setting things up, you can right click on a .bin
+		file and specify “open with” z26, so that you can navigate rom
+		directories with your file manager and double click on a game file
+		to run it, after making z26 the default “open with”
+		application.</p>
 	</ul>
 	<h4>Software Requirements</h4>
 	<p>This version of z26 is known to work on Windows 10, Linux, and
@@ -80,10 +99,12 @@
 	source directory and type:</p>
 	<pre style="margin-bottom: 0.2in">     make linux</pre><p>
 	<a name="selectable12"></a>If all goes well, when it's done you'll
-	have an executable named z26 that you can put where you like, but
-	please be sure to copy z26.wav along with the executable to the
-	destination directory. To run z26, open a terminal in the directory
-	you put z26 and type z26 at the command line prompt.</p>
+	have an executable named z26 that you can put where you like. To run
+	z26, open a terminal in the directory you put z26 and type ./z26 at
+	the command line prompt. This should make z26 available in your menu
+	system and can be run from there for future uses. You should also be
+	able to put a launcher on the desktop or in an application launcher
+	like other linux desktop apps.</p>
 	<h4>Setting up the Raspberry Pi 
 	</h4>
 	<p>First, we want to make sure your system is up to date. Open a
@@ -111,7 +132,10 @@ Exit
 	the config program by pressing escape until you reach the command
 	line prompt and reboot your system.</p>
 	<p>To run z26, open a terminal in the directory you put z26 and type
-	./z26 at the command line prompt.</p>
+	./z26 at the command line prompt. This should make z26 available in
+	your menu system and can be run from there for future uses. You
+	should also be able to put a launcher on the desktop or in an
+	application launcher or panel like other linux desktop apps.</p>
 	<h4>Main Menu</h4>
 	<p>After launching z26, you will be presented with the Main Menu.
 	The current selection is highlighted. You can navigate the list with
@@ -563,11 +587,14 @@ In no event unless required by applicable law
 Fonts were designed with
 	CSEDIT by Matt Pritchard.</p>
 	<h4>Credits</h4>
-	<p>Thanks to s0c7 for help with a compiler switch (4.04).<br/>
-Thanks
-	to alex_79 for reporting the problem with the F4 key (4.04).<br/>
-Thanks
-	to MrMaddog for help with the kidvid games (4.03).<br/>
+	<p>Thanks to “Mike” from the Stack Overflow community for the
+	routine to find the program launch directory (4.05).<br/>
+Thanks to
+	s0c7 for help with a compiler switch (4.04).<br/>
+Thanks to alex_79
+	for reporting the problem with the F4 key (4.04).<br/>
+Thanks to
+	MrMaddog for help with the kidvid games (4.03).<br/>
 Thanks to
 	Karl-Heinz Versl for help working out square textures on vintage
 	machines (4.01).<br/>

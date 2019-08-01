@@ -401,7 +401,7 @@ void cli_InterpretParm(char *p)
 				zlog = fopen(z26log, "w");
 				if (zlog == NULL)
 				{
-					sprintf(msg, "Couldn't build log file.");
+					sprintf(msg, "Couldn't build log file: %s", z26log);
 					srv_print(msg);
 					TraceCount = 0;
 					TraceEnabled = 0;
@@ -425,7 +425,7 @@ void cli_WriteParms(int argc, char *argv[])
 	fp = fopen(z26cli, "w");
 	if (fp == NULL)
 	{
-		sprintf(msg, "Couldn't build z26.cli file.");
+		sprintf(msg, "Couldn't build z26.cli file: %s", z26cli);
 		srv_print(msg);
 		SDL_Quit();
 		exit(1);
@@ -460,7 +460,7 @@ void cli_SaveParms()
 
 	if (fp == NULL)
 	{
-		sprintf(msg, "Couldn't find z26.gui file.");
+		sprintf(msg, "Couldn't build z26.gui file.");
 		srv_print(msg);
 		SDL_Quit();
 		exit(1);

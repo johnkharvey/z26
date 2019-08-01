@@ -29,7 +29,6 @@ dd srv_colortab_low[128];
 #include "sdlflip.c"
 #include "sdlvideo.c"
 #include "sdlsound.c"
-#include "sdlplaywav.c"
 #include "sdlmouse.c"
 
 void Init_SDL()

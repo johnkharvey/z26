@@ -3,12 +3,13 @@ FRAMEWORK_PATH=$(HOME)/Library/Frameworks
 APP_NAME=z26mac
 ICONFILE=z26icon
 
+# -no-pie so we can double-click to launch on more distros
 linux:
-	gcc -std=gnu99 -Wall -DLINUX -O3 z26.c -o z26 -lSDL2
+	gcc -std=gnu99 -no-pie -Wall -DLINUX -O3 z26.c -o z26 -lSDL2
 	strip z26
 
 debug:
-	gcc -std=gnu99 -Wall -DLINUX -g3 z26.c -o z26d -lSDL2
+	gcc -std=gnu99 -no-pie -Wall -DLINUX -g3 z26.c -o z26d -lSDL2
 
 windows:
 	windres z26.rc -O coff -o z26.res

@@ -31,7 +31,7 @@ int lines2draw = 1;		/* how many display lines to draw */
 #define NC 11	/* no controller connected */
 
 int MessageCode=0;		/* gets message code for final output */
-char msg[1000];			/* message buffer */
+char msg[1100];			/* message buffer */
 char stat_msg[100];		/* status message buffer */
 int status_timer = -1;	/* Counts down once per frame while status is shown,
 						   status disappears when it's -1 again. */
