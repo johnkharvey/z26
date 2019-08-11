@@ -5,7 +5,10 @@
 	<title>z26 readme</title>
 	<meta name="generator" content="LibreOffice 6.0.7.3 (Linux)"/>
 	<meta name="created" content="00:00:00"/>
-	<meta name="changed" content="2019-08-01T08:06:49.431850235"/>
+	<meta name="changed" content="2019-08-11T00:10:02.263438826"/>
+	<meta name="created" content="00:00:00">
+	<meta name="created" content="00:00:00">
+	<meta name="created" content="00:00:00">
 	<meta name="created" content="00:00:00">
 	<meta name="created" content="00:00:00">
 	<meta name="created" content="00:00:00">
@@ -27,8 +30,8 @@
 </head>
 <body lang="en-US" text="#68b4ff" link="#9dceff" vlink="#8080ff" bgcolor="#1f5f9f" dir="ltr">
 <div id="Section1" dir="ltr">
-	<h2>z26 -- An Atari 2600 Emulator (4.05)</h2>
-	<p>August 1, 2019</p>
+	<h2>z26 -- An Atari 2600 Emulator (4.06)</h2>
+	<p>August 11, 2019</p>
 	<p>http://www.whimsey.com/z26</p>
 	<h4>Copyright/License</h4>
 	<p>z26 is Copyright ©1997-2019 by John Saeger and contributors. z26
@@ -36,32 +39,30 @@
 	Public License Version 2 (GPL). z26 comes with no warranty. Please
 	see the included COPYING.TXT for details. Source code for the
 	current release is available at the home page listed above.</p>
-	<h4>What's new in version 4.05?</h4>
+	<h4>What's new in version 4.06?</h4>
 	<ul>
 		<li/>
-<p>Automatic desktop integration on linux. On distros and
-		desktop environments that use a .desktop file in
-		~/.local/share/applications and an icon file in
-		~/.local/share/icons, and as far as I can tell, this should be just
-		about everybody, you should be able to run the program once and
-		then access it from the system menu after that. Then you can add
-		the launcher to the desktop or a program launcher or panel as
-		supported by your distro and desktop environment. You should be
-		able to see z26 in the “Games” submenu of your system menu.</p>
+<p>Most supported bankswitch schemes not detectable by size
+		are now detected automatically with ROM signatures. Along with the
+		classic games, most hacks, 4A5, 3E and 3F bankswitched games should
+		start with the correct bankswitch scheme automatically.</p>
 		<li/>
-<p>On linux, if you move the linux application you no longer
-		need to remember to move the z26.wav file along with it. Just run
-		the program once from its new location manually by opening a
-		terminal in the directory of the new location and running ./z26.
-		This integrates the new location of z26 into your desktop
-		environment.</p>
+<p>Changes to override a bankswitch scheme made in the GUI
+		are no longer persistent. If you need a persistent change to a ROM,
+		please rename the ROM with a bankswitch name in square brackets or
+		as a filename extension.</p>
 		<li/>
-<p>This means that on linux systems that support this type of
-		integration, after setting things up, you can right click on a .bin
-		file and specify “open with” z26, so that you can navigate rom
-		directories with your file manager and double click on a game file
-		to run it, after making z26 the default “open with”
-		application.</p>
+<p>You can now launch a game from the command line in your
+		current directory. z26 no longer automatically looks in your home
+		directory for the ROM to launch. GUI navigation still begins in
+		your home directory no matter how you launch z26. Trace log files
+		are still built in your home directory.</p>
+		<li/>
+<p>On linux, desktop integration now creates the path for the
+		.desktop and icon files if necessary.</p>
+		<li/>
+<p>Starpath JAM and other Starpath errors no longer cause the
+		emulator to exit. We now just exit the game.</p>
 	</ul>
 	<h4>Software Requirements</h4>
 	<p>This version of z26 is known to work on Windows 10, Linux, and
@@ -71,8 +72,8 @@
 	support OpenGL.</p>
 	<h4>Hardware Requirements</h4>
 	<p>A computer with reasonably fast processors, hardware support for
-	OpenGL, and a working vsync. A Raspberry Pi version 1 should be fast
-	enough.</p>
+	OpenGL, and a working vsync. A Raspberry Pi version 1 or a Raspberry
+	Pi Zero should be fast enough.</p>
 	<h4>Windows Installation</h4>
 	<p>Unzip the z26 archive. You can leave it in the download directory
 	if you want. You will need a copy of SDL2.dll either in the z26
@@ -587,19 +588,30 @@ In no event unless required by applicable law
 Fonts were designed with
 	CSEDIT by Matt Pritchard.</p>
 	<h4>Credits</h4>
-	<p>Thanks to “Mike” from the Stack Overflow community for the
-	routine to find the program launch directory (4.05).<br/>
+	<p>Thanks to Yaroslav Stavnichiy from the Stack Overflow community
+	for the mkpath() routine (4.06).<br/>
+Thanks to fluxit for help with
+	directory paths in linux desktop integration (4.06).<br/>
 Thanks to
-	s0c7 for help with a compiler switch (4.04).<br/>
-Thanks to alex_79
-	for reporting the problem with the F4 key (4.04).<br/>
-Thanks to
-	MrMaddog for help with the kidvid games (4.03).<br/>
-Thanks to
-	Karl-Heinz Versl for help working out square textures on vintage
-	machines (4.01).<br/>
-Thanks to “Clifford” from the Stack
-	Overflow community for the stristr() routine (4.00).</p>
+	MAME 0.212 for ROM signature code and signatures in vcs_slot.c
+	(4.06).<br/>
+Thanks to Stella for 3E, 3F and E7 ROM signatures
+	(4.06).<br/>
+Thanks to fluxit for help with -no-pie command line
+	switch (4.05).<br/>
+Thanks to “Mike” from the Stack Overflow
+	community for code to find the program launch directory on linux
+	(4.05).<br/>
+Thanks to s0c7 for help with a compiler switch
+	(4.04).<br/>
+Thanks to alex_79 for reporting the problem with the F4
+	key (4.04).<br/>
+Thanks to MrMaddog for help with the kidvid games
+	(4.03).<br/>
+Thanks to Karl-Heinz Versl for help working out square
+	textures on vintage machines (4.01).<br/>
+Thanks to “Clifford”
+	from the Stack Overflow community for the stristr() routine (4.00).</p>
 	<p>The following people have made valuable suggestions for new
 	features and/or have helped to identify bugs in z26 3.0:<br/>
 <br/>

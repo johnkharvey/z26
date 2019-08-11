@@ -17,7 +17,7 @@
  Based in part on David Crane's U.S. Patent 4,644,495, Feb 17,1987.
 
 
- z26 is Copyright 1997-2011 by John Saeger and contributors.  
+ z26 is Copyright 1997-2019 by John Saeger and contributors.  
  contributors.	 z26 is released subject to the terms and conditions of the 
  GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
  Please see COPYING.TXT for details.
@@ -435,7 +435,7 @@ void Init_P2(void){				 //  <-- from init.asm
 }
 
 void SetPitfallII(void){				 //  <-- from banks.asm
- 	BSType = 21;
+ 	BSType = Z26_DPC;
  	RomBank = 0x1000;	// don't know if this is needed...
  	Pitfall2 = 1;		// tell RIOT to clock the music
 }

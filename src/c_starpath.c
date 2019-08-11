@@ -56,7 +56,6 @@ db SP_AddressCount = 7;
 */
 
 void Init_Starpath(void) {
-	
 	SPSlice[0] = 0;
 	SPSlice[1] = 3*0x800;
 	Starpath = 0;
@@ -74,8 +73,7 @@ void SP_SetScheme(void){
 }
 
 void SetStarpath(void){
-	
-	BSType = 15;
+	BSType = Z26_AR;
 	Starpath = 1;
 	RiotRam[0] = 0x40;	// Starpath loader does this I think
 	SP_SetScheme();	
@@ -87,24 +85,24 @@ void SetStarpath(void){
 */
 
 void ShowJAMmessage(void){
-	srv_Cleanup();
 	sprintf(msg, "JAM instruction %02x @ %04x\n", reg_a, reg_pc);
 	srv_print(msg);
-	ExitEmulator = 1; // be nice if we could get gui() to launch instead
+	SDL_Delay(2000);
+	Exit_Game();
 }
 
 void StarpathLoadNotFound(void){
-	srv_Cleanup();
 	sprintf(msg, "Unable to find load %02x\n", SC_ControlByte);
 	srv_print(msg);
-	ExitEmulator = 1;
+	SDL_Delay(2000);
+	Exit_Game();
 }
 
 void StarpathRealJAM(void){
-	srv_Cleanup();
 	sprintf(msg, "Starpath call @ %04x\n", reg_pc);
 	srv_print(msg);
-	ExitEmulator = 1;
+	SDL_Delay(2000);
+	Exit_Game();
 }
 
 
@@ -113,23 +111,27 @@ void StarpathRealJAM(void){
 */
 
 void StarpathJAM(void){
-
-	if((AddressBus & 0x1fff) == 0x1ff0){
+	if((AddressBus & 0x1fff) == 0x1ff0)
+	{
 		SC_ControlByte = RiotRam[0x7a];		// $FA contains the load number
 //		SC_ControlByte = RiotRam[0x01];		// $81 contains the load number
 		cli_LoadNextStarpath();
 		if(SC_StartAddress == 0) StarpathLoadNotFound();
-		else{
+		else
+		{
 			reg_pc = SC_StartAddress;	// tell CPU where to continue
 			RiotRam[0] = SC_ControlByte | 0x40; // tell game current memory config
 			SP_SetScheme();
 		}
-	}else if((AddressBus & 0x1fff) == 0x1ff1){
+	}
+	else if((AddressBus & 0x1fff) == 0x1ff1)
+	{
 		cli_ReloadStarpath();
 		reg_pc = SC_StartAddress;		// tell CPU where to continue
 		RiotRam[0] = SC_ControlByte | 0x40;	// tell game current memory config
 		SP_SetScheme();
-	}else StarpathRealJAM();
+	}
+	else StarpathRealJAM();
 }
 
 
@@ -138,7 +140,6 @@ void StarpathJAM(void){
 */
 
 void SP_Q_Adr(void){
-
 	if(SP_AddressCount <= 5){
 		if((AddressBus & 0x1fff) != SP_PrevAdr){
 			SP_PrevAdr = AddressBus & 0x1fff;
@@ -172,26 +173,22 @@ void SP_Q_Adr(void){
 */
 
 void ReadSPlow(void){
-
 	if(!debugflag) SP_Q_Adr();
 	(* TIARIOTReadAccess[AddressBus & 0xfff])();
 }
 
 void WriteSPlow(void){
-
 	SP_Q_Adr();
 	(* TIARIOTWriteAccess[AddressBus & 0xfff])();
 }
 
 void ReadSPhigh(void){
-
 	if(!debugflag) SP_Q_Adr();
 	DataBus = 
 		CartRom[SPSlice[(AddressBus & 0x800) >> 11] + (AddressBus & 0x7ff)];
 }
 
 void WriteSPhigh(void){
-
 	SP_Q_Adr();
 }
 
@@ -210,7 +207,6 @@ void InitSP(void){
 
 
 void RBank_SP(void){
-
 	if(!debugflag) SP_Q_Adr();
 	if(!(AddressBus & 0x1000)) ReadHardware();
 	else DataBus = 
@@ -218,14 +214,13 @@ void RBank_SP(void){
 }
 
 void WBank_SP(void){
-
 	SP_Q_Adr();
 	if(!(AddressBus & 0x1000)) WriteHardware();
 }
 
 
 /**
- z26 is Copyright 1997-2011 by John Saeger and contributors.  
+ z26 is Copyright 1997-2019 by John Saeger and contributors.  
  z26 is released subject to the terms and conditions of the
  GNU General Public License Version 2 (GPL).  z26 comes with no warranty.
  Please see COPYING.TXT for details.

@@ -227,71 +227,62 @@ void RecognizeCart(void)
 
 	BSType = 0;
 	
-	if (Lookup(BS_1)) BSType = 1;		/* CommaVid */
-	if (Lookup(BS_3)) BSType = 3;		/* Parker Brothers */
-	if (Lookup(BS_4)) BSType = 4;		/* Tigervision */
-	if (Lookup(BS_5)) BSType = 5;		/* Activision 8K flat model */
-	if (Lookup(BS_6)) BSType = 6;		/* 16K Superchip that can't be recognized automatically */
-	if (Lookup(BS_7)) BSType = 7;		/* M Network 16K */
-	if (Lookup(BS_8)) BSType = 8;       /* Atari 32K */
-	if (Lookup(BS_9)) BSType = 9;		/* 8K banks reversed */
-	if (crc == 0xa01ebff4) BSType = 10; /* Spectravideo CompuMate PAL */
-	if (crc == 0xdfa1388d) BSType = 10;	/* Spectravideo CompuMate NTSC */
-	if (Lookup(BS_11)) BSType = 11;		/* 32K Tigervision */
-	if (Lookup(BS_12)) BSType = 12;     /* 8K UA Ltd. */
+	if (crc == 0xa01ebff4) BSType = Z26_CM; /* Spectravideo CompuMate PAL */
+	if (crc == 0xdfa1388d) BSType = Z26_CM;	/* Spectravideo CompuMate NTSC */
 
-	if (stristr(FileName, "[2K]"))  BSType = 0;		// 4K Atari
-	if (stristr(FileName, "[4K]"))  BSType = 0;		// 4K Atari
-	if (stristr(FileName, "[CV]"))  BSType = 1;		// Commavid
-	if (stristr(FileName, "[F8S]")) BSType = 2;		// 8K superchip
-	if (stristr(FileName, "[E0]"))  BSType = 3;		// 8K Parker Bros.
-	if (stristr(FileName, "[3F]"))  BSType = 4;		// 8K Tigervision
-	if (stristr(FileName, "[FE]"))  BSType = 5;		// 8K flat
-	if (stristr(FileName, "[F6S]")) BSType = 6;		// 16K superchip
-	if (stristr(FileName, "[E7]"))  BSType = 7;		// 16K M-Network
-	if (stristr(FileName, "[F4S]")) BSType = 8;		// 32K superchip
-	if (stristr(FileName, "[F8R]")) BSType = 9;		// 8K Atari banks swapped
-	if (stristr(FileName, "[CM]"))  BSType = 10;	// Compumate
-	if (stristr(FileName, "[3F+]")) BSType = 11;	// 512K Tigervision
-	if (stristr(FileName, "[UA]"))  BSType = 12;	// UA Ltd.
-	if (stristr(FileName, "[EF]"))  BSType = 13;	// 64K Homestar Runner / Paul Slocum
-	if (stristr(FileName, "[3E]"))  BSType = 14;	// large 3F + 32K RAM (Krokodile / Andrew Davie)
-	if (stristr(FileName, "[AR]"))  BSType = 15;	// Starpath
-	if (stristr(FileName, "[F6]"))  BSType = 16;	// 16K Atari
-	if (stristr(FileName, "[F4]"))  BSType = 17;	// 32K Atari
-	if (stristr(FileName, "[MB]"))  BSType = 18;	// Megaboy
-	if (stristr(FileName, "[FA]"))  BSType = 19;	// 12K CBS
-	if (stristr(FileName, "[F8]"))  BSType = 20;	// 8K Atari
-	if (stristr(FileName, "[P2]"))  BSType = 21;	// Pitfall 2
-	if (stristr(FileName, "[4A5]")) BSType = 22;	// supercat
-	if (stristr(FileName, "[084]")) BSType = 23;	// EconoBanking
+	if (stristr(FileName, "[2K]"))  BSType = Z26_4K;	// 4K Atari
+	if (stristr(FileName, "[4K]"))  BSType = Z26_4K;	// 4K Atari
+	if (stristr(FileName, "[CV]"))  BSType = Z26_CV;	// Commavid
+	if (stristr(FileName, "[F8S]")) BSType = Z26_F8S;	// 8K superchip
+	if (stristr(FileName, "[E0]"))  BSType = Z26_E0;	// 8K Parker Bros.
+	if (stristr(FileName, "[3F]"))  BSType = Z26_3F;	// 8K Tigervision
+	if (stristr(FileName, "[FE]"))  BSType = Z26_FE;	// 8K flat
+	if (stristr(FileName, "[F6S]")) BSType = Z26_F6S;	// 16K superchip
+	if (stristr(FileName, "[E7]"))  BSType = Z26_E7;	// 16K M-Network
+	if (stristr(FileName, "[F4S]")) BSType = Z26_F4S;	// 32K superchip
+	if (stristr(FileName, "[F8R]")) BSType = Z26_F8SW;	// 8K Atari banks swapped
+	if (stristr(FileName, "[CM]"))  BSType = Z26_CM;	// Compumate
+	if (stristr(FileName, "[3F+]")) BSType = Z26_3FP;	// 512K Tigervision
+	if (stristr(FileName, "[UA]"))  BSType = Z26_UA;	// UA Ltd.
+	if (stristr(FileName, "[EF]"))  BSType = Z26_EF;	// 64K Homestar Runner / Paul Slocum
+	if (stristr(FileName, "[3E]"))  BSType = Z26_3E;	// large 3F + 32K RAM (Krokodile / Andrew Davie)
+	if (stristr(FileName, "[AR]"))  BSType = Z26_AR;	// Starpath
+	if (stristr(FileName, "[F6]"))  BSType = Z26_F6;	// 16K Atari
+	if (stristr(FileName, "[F4]"))  BSType = Z26_F4;	// 32K Atari
+	if (stristr(FileName, "[MB]"))  BSType = Z26_DC;	// Megaboy
+	if (stristr(FileName, "[FA]"))  BSType = Z26_FA;	// 12K CBS
+	if (stristr(FileName, "[F8]"))  BSType = Z26_F8;	// 8K Atari
+	if (stristr(FileName, "[P2]"))  BSType = Z26_DPC;	// Pitfall 2
+	if (stristr(FileName, "[DPC]")) BSType = Z26_DPC;	// Pitfall 2
+	if (stristr(FileName, "[4A5]")) BSType = Z26_4A5;	// supercat
+	if (stristr(FileName, "[084]")) BSType = Z26_084;	// EconoBanking
 
-	if (stristr(FileName, ".2k"))	BSType = 0;		// 4K Atari
-	if (stristr(FileName, ".4k"))	BSType = 0;		// 4K Atari
-	if (stristr(FileName, ".cv"))	BSType = 1;		// Commavid
-	if (stristr(FileName, ".f8s"))	BSType = 2;		// 8K superchip
-	if (stristr(FileName, ".e0"))	BSType = 3;		// 8K Parker Bros.
-	if (stristr(FileName, ".3f"))	BSType = 4;		// 8K Tigervision
-	if (stristr(FileName, ".fe"))	BSType = 5;		// 8K flat
-	if (stristr(FileName, ".f6s"))	BSType = 6;		// 16K superchip
-	if (stristr(FileName, ".e7"))	BSType = 7;		// 16K M-Network
-	if (stristr(FileName, ".f4s"))	BSType = 8;		// 32K superchip
-	if (stristr(FileName, ".f8r"))	BSType = 9;		// 8K Atari banks swapped
-	if (stristr(FileName, ".cm"))   BSType = 10;	// Compumate
-	if (stristr(FileName, ".3f+"))	BSType = 11;	// 512K Tigervision
-	if (stristr(FileName, ".ua"))	BSType = 12;	// UA Ltd.
-	if (stristr(FileName, ".ef"))   BSType = 13;	// 64K Homestar Runner / Paul Slocum
-	if (stristr(FileName, ".3e"))	BSType = 14;	// large 3F + 32K RAM (Krokodile / Andrew Davie)
-	if (stristr(FileName, ".ar"))	BSType = 15;	// Starpath
-	if (stristr(FileName, ".f6"))	BSType = 16;	// 16K Atari
-	if (stristr(FileName, ".f4"))	BSType = 17;	// 32K Atari
-	if (stristr(FileName, ".mb"))   BSType = 18;	// Megaboy
-	if (stristr(FileName, ".fa"))	BSType = 19;	// 12K CBS
-	if (stristr(FileName, ".f8"))	BSType = 20;	// 8K Atari
-	if (stristr(FileName, ".p2"))	BSType = 21;	// Pitfall 2
-	if (stristr(FileName, ".dpc"))	BSType = 21;	// Pitfall 2
-	if (stristr(FileName, ".4a5"))	BSType = 22;	// supercat
-	if (stristr(FileName, ".084"))	BSType = 23;	// EconoBanking
+	if (stristr(FileName, ".2k"))	BSType = Z26_4K;	// 4K Atari
+	if (stristr(FileName, ".4k"))	BSType = Z26_4K;	// 4K Atari
+	if (stristr(FileName, ".cv"))	BSType = Z26_CV;	// Commavid
+	if (stristr(FileName, ".f8s"))	BSType = Z26_F8S;	// 8K superchip
+	if (stristr(FileName, ".e0"))	BSType = Z26_E0;	// 8K Parker Bros.
+	if (stristr(FileName, ".3f"))	BSType = Z26_3F;	// 8K Tigervision
+	if (stristr(FileName, ".fe"))	BSType = Z26_FE;	// 8K flat
+	if (stristr(FileName, ".f6s"))	BSType = Z26_F6S;	// 16K superchip
+	if (stristr(FileName, ".e7"))	BSType = Z26_E7;	// 16K M-Network
+	if (stristr(FileName, ".f4s"))	BSType = Z26_F4S;	// 32K superchip
+	if (stristr(FileName, ".f8r"))	BSType = Z26_F8SW;	// 8K Atari banks swapped
+	if (stristr(FileName, ".cm"))   BSType = Z26_CM;	// Compumate
+	if (stristr(FileName, ".3f+"))	BSType = Z26_3FP;	// 512K Tigervision
+	if (stristr(FileName, ".ua"))	BSType = Z26_UA;	// UA Ltd.
+	if (stristr(FileName, ".ef"))   BSType = Z26_EF;	// 64K Homestar Runner / Paul Slocum
+	if (stristr(FileName, ".3e"))	BSType = Z26_3E;	// large 3F + 32K RAM (Krokodile / Andrew Davie)
+	if (stristr(FileName, ".ar"))	BSType = Z26_AR;	// Starpath
+	if (stristr(FileName, ".f6"))	BSType = Z26_F6;	// 16K Atari
+	if (stristr(FileName, ".f4"))	BSType = Z26_F4;	// 32K Atari
+	if (stristr(FileName, ".mb"))   BSType = Z26_DC;	// Megaboy
+	if (stristr(FileName, ".fa"))	BSType = Z26_FA;	// 12K CBS
+	if (stristr(FileName, ".f8"))	BSType = Z26_F8;	// 8K Atari
+	if (stristr(FileName, ".p2"))	BSType = Z26_DPC;	// Pitfall 2
+	if (stristr(FileName, ".dpc"))	BSType = Z26_DPC;	// Pitfall 2
+	if (stristr(FileName, ".4a5"))	BSType = Z26_4A5;	// supercat
+	if (stristr(FileName, ".084"))	BSType = Z26_084;	// EconoBanking
 
 	if (UserBankswitch !=0xff) BSType = UserBankswitch;
 }

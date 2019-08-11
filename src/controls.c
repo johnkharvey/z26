@@ -164,6 +164,14 @@
 #define P1Easy 		KeyF7
 #define P1Hard 		KeyF8
 
+void Exit_Game(void)
+{
+	ExitEmulator = 128;
+	GamePaused = !LaunchedFromCommandline;
+	GameReallyPaused = 0;
+	ROMLoaded = 0;
+}
+
 /* swap all signals from port 0 with those from port 1 */
 void SwapPorts()
 {
@@ -1488,7 +1496,7 @@ void ControlSWCHAWrite()
 ** gets called once per frame
 */
 
-void Controls()
+void Controls(void)
 {
 /* allow picture shifting only every couple of frames */
 	static int CtrlSkipCount = 0;
@@ -1549,19 +1557,13 @@ void Controls()
 	if (KeyTable[KeyEsc])
 	{
 		KeyTable[KeyEsc] = 0;
-		ExitEmulator = 128;
-		GamePaused = !LaunchedFromCommandline;
-		GameReallyPaused = 0;
-		ROMLoaded = 0;
+		Exit_Game();
 	}
 	
 	if (KeyTable[KeyBackSlash])
 	{
 		KeyTable[KeyBackSlash] = 0;
-		ExitEmulator = 128;
-		GamePaused = !LaunchedFromCommandline;
-		GameReallyPaused = 0;
-		ROMLoaded = 0;
+		Exit_Game();
 	}
 
 	if (KeyTable[KeyBackSpace]) 

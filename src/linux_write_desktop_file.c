@@ -5,10 +5,29 @@
 //	To put the icon file in a format to include in a C program:
 //	xxd --include z26.ico > z26_icon.c
 
-// We put the icon file in the same place as the .desktop file:
-// ~/.local/share/applications
+// The icon file goes in ~/.local/share/icons.
+// The .desktop file goes in ~/.local/share/applications.
 
 #include "z26_ico.c"
+
+// from: https://stackoverflow.com/questions/2336242/
+//		 recursive-mkdir-system-call-on-unix
+// by: 	 Yaroslav Stavnichiy
+
+int mkpath(char* file_path, mode_t mode) {
+    assert(file_path && *file_path);
+    for (char* p = strchr(file_path + 1, '/'); p; p = strchr(p + 1, '/')) {
+        *p = '\0';
+        if (mkdir(file_path, mode) == -1) {
+            if (errno != EEXIST) {
+                *p = '/';
+                return -1;
+            }
+        }
+        *p = '/';
+    }
+    return 0;
+}
 
 void linux_write_desktop_file(void)
 {
@@ -27,6 +46,17 @@ void linux_write_desktop_file(void)
 	int bytes = readlink(szTmp, z26exe, sizeof(z26exe));
 	if(bytes >= 0)
     	z26exe[bytes] = '\0';
+
+    // make the directories if necessary
+
+	strncpy(z26icon, homedir, sizeof(z26icon)-1);
+	strncat(z26icon, "/.local/share/icons/", sizeof(z26icon)-1);
+	mkpath(z26icon, 0755);
+	strncpy(z26desktop, homedir, sizeof(z26desktop)-1);
+	strncat(z26desktop, "/.local/share/applications/", sizeof(z26desktop)-1);
+	mkpath(z26desktop, 0755);
+
+    // write out the files
 
 	strncpy(z26icon, homedir, sizeof(z26icon)-1);
 	strncat(z26icon, "/.local/share/icons/z26.ico", sizeof(z26icon)-1);

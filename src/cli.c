@@ -187,8 +187,8 @@ db SCBIOS[188] = {
 
 	if (cli_calc_CRC(filename) == 0)
 	{
-		sprintf(msg, " Game not supported.");
-		srv_print(msg);
+//		sprintf(msg, " Game not found or too big.");
+//		srv_print(msg);
 		return(0);	// not supported in C engine
 	}
 
@@ -475,7 +475,7 @@ void cli_SaveParms()
 	/*if (theme)*/					fprintf(fp, "-C%d ", theme);
 
 	if (UserPaletteNumber != 0xff)	fprintf(fp, "-c%1d ", UserPaletteNumber);
-	if (UserBankswitch != 0xff)		fprintf(fp, "-g%d ", UserBankswitch);
+//	if (UserBankswitch != 0xff)		fprintf(fp, "-g%d ", UserBankswitch);
 	if (UserLeftController != 0xff)	fprintf(fp, "-)%s ", cli_controllers[UserLeftController]);
 	if (UserRightController != 0xff) fprintf(fp, "-(%s ", cli_controllers[UserRightController]);
 	if (UserAllowAll4 != 0xff)		fprintf(fp, "-4 ");
@@ -612,7 +612,7 @@ void cli_CommandLine(int argc, char *argv[])
 
 	if (!ROMLoaded)
 	{
-		sprintf(msg, "File not found:\n\n%s", FileName);
+		sprintf(msg, "File not found: %s", FileName);
 		srv_print(msg);
 		SDL_Quit();
 		exit(1);

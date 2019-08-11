@@ -1168,10 +1168,10 @@ void (* InitMemoryMap[24])(void) = {
 
 void DetectBySize() {
 
-	int i, j;
+//	int i, j;
 
 	if( CartSize == 480*0x400 ) {
-		BSType = 14;	/* 3E bankswitching with extra RAM */
+		BSType = Z26_FE;	/* 3E bankswitching with extra RAM */
 		return;
 	}
 		
@@ -1181,7 +1181,7 @@ void DetectBySize() {
 	}
 
 	if( CartSize > 0x10000 ) {
-		BSType = 11; /* large TigerVision game */
+		BSType = Z26_3FP; /* large TigerVision game */
 		return;
 	}
 
@@ -1189,49 +1189,28 @@ void DetectBySize() {
 		case 0x2000: /* 8k cart */
 			{
 				RomBank = 0x1000; /* need this for moonsweep and lancelot */
-				BSType = 2;
-				/* Superchip RAM ? */
-				for(i=0; i<2; i++)
-				{
-					for(j=0; j<256; j++)
-					{
-						if(CartRom[0]!=CartRom[i*0x1000+j]) BSType = 20;
-					}
-				}
+				BSType = Z26_F8S;
+				if (!detect_super_chip(CartRom, CartSize)) BSType = Z26_F8;
 				break;
 			}
 
 		case 0x3000: /* 12k cart */
 			{
-				BSType = 19;
+				BSType = Z26_FA;
 				break;
 			}
 
 		case 0x4000: /* 16k cart */
 			{
-				BSType = 6;
-				/* Superchip RAM ? */
-				for(i=0; i<4; i++)
-				{
-					for(j=0; j<256; j++)
-					{
-						if(CartRom[0]!=CartRom[i*0x1000+j]) BSType = 16;
-					}
-				}
+				BSType = Z26_F6S;
+				if (!detect_super_chip(CartRom, CartSize)) BSType = Z26_F6;
 				break;
 			}
 
 		case 0x8000: /* 32k cart */
 			{
-				BSType = 8;
-				/* Superchip RAM ? */
-				for(i=0; i<8; i++)
-				{
-					for(j=0; j<256; j++)
-					{
-						if(CartRom[0]!=CartRom[i*0x1000+j]) BSType = 17;
-					}
-				}
+				BSType = Z26_F4S;
+				if (!detect_super_chip(CartRom, CartSize)) BSType = Z26_F4;
 				break;
 			}
 
@@ -1247,8 +1226,8 @@ void DetectBySize() {
 				   (CartRom[CartRom[0xfffd] * 256 + CartRom[0xfffc]] == 0x0c) &&
 				   ((CartRom[CartRom[0xfffd] * 256 + CartRom[0xfffc] + 2] & 0xfe) == 0x6e))
 				   /* program starts at $1Fxx with NOP $6Exx or NOP $6Fxx ? */
-					BSType = 22; /* 64K cart with 4A50 bankswitching */
-				else BSType = 18; /* Megaboy 64k cart */
+					BSType = Z26_4A5; /* 64K cart with 4A50 bankswitching */
+				else BSType = Z26_DC; /* Megaboy 64k cart */
 				break;
 			}
 
@@ -1261,6 +1240,39 @@ void DetectBySize() {
 		default: /* 4k (non bank-switched)? */
 			break;
 	}
+}
+
+void Show_BSType(void)
+{
+	switch (BSType)
+	{
+	case Z26_4K:	printf("4K,"); break;
+	case Z26_CV:	printf("CV,"); break;
+	case Z26_F8S: 	printf("F8S,"); break;
+	case Z26_E0:	printf("E0,"); break;
+	case Z26_3F:	printf("3F,"); break;
+	case Z26_FE:	printf("FE,"); break;
+	case Z26_F6S: 	printf("F6S,"); break;
+	case Z26_E7:	printf("E7,"); break;
+	case Z26_F4S: 	printf("F4S,"); break;
+	case Z26_F8SW:  printf("F8SW,"); break;
+	case Z26_CM:	printf("CM,"); break;
+	case Z26_3FP: 	printf("3FP,"); break;
+	case Z26_UA:	printf("UA,"); break;
+	case Z26_EF:	printf("EF,"); break;
+	case Z26_3E:	printf("3E,"); break;
+	case Z26_AR:	printf("AR,"); break;
+	case Z26_F6:	printf("F6,"); break;
+	case Z26_F4:	printf("F4,"); break;
+	case Z26_DC:	printf("DC,"); break;
+	case Z26_FA:	printf("FA,"); break;
+	case Z26_F8:	printf("F8,"); break;
+	case Z26_DPC: 	printf("DPC,"); break;
+	case Z26_4A5: 	printf("4A5,"); break;
+	case Z26_084: 	printf("084,"); break;
+	default: break;
+	}
+	fflush(stdout);
 }
 
 /* setup bank switching scheme */
@@ -1285,6 +1297,8 @@ void SetupBanks() {
 	LastDataBus4A50 = 0xff;
 	LastAddressBus4A50 = 0xffff;
 
+	if (BSType == 0) BSType = identify_cart_type(CartRom, CartSize);
+
 	if( BSType == 0 )
 		DetectBySize();
 	else if( BSType == 1 ) {
@@ -1296,6 +1310,8 @@ void SetupBanks() {
 		RomBank = 0x3000;
 		InitCompuMate();
 	}
+
+	Show_BSType();
 
 	/* make last 2k bank fixed for 3E and 3F+ games: */
 	if ((BSType == 11) || (BSType == 14))

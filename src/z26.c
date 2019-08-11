@@ -38,6 +38,8 @@ char z26wav[1024] = {0};
 #include <unistd.h>		// for chdir
 #include <sys/types.h>
 #include <pwd.h>
+#include <assert.h>		// for mkpath()
+#include <errno.h>		// ditto
 #endif
 
 FILE *parmfp = NULL;
@@ -55,6 +57,7 @@ typedef unsigned char			db;
 void draw_trace_column_headers(void);
 
 #include "globals.c"
+#include "vcs_slot.c"
 #include "ct.c"
 #include "carts.c"
 #include "cli.c"
@@ -116,11 +119,6 @@ int main(int argc, char *argv[])
 	strncat(z26wav, "\\z26.wav", sizeof(z26wav)-1);
 #endif
 
-	if (chdir(z26home) != 0)
-	{
-		printf("couldn't go home\n");
-	}
-
 	srand(time(0));
 	def_LoadDefaults();
 
@@ -130,6 +128,12 @@ int main(int argc, char *argv[])
 		GamePaused = 1;
 		LaunchedFromCommandline = 0;
 		cli_ReadParms(z26gui);
+		
+		if (chdir(z26home) != 0)
+		{
+			printf("couldn't go home\n");
+		}
+
 	}
 	else
 	{
