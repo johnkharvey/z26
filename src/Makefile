@@ -3,17 +3,27 @@ FRAMEWORK_PATH=$(HOME)/Library/Frameworks
 APP_NAME=z26mac
 ICONFILE=z26icon
 
+# fast build with no optimization for convenient development
+fast:
+	clang -std=gnu99 -no-pie -Wall -DLINUX z26.c -o z26 -lSDL2 -lm
+	strip z26
+
 # -no-pie so we can double-click to launch on more distros
 linux:
-	gcc -std=gnu99 -no-pie -Wall -DLINUX -O3 z26.c -o z26 -lSDL2
+	gcc -std=gnu99 -no-pie -Wall -DLINUX -O3 z26.c -o z26 -lSDL2 -lm
 	strip z26
 
 debug:
-	gcc -std=gnu99 -no-pie -Wall -DLINUX -g3 z26.c -o z26d -lSDL2
+	gcc -std=gnu99 -no-pie -Wall -DLINUX -g3 z26.c -o z26d -lSDL2 -lm
+
+winfast:
+#	windres z26.rc -O coff -o z26.res
+	gcc -std=gnu99 -Wall -DWINDOWS z26.c -o z26.exe -lmingw32 -lSDL2main -lSDL2 -lm z26.res
+	strip z26.exe
 
 windows:
 	windres z26.rc -O coff -o z26.res
-	gcc -std=gnu99 -Wall -DWINDOWS -O3 z26.c -o z26.exe -lmingw32 -lSDL2main -lSDL2 z26.res
+	gcc -std=gnu99 -Wall -DWINDOWS -O3 z26.c -o z26.exe -lmingw32 -lSDL2main -lSDL2 -lm z26.res
 	strip z26.exe
 
 # https://joseph-long.com/writing/sdl-2-on-os-x-mavericks/
@@ -26,7 +36,7 @@ installsdl2mac:
 mac:
 	rm -f $(APP_NAME)
 	rm -rf "./build/$(APP_NAME).app/"	
-	clang -O3 -F "$(FRAMEWORK_PATH)" -DLINUX -DMAC -framework sdl2 z26.c -o $(APP_NAME)
+	clang -O3 -F "$(FRAMEWORK_PATH)" -DLINUX -DMAC -framework sdl2 z26.c -o $(APP_NAME) -lm
 	mkdir -p "./build/$(APP_NAME).app"/Contents/{MacOS,Resources}
 	cp -R "$(FRAMEWORK_PATH)/SDL2.framework" "./build/$(APP_NAME).app/Contents/Resources/"
 	cp Info.plist "./build/$(APP_NAME).app/Contents/"

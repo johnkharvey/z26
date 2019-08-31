@@ -26,6 +26,7 @@ void gui(void);
 #include <dirent.h>		// not in vc++ -- must be supplied 
 #include <sys/stat.h>
 #include <time.h>
+#include <math.h>
 
 const char *homedir;
 char z26cli[1024] = {0};
@@ -57,11 +58,11 @@ typedef unsigned char			db;
 void draw_trace_column_headers(void);
 
 #include "globals.c"
+#include "palette.c"
 #include "vcs_slot.c"
 #include "ct.c"
 #include "carts.c"
 #include "cli.c"
-#include "palette.c"
 #include "kidvid.c"
 #include "sdlsrv.c"
 #include "text.c"

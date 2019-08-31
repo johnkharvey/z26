@@ -13,6 +13,128 @@ char vid_mode_data[52];
 char Depth_data[52];
 char width_data[52];
 char vsync_data[52];
+char palette_data[52];
+char brightness_data[52];
+char warmth_data[52];
+char NTSC_phase_data[52];
+char PAL_phase_data[52];
+
+void set_palette_string() {
+	switch(UserPaletteNumber) {
+		case 0:
+			sprintf(palette_data, "NTSC");
+			break;
+		case 1:
+			sprintf(palette_data, "PAL");
+			break;
+		case 2:
+			sprintf(palette_data, "SECAM");
+			break;
+		case 3:
+			sprintf(palette_data, "vintage NTSC");
+			break;
+		case 4:
+			sprintf(palette_data, "vintage PAL");
+			break;
+		case 5:
+			sprintf(palette_data, "mame 0.212 NTSC");
+			break;
+		case 6:
+			sprintf(palette_data, "mame 0.212 PAL");
+			break;
+		case 0xff:
+			sprintf(palette_data, "Auto");
+			break;
+	}
+}
+
+void hand_palette_inc() {
+	if      (UserPaletteNumber == 0xff) UserPaletteNumber = 0;
+	else if (UserPaletteNumber == 6) UserPaletteNumber = 0xff;
+	else    UserPaletteNumber++;
+	
+	if (UserPaletteNumber == 0xff) PaletteNumber = 0;
+	else PaletteNumber = UserPaletteNumber;
+	
+	gui_SetVideoMode();
+	set_palette_string();
+}
+
+void hand_palette_dec() {
+	if      (UserPaletteNumber == 0xff) UserPaletteNumber = 6;
+	else if (UserPaletteNumber == 0) UserPaletteNumber = 0xff;
+	else    UserPaletteNumber--;
+	
+	if (UserPaletteNumber == 0xff) PaletteNumber = 0;
+	else PaletteNumber = UserPaletteNumber;
+
+	gui_SetVideoMode();
+	set_palette_string();
+}
+
+void set_warmth_string() {
+	sprintf(warmth_data, "%1.2lf", warmth);
+}
+
+void hand_warmth_inc() {
+	if (warmth < 2.0) warmth += 0.05;
+	set_warmth_string();
+	gui_SetVideoMode();
+}
+
+void hand_warmth_dec() {
+	if (warmth > -2.0) warmth -= 0.05;
+	set_warmth_string();
+	gui_SetVideoMode();
+}
+
+void set_brightness_string() {
+	sprintf(brightness_data, "%1.2lf", brightness);
+}
+
+void hand_brightness_inc() {
+	if (brightness < 1.9) brightness += 0.05;
+	set_brightness_string();
+	gui_SetVideoMode();
+}
+
+void hand_brightness_dec() {
+	if (brightness > 0.2) brightness -= 0.05;
+	set_brightness_string();
+	gui_SetVideoMode();
+}
+
+void set_NTSC_phase_string() {
+	sprintf(NTSC_phase_data, "%2.2lf", NTSC_PS);
+}
+
+void hand_NTSC_phase_inc() {
+	if (NTSC_PS < 32.0) NTSC_PS += 0.05;
+	set_NTSC_phase_string();
+	gui_SetVideoMode();
+}
+
+void hand_NTSC_phase_dec() {
+	if (NTSC_PS > 20.01) NTSC_PS -= 0.05;
+	set_NTSC_phase_string();
+	gui_SetVideoMode();
+}
+
+void set_PAL_phase_string() {
+	sprintf(PAL_phase_data, "%2.2lf", PAL_PS);
+}
+
+void hand_PAL_phase_inc() {
+	if (PAL_PS < 23.0) PAL_PS += 0.05;
+	set_PAL_phase_string();
+	gui_SetVideoMode();
+}
+
+void hand_PAL_phase_dec() {
+	if (PAL_PS > 20.01) PAL_PS -= 0.05;
+	set_PAL_phase_string();
+	gui_SetVideoMode();
+}
 
 void set_screen_string() {
 	if (FullScreen)		sprintf(screen_data, "Full Screen");
@@ -125,12 +247,19 @@ void hand_video_exit() {
 }
 
 gui_entry video_gui_items[] = {
-	{ " Display........: %s", screen_data, 0, hand_screen_inc, hand_screen_dec },
-	{ " Texture........: %s", vid_mode_data, 0, hand_vid_inc, hand_vid_dec },
-	{ " Width..........: %s ", width_data, 0, hand_width_inc, hand_width_dec },
-	{ " Line Mode......: %s", line_data, 0, hand_line_inc, hand_line_dec },
-	{ " Scanline Depth.: %s ", Depth_data, 0, hand_Depth_inc, hand_Depth_dec },
-	{ " Vsync..........: %s ", vsync_data, 0, hand_vsync, hand_vsync },
+	{ " Display............: %s", screen_data, 0, hand_screen_inc, hand_screen_dec },
+	{ " Texture............: %s", vid_mode_data, 0, hand_vid_inc, hand_vid_dec },
+	{ " Width..............: %s ", width_data, 0, hand_width_inc, hand_width_dec },
+	{ " Line Mode..........: %s", line_data, 0, hand_line_inc, hand_line_dec },
+	{ " Scanline Depth.....: %s ", Depth_data, 0, hand_Depth_inc, hand_Depth_dec },
+	{ " Vsync..............: %s ", vsync_data, 0, hand_vsync, hand_vsync },
+	{ " ", NULL, 0, NULL, NULL },
+	{ " Palette............: %s ", palette_data, 0, hand_palette_inc, hand_palette_dec },
+	{ " ", NULL, 0, NULL, NULL },
+	{ " Brightness.........: %s ", brightness_data, 0, hand_brightness_inc, hand_brightness_dec },
+	{ " Warmth.............: %s ", warmth_data, 0, hand_warmth_inc, hand_warmth_dec },
+	{ " NTSC Phase.(26.2)..: %s ", NTSC_phase_data, 0, hand_NTSC_phase_inc, hand_NTSC_phase_dec },
+	{ " PAL Phase..(21.5)..: %s ", PAL_phase_data, 0, hand_PAL_phase_inc, hand_PAL_phase_dec },
 
 	{ " ", NULL, 0, NULL, NULL },
 	{ " Exit ", NULL, 0, hand_video_exit, NULL },
@@ -138,10 +267,17 @@ gui_entry video_gui_items[] = {
 };
 
 gui_entry simple_video_gui_items[] = {
-	{ " Display........: %s", screen_data, 0, hand_screen_inc, hand_screen_dec },
-	{ " Texture........: %s", vid_mode_data, 0, hand_vid_inc, hand_vid_dec },
-	{ " Width..........: %s ", width_data, 0, hand_width_inc, hand_width_dec },
-	{ " Vsync..........: %s ", vsync_data, 0, hand_vsync, hand_vsync },
+	{ " Display............: %s", screen_data, 0, hand_screen_inc, hand_screen_dec },
+	{ " Texture............: %s", vid_mode_data, 0, hand_vid_inc, hand_vid_dec },
+	{ " Width..............: %s ", width_data, 0, hand_width_inc, hand_width_dec },
+	{ " Vsync..............: %s ", vsync_data, 0, hand_vsync, hand_vsync },
+	{ " ", NULL, 0, NULL, NULL },
+	{ " Palette............: %s ", palette_data, 0, hand_palette_inc, hand_palette_dec },
+	{ " ", NULL, 0, NULL, NULL },
+	{ " Brightness.........: %s ", brightness_data, 0, hand_brightness_inc, hand_brightness_dec },
+	{ " Warmth.............: %s ", warmth_data, 0, hand_warmth_inc, hand_warmth_dec },
+	{ " NTSC Phase.(26.2)..: %s ", NTSC_phase_data, 0, hand_NTSC_phase_inc, hand_NTSC_phase_dec },
+	{ " PAL Phase..(21.5)..: %s ", PAL_phase_data, 0, hand_PAL_phase_inc, hand_PAL_phase_dec },
 
 	{ " ", NULL, 0, NULL, NULL },
 	{ " Exit ", NULL, 0, hand_video_exit, NULL },
@@ -160,7 +296,12 @@ void video_gui() {
 	set_videomode_string();
 	set_width_string();
 	set_Depth_string();
-	
+	set_palette_string();
+	set_brightness_string();
+	set_warmth_string();
+	set_NTSC_phase_string();
+	set_PAL_phase_string();
+
 	exit_video = 0;
 	while( !exit_video ) {
 		status_timer = 0;

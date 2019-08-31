@@ -275,12 +275,16 @@ void cli_InterpretParm(char *p)
 
 	switch (ch)
 	{
-	case 'W':	width_adjust = parm;	break;	// width adjustment
-	case 'S':	DoScanline = 1;			break;	// scanline display
-	case 'C':	theme = parm & 0x70;	break;	// color theme for the GUI
-	case 'q':  	quiet = 1;				break;	// no sound
-	case 'r':	Vsync = 0;				break;  // turn off vsync
-	case 'n':	ShowLineCount = 1;		break;	// show line count and framerate
+	case 'W':	width_adjust = parm;				break;	// width adjustment
+	case 'S':	DoScanline = 1;						break;	// scanline display
+	case 'C':	theme = parm & 0x70;				break;	// color theme for the GUI
+	case 'N':	NTSC_PS = parm / 100.0 + 1e-9;		break;	// NTSC phase
+	case 'O':	PAL_PS = parm / 100.0 + 1e-9;		break;	// PAL phase
+	case 'B':	brightness = parm / 100.0 + 1e-9;	break;	// brightness
+	case 'T':	warmth = parm / 100.0 - 1.0 + 1e-9;	break;	// color temperature "warmth"
+	case 'q':  	quiet = 1;							break;	// no sound
+	case 'r':	Vsync = 0;							break;  // turn off vsync
+	case 'n':	ShowLineCount = 1;					break;	// show line count and framerate
 
 	case '0':  	UserP0Diff = 1;
 				IOPortB |= 64;				
@@ -467,10 +471,14 @@ void cli_SaveParms()
 	}
 	
 	fprintf(fp, "-v");					// (-v) do video mode
-	
 	if (!FullScreen)		fputc('1', fp);
-
 	fprintf(fp, "%1d ",VideoMode);
+
+	fprintf(fp, "-N%4.0lf ", NTSC_PS * 100.0);
+	fprintf(fp, "-O%4.0lf ", PAL_PS * 100.0);
+	fprintf(fp, "-B%2.0lf ", brightness * 100.0);
+	fprintf(fp, "-T%2.0lf ", (warmth + 1.0) * 100.0);
+
 
 	/*if (theme)*/					fprintf(fp, "-C%d ", theme);
 

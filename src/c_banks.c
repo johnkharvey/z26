@@ -1311,7 +1311,7 @@ void SetupBanks() {
 		InitCompuMate();
 	}
 
-	Show_BSType();
+//	Show_BSType();
 
 	/* make last 2k bank fixed for 3E and 3F+ games: */
 	if ((BSType == 11) || (BSType == 14))

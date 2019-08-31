@@ -21,7 +21,6 @@ char *controllers[] = {
 };
 
 char bank_data[52];
-char palette_data[52];
 char left_control_data[52];
 char right_control_data[52];
 char allowall4_data[52];
@@ -29,6 +28,9 @@ char swapports_data[52];
 char p0diff_data[52];
 char p1diff_data[52];
 char consoleBW_data[52];
+
+
+
 
 
 void set_p0diff_string() {
@@ -92,23 +94,6 @@ void set_allowall4_string() {
 	}
 }
 
-void set_palette_string() {
-	switch(UserPaletteNumber) {
-		case 0:
-			sprintf(palette_data, "NTSC");
-			break;
-		case 1:
-			sprintf(palette_data, "PAL");
-			break;
-		case 2:
-			sprintf(palette_data, "SECAM");
-			break;
-		case 0xff:
-			sprintf(palette_data, "Auto");
-			break;
-	}
-}
-
 void set_bank_string() {
 	switch (UserBankswitch)
 	{
@@ -139,30 +124,6 @@ void set_bank_string() {
 	case 0xff: sprintf(bank_data, "Auto");	break;
 	default: sprintf(bank_data, "unknown");	break;
 	}
-}
-
-void hand_palette_inc() {
-	if      (UserPaletteNumber == 0xff) UserPaletteNumber = 0;
-	else if (UserPaletteNumber == 2) UserPaletteNumber = 0xff;
-	else    UserPaletteNumber++;
-	
-	if (UserPaletteNumber == 0xff) PaletteNumber = 0;
-	else PaletteNumber = UserPaletteNumber;
-	
-	gui_SetVideoMode();
-	set_palette_string();
-}
-
-void hand_palette_dec() {
-	if      (UserPaletteNumber == 0xff) UserPaletteNumber = 2;
-	else if (UserPaletteNumber == 0) UserPaletteNumber = 0xff;
-	else    UserPaletteNumber--;
-	
-	if (UserPaletteNumber == 0xff) PaletteNumber = 0;
-	else PaletteNumber = UserPaletteNumber;
-
-	gui_SetVideoMode();
-	set_palette_string();
 }
 
 void hand_bank_inc() {
@@ -311,7 +272,6 @@ gui_entry game_gui_items[] = {
 	{ " Console B/W.....: %s ", consoleBW_data, 0, hand_consoleBW, hand_consoleBW },
 	{ " ", NULL, 0, NULL, NULL },
 	{ " Bankswitch......: %s", bank_data, 0, hand_bank_inc, hand_bank_dec },
-	{ " Palette.........: %s ", palette_data, 0, hand_palette_inc, hand_palette_dec },
 	{ " Left Controller.: %s", left_control_data, 0, hand_lctrl_inc, hand_lctrl_dec },
 	{ " Right Controller: %s", right_control_data, 0, hand_rctrl_inc, hand_rctrl_dec },
 	{ " Swap Ports......: %s ", swapports_data, 0, hand_swapports_inc, hand_swapports_dec },
@@ -332,7 +292,6 @@ void game_gui() {
 	set_bank_string();
 	set_ctrlr_string(left_control_data, UserLeftController);
 	set_ctrlr_string(right_control_data, UserRightController);
-	set_palette_string();
 	set_allowall4_string();
 	set_swapports_string();
 	set_p0diff_string();
